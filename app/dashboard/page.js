@@ -7,16 +7,18 @@ import { useRouter } from 'next/navigation'
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 
 const NAV = [
-  { l: 'Fleet',     p: '/dashboard/fleet' },
-  { l: 'Trips',     p: '/dashboard/trips' },
-  { l: 'Lists',     p: '/dashboard/lists' },
-  { l: 'Crew',      p: '/dashboard/crew' },
-  { l: 'Hub Cov.',  p: '/dashboard/hub-coverage' },
-  { l: 'Pax Cov.', p: '/dashboard/pax-coverage' },
-  { l: 'Reports',   p: '/dashboard/reports' },
-  { l: 'QR',        p: '/dashboard/qr-codes' },
-  { l: 'Vehicles',  p: '/dashboard/vehicles' },
-  { l: '🎬 Prods', p: '/dashboard/productions' },
+  { l: 'Fleet',      p: '/dashboard/fleet' },
+  { l: 'Trips',      p: '/dashboard/trips' },
+  { l: 'Lists',      p: '/dashboard/lists' },
+  { l: 'Crew',       p: '/dashboard/crew' },
+  { l: 'Hub Cov.',   p: '/dashboard/hub-coverage' },
+  { l: 'Pax Cov.',   p: '/dashboard/pax-coverage' },
+  { l: 'Reports',    p: '/dashboard/reports' },
+  { l: 'QR',         p: '/dashboard/qr-codes' },
+  { l: 'Locations',  p: '/dashboard/locations' },
+  { l: 'Vehicles',   p: '/dashboard/vehicles' },
+  { l: '🚀 Rocket', p: '/dashboard/rocket' },
+  { l: '🎬 Prods',  p: '/dashboard/productions' },
 ]
 
 const CARDS = [
@@ -91,6 +93,14 @@ const CARDS = [
     href: '/dashboard/vehicles',
     accent: '#64748b',
     bg: '#f8fafc',
+  },
+  {
+    emoji: '🚀',
+    title: 'Rocket — Trip Generator',
+    desc: 'Genera automaticamente tutti i trip del giorno: assegna crew ai veicoli per hotel e dipartimento, anteprima e conferma con un click.',
+    href: '/dashboard/rocket',
+    accent: '#7c3aed',
+    bg: '#f5f3ff',
   },
 ]
 
