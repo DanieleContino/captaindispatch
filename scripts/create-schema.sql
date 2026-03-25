@@ -78,7 +78,9 @@ CREATE TABLE IF NOT EXISTS routes (
   from_id       text NOT NULL REFERENCES locations(id),
   to_id         text NOT NULL REFERENCES locations(id),
   duration_min  integer NOT NULL,
-  source        text NOT NULL DEFAULT 'AUTO' CHECK (source IN ('ORS','AUTO','MANUAL')),
+  distance_km   numeric(8,1),                  -- km calcolati da Google Routes o Haversine
+  source        text NOT NULL DEFAULT 'AUTO'
+                CHECK (source IN ('ORS','AUTO','MANUAL','google')),
   updated_at    timestamptz DEFAULT now(),
   UNIQUE (production_id, from_id, to_id)
 );
@@ -165,6 +167,7 @@ CREATE TABLE IF NOT EXISTS trips (
   start_dt          timestamptz,
   end_dt            timestamptz,
   meeting_point     text,
+  service_type      text,                          -- es. "Wrap", "Airport", "Hotel Run"
   service_type_id   uuid REFERENCES service_types(id),
   passenger_list    text,
   pax_count         integer DEFAULT 0,

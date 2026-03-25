@@ -106,7 +106,7 @@ function TripRow({ group, locations, selected, onClick }) {
     <div onClick={onClick}
       style={{
         display: 'grid',
-        gridTemplateColumns: '76px 68px 1fr 170px 1fr 76px',
+        gridTemplateColumns: '76px 68px 220px 180px 1fr 36px',
         alignItems: 'start',
         padding: '10px 14px 10px 14px',
         borderBottom: '1px solid #f1f5f9',
@@ -187,12 +187,12 @@ function TripRow({ group, locations, selected, onClick }) {
             <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', lineHeight: 1.4 }}>
               {t.driver_name && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>👤 {t.driver_name}</div>}
               {(t.sign_code || t.capacity) && (
-                <div>{[t.sign_code, t.capacity ? `×${t.capacity} posti` : null].filter(Boolean).join(' · ')}</div>
+                <div>{[t.sign_code, t.capacity ? `×${t.capacity} seats` : null].filter(Boolean).join(' · ')}</div>
               )}
             </div>
           </>
         ) : (
-          <span style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>Nessun veicolo</span>
+          <span style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>No vehicle</span>
         )}
       </div>
 
@@ -200,7 +200,7 @@ function TripRow({ group, locations, selected, onClick }) {
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: '11px', fontWeight: '800', color: paxColor, marginBottom: '3px' }}>
           👥 {t.pax_count || 0}{t.capacity ? `/${t.capacity}` : ''} pax
-          {t.pax_conflict_flag && <span style={{ color: '#dc2626', marginLeft: '4px' }}>⚠ conflitto</span>}
+          {t.pax_conflict_flag && <span style={{ color: '#dc2626', marginLeft: '4px' }}>⚠ conflict</span>}
         </div>
         {paxNames.length > 0 ? (
           <>
@@ -210,11 +210,11 @@ function TripRow({ group, locations, selected, onClick }) {
               </div>
             ))}
             {paxNames.length > 4 && (
-              <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic', marginTop: '1px' }}>+{paxNames.length - 4} altri</div>
+              <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic', marginTop: '1px' }}>+{paxNames.length - 4} more</div>
             )}
           </>
         ) : (
-          <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic' }}>Nessun pax assegnato</div>
+          <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic' }}>No passengers assigned</div>
         )}
       </div>
 
@@ -290,7 +290,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   async function handleSubmit(e) {
     e.preventDefault(); setError(null)
     if (!form.trip_id || !form.date || !form.pickup_id || !form.dropoff_id) {
-      setError('Campi richiesti: Trip ID, Data, Pickup, Dropoff'); return
+      setError('Required: Trip ID, Date, Pickup, Dropoff'); return
     }
     setSaving(true)
     const row = {
@@ -389,7 +389,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               </select>
               {form.vehicle_id && vCheck && (
                 <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: '700', color: vCheck.available ? '#15803d' : '#dc2626' }}>
-                  {vCheck.available ? '✅ Veicolo libero' : `⚠ Occupato su ${vCheck.conflictTripId}`}
+                  {vCheck.available ? '✅ Vehicle available' : `⚠ Busy on ${vCheck.conflictTripId}`}
                 </div>
               )}
             </div>
@@ -780,7 +780,7 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
               </select>
               {form.vehicle_id && vCheck && (
                 <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: '700', color: vCheck.available ? '#15803d' : '#dc2626' }}>
-                  {vCheck.available ? '✅ Veicolo libero' : `⚠ Già occupato su ${vCheck.conflictTripId}`}
+                  {vCheck.available ? '✅ Vehicle available' : `⚠ Already busy on ${vCheck.conflictTripId}`}
                 </div>
               )}
             </div>
@@ -843,14 +843,14 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
               </div>
 
               {paxLoading ? (
-                <div style={{ padding: '10px', color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>Caricamento pax…</div>
+                <div style={{ padding: '10px', color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>Loading passengers…</div>
               ) : (
                 <>
                   {/* ASSIGNED */}
                   {assignedPax.length > 0 && (
                     <div style={{ marginBottom: '12px' }}>
                       <div style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                        ✓ ASSEGNATI ({assignedPax.length})
+                        ✓ ASSIGNED ({assignedPax.length})
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         {assignedPax.map(c => (
@@ -874,7 +874,7 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
                         <div style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', letterSpacing: '0.05em' }}>
-                          DISPONIBILI ({freeCount})
+                          AVAILABLE ({freeCount})
                           {busyCount > 0 && <span style={{ color: '#a16207', marginLeft: '6px' }}>· {busyCount} BUSY</span>}
                         </div>
                         {freeCount > 0 && (
@@ -884,11 +884,11 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
                           </button>
                         )}
                       </div>
-                      <input type="text" placeholder="Cerca crew…" value={paxSearch} onChange={e => setPaxSearch(e.target.value)}
+                      <input type="text" placeholder="Search crew…" value={paxSearch} onChange={e => setPaxSearch(e.target.value)}
                         style={{ ...inp, padding: '5px 9px', fontSize: '12px', marginBottom: '4px' }} />
                       <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                         {filtered.length === 0 ? (
-                          <div style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>Nessun risultato</div>
+                          <div style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No results</div>
                         ) : filtered.map(c => {
                           const isBusy = !!busyMap[c.id]
                           return (
@@ -900,7 +900,7 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
                                 <div style={{ fontSize: '12px', fontWeight: '500', color: isBusy ? '#92400e' : '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
                                 <div style={{ fontSize: '10px', color: '#94a3b8' }}>
                                   {c.department}
-                                  {isBusy && <span style={{ color: '#a16207', marginLeft: '4px' }}>· ⚠ BUSY su {busyMap[c.id]}</span>}
+                                  {isBusy && <span style={{ color: '#a16207', marginLeft: '4px' }}>· ⚠ BUSY on {busyMap[c.id]}</span>}
                                 </div>
                               </div>
                               {!isBusy && <span style={{ fontSize: '14px', color: '#2563eb', fontWeight: '700', flexShrink: 0 }}>+</span>}
@@ -913,7 +913,7 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
                   ) : (
                     assignedPax.length === 0 && (
                       <div style={{ padding: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
-                        Nessun crew eligibile (verifica hotel e Travel_Status)
+                        No eligible crew (check hotel and Travel_Status)
                       </div>
                     )
                   )}
@@ -930,10 +930,10 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
                 </button>
               ) : (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '600', flexShrink: 0 }}>Conferma eliminazione?</span>
+                  <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '600', flexShrink: 0 }}>Confirm delete?</span>
                   <button type="button" onClick={handleDelete} disabled={deleting}
                     style={{ flex: 1, padding: '6px', border: 'none', background: '#dc2626', color: 'white', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '800' }}>
-                    {deleting ? '…' : 'Sì, elimina'}
+                    {deleting ? '…' : 'Yes, delete'}
                   </button>
                   <button type="button" onClick={() => setConfirmDel(false)}
                     style={{ flex: 1, padding: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
@@ -1132,12 +1132,12 @@ export default function TripsPage() {
       <div style={{ transition: 'margin-right 0.25s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
 
         {trips.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '76px 68px 1fr 170px 1fr 76px', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: '100px', zIndex: 10 }}>
-            <div>ORARIO</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '76px 68px 220px 180px 1fr 36px', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: '100px', zIndex: 10 }}>
+            <div>TIME</div>
             <div>TRIP</div>
-            <div>ROTTA</div>
-            <div>VEICOLO</div>
-            <div>PASSEGGERI</div>
+            <div>ROUTE</div>
+            <div>VEHICLE</div>
+            <div>PASSENGERS</div>
             <div />
           </div>
         )}

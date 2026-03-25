@@ -149,7 +149,7 @@ function TripBlock({ group, locsMap, showFlight, showPickup }) {
                     ))}
                   </div>
                 ) : (
-                  <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic' }}>nessun pax assegnato</div>
+                  <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic' }}>no passengers assigned</div>
                 )}
               </div>
               <div style={{ flexShrink: 0, textAlign: 'right', fontSize: '11px', color: pax.length === 0 ? '#cbd5e1' : '#64748b' }}>
@@ -282,7 +282,7 @@ export default function ListsPage() {
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
           <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
-          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Oggi</button>
+          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '12px', color: '#64748b' }}>
@@ -290,7 +290,7 @@ export default function ListsPage() {
           </span>
           <button onClick={() => window.print()}
             style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 18px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            🖨 Stampa / PDF
+            🖨 Print / PDF
           </button>
         </div>
       </div>
@@ -310,7 +310,7 @@ export default function ListsPage() {
           </div>
           <div style={{ textAlign: 'right', fontSize: '11px', color: '#94a3b8' }}>
             <div>{trips.length} trips · {totalPax} pax</div>
-            <div>Stampato: {fmtNow()}</div>
+            <div>Printed: {fmtNow()}</div>
           </div>
         </div>
 
@@ -325,7 +325,7 @@ export default function ListsPage() {
         ) : trips.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px' }}>
             <div style={{ fontSize: '36px', marginBottom: '10px' }}>📋</div>
-            <div style={{ color: '#64748b', fontSize: '15px', fontWeight: '600' }}>Nessun trip per {fmtDateLong(date)}</div>
+            <div style={{ color: '#64748b', fontSize: '15px', fontWeight: '600' }}>No trips for {fmtDateLong(date)}</div>
           </div>
         ) : (
           <div style={{ background: 'white', borderRadius: '10px', padding: '20px 24px', border: '1px solid #e2e8f0' }}>
@@ -343,7 +343,7 @@ export default function ListsPage() {
             {/* ══ SECTION 2: TRAVEL LIST — ARRIVAL ══ */}
             {arrivals.length > 0 && (
               <div style={{ marginBottom: '32px' }}>
-                <SectionHeader icon="✈ 🛬" title="TRAVEL LIST — ARRIVI" count={arrivals.length} color="#16a34a" />
+                <SectionHeader icon="✈ 🛬" title="TRAVEL LIST — ARRIVALS" count={arrivals.length} color="#16a34a" />
                 {arrivals.map(group => (
                   <TripBlock key={group.trip_id} group={group} locsMap={locsMap} showFlight={true} showPickup={true} />
                 ))}
@@ -353,7 +353,7 @@ export default function ListsPage() {
             {/* ══ SECTION 3: TRAVEL LIST — DEPARTURE ══ */}
             {departures.length > 0 && (
               <div style={{ marginBottom: '16px' }}>
-                <SectionHeader icon="✈ 🛫" title="TRAVEL LIST — PARTENZE" count={departures.length} color="#ea580c" />
+                <SectionHeader icon="✈ 🛫" title="TRAVEL LIST — DEPARTURES" count={departures.length} color="#ea580c" />
                 {departures.map(group => (
                   <TripBlock key={group.trip_id} group={group} locsMap={locsMap} showFlight={true} showPickup={false} />
                 ))}

@@ -22,7 +22,7 @@ const HC = {
 function isoToday() { return new Date().toISOString().split('T')[0] }
 function fmtDate(s) {
   if (!s) return '–'
-  return new Date(s + 'T12:00:00Z').toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })
+  return new Date(s + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 function isTomorrow(s) {
   if (!s) return false
@@ -84,7 +84,7 @@ function CrewCard({ member, locations, onStatusChange, onEdit }) {
           <Badge label={member.hotel_status} style={hc} />
           {(depToday || depTomorrow) && (
             <span style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '2px 8px', borderRadius: '6px', border: '1px solid #fecaca' }}>
-              {depToday ? '✈ OGGI' : '✈ DOMANI'}
+              {depToday ? '✈ TODAY' : '✈ TOMORROW'}
             </span>
           )}
         </div>
@@ -161,8 +161,8 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
-    if (!form.full_name.trim()) { setError('Nome obbligatorio'); return }
-    if (mode === 'new' && !form.id.trim()) { setError('Crew ID obbligatorio'); return }
+    if (!form.full_name.trim()) { setError('Name required'); return }
+    if (mode === 'new' && !form.id.trim()) { setError('Crew ID required'); return }
     setSaving(true)
 
     const row = {
@@ -220,7 +220,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
         {/* Header */}
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
-            {mode === 'new' ? 'Nuova Crew' : 'Modifica Crew'}
+            {mode === 'new' ? 'New Crew Member' : 'Edit Crew Member'}
           </div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
         </div>
@@ -245,13 +245,13 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
 
             {/* Nome */}
             <div style={row}>
-              <label style={lbl}>Nome Completo *</label>
+              <label style={lbl}>Full Name *</label>
               <input value={form.full_name} onChange={e => set('full_name', e.target.value)} style={inp} placeholder="Mario Rossi" required />
             </div>
 
             {/* Dipartimento */}
             <div style={row}>
-              <label style={lbl}>Dipartimento</label>
+              <label style={lbl}>Department</label>
               <input value={form.department} onChange={e => set('department', e.target.value)} style={inp} placeholder="GRIP, CAMERA, PRODUCTION…" />
             </div>
 
@@ -259,7 +259,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
             <div style={row}>
               <label style={lbl}>Hotel / Location</label>
               <select value={form.hotel_id} onChange={e => set('hotel_id', e.target.value)} style={inp}>
-                <option value="">– Nessun hotel –</option>
+                <option value="">– No hotel –</option>
                 {locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name} ({l.id})</option>)}
                 {locations.filter(l => l.is_hub).length > 0 && (
                   <optgroup label="Hubs">
@@ -315,8 +315,8 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
 
             {/* Note */}
             <div style={row}>
-              <label style={lbl}>Note</label>
-              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Note, richieste speciali…" />
+              <label style={lbl}>Notes</label>
+              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Notes, special requests…" />
             </div>
 
             {/* Elimina (solo edit) */}
@@ -328,12 +328,12 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
                 {!confirmDel ? (
                   <button type="button" onClick={handleDelete} disabled={deleting}
                     style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
-                    🗑 Elimina Crew
+                    🗑 Delete Crew Member
                   </button>
                 ) : (
                   <div>
                     <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>
-                      ⚠ Sicuro? Verranno rimosse anche le assegnazioni ai trip.
+                      ⚠ Sure? All trip assignments will also be removed.
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button type="button" onClick={() => setConfirmDel(false)}
@@ -342,7 +342,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
                       </button>
                       <button type="button" onClick={handleDelete} disabled={deleting}
                         style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: deleting ? 'default' : 'pointer', fontSize: '12px', fontWeight: '800' }}>
-                        {deleting ? 'Eliminando…' : '⚠ Conferma Elimina'}
+                        {deleting ? 'Deleting…' : '⚠ Confirm Delete'}
                       </button>
                     </div>
                   </div>
@@ -360,7 +360,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
             </button>
             <button type="submit" disabled={saving}
               style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
-              {saving ? 'Salvataggio…' : mode === 'new' ? '+ Aggiungi Crew' : '✓ Salva Modifiche'}
+              {saving ? 'Saving…' : mode === 'new' ? '+ Add Crew Member' : '✓ Save Changes'}
             </button>
           </div>
         </form>
@@ -482,7 +482,7 @@ export default function CrewPage() {
       {/* Sub-toolbar */}
       <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20, gap: '12px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input type="text" placeholder="Cerca nome, dept, ID…" value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder="Search name, dept, ID…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px' }} />
           {/* Travel filter */}
           <div style={{ display: 'flex', gap: '3px' }}>
@@ -511,7 +511,7 @@ export default function CrewPage() {
           {departments.length > 1 && (
             <select value={filterDept} onChange={e => setFD(e.target.value)}
               style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white', cursor: 'pointer' }}>
-              <option value="ALL">Tutti i dept</option>
+              <option value="ALL">All depts</option>
               {departments.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           )}
@@ -543,7 +543,7 @@ export default function CrewPage() {
           </button>
           <button onClick={openNew}
             style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-            + Nuova Crew
+            + New Crew Member
           </button>
         </div>
       </div>
@@ -556,8 +556,8 @@ export default function CrewPage() {
           <div style={{ marginBottom: '16px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '9px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span>✈</span>
             <div>
-              <div style={{ fontWeight: '700', color: '#dc2626', fontSize: '13px' }}>{counts.depTomorrow} crew in partenza domani</div>
-              <div style={{ fontSize: '11px', color: '#ef4444' }}>Verifica Travel_Status = OUT</div>
+              <div style={{ fontWeight: '700', color: '#dc2626', fontSize: '13px' }}>{counts.depTomorrow} crew departing tomorrow</div>
+              <div style={{ fontSize: '11px', color: '#ef4444' }}>Check Travel_Status = OUT</div>
             </div>
           </div>
         )}
@@ -574,7 +574,7 @@ export default function CrewPage() {
           <div style={{ textAlign: 'center', padding: '80px' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>👤</div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>
-              {crew.length === 0 ? 'Nessun crew nel database' : 'Nessun crew con i filtri selezionati'}
+              {crew.length === 0 ? 'No crew in database' : 'No crew matching filters'}
             </div>
             {crew.length === 0 && (
               <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', padding: '9px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', marginTop: '8px' }}>

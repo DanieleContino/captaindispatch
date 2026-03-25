@@ -23,10 +23,10 @@ function isoAdd(d, n) {
   return dt.toISOString().split('T')[0]
 }
 function fmtDate(d) {
-  return new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+  return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 function fmtDateLong(d) {
-  return new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 function fmtNow() {
   const d = new Date()
@@ -103,7 +103,7 @@ export default function ReportsPage() {
     return trips.filter(t => (t.vehicle_id || '__no_vehicle__') === vId)
   }
   function vehicleName(vId) {
-    return vId === '__no_vehicle__' ? 'Senza veicolo' : vId
+    return vId === '__no_vehicle__' ? 'No vehicle' : vId
   }
   function totalDurMin(tList) { return tList.reduce((s, t) => s + (t.duration_min || 0), 0) }
   function totalPax(tList) { return tList.reduce((s, t) => s + (t.pax_count || 0), 0) }
@@ -173,7 +173,7 @@ export default function ReportsPage() {
           {['daily', 'weekly'].map(m => (
             <button key={m} onClick={() => setMode(m)}
               style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(mode === m ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#64748b', borderColor: '#e2e8f0' }) }}>
-              {m === 'daily' ? 'Giornaliero' : 'Settimanale'}
+              {m === 'daily' ? 'Daily' : 'Weekly'}
             </button>
           ))}
           <span style={{ color: '#cbd5e1' }}>·</span>
@@ -181,11 +181,11 @@ export default function ReportsPage() {
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
           <button onClick={() => setDate(isoAdd(date, mode === 'weekly' ? 7 : 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
-          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Oggi</button>
+          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
         </div>
         <button onClick={() => window.print()}
           style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
-          🖨 Stampa / PDF
+          🖨 Print / PDF
         </button>
       </div>
 
@@ -197,30 +197,30 @@ export default function ReportsPage() {
           <div>
             <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f2340' }}>CAPTAIN <span style={{ color: '#2563eb' }}>Dispatch</span></div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-              Fleet Report {mode === 'daily' ? 'Giornaliero' : 'Settimanale'} —{' '}
+              Fleet Report {mode === 'daily' ? 'Daily' : 'Weekly'} —{' '}
               <strong style={{ color: '#0f172a' }}>
                 {mode === 'daily' ? fmtDateLong(date) : `${fmtDate(weekStart)} → ${fmtDate(weekDays[6])}`}
               </strong>
             </div>
           </div>
           <div style={{ textAlign: 'right', fontSize: '11px', color: '#94a3b8' }}>
-            <div>{trips.length} trips · {totalPax(trips)} pax · {durToH(totalDurMin(trips))} totali</div>
-            <div>Stampato: {fmtNow()}</div>
+            <div>{trips.length} trips · {totalPax(trips)} pax · {durToH(totalDurMin(trips))} total</div>
+            <div>Printed: {fmtNow()}</div>
           </div>
         </div>
 
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
-            ⚠ NEXT_PUBLIC_PRODUCTION_ID non impostato
+            ⚠ NEXT_PUBLIC_PRODUCTION_ID not set
           </div>
         )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Caricamento…</div>
+          <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Loading…</div>
         ) : trips.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px' }}>
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>📊</div>
-            <div style={{ color: '#64748b', fontWeight: '600' }}>Nessun trip per questo periodo</div>
+            <div style={{ color: '#64748b', fontWeight: '600' }}>No trips for this period</div>
           </div>
         ) : mode === 'daily' ? (
 
@@ -258,7 +258,7 @@ export default function ReportsPage() {
                   <div>
                     {/* Column headers */}
                     <div style={{ display: 'grid', gridTemplateColumns: '42px 68px 80px 1fr 1fr 55px 55px 60px', gap: '8px', padding: '5px 16px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: '9px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em' }}>
-                      <div>CALL</div><div>TRIP</div><div>CLASSE</div><div>DA</div><div>A</div><div style={{ textAlign: 'center' }}>DUR</div><div style={{ textAlign: 'center' }}>PAX</div><div>STATUS</div>
+                      <div>CALL</div><div>TRIP</div><div>CLASSE</div><div>FROM</div><div>TO</div><div style={{ textAlign: 'center' }}>DUR</div><div style={{ textAlign: 'center' }}>PAX</div><div>STATUS</div>
                     </div>
                     {vTrips.map((t, i) => {
                       const cls = CLS[t.transfer_class] || CLS.STANDARD
@@ -277,7 +277,7 @@ export default function ReportsPage() {
                     })}
                     {/* Vehicle total row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '42px 68px 80px 1fr 1fr 55px 55px 60px', gap: '8px', padding: '7px 16px', background: '#f0fdf4', fontSize: '11px', borderTop: '2px solid #bbf7d0', fontWeight: '800', color: '#15803d' }}>
-                      <div colSpan={5} style={{ gridColumn: '1 / 6' }}>TOTALE GIORNATA</div>
+                      <div colSpan={5} style={{ gridColumn: '1 / 6' }}>DAILY TOTAL</div>
                       <div style={{ textAlign: 'center' }}>{durToH(durMin)}</div>
                       <div style={{ textAlign: 'center' }}>{pax}</div>
                       <div style={{ color: '#94a3b8', fontWeight: '500', fontSize: '9px' }}>{vTrips.length} trip</div>
@@ -290,7 +290,7 @@ export default function ReportsPage() {
             {/* Grand total */}
             {vehicles.length > 1 && (
               <div style={{ background: '#0f2340', color: 'white', borderRadius: '10px', padding: '14px 20px', display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <span style={{ fontWeight: '900', fontSize: '13px' }}>TOTALE GIORNATA</span>
+                <span style={{ fontWeight: '900', fontSize: '13px' }}>DAILY TOTAL</span>
                 <span style={{ padding: '3px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.15)', fontSize: '12px', fontWeight: '700' }}>{trips.length} trips</span>
                 <span style={{ padding: '3px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.15)', fontSize: '12px', fontWeight: '700' }}>{durToH(totalDurMin(trips))}</span>
                 <span style={{ padding: '3px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.15)', fontSize: '12px', fontWeight: '700' }}>{totalPax(trips)} pax</span>
@@ -304,11 +304,11 @@ export default function ReportsPage() {
           <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
             {/* Grid header */}
             <div style={{ display: 'grid', gridTemplateColumns: `180px repeat(7, 1fr) 90px`, borderBottom: '2px solid #e2e8f0' }}>
-              <div style={{ padding: '10px 14px', background: '#f8fafc', fontSize: '10px', fontWeight: '800', color: '#94a3b8' }}>VEICOLO</div>
+              <div style={{ padding: '10px 14px', background: '#f8fafc', fontSize: '10px', fontWeight: '800', color: '#94a3b8' }}>VEHICLE</div>
               {weekDays.map(d => (
                 <div key={d} style={{ padding: '8px 6px', background: d === isoToday() ? '#eff6ff' : '#f8fafc', textAlign: 'center', borderLeft: '1px solid #f1f5f9' }}>
                   <div style={{ fontSize: '9px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.05em' }}>
-                    {new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'short' }).toUpperCase()}
+                    {new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase()}
                   </div>
                   <div style={{ fontSize: '12px', fontWeight: '800', color: d === isoToday() ? '#2563eb' : '#374151' }}>
                     {new Date(d + 'T12:00:00Z').getUTCDate()}
@@ -320,7 +320,7 @@ export default function ReportsPage() {
 
             {/* Vehicle rows */}
             {weekVehicles.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Nessun veicolo con trip questa settimana</div>
+              <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No vehicles with trips this week</div>
             ) : weekVehicles.map((vId, vi) => {
               const total = vehicleWeekTotal(vId)
               return (
@@ -357,7 +357,7 @@ export default function ReportsPage() {
 
             {/* Day totals row */}
             <div style={{ display: 'grid', gridTemplateColumns: `180px repeat(7, 1fr) 90px`, background: '#f8fafc' }}>
-              <div style={{ padding: '10px 14px', fontSize: '10px', fontWeight: '800', color: '#64748b' }}>TOTALE / GIORNO</div>
+              <div style={{ padding: '10px 14px', fontSize: '10px', fontWeight: '800', color: '#64748b' }}>TOTAL / DAY</div>
               {weekDays.map(d => {
                 const cell = dayTotal(d)
                 return (

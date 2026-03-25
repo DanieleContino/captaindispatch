@@ -22,7 +22,7 @@ function isoAdd(d, n) {
   return dt.toISOString().split('T')[0]
 }
 function fmtDate(d) {
-  return new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+  return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 const pad2 = n => String(n).padStart(2, '0')
 function minToHHMM(min) {
@@ -33,11 +33,11 @@ function minToHHMM(min) {
 
 // ─── Status coverage ──────────────────────────────────────────
 function coverageStatus(expected, assigned) {
-  if (expected === 0 && assigned === 0) return { icon: '—',  label: 'Nessuno',   color: '#94a3b8', bg: '#f8fafc' }
+  if (expected === 0 && assigned === 0) return { icon: '—',  label: 'None',      color: '#94a3b8', bg: '#f8fafc' }
   if (expected === 0 && assigned > 0)  return { icon: '➕', label: 'Extra',     color: '#7c3aed', bg: '#f5f3ff' }
-  if (assigned === 0)                   return { icon: '❌', label: 'Mancante',  color: '#dc2626', bg: '#fef2f2' }
-  if (assigned >= expected)             return { icon: '✅', label: 'Coperto',   color: '#15803d', bg: '#f0fdf4' }
-  return                                       { icon: '⚠',  label: 'Parziale',  color: '#d97706', bg: '#fefce8' }
+  if (assigned === 0)                   return { icon: '❌', label: 'Missing',   color: '#dc2626', bg: '#fef2f2' }
+  if (assigned >= expected)             return { icon: '✅', label: 'Covered',   color: '#15803d', bg: '#f0fdf4' }
+  return                                       { icon: '⚠',  label: 'Partial',   color: '#d97706', bg: '#fefce8' }
 }
 
 // ─── Riga hotel nella tabella ──────────────────────────────────
@@ -71,7 +71,7 @@ function HotelRow({ hotel, expected, assignedCrew, trips }) {
             <div>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.05em', marginBottom: '6px' }}>EXPECTED ({expected.length})</div>
               {expected.length === 0 ? (
-                <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>Nessuno</div>
+                <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>None</div>
               ) : expected.map(c => (
                 <div key={c.id} style={{ fontSize: '11px', color: '#374151', padding: '2px 0', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
                   <span>{c.full_name}</span>
@@ -83,7 +83,7 @@ function HotelRow({ hotel, expected, assignedCrew, trips }) {
             <div>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.05em', marginBottom: '6px' }}>ASSEGNATI ({assignedCrew.length})</div>
               {trips.length === 0 ? (
-                <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>Nessun trip</div>
+                <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>No trips</div>
               ) : trips.map((t, i) => (
                 <div key={i} style={{ fontSize: '11px', color: '#374151', padding: '3px 0', borderBottom: '1px solid #f1f5f9' }}>
                   <span style={{ fontWeight: '700', fontFamily: 'monospace' }}>{t.trip_id}</span>
@@ -173,7 +173,7 @@ function CoverageSection({ title, icon, color, hotels, allExpected, allTrips, lo
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 90px 90px', gap: '8px', padding: '6px 12px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
             <div>Hotel</div>
             <div style={{ textAlign: 'center' }}>Exp.</div>
-            <div style={{ textAlign: 'center' }}>Assegnati</div>
+            <div style={{ textAlign: 'center' }}>Assigned</div>
             <div style={{ textAlign: 'center' }}>Status</div>
             <div style={{ textAlign: 'center' }}>Trips</div>
           </div>
@@ -299,9 +299,9 @@ export default function HubCoveragePage() {
         <input type="date" value={date} onChange={e => setDate(e.target.value)}
           style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
         <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
-        <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Oggi</button>
+        <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
         <button onClick={loadCoverage} style={{ marginLeft: 'auto', background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-          🔄 Aggiorna
+          🔄 Refresh
         </button>
       </div>
 
@@ -309,7 +309,7 @@ export default function HubCoveragePage() {
       <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px' }}>
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
-            ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> non impostato in .env.local
+            ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> not set in .env.local
           </div>
         )}
 
@@ -336,7 +336,7 @@ export default function HubCoveragePage() {
           <div style={{ background: 'white', borderRadius: '10px', padding: '20px 24px', border: '1px solid #e2e8f0' }}>
 
             <CoverageSection
-              title={`ARRIVI da ${hubName}`}
+              title={`ARRIVALS from ${hubName}`}
               icon="🛬"
               color="#16a34a"
               transferClass="ARRIVAL"
@@ -346,7 +346,7 @@ export default function HubCoveragePage() {
             />
 
             <CoverageSection
-              title={`PARTENZE verso ${hubName}`}
+              title={`DEPARTURES to ${hubName}`}
               icon="🛫"
               color="#ea580c"
               transferClass="DEPARTURE"

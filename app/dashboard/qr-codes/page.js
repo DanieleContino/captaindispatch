@@ -25,8 +25,8 @@ import { useRouter } from 'next/navigation'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 
-function qrImgUrl(data, size = 160) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}&margin=8&format=png`
+function qrImgUrl(data, size = 160, ecc = 'M') {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}&margin=10&format=png&ecc=${ecc}`
 }
 
 // Determina base URL (localhost in dev, dominio in prod)
@@ -221,9 +221,9 @@ export default function QrCodesPage() {
                   return (
                     <div key={c.id} className="qr-card" style={{ background:'white', borderRadius:'10px', padding:'14px 16px', border:'1px solid #e2e8f0', display:'flex', gap:'12px', alignItems:'flex-start', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={qrImgUrl(scanUrl, 70)} alt={`QR ${c.id}`}
-                        width={56} height={56}
-                        style={{ display:'block', borderRadius:'5px', flexShrink:0 }} />
+                      <img src={qrImgUrl(scanUrl, 200)} alt={`QR ${c.id}`}
+                        width={90} height={90}
+                        style={{ display:'block', borderRadius:'6px', flexShrink:0 }} />
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:'13px', fontWeight:'800', color:'#0f172a', marginBottom:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.full_name}</div>
                         <div style={{ fontSize:'10px', color:'#64748b', marginBottom:'2px' }}>{c.department}</div>

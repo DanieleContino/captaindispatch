@@ -23,7 +23,7 @@ function isoAdd(d, n) {
   return dt.toISOString().split('T')[0]
 }
 function fmtDate(d) {
-  return new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
+  return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 const pad2 = n => String(n).padStart(2, '0')
 function minToHHMM(min) {
@@ -74,7 +74,7 @@ function AssignedRow({ member, trips, locsMap }) {
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
             {member.travel_status}
           </span>
-          {dep && <span style={{ fontSize: '10px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: '5px', border: '1px solid #fecaca' }}>✈ DOMANI</span>}
+          {dep && <span style={{ fontSize: '10px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: '5px', border: '1px solid #fecaca' }}>✈ TOMORROW</span>}
         </div>
         <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>🏨 {hotel}</div>
         {/* Trip assegnati */}
@@ -128,12 +128,12 @@ function UnassignedRow({ member, locsMap }) {
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
             {member.travel_status}
           </span>
-          {dep && <span style={{ fontSize: '10px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: '5px', border: '1px solid #fecaca' }}>✈ DOMANI</span>}
+          {dep && <span style={{ fontSize: '10px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: '5px', border: '1px solid #fecaca' }}>✈ TOMORROW</span>}
         </div>
         <div style={{ fontSize: '11px', color: '#64748b' }}>🏨 {hotel}</div>
       </div>
       <a href="/dashboard/trips" style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fca5a5', padding: '4px 10px', borderRadius: '7px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-        + Assegna
+        + Assign
       </a>
     </div>
   )
@@ -296,7 +296,7 @@ export default function PaxCoveragePage() {
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
           <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
-          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Oggi</button>
+          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -304,7 +304,7 @@ export default function PaxCoveragePage() {
           {['ALL', 'UNASSIGNED', 'ASSIGNED'].map(s => (
             <button key={s} onClick={() => setSO(s)}
               style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(showOnly === s ? (s === 'UNASSIGNED' ? { background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' } : s === 'ASSIGNED' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' } : { background: '#0f2340', color: 'white', borderColor: '#0f2340' }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
-              {s === 'ALL' ? `Tutti (${crew.length})` : s === 'UNASSIGNED' ? `❌ Senza transfer (${totalUnassigned})` : `✅ Assegnati (${totalAssigned})`}
+              {s === 'ALL' ? `All (${crew.length})` : s === 'UNASSIGNED' ? `❌ Without transfer (${totalUnassigned})` : `✅ Assigned (${totalAssigned})`}
             </button>
           ))}
           {/* Travel status filter */}
@@ -323,7 +323,7 @@ export default function PaxCoveragePage() {
           {departments.length > 1 && (
             <select value={filterDept} onChange={e => setFD(e.target.value)}
               style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
-              <option value="ALL">Tutti dept</option>
+              <option value="ALL">All depts</option>
               {departments.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           )}
@@ -331,11 +331,11 @@ export default function PaxCoveragePage() {
           {hotels.length > 1 && (
             <select value={filterHotel} onChange={e => setFH(e.target.value)}
               style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
-              <option value="ALL">Tutti hotel</option>
+              <option value="ALL">All hotels</option>
               {hotels.map(h => <option key={h} value={h}>{locsMap[h] || h}</option>)}
             </select>
           )}
-          <input type="text" placeholder="Cerca…" value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '120px' }} />
           <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
@@ -346,7 +346,7 @@ export default function PaxCoveragePage() {
 
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
-            ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> non impostato in .env.local
+            ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> not set in .env.local
           </div>
         )}
 
@@ -356,7 +356,7 @@ export default function PaxCoveragePage() {
             {/* Progress bar */}
             <div style={{ flex: 1, minWidth: '200px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>
-                <span>Coverage transfer</span>
+                <span>Transfer coverage</span>
                 <span style={{ color: pct === 100 ? '#15803d' : pct >= 75 ? '#d97706' : '#dc2626' }}>{pct}%</span>
               </div>
               <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
@@ -367,9 +367,9 @@ export default function PaxCoveragePage() {
             {/* Stats */}
             <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
               {[
-                { n: crew.length, l: 'Crew totale', c: '#374151', bg: '#f8fafc', b: '#e2e8f0' },
-                { n: totalAssigned, l: 'Con transfer', c: '#15803d', bg: '#f0fdf4', b: '#86efac' },
-                { n: totalUnassigned, l: 'Senza transfer', c: totalUnassigned > 0 ? '#dc2626' : '#94a3b8', bg: totalUnassigned > 0 ? '#fef2f2' : '#f8fafc', b: totalUnassigned > 0 ? '#fecaca' : '#e2e8f0' },
+                { n: crew.length, l: 'Total crew', c: '#374151', bg: '#f8fafc', b: '#e2e8f0' },
+                { n: totalAssigned, l: 'With transfer', c: '#15803d', bg: '#f0fdf4', b: '#86efac' },
+                { n: totalUnassigned, l: 'Without transfer', c: totalUnassigned > 0 ? '#dc2626' : '#94a3b8', bg: totalUnassigned > 0 ? '#fef2f2' : '#f8fafc', b: totalUnassigned > 0 ? '#fecaca' : '#e2e8f0' },
               ].map(s => (
                 <div key={s.l} style={{ textAlign: 'center', padding: '8px 14px', borderRadius: '10px', background: s.bg, border: `1px solid ${s.b}` }}>
                   <div style={{ fontSize: '22px', fontWeight: '900', color: s.c, lineHeight: 1 }}>{s.n}</div>
@@ -395,16 +395,16 @@ export default function PaxCoveragePage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-            {/* ══ SENZA TRANSFER (prima, più urgente) ══ */}
+            {/* ══ WITHOUT TRANSFER (prima, più urgente) ══ */}
             {(showOnly === 'ALL' || showOnly === 'UNASSIGNED') && unassigned.length > 0 && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #ef4444' }}>
                   <span style={{ fontSize: '16px' }}>❌</span>
-                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>SENZA TRANSFER</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>WITHOUT TRANSFER</span>
                   <span style={{ fontSize: '11px', fontWeight: '700', background: '#ef4444', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
                     {unassigned.length} crew
                   </span>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— nessun trip assegnato per {fmtDate(date)}</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— no trips assigned for {fmtDate(date)}</span>
                   <a href="/dashboard/trips" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '3px 10px', borderRadius: '7px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                     Vai a Trips →
                   </a>
@@ -422,7 +422,7 @@ export default function PaxCoveragePage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #22c55e' }}>
                   <span style={{ fontSize: '16px' }}>✅</span>
-                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>CON TRANSFER ASSEGNATO</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>WITH ASSIGNED TRANSFER</span>
                   <span style={{ fontSize: '11px', fontWeight: '700', background: '#22c55e', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
                     {assigned.length} crew
                   </span>
