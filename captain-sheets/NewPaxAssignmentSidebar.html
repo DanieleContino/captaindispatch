@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      margin: 0;
+      padding: 16px;
+      background: #f8fafc;
+      color: #1f2937;
+    }
+
+    h3 {
+      font-size: 20px;
+      margin: 0 0 12px 0;
+    }
+
+    .trip-summary {
+      margin-bottom: 16px;
+      padding: 10px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      line-height: 1.5;
+    }
+
+    .section {
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .crew-list,
+    .assigned-list {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 10px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .crew-item,
+    .assigned-item {
+      padding: 8px 6px;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .crew-item:last-child,
+    .assigned-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .crew-row,
+    .assigned-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .crew-main,
+    .assigned-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .crew-name,
+    .assigned-name,
+    .crew-details,
+    .assigned-details,
+    .crew-reason,
+    .crew-time {
+      display: block;
+    }
+
+    .crew-name,
+    .assigned-name {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .crew-details,
+    .assigned-details {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .crew-item.busy {
+      opacity: 0.78;
+      border-left: 3px solid #d9534f;
+      padding-left: 10px;
+      background: #fafafa;
+    }
+    .crew-row-ref {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+.trip-link {
+  color: #d9534f;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.trip-link:hover {
+  text-decoration: underline;
+}
+    .crew-reason {
+      font-size: 11px;
+      color: #d9534f;
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+
+    .crew-time {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+
+    .empty {
+      font-size: 12px;
+      color: #94a3b8;
+      padding: 6px 2px;
+    }
+
+    .buttons {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      padding: 7px 12px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button.add {
+      background-color: #15803d;
+      color: white;
+    }
+
+    button.remove {
+      background-color: #b91c1c;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    label.crew-select {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    input[type="checkbox"] {
+      margin-top: 2px;
+      flex: 0 0 auto;
+    }
+
+    .capacity-banner {
+      display: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .capacity-banner.full {
+      display: block;
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+
+    .capacity-banner.over {
+      display: block;
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+    }</style>
+</head>
+<body>
+  <h3>Pax Assignment</h3>
+
+  <div class="trip-summary">
+    <div><strong>Trip:</strong> <?= payload.tripId || "" ?></div>
+    <div><strong>Date:</strong> <?= payload.tripDate || "" ?></div>
+    <div><strong>Route:</strong> <?= payload.pickup || "" ?> → <?= payload.dropoff || "" ?></div>
+    <div><strong>Pickup Time:</strong> <?= payload.pickupTime || "" ?></div>
+    <div><strong>Call Time:</strong> <?= payload.callTime || "" ?></div>
+    <? if (payload.vehicleId) { ?>
+    <div><strong>Vehicle:</strong> <?= payload.vehicleId ?>
+      <? if (payload.capacity) { ?> — capacity <?= payload.capacity ?><? } ?>
+    </div>
+    <? } ?>
+  </div>
+
+  <div id="capacityBanner" class="capacity-banner"></div>
+
+  <div class="section">
+    <div class="section-title">Available Crew</div>
+    <div class="crew-list" id="availableCrewList">
+      <? if (!payload.availableCrew || !payload.availableCrew.length) { ?>
+        <div class="empty">No available crew</div>
+      <? } else { ?>
+        <? payload.availableCrew.forEach(function(c){ ?>
+          <div class="crew-item">
+            <label class="crew-select">
+              <input type="checkbox" class="crew-checkbox" value="<?= c.crewId ?>">
+              <div class="crew-main">
+                <span class="crew-name"><?= c.fullName || "" ?></span>
+                <span class="crew-details">
+                  <?= c.dept || "" ?><? if (c.hotelName) { ?> • <?= c.hotelName ?><? } ?>
+                </span>
+              </div>
+            </label>
+          </div>
+        <? }); ?>
+      <? } ?>
+    </div>
+  </div>
+
+  
+
+  <div class="section">
+    <div class="section-title">Assigned Passengers</div>
+    <div class="assigned-list" id="assignedCrewList">
+      <? if (!payload.assignedPassengers || !payload.assignedPassengers.length) { ?>
+        <div class="empty">No passengers assigned</div>
+      <? } else { ?>
+        <? payload.assignedPassengers.forEach(function(c){ ?>
+          <div class="assigned-item">
+            <div class="assigned-row">
+              <div class="assigned-main">
+                <span class="assigned-name"><?= c.fullName || "" ?></span>
+                <span class="assigned-details"><?= c.dept || "" ?></span>
+              </div>
+              <input type="checkbox" class="assigned-checkbox" value="<?= c.crewId ?>">
+            </div>
+          </div>
+        <? }); ?>
+      <? } ?>
+    </div>
+  </div>
+
+  <div class="buttons">
+    <button class="add" onclick="addSelected()">ADD SELECTED</button>
+    <button class="remove" onclick="removeSelected()">REMOVE SELECTED</button>
+  </div>
+
+  <script>
+    const TRIP_ID  = "<?= payload.tripId ?>";
+    const TRIP_ROW = <?= payload.tripRow ?>;
+    const CAPACITY = <?= payload.capacity || 0 ?>;
+
+    function getCheckedValues(className) {
+      const checkboxes = document.querySelectorAll("." + className + ":checked");
+      return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function setButtonsDisabled(disabled) {
+      document.querySelectorAll("button").forEach(btn => btn.disabled = disabled);
+    }
+
+    function updateCapacityBanner() {
+      if (!CAPACITY) return;
+      const count  = document.querySelectorAll(".assigned-item:not(.empty-item)").length;
+      const banner = document.getElementById("capacityBanner");
+      if (!banner) return;
+
+      banner.className = "capacity-banner";
+
+      if (count > CAPACITY) {
+        banner.className = "capacity-banner over";
+        banner.textContent = "⚠ Over capacity — " + count + " / " + CAPACITY;
+      } else if (count === CAPACITY) {
+        banner.className = "capacity-banner full";
+        banner.textContent = "✓ Full — " + count + " / " + CAPACITY;
+      }
+    }
+
+    function addSelected() {
+      const selected = getCheckedValues("crew-checkbox");
+      if (!selected.length) return;
+
+      setButtonsDisabled(true);
+
+      google.script.run
+        .withSuccessHandler(() => {
+          moveSelectedToAssigned(selected);
+          setButtonsDisabled(false);
+          updateCapacityBanner();
+        })
+        .withFailureHandler(err => {
+          setButtonsDisabled(false);
+          alert(err.message || err);
+        })
+        .addSelectedPassengers(TRIP_ID, TRIP_ROW, selected);
+    }
+
+    function removeSelected() {
+      const selected = getCheckedValues("assigned-checkbox");
+      if (!selected.length) return;
+
+      setButtonsDisabled(true);
+
+      google.script.run
+        .withSuccessHandler(() => {
+          moveSelectedToAvailable(selected);
+          setButtonsDisabled(false);
+          updateCapacityBanner();
+        })
+        .withFailureHandler(err => {
+          setButtonsDisabled(false);
+          alert(err.message || err);
+        })
+        .removeSelectedPassengers(TRIP_ID, TRIP_ROW, selected);
+    }
+
+    function moveSelectedToAssigned(selectedIds) {
+      const available = document.getElementById("availableCrewList");
+      const assigned = document.getElementById("assignedCrewList");
+
+      selectedIds.forEach(id => {
+        const checkbox = available.querySelector(`.crew-checkbox[value="${cssEscape(id)}"]`);
+        if (!checkbox) return;
+
+        const item = checkbox.closest(".crew-item");
+        if (!item) return;
+
+        const nameEl = item.querySelector(".crew-name");
+        const detailsEl = item.querySelector(".crew-details");
+
+        const fullName = nameEl ? nameEl.textContent : "";
+        const details = detailsEl ? detailsEl.textContent : "";
+
+        const newItem = document.createElement("div");
+        newItem.className = "assigned-item";
+        newItem.innerHTML = `
+          <div class="assigned-row">
+            <div class="assigned-main">
+              <span class="assigned-name">${escapeHtml(fullName)}</span>
+              <span class="assigned-details">${escapeHtml(details)}</span>
+            </div>
+            <input type="checkbox" class="assigned-checkbox" value="${escapeHtml(id)}">
+          </div>
+        `;
+
+        if (assigned.querySelector(".empty")) assigned.innerHTML = "";
+        assigned.appendChild(newItem);
+        item.remove();
+      });
+
+      if (!available.children.length) {
+        available.innerHTML = '<div class="empty">No available crew</div>';
+      }
+    }
+
+    function moveSelectedToAvailable(selectedIds) {
+      const available = document.getElementById("availableCrewList");
+      const assigned = document.getElementById("assignedCrewList");
+
+      selectedIds.forEach(id => {
+        const checkbox = assigned.querySelector(`.assigned-checkbox[value="${cssEscape(id)}"]`);
+        if (!checkbox) return;
+
+        const item = checkbox.closest(".assigned-item");
+        if (!item) return;
+
+        const nameEl = item.querySelector(".assigned-name");
+        const detailsEl = item.querySelector(".assigned-details");
+
+        const fullName = nameEl ? nameEl.textContent : "";
+        const details = detailsEl ? detailsEl.textContent : "";
+
+        const newItem = document.createElement("div");
+        newItem.className = "crew-item";
+        newItem.innerHTML = `
+          <label class="crew-select">
+            <input type="checkbox" class="crew-checkbox" value="${escapeHtml(id)}">
+            <div class="crew-main">
+              <span class="crew-name">${escapeHtml(fullName)}</span>
+              <span class="crew-details">${escapeHtml(details)}</span>
+            </div>
+          </label>
+        `;
+
+        if (available.querySelector(".empty")) available.innerHTML = "";
+        available.appendChild(newItem);
+        item.remove();
+      });
+
+      if (!assigned.children.length) {
+        assigned.innerHTML = '<div class="empty">No passengers assigned</div>';
+      }
+    }
+function goToTripRow(tripRow) {
+  google.script.run
+    .withFailureHandler(err => {
+      alert(err.message || err);
+    })
+    .goToTripRowFromPaxSidebar_(tripRow);
+}
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function cssEscape(value) {
+      return String(value || "").replace(/["\\]/g, "\\$&");
+    }
+
+    // Controlla capacity al caricamento
+    document.addEventListener("DOMContentLoaded", updateCapacityBanner);
+  </script>
+</body>
+</html>

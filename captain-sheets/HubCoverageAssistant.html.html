@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body{
+      font-family:Arial,sans-serif;
+      margin:0;
+      padding:16px;
+      background:#f1f5f9;
+      font-size:13px;
+      color:#1f2937;
+    }
+
+    .toolbar{
+      margin-bottom:12px;
+      display:flex;
+      gap:8px;
+    }
+
+    button{
+      border:0;
+      padding:8px 12px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:bold;
+      background:#2563eb;
+      color:white;
+    }
+
+    .header{
+      background:#0f766e;
+      color:white;
+      padding:14px;
+      border-radius:10px;
+      margin-bottom:14px;
+    }
+
+    .header h2{
+      margin:0 0 6px 0;
+      font-size:18px;
+    }
+
+    .error{
+      background:#fee2e2;
+      color:#991b1b;
+      padding:12px;
+      border-radius:10px;
+      margin-bottom:12px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+      align-items:start;
+    }
+
+    .section{
+      background:white;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid #e2e8f0;
+    }
+
+    .section-title{
+      font-weight:bold;
+      margin-bottom:10px;
+      font-size:14px;
+      text-transform:uppercase;
+      color:#334155;
+    }
+
+    .summary{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:8px;
+      margin-bottom:12px;
+    }
+
+    .summary-card{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      padding:8px;
+      border-radius:8px;
+      font-size:12px;
+    }
+
+    .summary-card b{
+      font-size:15px;
+      color:#0f172a;
+    }
+
+    .flight{
+      background:#ffffff;
+      border:1px solid #cbd5e1;
+      border-radius:10px;
+      padding:10px;
+      margin-bottom:12px;
+    }
+
+    .flight-title{
+      font-weight:bold;
+      margin-bottom:6px;
+      font-size:13px;
+      color:#0f172a;
+    }
+
+    .flight-meta{
+      font-size:12px;
+      color:#475569;
+      line-height:1.5;
+      margin-bottom:8px;
+    }
+
+    .vehicle{
+      background:#e0f2fe;
+      border-radius:8px;
+      padding:8px;
+      margin-top:6px;
+      margin-bottom:8px;
+      font-size:12px;
+      color:#075985;
+    }
+
+    .driver-card{
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      border-radius:8px;
+      padding:8px;
+      margin-top:6px;
+      font-size:12px;
+      color:#1e3a8a;
+    }
+
+    .hotel-card{
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:8px;
+      padding:8px;
+      margin-top:8px;
+    }
+
+    .hotel-top{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:flex-start;
+      margin-bottom:6px;
+    }
+
+    .hotel-name{
+      font-weight:bold;
+      color:#0f172a;
+    }
+
+    .hotel-id{
+      font-size:11px;
+      color:#64748b;
+      margin-top:2px;
+    }
+
+    .status{
+      font-size:11px;
+      padding:3px 7px;
+      border-radius:999px;
+      text-transform:uppercase;
+      font-weight:bold;
+      white-space:nowrap;
+    }
+
+    .missing{background:#fee2e2;color:#991b1b;}
+    .partial{background:#fef3c7;color:#92400e;}
+    .covered{background:#dcfce7;color:#166534;}
+    .extra{background:#e0f2fe;color:#075985;}
+
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-bottom:6px;
+    }
+
+    .chip{
+      background:#e2e8f0;
+      border-radius:999px;
+      padding:4px 8px;
+      font-size:11px;
+      font-weight:bold;
+      color:#334155;
+    }
+
+    .sub-title{
+      font-size:11px;
+      text-transform:uppercase;
+      font-weight:bold;
+      color:#475569;
+      margin-top:8px;
+      margin-bottom:4px;
+    }
+
+    .names{
+      background:white;
+      border:1px solid #e2e8f0;
+      border-radius:6px;
+      padding:6px 8px;
+      font-size:12px;
+      line-height:1.5;
+      color:#334155;
+    }
+
+    .stop{
+      background:white;
+      border:1px solid #e2e8f0;
+      border-radius:6px;
+      padding:6px 8px;
+      margin-top:6px;
+      font-size:12px;
+      line-height:1.45;
+    }
+
+    .empty{
+      background:#f8fafc;
+      border:1px dashed #cbd5e1;
+      border-radius:8px;
+      padding:10px;
+      color:#64748b;
+      font-size:12px;
+    }
+
+    @media (max-width: 900px){
+      .grid{
+        grid-template-columns:1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <button onclick="google.script.host.close()">Close</button>
+    <button onclick="google.script.run.refreshHubCoverageAssistant()">Refresh</button>
+  </div>
+
+  <? if (payload.error) { ?>
+    <div class="error"><?= payload.error ?></div>
+  <? } else { ?>
+
+    <div class="header">
+  <h2>Hub Coverage Assistant</h2>
+
+  <div class="chips" style="margin-top:8px;">
+    <div class="chip">Trip: <?= payload.selectedTrip && payload.selectedTrip.tripId ? payload.selectedTrip.tripId : "-" ?></div>
+    <div class="chip">Rows: <?= payload.selectedTrip && payload.selectedTrip.row ? payload.selectedTrip.row : "-" ?></div>
+    <div class="chip">Direction: <?= payload.selectedDirection || "-" ?></div>
+    <div class="chip">Service: <?= payload.selectedTrip && payload.selectedTrip.serviceType ? payload.selectedTrip.serviceType : "-" ?></div>
+    <div class="chip">Multi Dropoff: <?= payload.selectedTrip && payload.selectedTrip.isMultiDropoff ? payload.selectedTrip.isMultiDropoff : "-" ?></div>
+    <div class="chip">Unit: <?= payload.selectedTrip && payload.selectedTrip.unit ? payload.selectedTrip.unit : "-" ?></div>
+  </div>
+
+  <div style="margin-top:10px; line-height:1.65;">
+    <div><strong>Date:</strong> <?= payload.date || "-" ?></div>
+    <div><strong>Hub:</strong> <?= payload.selectedTrip && payload.selectedTrip.hubName ? payload.selectedTrip.hubName : (payload.hubName || "-") ?><? if (payload.selectedTrip && payload.selectedTrip.hubId) { ?> (<?= payload.selectedTrip.hubId ?>)<? } ?></div>
+    <div><strong>Hotels Involved:</strong> <?= payload.selectedTrip && payload.selectedTrip.hotelNames && payload.selectedTrip.hotelNames.length ? payload.selectedTrip.hotelNames.join(", ") : "-" ?></div>
+    <div><strong>Stops:</strong> <?= payload.selectedTrip && payload.selectedTrip.hotelCount ? payload.selectedTrip.hotelCount : "-" ?></div>
+    <div><strong>Flight / Arrival / Gate:</strong> <?= payload.selectedTrip && payload.selectedTrip.flightNo ? payload.selectedTrip.flightNo : "-" ?> | <?= payload.selectedTrip && payload.selectedTrip.arrTime ? payload.selectedTrip.arrTime : "-" ?> | <?= payload.selectedTrip && payload.selectedTrip.terminalGate ? payload.selectedTrip.terminalGate : "-" ?></div>
+    <div><strong>Pickup Time:</strong> <?= payload.selectedTrip && payload.selectedTrip.pickupTime ? payload.selectedTrip.pickupTime : "-" ?></div>
+    <div><strong>Vehicle / Driver:</strong> <?= payload.selectedTrip && payload.selectedTrip.vehicleId ? payload.selectedTrip.vehicleId : "-" ?> / <?= payload.selectedTrip && payload.selectedTrip.driverName ? payload.selectedTrip.driverName : "-" ?></div>
+    <div><strong>Total Pax:</strong> <?= payload.selectedTrip && payload.selectedTrip.totalPax != null ? payload.selectedTrip.totalPax : "0" ?></div>
+
+    <? if (payload.selectedTrip && payload.selectedTrip.notes) { ?>
+      <div><strong>Notes:</strong> <?= payload.selectedTrip.notes ?></div>
+    <? } ?>
+
+    <? if (payload.selectedTrip && payload.selectedTrip.hotelGroups && payload.selectedTrip.hotelGroups.length) { ?>
+      <div style="margin-top:8px;">
+        <strong>Pax by Hotel:</strong>
+        <? payload.selectedTrip.hotelGroups.forEach(function(h){ ?>
+          <div style="margin-top:4px;">
+            <strong><?= h.hotelName || "-" ?></strong> (<?= h.count || 0 ?>):
+            <?= h.passengers && h.passengers.length ? h.passengers.join(", ") : "-" ?>
+          </div>
+        <? }); ?>
+      </div>
+    <? } ?>
+  </div>
+</div>
+
+    <div class="grid">
+      <? payload.sections.forEach(function(section){ ?>
+        <div class="section">
+
+          <div class="section-title"><?= section.direction ?> Transfers</div>
+
+          <div class="summary">
+            <div class="summary-card">Expected<br><b><?= section.expectedTotal || 0 ?></b></div>
+            <div class="summary-card">Assigned<br><b><?= section.assignedTotal || 0 ?></b></div>
+            <div class="summary-card">Stops<br><b><?= section.stopsCount || 0 ?></b></div>
+            <div class="summary-card">Covered Hotels<br><b><?= section.coveredHotels || 0 ?></b></div>
+            <div class="summary-card">Partial Hotels<br><b><?= section.partialHotels || 0 ?></b></div>
+            <div class="summary-card">Missing Hotels<br><b><?= section.missingHotels || 0 ?></b></div>
+          </div>
+
+          <? if (section.missingPassengerGroups && section.missingPassengerGroups.length) { ?>
+            <div class="sub-title">Passengers Still Missing Trip</div>
+            <? section.missingPassengerGroups.forEach(function(mg){ ?>
+              <div class="hotel-card" style="border-color:#fecaca;background:#fff7f7;">
+                <div class="hotel-top">
+                  <div>
+                    <div class="hotel-name"><?= mg.hotelName || "-" ?></div>
+                    <div class="hotel-id"><?= mg.hotelId || "" ?></div>
+                  </div>
+                  <div class="status missing"><?= mg.count || 0 ?> missing</div>
+                </div>
+                <div class="names">
+                  <?= mg.passengers.join(", ") ?>
+                </div>
+              </div>
+            <? }); ?>
+          <? } ?>
+
+          <? if (section.flights && section.flights.length) { ?>
+            <? section.flights.forEach(function(flight){ ?>
+              <div class="flight">
+
+                <div class="flight-title">
+                  Flight <?= flight.flight || "NO FLIGHT" ?>
+                  <? if (flight.arrTime) { ?> | <?= flight.arrTime ?><? } ?>
+                </div>
+
+                <div class="flight-meta">
+                  <div><strong>Total Pax:</strong> <?= flight.totalPax || 0 ?></div>
+                  <div><strong>Terminal/Gate:</strong> <?= flight.terminalGate || "-" ?></div>
+                  <div><strong>Covered Hotels:</strong> <?= flight.coveredHotels || 0 ?> |
+                    <strong>Partial:</strong> <?= flight.partialHotels || 0 ?> |
+                    <strong>Missing:</strong> <?= flight.missingHotels || 0 ?>
+                  </div>
+                  <? if (flight.missingPassengerTotal) { ?>
+                    <div><strong>Passengers Still Missing Trip:</strong> <?= flight.missingPassengerTotal ?></div>
+                  <? } ?>
+                </div>
+
+                <div class="vehicle">
+                  <div><strong>Vehicle Plan:</strong> <?= flight.vehiclePlanText || "No vehicle plan" ?></div>
+                </div>
+
+                
+
+               
+
+                <? if (flight.hotelList && flight.hotelList.length) { ?>
+                  <? flight.hotelList.forEach(function(h){ ?>
+                    <div class="hotel-card">
+
+                      <div class="hotel-top">
+                        <div>
+                          <div class="hotel-name"><?= h.hotelName || "-" ?></div>
+                          <div class="hotel-id"><?= h.hotelId || "" ?></div>
+                        </div>
+                        <div class="status <?= h.status ?>"><?= h.status || "missing" ?></div>
+                      </div>
+
+                      <div class="chips">
+                        <div class="chip">Expected: <?= h.expectedCount || 0 ?></div>
+                        <div class="chip">Assigned: <?= h.assignedCount || 0 ?></div>
+                        <div class="chip">Matched: <?= h.matchedCount || 0 ?></div>
+                        <? if (h.missingCount) { ?><div class="chip">Missing: <?= h.missingCount ?></div><? } ?>
+                      </div>
+
+                      <div class="sub-title">Expected Passengers</div>
+                      <div class="names">
+                        <? if (h.expectedPassengers && h.expectedPassengers.length) { ?>
+                          <?= h.expectedPassengers.join(", ") ?>
+                        <? } else { ?>
+                          No expected passengers.
+                        <? } ?>
+                      </div>
+
+                      <div class="sub-title">Assigned Passengers</div>
+                      <div class="names">
+                        <? if (h.assignedPassengers && h.assignedPassengers.length) { ?>
+                          <?= h.assignedPassengers.join(", ") ?>
+                        <? } else { ?>
+                          No assigned passengers.
+                        <? } ?>
+                      </div>
+
+                      <? if (h.missingPassengers && h.missingPassengers.length) { ?>
+                        <div class="sub-title">Passengers Missing Trip</div>
+                        <div class="names" style="border-color:#fecaca;background:#fff7f7;">
+                          <?= h.missingPassengers.join(", ") ?>
+                        </div>
+                      <? } ?>
+
+                      <div class="sub-title">Assigned Stops</div>
+                      <? if (flight.stops && flight.stops.length) { ?>
+                        <? 
+                          var hotelStops = flight.stops.filter(function(s){
+                            return s.hotelId === h.hotelId;
+                          });
+                        ?>
+                        <? if (hotelStops.length) { ?>
+                          <? hotelStops.forEach(function(stop){ ?>
+                            <div class="stop">
+                              <div><strong>Trip:</strong> <?= stop.tripId || "-" ?> | <strong>Row:</strong> <?= stop.row || "-" ?></div>
+<div><strong>Route:</strong> <?= stop.pickup || "-" ?> → <?= stop.dropoff || "-" ?></div>
+<div>
+  <strong>Assigned:</strong> <?= stop.vehicleId || "-" ?>
+  <? if (stop.signCode) { ?> | <strong>Sign:</strong> <?= stop.signCode ?><? } ?>
+  <? if (stop.driverName) { ?> | <strong>Driver:</strong> <?= stop.driverName ?><? } ?>
+</div>
+<div><strong>Pax:</strong> <?= stop.paxCount || 0 ?></div>
+                              <div><strong>Passengers:</strong>
+                                <? if (stop.passengers && stop.passengers.length) { ?>
+                                  <?= stop.passengers.join(", ") ?>
+                                <? } else { ?>
+                                  -
+                                <? } ?>
+                              </div>
+                            </div>
+                          <? }); ?>
+                        <? } else { ?>
+                          <div class="empty">No assigned stops for this hotel.</div>
+                        <? } ?>
+                      <? } else { ?>
+                        <div class="empty">No assigned stops for this flight.</div>
+                      <? } ?>
+
+                    </div>
+                  <? }); ?>
+                <? } else { ?>
+                  <div class="empty">No hotel breakdown found for this flight.</div>
+                <? } ?>
+
+              </div>
+            <? }); ?>
+          <? } else { ?>
+            <div class="empty">No flights found.</div>
+          <? } ?>
+
+        </div>
+      <? }); ?>
+    </div>
+
+  <? } ?>
+
+</body>
+</html>

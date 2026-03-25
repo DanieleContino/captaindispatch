@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; font-size:13px; background:#f8fafc; color:#1f2937; }
+
+    .toolbar { background:#1a3a5c; color:white; padding:10px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+    .toolbar h1 { font-size:15px; font-weight:700; }
+    .toolbar .sub { font-size:11px; opacity:0.75; margin-top:1px; }
+    .date-picker { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); border-radius:6px; color:white; padding:5px 9px; font-size:12px; cursor:pointer; }
+    .date-picker::-webkit-calendar-picker-indicator { filter:invert(1); }
+    .btn-refresh { background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.3); color:white; border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; font-weight:600; }
+    .btn-refresh:hover { background:rgba(255,255,255,0.28); }
+
+    .content { padding:14px 16px 20px; }
+    .summary-bar { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+    .chip { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+
+    .vehicle-list { display:flex; flex-direction:column; gap:10px; }
+    .vehicle-card { background:white; border:1.5px solid #e2e8f0; border-radius:12px; overflow:hidden; }
+    .vehicle-card.s-busy  { border-left:4px solid #ef4444; }
+    .vehicle-card.s-free  { border-left:4px solid #22c55e; }
+    .vehicle-card.s-idle  { border-left:4px solid #94a3b8; }
+    .vehicle-card.s-done  { border-left:4px solid #f59e0b; }
+
+    .vh { display:flex; align-items:center; padding:10px 14px 8px; cursor:pointer; gap:10px; user-select:none; }
+    .vh:hover { background:#f8fafc; }
+    .vh-info { flex:1; min-width:0; }
+    .vh-name { font-weight:700; font-size:14px; color:#0f172a; }
+    .vh-driver { font-size:12px; color:#475569; margin-top:1px; }
+    .vh-right { display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+    .vh-eta { text-align:right; line-height:1.5; }
+    .eta-free { font-size:11px; font-weight:700; color:#b91c1c; }
+    .eta-return { font-size:11px; color:#64748b; }
+    .badge { font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; }
+    .badge-busy { background:#fee2e2; color:#b91c1c; }
+    .badge-free { background:#dcfce7; color:#15803d; }
+    .badge-idle { background:#f1f5f9; color:#64748b; }
+    .badge-done { background:#fef9c3; color:#92400e; }
+    .chevron { font-size:12px; color:#94a3b8; transition:transform 0.2s; flex:0 0 auto; }
+    .chevron.open { transform:rotate(180deg); }
+
+    .vh-stats { display:flex; gap:14px; padding:0 14px 8px; font-size:11px; color:#64748b; }
+    .vh-stats strong { color:#334155; }
+    .fs-green { color:#15803d; font-weight:700; }
+    .fs-yellow { color:#b45309; font-weight:700; }
+    .fs-red    { color:#b91c1c; font-weight:700; }
+
+    .trip-list { border-top:1px solid #f1f5f9; display:none; }
+    .trip-list.open { display:block; }
+    .trip-row { display:flex; gap:10px; padding:7px 14px; }
+    .trip-row:hover { background:#f8fafc; }
+    .trip-row + .trip-row { border-top:1px solid #f8fafc; }
+    .trip-row.current { background:#fff7ed; }
+    .trip-row.done { opacity:0.55; }
+    .trip-time { flex:0 0 44px; text-align:center; }
+    .trip-time .t { font-size:12px; font-weight:700; color:#0f172a; display:block; }
+    .trip-time .e { font-size:11px; color:#94a3b8; display:block; }
+    .trip-content { flex:1; min-width:0; }
+    .trip-id { font-size:10px; font-weight:700; color:#94a3b8; letter-spacing:0.4px; }
+    .trip-route { font-size:12px; font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+    .trip-meta { font-size:11px; color:#64748b; margin-top:2px; }
+    .progress-bar { margin-top:5px; height:4px; background:#e2e8f0; border-radius:2px; overflow:hidden; }
+    .progress-fill { height:100%; background:#f97316; border-radius:2px; }
+    .badge-inline { font-size:10px; font-weight:700; padding:1px 6px; border-radius:10px; margin-left:4px; vertical-align:middle; }
+    .badge-current { background:#fed7aa; color:#c2410c; }
+
+    .no-trips { padding:10px 14px; font-size:12px; color:#94a3b8; font-style:italic; border-top:1px solid #f1f5f9; }
+    .loading { text-align:center; padding:30px; color:#94a3b8; }
+    .error-box { background:#fee2e2; color:#b91c1c; border-radius:8px; padding:12px 14px; margin:14px 16px; }
+    .gen-at { text-align:right; font-size:11px; color:#94a3b8; padding:8px 16px 4px; }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div>
+    <div class="h1" style="font-size:15px;font-weight:700;">&#128663; Fleet Monitor</div>
+    <div class="sub" id="toolbarSub">Loading...</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <input type="date" class="date-picker" id="datePicker" onchange="loadDate(this.value)">
+    <button class="btn-refresh" onclick="refresh()">&#8635; Refresh</button>
+  </div>
+</div>
+
+<div id="mainContent">
+  <div class="loading">Loading fleet data...</div>
+</div>
+
+<script>
+// Nessun dato inline — caricato sempre via google.script.run
+// Evita qualsiasi problema di escape/parsing con JSON nel template GAS
+var currentDate = null;
+
+window.onload = function() {
+  google.script.run
+    .withSuccessHandler(render)
+    .withFailureHandler(function(e){ showError(e.message||e); })
+    .getFleetOverviewData(null);
+};
+
+function refresh() {
+  var d = currentDate || todayStr();
+  document.getElementById("mainContent").innerHTML = '<div class="loading">Refreshing...</div>';
+  google.script.run
+    .withSuccessHandler(render)
+    .withFailureHandler(function(e){ showError(e.message||e); })
+    .getFleetOverviewData(d);
+}
+
+function loadDate(ds) {
+  document.getElementById("mainContent").innerHTML = '<div class="loading">Loading...</div>';
+  google.script.run
+    .withSuccessHandler(render)
+    .withFailureHandler(function(e){ showError(e.message||e); })
+    .getFleetOverviewData(ds);
+}
+
+function render(data) {
+  if (!data || !data.ok) { showError(data&&data.error?data.error:"Unknown error"); return; }
+
+  currentDate = data.date;
+  var dp = document.getElementById("datePicker");
+  if (dp) dp.value = data.date;
+  document.getElementById("toolbarSub").textContent =
+    data.isToday ? "Today \u2014 " + data.dateDisplay : data.dateDisplay;
+
+  var counts = {BUSY:0,FREE:0,IDLE:0,DONE:0};
+  data.vehicles.forEach(function(v){ counts[v.statusNow]=(counts[v.statusNow]||0)+1; });
+
+  var sc = {
+    BUSY:{cls:"s-busy",badge:"badge-busy",label:"BUSY"},
+    FREE:{cls:"s-free",badge:"badge-free",label:"FREE"},
+    IDLE:{cls:"s-idle",badge:"badge-idle",label:"NO TRIPS"},
+    DONE:{cls:"s-done",badge:"badge-done",label:"DONE TODAY"}
+  };
+
+  var html = '<div class="content">';
+  // Summary
+  html += '<div class="summary-bar">';
+  if(counts.BUSY) html += '<span class="chip" style="background:#fee2e2;color:#b91c1c;">\uD83D\uDD34 '+counts.BUSY+' BUSY</span>';
+  if(counts.FREE) html += '<span class="chip" style="background:#dcfce7;color:#15803d;">\uD83D\uDFE2 '+counts.FREE+' FREE</span>';
+  if(counts.IDLE) html += '<span class="chip" style="background:#f1f5f9;color:#64748b;">\u26AA '+counts.IDLE+' IDLE</span>';
+  if(counts.DONE) html += '<span class="chip" style="background:#fef9c3;color:#92400e;">\uD83D\uDFE1 '+counts.DONE+' DONE</span>';
+  html += '<span class="chip" style="background:#e0f2fe;color:#0369a1;">\uD83D\uDE97 '+data.vehicles.length+' TOTAL</span>';
+  html += '</div>';
+
+  html += '<div class="vehicle-list">';
+  data.vehicles.forEach(function(v, idx) {
+    var s = sc[v.statusNow]||sc.IDLE;
+    var fsClass = v.fleetStatus==="RED"?"fs-red":v.fleetStatus==="YELLOW"?"fs-yellow":"fs-green";
+
+    html += '<div class="vehicle-card '+s.cls+'">';
+
+    // Header
+    html += '<div class="vh" onclick="toggleTrips('+idx+')">';
+    html += '<div class="vh-info">';
+    html += '<div class="vh-name">'+e(v.vehicleId)+' &mdash; '+e(v.signCode)+'</div>';
+    html += '<div class="vh-driver">'+e(v.driverName)+' &middot; '+e(v.type)+' &middot; '+v.capacity+' pax</div>';
+    html += '</div>';
+    html += '<div class="vh-right">';
+    if(v.statusNow==="BUSY"){
+      html += '<div class="vh-eta">';
+      if(v.etaFreeDisplay) html += '<div class="eta-free">libero '+e(v.etaFreeDisplay)+'</div>';
+      if(v.etaReturnDisplay&&v.returnToBaseName)
+        html += '<div class="eta-return">\u21A9 '+e(v.returnToBaseName)+' '+e(v.etaReturnDisplay)+'</div>';
+      html += '</div>';
+    }
+    if(v.statusNow==="FREE"&&v.nextFreeDisplay)
+      html += '<span style="font-size:11px;color:#64748b;">dal '+e(v.nextFreeDisplay)+'</span>';
+    html += '<span class="badge '+s.badge+'">'+s.label+'</span>';
+    html += '<span class="chevron" id="chev-'+idx+'">\u25BC</span>';
+    html += '</div></div>';
+
+    // Stats
+    html += '<div class="vh-stats">';
+    html += '<span><strong>'+v.tripCount+'</strong> trips</span>';
+    html += '<span><strong>'+e(v.workHours)+'</strong> work</span>';
+    html += '<span class="'+fsClass+'">'+v.fleetStatus+'</span>';
+    html += '</div>';
+
+    // Trip list
+    html += '<div class="trip-list" id="trips-'+idx+'">';
+    if(!v.trips||!v.trips.length){
+      html += '<div class="no-trips">No trips scheduled</div>';
+    } else {
+      v.trips.forEach(function(t) {
+        var rowCls = t.isCurrent?"trip-row current":t.isDone?"trip-row done":"trip-row";
+        var bdg = t.isCurrent?'<span class="badge-inline badge-current">\u25B6 IN CORSO</span>'
+          :t.isDone?'<span style="font-size:10px;color:#94a3b8;margin-left:4px;">\u2713</span>':"";
+        html += '<div class="'+rowCls+'">';
+        html += '<div class="trip-time"><span class="t">'+e(t.startDisplay)+'</span><span class="e">'+e(t.endDisplay)+'</span></div>';
+        html += '<div class="trip-content">';
+        html += '<div class="trip-id">'+e(t.tripId)+(t.svcType?" &middot; "+e(t.svcType):"")+bdg+'</div>';
+        html += '<div class="trip-route">'+e(t.route)+'</div>';
+        if(t.isCurrent&&t.progressPct>0){
+          html += '<div class="progress-bar"><div class="progress-fill" style="width:'+t.progressPct+'%;"></div></div>';
+        }
+        var meta=[];
+        if(t.paxCount) meta.push(t.paxCount+" pax");
+        if(meta.length) html += '<div class="trip-meta">'+meta.join(" &middot; ")+'</div>';
+        html += '</div></div>';
+      });
+    }
+    html += '</div></div>';
+  });
+  html += '</div>';
+  html += '<div class="gen-at">Updated: '+e(data.generatedAt)+'</div>';
+  html += '</div>';
+
+  document.getElementById("mainContent").innerHTML = html;
+
+  // Auto-apri BUSY e ruota chevron
+  data.vehicles.forEach(function(v,idx){
+    if(v.statusNow==="BUSY"){
+      toggleTrips(idx, true);
+    }
+  });
+}
+
+function toggleTrips(idx, forceOpen) {
+  var list = document.getElementById("trips-"+idx);
+  var chev = document.getElementById("chev-"+idx);
+  if(!list) return;
+  var isOpen = list.classList.contains("open");
+  var open = forceOpen===true ? true : !isOpen;
+  list.classList.toggle("open", open);
+  if(chev) chev.classList.toggle("open", open);
+}
+
+function showError(msg) {
+  document.getElementById("mainContent").innerHTML = '<div class="error-box">&#10060; '+e(msg)+'</div>';
+}
+
+function todayStr() {
+  var d=new Date(), mm=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
+  return d.getFullYear()+"-"+mm+"-"+dd;
+}
+
+function e(s) {
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body{
+      font-family:Arial,sans-serif;
+      font-size:13px;
+      margin:0;
+      padding:16px;
+      background:#f8fafc;
+      color:#1f2937;
+    }
+
+    h3{
+      margin:0 0 12px 0;
+      font-size:20px;
+      color:#0f172a;
+    }
+
+    .meta{
+      margin-bottom:16px;
+      color:#475569;
+      font-size:13px;
+      line-height:1.55;
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      padding:12px 14px;
+    }
+
+    .meta strong{
+      color:#0f172a;
+    }
+
+    h4{
+      margin:20px 0 10px 0;
+      font-size:15px;
+      border-bottom:2px solid #e2e8f0;
+      padding-bottom:6px;
+      color:#0f172a;
+    }
+
+    .empty{
+      border:1px dashed #cbd5e1;
+      border-radius:10px;
+      padding:14px;
+      background:#ffffff;
+      color:#64748b;
+    }
+
+    .vehicle-list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-bottom:18px;
+    }
+
+    .vehicle-card{
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:12px;
+      padding:12px 13px;
+      box-shadow:0 1px 2px rgba(15,23,42,0.04);
+    }
+
+    .vehicle-card.clickable{
+      cursor:pointer;
+      transition:background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .vehicle-card.clickable:hover{
+      background:#f8fafc;
+      border-color:#cbd5e1;
+    }
+
+    .vehicle-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+      margin-bottom:8px;
+    }
+
+    .vehicle-id{
+      font-weight:700;
+      font-size:15px;
+      color:#0f172a;
+      line-height:1.2;
+    }
+
+    .driver{
+      margin-top:2px;
+      color:#334155;
+      font-weight:600;
+      line-height:1.3;
+    }
+
+    .status{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:20px;
+      font-size:11px;
+      font-weight:700;
+      min-width:56px;
+      text-align:center;
+      white-space:nowrap;
+    }
+
+    .status-free{
+      background:#dcfce7;
+      color:#15803d;
+    }
+
+    .status-busy{
+      background:#fee2e2;
+      color:#b91c1c;
+    }
+
+    .vehicle-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px 12px;
+      margin-top:8px;
+    }
+
+    .label{
+      display:block;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:0.35px;
+      color:#64748b;
+      margin-bottom:2px;
+    }
+
+    .value{
+      color:#0f172a;
+      font-weight:600;
+      line-height:1.35;
+      word-break:break-word;
+    }
+
+    .block{
+      margin-top:8px;
+      padding-top:8px;
+      border-top:1px solid #eef2f7;
+    }
+
+    .subnote{
+      margin-top:4px;
+      color:#64748b;
+      font-size:12px;
+      line-height:1.4;
+      word-break:break-word;
+    }
+
+    .click-hint{
+      margin-top:8px;
+      color:#64748b;
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .fleet-green{
+      color:#15803d;
+      font-weight:700;
+    }
+
+    .fleet-yellow{
+      color:#b45309;
+      font-weight:700;
+    }
+
+    .fleet-red{
+      color:#b91c1c;
+      font-weight:700;
+    }
+  </style>
+</head>
+<body>
+
+  <h3>Vehicle Availability</h3>
+
+  <? if (payload.error) { ?>
+    <div class="empty"><?= payload.error ?></div>
+  <? } else { ?>
+
+    <div class="meta">
+      <div><strong>Trip:</strong> <?= payload.tripId || "" ?></div>
+      <div><strong>Route:</strong> <?= payload.pickup || "" ?> → <?= payload.dropoff || "" ?></div>
+      <div><strong>Pickup Time:</strong> <?= payload.pickupTime || "" ?></div>
+    </div>
+
+    <h4>Available Vehicles</h4>
+
+    <? if (!payload.freeVehicles || !payload.freeVehicles.length) { ?>
+      <div class="empty">No available vehicles found for this trip.</div>
+    <? } else { ?>
+      <div class="vehicle-list">
+        <? payload.freeVehicles.forEach(function(v){ ?>
+          <div class="vehicle-card clickable" onclick="selectVehicle('<?= v.vehicleId || '' ?>')">
+            <div class="vehicle-top">
+              <div>
+                <div class="vehicle-id"><?= v.vehicleId || "" ?></div>
+                <div class="driver"><?= v.driver || "" ?></div>
+              </div>
+              <span class="status status-free">FREE</span>
+            </div>
+
+            <div class="vehicle-grid">
+              <div>
+                <span class="label">Capacity</span>
+                <span class="value"><?= v.capacity || "" ?></span>
+              </div>
+              <div>
+                <span class="label">Available</span>
+                <span class="value"><?= v.availableAfter || "Now" ?></span>
+              </div>
+              <div>
+                <span class="label">Trips Today</span>
+                <span class="value"><?= v.tripsToday || 0 ?></span>
+              </div>
+              <div>
+                <span class="label">Work Hours</span>
+                <span class="value"><?= v.workHours || "0h 0m" ?></span>
+              </div>
+              <div>
+                <span class="label">Fleet Status</span>
+                <span class="value <?=
+                  v.fleetStatus === 'RED' ? 'fleet-red' :
+                  v.fleetStatus === 'YELLOW' ? 'fleet-yellow' :
+                  'fleet-green'
+                ?>">
+                  <?= v.fleetStatus || "GREEN" ?>
+                </span>
+              </div>
+            </div>
+          </div>
+        <? }); ?>
+      </div>
+    <? } ?>
+
+    <h4>Busy Vehicles</h4>
+
+    <? if (!payload.busyVehicles || !payload.busyVehicles.length) { ?>
+      <div class="empty">No busy vehicles found.</div>
+    <? } else { ?>
+      <div class="vehicle-list">
+        <? payload.busyVehicles.forEach(function(v){ ?>
+          <div class="vehicle-card">
+            <div class="vehicle-top">
+              <div>
+                <div class="vehicle-id"><?= v.vehicleId || "" ?></div>
+                <div class="driver"><?= v.driver || "" ?></div>
+              </div>
+              <span class="status status-busy">BUSY</span>
+            </div>
+
+            <div class="vehicle-grid">
+              <div>
+                <span class="label">Capacity</span>
+                <span class="value"><?= v.capacity || "" ?></span>
+              </div>
+              <div>
+                <span class="label">Available</span>
+                <span class="value"><?= v.availableAfter || "" ?></span>
+              </div>
+              <div>
+                <span class="label">Trips Today</span>
+                <span class="value"><?= v.tripsToday || 0 ?></span>
+              </div>
+              <div>
+                <span class="label">Work Hours</span>
+                <span class="value"><?= v.workHours || "0h 0m" ?></span>
+              </div>
+              <div>
+                <span class="label">Fleet Status</span>
+                <span class="value <?=
+                  v.fleetStatus === 'RED' ? 'fleet-red' :
+                  v.fleetStatus === 'YELLOW' ? 'fleet-yellow' :
+                  'fleet-green'
+                ?>">
+                  <?= v.fleetStatus || "GREEN" ?>
+                </span>
+              </div>
+            </div>
+
+            <? if (v.blockingTripId || v.blockingRoute) { ?>
+              <div class="block">
+                <span class="label">Blocking Trip</span>
+                <span class="value"><?= v.blockingTripId || "" ?></span>
+                <? if (v.blockingRoute) { ?>
+                  <div class="subnote"><?= v.blockingRoute || "" ?></div>
+                <? } ?>
+              </div>
+            <? } ?>
+          </div>
+        <? }); ?>
+      </div>
+    <? } ?>
+
+    <div class="click-hint">Click an available vehicle to assign it to the selected trip row.</div>
+
+  <? } ?>
+
+  <script>
+    function selectVehicle(vehicleId){
+      if(!vehicleId) return;
+
+      google.script.run
+        .withSuccessHandler(function(){
+          google.script.host.close();
+        })
+        .assignVehicleFromSidebar(vehicleId);
+    }
+  </script>
+
+</body>
+</html>

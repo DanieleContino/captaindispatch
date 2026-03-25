@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      margin: 0;
+      padding: 20px;
+      background: #f8fafc;
+      color: #1f2937;
+    }
+    h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      color: #0f172a;
+    }
+    .field {
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #374151;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    input[type="date"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #1f2937;
+      background: #ffffff;
+    }
+    input[type="date"]:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+    }
+    .hint {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 3px;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+    button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    button.generate {
+      background: #1a3a5c;
+      color: white;
+    }
+    button.generate:hover { background: #142d47; }
+    button.cancel {
+      background: #f1f5f9;
+      color: #475569;
+    }
+    button.cancel:hover { background: #e2e8f0; }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: none;
+    }
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+      display: block;
+    }
+    .status.info {
+      background: #dbeafe;
+      color: #1e40af;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <h3>Generate Transport Lists</h3>
+
+  <div class="field">
+    <label>From</label>
+    <input type="date" id="dateFrom" value="<?= defaultDate ?>">
+  </div>
+
+  <div class="field">
+    <label>To</label>
+    <input type="date" id="dateTo" value="<?= defaultDate ?>">
+    <div class="hint">Same date as From for a single day</div>
+  </div>
+
+  <div id="status" class="status"></div>
+
+  <div class="buttons">
+    <button class="cancel" onclick="google.script.host.close()">Cancel</button>
+    <button class="generate" id="generateBtn" onclick="generate()">Generate</button>
+  </div>
+
+  <script>
+    function generate() {
+      const from = document.getElementById('dateFrom').value;
+      const to   = document.getElementById('dateTo').value;
+
+      if (!from || !to) {
+        showStatus('Please select both dates.', 'error');
+        return;
+      }
+
+      if (from > to) {
+        showStatus('From date must be before or equal to To date.', 'error');
+        return;
+      }
+
+      setLoading(true);
+      showStatus('Generating lists...', 'info');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          setLoading(false);
+          google.script.host.close();
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false);
+          showStatus('Error: ' + (err.message || err), 'error');
+        })
+        .tsGenerateListsForRange(from, to);
+    }
+
+    function setLoading(loading) {
+      document.getElementById('generateBtn').disabled = loading;
+      document.getElementById('generateBtn').textContent = loading ? 'Generating...' : 'Generate';
+    }
+
+    function showStatus(msg, type) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = 'status ' + type;
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+
+<style>
+
+body{
+font-family:Arial;
+font-size:13px;
+margin:0;
+padding:18px;
+background:#f8fafc;
+color:#1f2937;
+}
+
+h3{
+margin:0 0 12px 0;
+font-size:20px;
+color:#0f172a;
+}
+
+h4{
+margin:24px 0 10px 0;
+font-size:15px;
+border-bottom:2px solid #e2e8f0;
+padding-bottom:6px;
+}
+
+.table-box{
+background:white;
+border:1px solid #e2e8f0;
+border-radius:10px;
+overflow:hidden;
+margin-bottom:20px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th{
+background:#f1f5f9;
+padding:10px;
+text-align:left;
+font-weight:700;
+border-bottom:1px solid #e2e8f0;
+}
+
+td{
+padding:9px 10px;
+border-bottom:1px solid #f1f5f9;
+}
+
+tr:last-child td{
+border-bottom:none;
+}
+
+.dept-row td{
+background:#e0f2fe;
+font-weight:700;
+font-size:12px;
+text-transform:uppercase;
+letter-spacing:0.3px;
+}
+
+.unassigned{
+background:#fff1f2;
+}
+
+.status{
+display:inline-block;
+padding:3px 8px;
+border-radius:20px;
+font-size:11px;
+font-weight:700;
+}
+
+.status-in{
+background:#dbeafe;
+color:#1d4ed8;
+}
+
+.status-out{
+background:#ffedd5;
+color:#c2410c;
+}
+
+.status-present{
+background:#dcfce7;
+color:#15803d;
+}
+
+.empty{
+border:1px dashed #cbd5e1;
+border-radius:10px;
+padding:14px;
+background:white;
+color:#64748b;
+}
+
+</style>
+</head>
+
+<body>
+
+<h3>Pax Assignment Status</h3>
+
+<h4>Assigned</h4>
+
+<? if (!payload.assigned.length) { ?>
+<div class="empty">No assigned passengers</div>
+<? } else { ?>
+
+<div class="table-box">
+<table>
+
+<thead>
+<tr>
+<th>Name</th>
+<th>Dept</th>
+<th>Status</th>
+<th>Hotel</th>
+<th>Trip</th>
+<th>Route</th>
+</tr>
+</thead>
+
+<tbody>
+
+<? var lastDept=""; ?>
+
+<? payload.assigned.forEach(function(p){ ?>
+
+<? if (p.dept!==lastDept){ ?>
+<tr class="dept-row">
+<td colspan="6"><?= p.dept ?></td>
+</tr>
+<? lastDept=p.dept; ?>
+<? } ?>
+
+<tr>
+<td><?= p.name ?></td>
+<td><?= p.dept ?></td>
+<td>
+
+<span class="status <?=
+p.status=='IN' ? 'status-in' :
+p.status=='OUT' ? 'status-out' :
+'status-present'
+?>">
+
+<?= p.status ?>
+
+</span>
+
+</td>
+
+<td><?= p.hotel ?></td>
+<td><?= p.trip ?></td>
+<td>
+  <?= p.route ?>
+  <? if (p.pickupTime) { ?>
+    &nbsp; • &nbsp;<strong>PU</strong> <?= p.pickupTime ?>
+  <? } ?>
+  <? if (p.callTime) { ?>
+    &nbsp; • &nbsp;<strong>CALL</strong> <?= p.callTime ?>
+  <? } ?>
+</td>
+</tr>
+
+<? }); ?>
+
+</tbody>
+</table>
+</div>
+
+<? } ?>
+
+
+<h4>Unassigned</h4>
+
+<? if (!payload.unassigned.length) { ?>
+<div class="empty">No unassigned passengers</div>
+<? } else { ?>
+
+<div class="table-box">
+<table>
+
+<thead>
+<tr>
+<th>Name</th>
+<th>Dept</th>
+<th>Status</th>
+<th>Hotel</th>
+</tr>
+</thead>
+
+<tbody>
+
+<? var lastDept2=""; ?>
+
+<? payload.unassigned.forEach(function(p){ ?>
+
+<? if (p.dept!==lastDept2){ ?>
+<tr class="dept-row">
+<td colspan="4"><?= p.dept ?></td>
+</tr>
+<? lastDept2=p.dept; ?>
+<? } ?>
+
+<tr class="unassigned">
+
+<td><?= p.name ?></td>
+<td><?= p.dept ?></td>
+
+<td>
+
+<span class="status <?=
+p.status=='IN' ? 'status-in' :
+p.status=='OUT' ? 'status-out' :
+'status-present'
+?>">
+
+<?= p.status ?>
+
+</span>
+
+</td>
+
+<td><?= p.hotel ?></td>
+
+</tr>
+
+<? }); ?>
+
+</tbody>
+</table>
+</div>
+
+<? } ?>
+
+</body>
+</html>
