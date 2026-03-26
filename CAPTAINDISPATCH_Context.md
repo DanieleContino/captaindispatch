@@ -171,6 +171,11 @@ Automazioni:
 
 ### P1 (Prossima sessione)
 ```
+[ ] BUG CRITICO — Lists page: groupByTripId usa trip_id esatto invece di baseTripId()
+    → Multi-stop (R_01A + R_01B) non vengono raggruppati → nessun badge MULTI visibile
+    → Fix: aggiungere baseTripId() e raggruppare per baseTripId(trip_id) + vehicle_id
+    → Stesso pattern già usato in trips/page.js
+
 [ ] Aggiungere env vars su Vercel (GMAIL_USER, GMAIL_APP_PASSWORD, ADMIN_EMAIL)
 [ ] Trips page — pax_count totale per gruppo multi-stop (ora mostra solo primo sub-trip)
 [ ] Rocket — crew call time override nella tabella Step 1
