@@ -119,58 +119,41 @@ function TripTableRow({ group, locsMap, sectionColor }) {
       <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.4 }}>
         {isMultiStop ? (
           <div>
-            {/* Badge multi-stop */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+            {/* Riga 1: badge + tratte inline */}
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '2px' }}>
               <span style={{
                 background: '#ea580c', color: 'white', fontWeight: '900',
-                fontSize: '10px', padding: '1px 6px', borderRadius: '4px', letterSpacing: '0.3px'
+                fontSize: '9px', padding: '1px 5px', borderRadius: '4px', letterSpacing: '0.3px', flexShrink: 0
               }}>
-                🔀 MULTI · {group.rows.length} STOPS
+                🔀 {group.rows.length}
               </span>
-              <span style={{ fontSize: '10px', color: '#64748b' }}>
-                📍 FROM: <strong style={{ color: '#0f172a' }}>{pickupName}</strong>
-              </span>
-            </div>
-            {/* Ogni fermata */}
-            {group.rows.map((row, i) => {
-              const pax = row.passenger_list
-                ? row.passenger_list.split(',').map(s => s.trim()).filter(Boolean)
-                : []
-              const dropoffName = locsMap[row.dropoff_id] || row.dropoff_id || '–'
-              const legTime = minToHHMM(row.pickup_min)
-              return (
-                <div key={row.id || i} style={{
-                  display: 'flex', gap: '6px', alignItems: 'flex-start',
-                  padding: '2px 0 2px 8px',
-                  borderLeft: '2px solid #e2e8f0',
-                  marginBottom: '2px',
-                }}>
-                  <span style={{ fontWeight: '900', color: '#ea580c', fontSize: '11px', minWidth: '14px' }}>
-                    {i + 1}.
+              {group.rows.map((row, i) => {
+                const fromName = (locsMap[row.pickup_id] || row.pickup_id || '–').split(' ').slice(0, 2).join(' ')
+                const toName   = (locsMap[row.dropoff_id] || row.dropoff_id || '–').split(' ').slice(0, 2).join(' ')
+                const legTime  = minToHHMM(row.pickup_min)
+                return (
+                  <span key={row.id || i} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '10px', whiteSpace: 'nowrap' }}>
+                    {i > 0 && <span style={{ color: '#cbd5e1', margin: '0 2px' }}>|</span>}
+                    <span style={{ color: '#64748b' }}>{fromName}</span>
+                    <span style={{ color: '#94a3b8' }}>→</span>
+                    <span style={{ fontWeight: '800', color: '#0f172a' }}>{toName}</span>
+                    {legTime !== '–' && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>@{legTime}</span>}
+                    <span style={{ color: '#64748b' }}>({row.pax_count || 0})</span>
                   </span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '11px' }}>
-                        → {dropoffName}
-                      </span>
-                      {legTime !== '–' && (
-                        <span style={{ fontSize: '10px', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
-                          @{legTime}
-                        </span>
-                      )}
-                      <span style={{ fontSize: '10px', color: '#64748b' }}>
-                        ({row.pax_count || 0} pax)
-                      </span>
-                    </div>
-                    {pax.length > 0 && (
-                      <div style={{ fontSize: '10px', color: '#475569', marginTop: '1px', fontWeight: '500' }}>
-                        {pax.join(' · ')}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                )
+              })}
+            </div>
+            {/* Riga 2: tutti i nomi crew in una riga compatta */}
+            {(() => {
+              const allNames = group.rows.flatMap(row =>
+                row.passenger_list ? row.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
               )
-            })}
+              return allNames.length > 0 ? (
+                <div style={{ fontSize: '10px', color: '#475569', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {allNames.join(' · ')}
+                </div>
+              ) : null
+            })()}
           </div>
         ) : (
           <div>
