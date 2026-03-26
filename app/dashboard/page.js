@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 
+import { Navbar } from '../../lib/navbar'
+
 const NAV = [
   { l: 'Fleet',      p: '/dashboard/fleet' },
   { l: 'Trips',      p: '/dashboard/trips' },

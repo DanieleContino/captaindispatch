@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 26 marzo 2026 (S7e)**
+**Aggiornato: 26 marzo 2026 (S7f)**
 
 ---
 
@@ -154,11 +154,12 @@ Automazioni:
 - Font 9px, spacing ottimizzato, tutto su un foglio singolo
 - Supporta 50+ trip mantenendo leggibilità
 
-### Navbar Unificata (S7e)
+### Navbar Unificata (S7f)
 - Componente `Navbar` in `lib/navbar.js` riutilizzabile su tutte le pagine
 - NAV_ITEMS esportato per coerenza globale
-- Aggiornato `/dashboard/lists` per usare il nuovo componente
-- Pronto per essere applicato a tutte le altre pagine dashboard
+- ✅ Migrati: `/dashboard/fleet`, `/dashboard/trips`, `/dashboard/crew`, `/dashboard/lists`
+- ⏳ Ancora da migrare (8 pagine): rocket, vehicles, locations, hub-coverage, pax-coverage, reports, qr-codes, productions
+- Pattern: `<Navbar currentPath="/dashboard/xxx" />` sostituisce hardcoded nav header
 
 ---
 
