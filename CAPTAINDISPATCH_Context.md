@@ -2,7 +2,7 @@
 
 ## Per uso in Cline (VS Code) con claude-sonnet-4-6 + thinking
 
-## Aggiornato: sessione 26 marzo 2026 (S7)
+## Aggiornato: sessione 26 marzo 2026 (S7) + S7b navbar fix
 
 ---
 
@@ -699,6 +699,21 @@ CaptainDispatch login OAuth + dashboard base
   - Bordo colorato per trip multi-stop
   - TIME mostra pickup più presto del gruppo
   - Deploy
+
+### S7b (26 marzo) — Navbar fix + Vercel webhook
+
+47. **Navbar reordering:** Rocket link spostato dopo Vehicles (era dopo Trips)
+    - Commit: 56f5ed3 "Move Rocket link after Vehicles in navbar"
+    - Deploy: Vercel completato, sito live aggiornato
+48. **Vercel webhook fix:** GitHub→Vercel connection era disabilitata
+    - Problema: Commit Comments toggle era OFF
+    - Soluzione: Riabilitato webhook in Vercel Settings → Git
+    - Trigger deployment: commit vuoto 3c46ee1 per testare webhook
+    - Risultato: Deploy automatici ora funzionano
+49. **Cache issue:** Sito live non aggiornato subito dopo deploy
+    - Causa: Session cache browser + DNS propagation
+    - Soluzione: Logout/login per pulire cache sessione
+    - Vercel deployment completato in 6 minuti
 
 ---
 
