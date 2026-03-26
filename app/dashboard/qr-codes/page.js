@@ -22,6 +22,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
+import { Navbar } from '../../../lib/navbar'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 
@@ -64,16 +65,6 @@ export default function QrCodesPage() {
     })
   }, [])
 
-  const NAV = [
-    { l: 'Dashboard', p: '/dashboard' }, { l: 'Fleet', p: '/dashboard/fleet' },
-    { l: 'Trips', p: '/dashboard/trips' }, { l: 'Lists', p: '/dashboard/lists' },
-    { l: 'Crew', p: '/dashboard/crew' }, { l: 'Hub Cov.', p: '/dashboard/hub-coverage' },
-    { l: 'Pax Cov.', p: '/dashboard/pax-coverage' },
-    { l: 'Reports', p: '/dashboard/reports' }, { l: 'QR', p: '/dashboard/qr-codes' },
-    { l: 'Locations', p: '/dashboard/locations' }, { l: 'Vehicles', p: '/dashboard/vehicles' },
-    { l: '🎬 Prods', p: '/dashboard/productions' },
-  ]
-
   if (!user) return <div style={{ minHeight:'100vh', background:'#0f2340', display:'flex', alignItems:'center', justifyContent:'center', color:'white' }}>Loading…</div>
 
   return (
@@ -89,21 +80,8 @@ export default function QrCodesPage() {
       `}</style>
 
       {/* Header */}
-      <div className="no-print" style={{ background:'#0f2340', padding:'0 24px', height:'52px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:30 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'20px' }}>
-          <div style={{ fontSize:'20px', fontWeight:'900', color:'white', letterSpacing:'-1px', cursor:'pointer' }} onClick={() => router.push('/dashboard')}>
-            CAPTAIN <span style={{ color:'#2563eb' }}>Dispatch</span>
-          </div>
-          <nav style={{ display:'flex', gap:'2px' }}>
-            {NAV.map(({ l, p }) => (
-              <a key={p} href={p} style={{ padding:'5px 12px', borderRadius:'7px', fontSize:'13px', fontWeight:'600', color:'#94a3b8', background:'transparent', textDecoration:'none', whiteSpace:'nowrap' }}>{l}</a>
-            ))}
-          </nav>
-        </div>
-        <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
-          style={{ background:'transparent', border:'1px solid #334155', color:'#94a3b8', padding:'5px 12px', borderRadius:'7px', cursor:'pointer', fontSize:'12px' }}>
-          Sign out
-        </button>
+      <div className="no-print">
+        <Navbar currentPath="/dashboard/qr-codes" />
       </div>
 
       {/* Toolbar */}

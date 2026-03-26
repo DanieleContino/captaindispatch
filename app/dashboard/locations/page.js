@@ -3,25 +3,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
+import { Navbar } from '../../../lib/navbar'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
-
-// ─── Nav shared ──────────────────────────────────────────────
-const NAV = [
-  { l: 'Dashboard', p: '/dashboard' },
-  { l: 'Fleet',     p: '/dashboard/fleet' },
-  { l: 'Trips',     p: '/dashboard/trips' },
-  { l: 'Lists',     p: '/dashboard/lists' },
-  { l: 'Crew',      p: '/dashboard/crew' },
-  { l: 'Hub Cov.',  p: '/dashboard/hub-coverage' },
-  { l: 'Pax Cov.', p: '/dashboard/pax-coverage' },
-  { l: 'Reports',   p: '/dashboard/reports' },
-  { l: 'QR',        p: '/dashboard/qr-codes' },
-  { l: 'Locations', p: '/dashboard/locations' },
-  { l: 'Vehicles',  p: '/dashboard/vehicles' },
-  { l: '🎬 Prods', p: '/dashboard/productions' },
-]
 
 // ─── Sidebar ─────────────────────────────────────────────────
 function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
@@ -266,22 +251,7 @@ export default function LocationsPage() {
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
 
       {/* Header */}
-      <div style={{ background: '#0f2340', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ fontSize: '20px', fontWeight: '900', color: 'white', letterSpacing: '-1px', cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => router.push('/dashboard')}>
-            CAPTAIN <span style={{ color: '#2563eb' }}>Dispatch</span>
-          </div>
-          <nav style={{ display: 'flex', gap: '2px' }}>
-            {NAV.map(({ l, p }) => (
-              <a key={p} href={p} style={{ padding: '5px 12px', borderRadius: '7px', fontSize: '13px', fontWeight: '600', color: p === '/dashboard/locations' ? 'white' : '#94a3b8', background: p === '/dashboard/locations' ? '#1e3a5f' : 'transparent', textDecoration: 'none', whiteSpace: 'nowrap' }}>{l}</a>
-            ))}
-          </nav>
-        </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <span style={{ color: '#64748b', fontSize: '12px' }}>{user.email}</span>
-          <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} style={{ background: 'transparent', border: '1px solid #334155', color: '#94a3b8', padding: '5px 12px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px' }}>Sign out</button>
-        </div>
-      </div>
+      <Navbar currentPath="/dashboard/locations" />
 
       {/* Toolbar */}
       <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20 }}>
