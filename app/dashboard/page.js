@@ -9,6 +9,7 @@ const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const NAV = [
   { l: 'Fleet',      p: '/dashboard/fleet' },
   { l: 'Trips',      p: '/dashboard/trips' },
+  { l: '🚀 Rocket', p: '/dashboard/rocket' },
   { l: 'Lists',      p: '/dashboard/lists' },
   { l: 'Crew',       p: '/dashboard/crew' },
   { l: 'Hub Cov.',   p: '/dashboard/hub-coverage' },
@@ -17,7 +18,6 @@ const NAV = [
   { l: 'QR',         p: '/dashboard/qr-codes' },
   { l: 'Locations',  p: '/dashboard/locations' },
   { l: 'Vehicles',   p: '/dashboard/vehicles' },
-  { l: '🚀 Rocket', p: '/dashboard/rocket' },
   { l: '🎬 Prods',  p: '/dashboard/productions' },
 ]
 

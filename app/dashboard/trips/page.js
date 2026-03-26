@@ -29,6 +29,7 @@ function fmtDate(d) {
   return new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 function isHub(id) { return /^(APT_|STN_|PRT_)/.test(id || '') }
+function baseTripId(id) { return id ? id.replace(/[A-Z]$/, '') : id }
 function getClass(p, d) {
   if (isHub(p) && !isHub(d)) return 'ARRIVAL'
   if (!isHub(p) && isHub(d))  return 'DEPARTURE'
@@ -83,15 +84,29 @@ function TripRow({ group, locations, selected, onClick }) {
   const cls = CLS[t.transfer_class] || CLS.STANDARD
   const sts = STS[t.status] || STS.PLANNED
 
+  // Multi-stop detection
+  const pickupIds   = [...new Set(group.map(r => r.pickup_id).filter(Boolean))]
+  const dropoffIds  = [...new Set(group.map(r => r.dropoff_id).filter(Boolean))]
+  const isMultiPickup  = pickupIds.length > 1
+  const isMultiDropoff = dropoffIds.length > 1
+  const isMixed        = isMultiPickup || isMultiDropoff
+
   const pickupLoc  = locations[t.pickup_id]  || t.pickup_id  || '–'
-  const dropoffLoc = group.length > 1
-    ? group.map(r => (locations[r.dropoff_id] || r.dropoff_id || '').split(' ').slice(0, 2).join(' ')).join(' / ')
+  const dropoffLoc = isMultiDropoff
+    ? dropoffIds.map(id => (locations[id] || id || '').split(' ').slice(0, 2).join(' ')).join(' / ')
     : (locations[t.dropoff_id] || t.dropoff_id || '–')
 
   const callTime   = t.call_min   !== null ? minToHHMM(t.call_min)   : null
   const pickupTime = t.pickup_min !== null ? minToHHMM(t.pickup_min) : callTime
   const arrTime    = t.arr_time   ? t.arr_time.slice(0, 5)            : null
-  const mainTime   = callTime || pickupTime || '–'
+  // For multi-stop: show earliest pickup time
+  const earliestPickupMin = isMixed
+    ? Math.min(...group.map(r => r.pickup_min ?? r.call_min ?? 9999).filter(n => n < 9999))
+    : null
+
+  const mainTime   = isMixed
+    ? (earliestPickupMin < 9999 ? minToHHMM(earliestPickupMin) : callTime || '–')
+    : (callTime || pickupTime || '–')
 
   // Passeggeri dal campo denormalizzato
   const paxNames = t.passenger_list
@@ -111,8 +126,8 @@ function TripRow({ group, locations, selected, onClick }) {
         padding: '10px 14px 10px 14px',
         borderBottom: '1px solid #f1f5f9',
         cursor: 'pointer',
-        background: selected ? '#eff6ff' : 'white',
-        borderLeft: `4px solid ${selected ? '#2563eb' : cls.dot}`,
+        background: selected ? '#eff6ff' : isMixed ? (isMultiPickup && isMultiDropoff ? '#fdf4ff' : isMultiPickup ? '#fffbeb' : '#fdf4ff') : 'white',
+        borderLeft: `4px solid ${selected ? '#2563eb' : isMixed ? (isMultiPickup ? '#d97706' : '#7c3aed') : cls.dot}`,
         transition: 'background 0.1s',
         gap: '10px',
         fontSize: '12px',
@@ -140,13 +155,14 @@ function TripRow({ group, locations, selected, onClick }) {
       {/* ── Trip ID + Classe ── */}
       <div>
         <div style={{ fontWeight: '900', color: '#0f172a', fontSize: '14px', fontFamily: 'monospace', letterSpacing: '-0.3px' }}>
-          {t.trip_id}
+          {isMixed ? baseTripId(t.trip_id) : t.trip_id}
         </div>
-        <div style={{ marginTop: '4px' }}>
+        <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '9px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}`, letterSpacing: '0.04em' }}>
             {t.transfer_class?.slice(0, 3) || 'STD'}
-            {group.length > 1 && ` ×${group.length}`}
           </span>
+          {isMultiPickup  && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>🔀 MULTI-PKP</span>}
+          {isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe' }}>🔀 MULTI-DRP</span>}
         </div>
         <div style={{ marginTop: '4px' }}>
           <span style={{ padding: '2px 5px', borderRadius: '5px', fontSize: '9px', fontWeight: '700', background: sts.bg, color: sts.color }}>
@@ -157,23 +173,43 @@ function TripRow({ group, locations, selected, onClick }) {
 
       {/* ── Rotta ── */}
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'baseline', gap: '4px', minWidth: 0 }}>
-          <span style={{ color: '#94a3b8', fontSize: '10px', fontWeight: '500', flexShrink: 0 }}>
-            {pickupLoc.split(' ').slice(0, 2).join(' ')}
-          </span>
-          <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dropoffLoc}</span>
-        </div>
-        {t.flight_no && (
-          <div style={{ fontSize: '10px', color: '#2563eb', fontWeight: '700', marginTop: '2px' }}>✈ {t.flight_no}</div>
-        )}
-        {t.notes && (
-          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            📝 {t.notes}
-          </div>
-        )}
-        {t.duration_min && (
-          <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '1px' }}>⏱ {t.duration_min} min</div>
+        {isMixed ? (
+          <>
+            {group.map((r, ri) => (
+              <div key={r.id || ri} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', marginBottom: ri < group.length - 1 ? '4px' : 0, minWidth: 0 }}>
+                <span style={{ color: '#94a3b8', fontWeight: '500', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75px' }}>
+                  {(locations[r.pickup_id] || r.pickup_id || '–').split(' ').slice(0, 2).join(' ')}
+                </span>
+                <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
+                <span style={{ fontWeight: '700', color: '#0f172a', flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {(locations[r.dropoff_id] || r.dropoff_id || '–').split(' ').slice(0, 2).join(' ')}
+                </span>
+                {r.pickup_min != null && <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>· 🕐{minToHHMM(r.pickup_min)}</span>}
+                {r.pax_count  > 0   && <span style={{ color: '#64748b', flexShrink: 0 }}>· {r.pax_count}pax</span>}
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'baseline', gap: '4px', minWidth: 0 }}>
+              <span style={{ color: '#94a3b8', fontSize: '10px', fontWeight: '500', flexShrink: 0 }}>
+                {pickupLoc.split(' ').slice(0, 2).join(' ')}
+              </span>
+              <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dropoffLoc}</span>
+            </div>
+            {t.flight_no && (
+              <div style={{ fontSize: '10px', color: '#2563eb', fontWeight: '700', marginTop: '2px' }}>✈ {t.flight_no}</div>
+            )}
+            {t.notes && (
+              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                📝 {t.notes}
+              </div>
+            )}
+            {t.duration_min && (
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '1px' }}>⏱ {t.duration_min} min</div>
+            )}
+          </>
         )}
       </div>
 
@@ -1018,8 +1054,17 @@ export default function TripsPage() {
     (filterVehicle === 'ALL' || t.vehicle_id     === filterVehicle)
   )
   const grouped = Object.values(
-    filtered.reduce((acc, t) => { if (!acc[t.trip_id]) acc[t.trip_id] = []; acc[t.trip_id].push(t); return acc }, {})
-  ).sort((a, b) => (a[0].pickup_min ?? a[0].call_min ?? 9999) - (b[0].pickup_min ?? b[0].call_min ?? 9999))
+    filtered.reduce((acc, t) => {
+      const key = baseTripId(t.trip_id) + '::' + (t.vehicle_id || '__none__')
+      if (!acc[key]) acc[key] = []
+      acc[key].push(t)
+      return acc
+    }, {})
+  ).sort((a, b) => {
+    const aMin = Math.min(...a.map(r => r.pickup_min ?? r.call_min ?? 9999))
+    const bMin = Math.min(...b.map(r => r.pickup_min ?? r.call_min ?? 9999))
+    return aMin - bMin
+  })
 
   const vehicles = [...new Set(trips.map(t => t.vehicle_id).filter(Boolean))].sort()
   const cnts = {
@@ -1032,7 +1077,8 @@ export default function TripsPage() {
 
   const NAV = [
     { l: 'Dashboard', p: '/dashboard' }, { l: 'Fleet', p: '/dashboard/fleet' },
-    { l: 'Trips', p: '/dashboard/trips' }, { l: 'Lists', p: '/dashboard/lists' },
+    { l: 'Trips', p: '/dashboard/trips' }, { l: '🚀 Rocket', p: '/dashboard/rocket' },
+    { l: 'Lists', p: '/dashboard/lists' },
     { l: 'Crew', p: '/dashboard/crew' }, { l: 'Hub Cov.', p: '/dashboard/hub-coverage' },
     { l: 'Pax Cov.', p: '/dashboard/pax-coverage' },
     { l: 'Reports', p: '/dashboard/reports' }, { l: 'QR', p: '/dashboard/qr-codes' },

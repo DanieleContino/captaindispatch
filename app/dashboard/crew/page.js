@@ -461,7 +461,8 @@ export default function CrewPage() {
           <nav style={{ display: 'flex', gap: '2px' }}>
             {[
               { l: 'Dashboard', p: '/dashboard' }, { l: 'Fleet', p: '/dashboard/fleet' },
-              { l: 'Trips', p: '/dashboard/trips' }, { l: 'Lists', p: '/dashboard/lists' },
+              { l: 'Trips', p: '/dashboard/trips' }, { l: '🚀 Rocket', p: '/dashboard/rocket' },
+              { l: 'Lists', p: '/dashboard/lists' },
               { l: 'Crew', p: '/dashboard/crew' }, { l: 'Hub Cov.', p: '/dashboard/hub-coverage' },
               { l: 'Pax Cov.', p: '/dashboard/pax-coverage' },
               { l: 'Reports', p: '/dashboard/reports' }, { l: 'QR', p: '/dashboard/qr-codes' },
