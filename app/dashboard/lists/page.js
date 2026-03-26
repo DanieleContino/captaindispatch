@@ -143,16 +143,29 @@ function TripTableRow({ group, locsMap, sectionColor }) {
                 )
               })}
             </div>
-            {/* Riga 2: tutti i nomi crew in una riga compatta */}
+            {/* Righe crew: raggruppate per pickup_id */}
             {(() => {
-              const allNames = group.rows.flatMap(row =>
-                row.passenger_list ? row.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
-              )
-              return allNames.length > 0 ? (
-                <div style={{ fontSize: '10px', color: '#475569', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {allNames.join(' · ')}
+              // Raggruppa le righe per pickup_id
+              const byPickup = {}
+              for (const row of group.rows) {
+                const key = row.pickup_id || '__unknown__'
+                if (!byPickup[key]) byPickup[key] = { pickup_id: row.pickup_id, names: [] }
+                if (row.passenger_list) {
+                  byPickup[key].names.push(...row.passenger_list.split(',').map(s => s.trim()).filter(Boolean))
+                }
+              }
+              const pickupGroups = Object.values(byPickup).filter(g => g.names.length > 0)
+              if (!pickupGroups.length) return null
+              return pickupGroups.map(pg => (
+                <div key={pg.pickup_id} style={{ display: 'flex', alignItems: 'baseline', gap: '4px', fontSize: '10px', marginTop: '1px', lineHeight: 1.3 }}>
+                  <span style={{ color: '#ea580c', fontWeight: '800', flexShrink: 0 }}>
+                    📍 {(locsMap[pg.pickup_id] || pg.pickup_id || '?').split(' ').slice(0, 3).join(' ')}:
+                  </span>
+                  <span style={{ color: '#475569', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {pg.names.join(' · ')}
+                  </span>
                 </div>
-              ) : null
+              ))
             })()}
           </div>
         ) : (
