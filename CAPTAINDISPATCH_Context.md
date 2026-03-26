@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 26 marzo 2026 (S7d)**
+**Aggiornato: 26 marzo 2026 (S7e)**
 
 ---
 
@@ -144,14 +144,21 @@ Automazioni:
 - Env vars: `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `ADMIN_EMAIL`
 - ⚠️ TODO: Aggiungere env vars su Vercel Dashboard
 
-### Transport Lists Print-Optimized (S7d)
-- Layout adattivo: ≤20 trip → card dettagliate | >20 trip → tabella compatta
-- Stampa A4 landscape con `@page { size: A4 landscape; margin: 10mm; }`
-- Compact layout: 7 colonne (TIME | TRIP ID | VEHICLE | DRIVER | DROPOFF(S) | PAX | CAP)
-- Dropoff multipli concatenati con " + " per trip multi-stop
-- Pax totali = somma di tutti i dropoff per trip
-- Font 10px, spacing ottimizzato, colori mantenuti per sezioni
-- Supporta 50+ trip su poche pagine mantenendo leggibilità
+### Transport Lists Print-Optimized (S7e)
+- Layout unificato landscape: una sola tabella compatta per tutte le pagine
+- Stampa A4 landscape con `@page { size: A4 landscape; margin: 8mm; }`
+- 8 colonne: TIME | CALL | TRIP ID | VEHICLE | DRIVER | ROUTE | PAX | CAP
+- Multi-stop evidenti: badge 🔀 MULTI in arancione con numero fermate
+- Ogni fermata indentata con → e nomi passeggeri in font 7px
+- Colori sezione: bordo sinistro su ogni riga (blu TRANSPORT, verde ARRIVALS, arancione DEPARTURES)
+- Font 9px, spacing ottimizzato, tutto su un foglio singolo
+- Supporta 50+ trip mantenendo leggibilità
+
+### Navbar Unificata (S7e)
+- Componente `Navbar` in `lib/navbar.js` riutilizzabile su tutte le pagine
+- NAV_ITEMS esportato per coerenza globale
+- Aggiornato `/dashboard/lists` per usare il nuovo componente
+- Pronto per essere applicato a tutte le altre pagine dashboard
 
 ---
 
