@@ -58,92 +58,123 @@ function groupByTripId(tripRows) {
   )
 }
 
-// ─── Stili condivisi ───────────────────────────────────────────
-const CLS_COLOR = {
-  ARRIVAL:   { bg: '#dcfce7', color: '#15803d', border: '#86efac' },
-  DEPARTURE: { bg: '#fff7ed', color: '#c2410c', border: '#fdba74' },
-  STANDARD:  { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd' },
-}
-
-// ─── Riga tabella trip (layout landscape unificato) ──────────────
-function TripTableRow({ group, locsMap, showFlight, showPickup, sectionColor }) {
+// ─── Riga tabella trip ─────────────────────────────────────────
+function TripTableRow({ group, locsMap, sectionColor }) {
   const mainTime = minToHHMM(group.pickup_min ?? group.call_min)
   const callTime = minToHHMM(group.call_min)
   const totalPax = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
   const isMultiStop = group.rows.length > 1
 
+  const pickupName = locsMap[group.pickup_id] || group.pickup_id || '–'
+
   return (
-    <div style={{
+    <div className="trip-row" style={{
       display: 'grid',
-      gridTemplateColumns: '50px 50px 70px 60px 90px 1fr 50px 50px',
-      gap: '8px',
+      gridTemplateColumns: '56px 50px 80px 58px 110px 1fr 36px 36px',
+      gap: '0 6px',
       alignItems: 'flex-start',
-      padding: '8px',
-      borderBottom: '1px solid #f1f5f9',
-      borderLeft: `3px solid ${sectionColor}`,
-      fontSize: '9px',
-      pageBreakInside: 'avoid',
+      padding: '5px 6px',
+      borderBottom: '1px solid #e2e8f0',
+      borderLeft: `4px solid ${sectionColor}`,
       background: 'white',
+      pageBreakInside: 'avoid',
     }}>
       {/* TIME */}
-      <div style={{ fontWeight: '900', color: '#0f172a', fontVariantNumeric: 'tabular-nums', textAlign: 'center' }}>
+      <div style={{ fontWeight: '900', color: '#0f172a', fontVariantNumeric: 'tabular-nums', textAlign: 'center', fontSize: '13px', lineHeight: 1.2 }}>
         {mainTime}
       </div>
 
       {/* CALL */}
-      <div style={{ fontWeight: '700', color: '#64748b', fontVariantNumeric: 'tabular-nums', textAlign: 'center', fontSize: '8px' }}>
+      <div style={{ fontWeight: '700', color: '#64748b', fontVariantNumeric: 'tabular-nums', textAlign: 'center', fontSize: '11px', lineHeight: 1.2, paddingTop: '1px' }}>
         {callTime}
       </div>
 
       {/* TRIP ID */}
-      <div style={{ fontWeight: '800', color: '#374151', fontFamily: 'monospace', textAlign: 'center' }}>
+      <div style={{ fontWeight: '800', color: '#374151', fontFamily: 'monospace', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
         {group.trip_id}
       </div>
 
       {/* VEHICLE */}
-      <div style={{ fontWeight: '700', color: '#0f172a', textAlign: 'center' }}>
+      <div style={{ fontWeight: '800', color: '#0f172a', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
         {group.vehicle_id || '–'}
       </div>
 
       {/* DRIVER */}
-      <div style={{ fontSize: '8px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ fontSize: '11px', color: '#1e293b', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
         {group.driver_name || '–'}
       </div>
 
-      {/* ROUTE (multi-stop) */}
-      <div style={{ fontSize: '8px', color: '#374151', lineHeight: '1.4' }}>
+      {/* ROUTE */}
+      <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.4 }}>
         {isMultiStop ? (
           <div>
-            <div style={{ fontWeight: '700', color: '#ea580c', marginBottom: '2px' }}>
-              🔀 MULTI ({group.rows.length} stops)
+            {/* Badge multi-stop */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+              <span style={{
+                background: '#ea580c', color: 'white', fontWeight: '900',
+                fontSize: '10px', padding: '1px 6px', borderRadius: '4px', letterSpacing: '0.3px'
+              }}>
+                🔀 MULTI · {group.rows.length} STOPS
+              </span>
+              <span style={{ fontSize: '10px', color: '#64748b' }}>
+                📍 FROM: <strong style={{ color: '#0f172a' }}>{pickupName}</strong>
+              </span>
             </div>
+            {/* Ogni fermata */}
             {group.rows.map((row, i) => {
               const pax = row.passenger_list
                 ? row.passenger_list.split(',').map(s => s.trim()).filter(Boolean)
                 : []
               const dropoffName = locsMap[row.dropoff_id] || row.dropoff_id || '–'
+              const legTime = minToHHMM(row.pickup_min)
               return (
-                <div key={row.id || i} style={{ marginBottom: '3px', paddingLeft: '12px', borderLeft: '1px solid #e2e8f0' }}>
-                  <div style={{ fontWeight: '600', color: '#0f172a' }}>
-                    → {dropoffName}
-                  </div>
-                  {pax.length > 0 && (
-                    <div style={{ fontSize: '7px', color: '#64748b', marginTop: '1px' }}>
-                      {pax.join(', ')}
+                <div key={row.id || i} style={{
+                  display: 'flex', gap: '6px', alignItems: 'flex-start',
+                  padding: '2px 0 2px 8px',
+                  borderLeft: '2px solid #e2e8f0',
+                  marginBottom: '2px',
+                }}>
+                  <span style={{ fontWeight: '900', color: '#ea580c', fontSize: '11px', minWidth: '14px' }}>
+                    {i + 1}.
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '11px' }}>
+                        → {dropoffName}
+                      </span>
+                      {legTime !== '–' && (
+                        <span style={{ fontSize: '10px', color: '#64748b', fontVariantNumeric: 'tabular-nums' }}>
+                          @{legTime}
+                        </span>
+                      )}
+                      <span style={{ fontSize: '10px', color: '#64748b' }}>
+                        ({row.pax_count || 0} pax)
+                      </span>
                     </div>
-                  )}
+                    {pax.length > 0 && (
+                      <div style={{ fontSize: '10px', color: '#475569', marginTop: '1px', fontWeight: '500' }}>
+                        {pax.join(' · ')}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}
           </div>
         ) : (
           <div>
-            <div style={{ fontWeight: '600', color: '#0f172a' }}>
-              → {locsMap[group.rows[0]?.dropoff_id] || group.rows[0]?.dropoff_id || '–'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '10px', color: '#64748b' }}>
+                FROM: <strong style={{ color: '#0f172a' }}>{pickupName}</strong>
+              </span>
+              <span style={{ color: '#94a3b8' }}>→</span>
+              <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '11px' }}>
+                {locsMap[group.rows[0]?.dropoff_id] || group.rows[0]?.dropoff_id || '–'}
+              </span>
             </div>
             {group.rows[0]?.passenger_list && (
-              <div style={{ fontSize: '7px', color: '#64748b', marginTop: '1px' }}>
-                {group.rows[0].passenger_list.split(',').map(s => s.trim()).filter(Boolean).join(', ')}
+              <div style={{ fontSize: '10px', color: '#475569', marginTop: '2px', fontWeight: '500' }}>
+                {group.rows[0].passenger_list.split(',').map(s => s.trim()).filter(Boolean).join(' · ')}
               </div>
             )}
           </div>
@@ -151,35 +182,14 @@ function TripTableRow({ group, locsMap, showFlight, showPickup, sectionColor }) 
       </div>
 
       {/* PAX */}
-      <div style={{ fontWeight: '700', color: '#0f172a', textAlign: 'right' }}>
+      <div style={{ fontWeight: '800', color: '#0f172a', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
         {totalPax}
       </div>
 
       {/* CAPACITY */}
-      <div style={{ fontSize: '8px', color: '#64748b', textAlign: 'center' }}>
+      <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'center', lineHeight: 1.2 }}>
         {group.capacity || '–'}
       </div>
-    </div>
-  )
-}
-
-// ─── Separatore sezione ────────────────────────────────────────
-function SectionHeader({ icon, title, count, color }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '10px',
-      padding: '10px 0 8px',
-      marginBottom: '12px',
-      borderBottom: `2px solid ${color}`,
-      pageBreakAfter: 'avoid',
-    }}>
-      <span style={{ fontSize: '18px' }}>{icon}</span>
-      <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a', letterSpacing: '-0.3px' }}>{title}</span>
-      {count > 0 && (
-        <span style={{ fontSize: '11px', fontWeight: '700', background: color, color: 'white', padding: '1px 7px', borderRadius: '999px' }}>
-          {count} trip{count !== 1 ? 's' : ''}
-        </span>
-      )}
     </div>
   )
 }
@@ -219,14 +229,12 @@ export default function ListsPage() {
 
   useEffect(() => { if (user) loadData(date) }, [user, date, loadData])
 
-  // Raggruppa per classe
   const standard   = groupByTripId(trips.filter(t => t.transfer_class === 'STANDARD'))
   const arrivals   = groupByTripId(trips.filter(t => t.transfer_class === 'ARRIVAL'))
   const departures = groupByTripId(trips.filter(t => t.transfer_class === 'DEPARTURE'))
 
   const totalPax = trips.reduce((s, t) => s + (t.pax_count || 0), 0)
   const totalTrips = standard.length + arrivals.length + departures.length
-  const useCompactLayout = totalTrips > 20
 
   if (!user) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
@@ -234,27 +242,79 @@ export default function ListsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-      {/* ── Stili print ── */}
+
+      {/* ══ STILI GLOBALI ══ */}
       <style>{`
+        /* ── SCHERMO: leggibile ── */
+        .trip-row { font-size: 13px; }
+
+        /* ── STAMPA ── */
         @media print {
           .no-print { display: none !important; }
-          .print-page { background: white !important; padding: 0 !important; }
-          .print-content { max-width: 100% !important; padding: 8mm !important; }
-          body { background: white !important; margin: 0; }
-          .trip-block { page-break-inside: avoid; }
-          .print-container { width: 100%; }
+          body { background: white !important; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+          /* Comprimi ogni riga al minimo */
+          .trip-row {
+            padding: 3px 4px !important;
+            font-size: 9px !important;
+          }
+          .trip-row > div { font-size: 9px !important; }
+
+          /* TIME grande e leggibile anche in stampa */
+          .trip-row .time-cell { font-size: 11px !important; }
+
+          /* Sezioni header compatte */
+          .section-header { padding: 4px 0 2px !important; font-size: 8px !important; }
+
+          /* Intestazione documento compatta */
+          .doc-header { padding: 6px 10px !important; margin-bottom: 8px !important; }
+          .doc-header .title { font-size: 13px !important; }
+          .doc-header .subtitle { font-size: 9px !important; }
+          .doc-header .meta { font-size: 8px !important; }
+
+          /* Intestazione colonne compatta */
+          .col-header { padding: 3px 4px !important; font-size: 8px !important; }
+
+          /* Footer compatto */
+          .doc-footer { padding-top: 4px !important; margin-top: 6px !important; font-size: 8px !important; }
+
+          /* Nomi crew in stampa */
+          .crew-names { font-size: 8px !important; }
+
+          /* Stop label in stampa */
+          .stop-label { font-size: 8px !important; }
+          .stop-dest { font-size: 9px !important; }
+
+          /* Multi badge in stampa */
+          .multi-badge { font-size: 8px !important; padding: 0 4px !important; }
+          .multi-from { font-size: 8px !important; }
+
+          /* Contenitore principale */
+          .print-wrap { padding: 0 !important; background: white !important; }
+          .print-card { border-radius: 0 !important; padding: 0 !important; border: none !important; }
+
+          /* Toolbar nascosta */
+          .toolbar { display: none !important; }
         }
-        @page { 
+
+        @page {
           size: A4 landscape;
-          margin: 8mm;
+          margin: 7mm 8mm;
         }
       `}</style>
 
-      {/* ── Navbar unificata ── */}
-      <Navbar currentPath="/dashboard/lists" />
+      {/* ── Navbar (nascosta in stampa) ── */}
+      <div className="no-print">
+        <Navbar currentPath="/dashboard/lists" />
+      </div>
 
-      {/* ── Toolbar (no-print) ── */}
-      <div className="no-print" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20 }}>
+      {/* ── Toolbar (nascosta in stampa) ── */}
+      <div className="no-print toolbar" style={{
+        background: 'white', borderBottom: '1px solid #e2e8f0',
+        padding: '0 24px', height: '52px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        position: 'sticky', top: '52px', zIndex: 20,
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>📋</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Transport Lists</span>
@@ -267,7 +327,7 @@ export default function ListsPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '12px', color: '#64748b' }}>
-            {trips.length} trips · {totalPax} pax
+            {totalTrips} trips · {totalPax} pax
           </span>
           <button onClick={() => window.print()}
             style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 18px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -277,20 +337,25 @@ export default function ListsPage() {
       </div>
 
       {/* ── Contenuto stampabile ── */}
-      <div className="print-content" style={{ maxWidth: '900px', margin: '0 auto', padding: '24px', background: '#f1f5f9', minHeight: '80vh' }}>
+      <div className="print-wrap" style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', background: '#f1f5f9', minHeight: '80vh' }}>
 
-        {/* Intestazione documento (visibile in stampa) */}
-        <div style={{ background: 'white', borderRadius: '10px', padding: '16px 20px', marginBottom: '20px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+        {/* Intestazione documento */}
+        <div className="doc-header" style={{
+          background: 'white', borderRadius: '10px', padding: '14px 20px',
+          marginBottom: '16px', border: '1px solid #e2e8f0',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
           <div>
-            <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f2340', letterSpacing: '-0.5px' }}>
+            <div className="title" style={{ fontSize: '22px', fontWeight: '900', color: '#0f2340', letterSpacing: '-0.5px' }}>
               CAPTAIN <span style={{ color: '#2563eb' }}>Dispatch</span>
+              <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginLeft: '12px' }}>Transport Lists</span>
             </div>
-            <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
-              Transport Lists — <strong style={{ color: '#0f172a' }}>{fmtDateLong(date)}</strong>
+            <div className="subtitle" style={{ fontSize: '14px', color: '#0f172a', marginTop: '2px', fontWeight: '700' }}>
+              {fmtDateLong(date)}
             </div>
           </div>
-          <div style={{ textAlign: 'right', fontSize: '11px', color: '#94a3b8' }}>
-            <div>{trips.length} trips · {totalPax} pax</div>
+          <div className="meta" style={{ textAlign: 'right', fontSize: '12px', color: '#94a3b8', lineHeight: 1.6 }}>
+            <div style={{ fontWeight: '700', color: '#64748b' }}>{totalTrips} trips · {totalPax} pax</div>
             <div>Printed: {fmtNow()}</div>
           </div>
         </div>
@@ -309,73 +374,104 @@ export default function ListsPage() {
             <div style={{ color: '#64748b', fontSize: '15px', fontWeight: '600' }}>No trips for {fmtDateLong(date)}</div>
           </div>
         ) : (
-          <div style={{ background: 'white', borderRadius: '10px', padding: '20px 24px', border: '1px solid #e2e8f0' }}>
+          <div className="print-card" style={{ background: 'white', borderRadius: '10px', padding: '16px 20px', border: '1px solid #e2e8f0' }}>
 
-            {/* ══ LAYOUT UNIFICATO LANDSCAPE ══ */}
-            {/* Intestazione tabella */}
-            <div style={{
+            {/* Intestazione colonne */}
+            <div className="col-header" style={{
               display: 'grid',
-              gridTemplateColumns: '50px 50px 70px 60px 90px 1fr 50px 50px',
-              gap: '8px',
-              padding: '8px',
-              borderBottom: '2px solid #e2e8f0',
-              fontWeight: '700',
-              fontSize: '9px',
-              color: '#64748b',
+              gridTemplateColumns: '56px 50px 80px 58px 110px 1fr 36px 36px',
+              gap: '0 6px',
+              padding: '6px 6px',
+              borderBottom: '2px solid #0f172a',
+              fontWeight: '800',
+              fontSize: '10px',
+              color: '#0f172a',
               background: '#f8fafc',
+              letterSpacing: '0.5px',
               pageBreakAfter: 'avoid',
             }}>
               <div style={{ textAlign: 'center' }}>TIME</div>
               <div style={{ textAlign: 'center' }}>CALL</div>
               <div style={{ textAlign: 'center' }}>TRIP ID</div>
-              <div style={{ textAlign: 'center' }}>VEHICLE</div>
+              <div style={{ textAlign: 'center' }}>VEH.</div>
               <div>DRIVER</div>
-              <div>ROUTE</div>
-              <div style={{ textAlign: 'right' }}>PAX</div>
+              <div>ROUTE &amp; CREW</div>
+              <div style={{ textAlign: 'center' }}>PAX</div>
               <div style={{ textAlign: 'center' }}>CAP</div>
             </div>
 
-            {/* STANDARD */}
+            {/* ── STANDARD ── */}
             {standard.length > 0 && (
               <>
-                <div style={{ fontSize: '9px', fontWeight: '700', color: '#2563eb', padding: '8px 0 4px', marginTop: '8px', pageBreakAfter: 'avoid' }}>
-                  🚌 TRANSPORT LIST ({standard.length})
+                <div className="section-header" style={{
+                  fontSize: '11px', fontWeight: '800', color: 'white',
+                  background: '#2563eb',
+                  padding: '5px 8px', marginTop: '8px',
+                  pageBreakAfter: 'avoid',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}>
+                  <span>🚌 TRANSPORT LIST</span>
+                  <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
+                    {standard.length} trip{standard.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
                 {standard.map(group => (
-                  <TripTableRow key={group.trip_id} group={group} locsMap={locsMap} showFlight={false} showPickup={true} sectionColor="#2563eb" />
+                  <TripTableRow key={group.trip_id} group={group} locsMap={locsMap} sectionColor="#2563eb" />
                 ))}
               </>
             )}
 
-            {/* ARRIVALS */}
+            {/* ── ARRIVALS ── */}
             {arrivals.length > 0 && (
               <>
-                <div style={{ fontSize: '9px', fontWeight: '700', color: '#16a34a', padding: '12px 0 4px', marginTop: '8px', pageBreakAfter: 'avoid' }}>
-                  ✈ 🛬 TRAVEL LIST — ARRIVALS ({arrivals.length})
+                <div className="section-header" style={{
+                  fontSize: '11px', fontWeight: '800', color: 'white',
+                  background: '#16a34a',
+                  padding: '5px 8px', marginTop: '10px',
+                  pageBreakAfter: 'avoid',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}>
+                  <span>✈ 🛬 TRAVEL LIST — ARRIVALS</span>
+                  <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
+                    {arrivals.length} trip{arrivals.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
                 {arrivals.map(group => (
-                  <TripTableRow key={group.trip_id} group={group} locsMap={locsMap} showFlight={true} showPickup={true} sectionColor="#16a34a" />
+                  <TripTableRow key={group.trip_id} group={group} locsMap={locsMap} sectionColor="#16a34a" />
                 ))}
               </>
             )}
 
-            {/* DEPARTURES */}
+            {/* ── DEPARTURES ── */}
             {departures.length > 0 && (
               <>
-                <div style={{ fontSize: '9px', fontWeight: '700', color: '#ea580c', padding: '12px 0 4px', marginTop: '8px', pageBreakAfter: 'avoid' }}>
-                  ✈ 🛫 TRAVEL LIST — DEPARTURES ({departures.length})
+                <div className="section-header" style={{
+                  fontSize: '11px', fontWeight: '800', color: 'white',
+                  background: '#ea580c',
+                  padding: '5px 8px', marginTop: '10px',
+                  pageBreakAfter: 'avoid',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}>
+                  <span>✈ 🛫 TRAVEL LIST — DEPARTURES</span>
+                  <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
+                    {departures.length} trip{departures.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
                 {departures.map(group => (
-                  <TripTableRow key={group.trip_id} group={group} locsMap={locsMap} showFlight={true} showPickup={false} sectionColor="#ea580c" />
+                  <TripTableRow key={group.trip_id} group={group} locsMap={locsMap} sectionColor="#ea580c" />
                 ))}
               </>
             )}
 
             {/* Footer documento */}
-            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', marginTop: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#94a3b8' }}>
+            <div className="doc-footer" style={{
+              borderTop: '1px solid #e2e8f0', paddingTop: '10px', marginTop: '14px',
+              display: 'flex', justifyContent: 'space-between',
+              fontSize: '11px', color: '#94a3b8',
+            }}>
               <span>CAPTAIN Dispatch · {PRODUCTION_ID?.slice(0, 8) ?? 'N/A'}</span>
               <span>{fmtDateLong(date)}</span>
-              <span>Total: {trips.length} trips · {totalPax} pax</span>
+              <span>Total: {totalTrips} trips · {totalPax} pax</span>
             </div>
           </div>
         )}

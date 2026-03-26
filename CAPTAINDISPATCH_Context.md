@@ -18,7 +18,11 @@ GitHub: DanieleContino/captaindispatch
 - Vercel: danielecontino
 - Supabase: captaindispatch (Project ID: lvxtvgxyancpegvfcnsk, West EU)
 
-**Deploy:** `vercel --prod` da `c:\Users\WKS\Desktop\captaindispatch`
+**Deploy:** `git add . && git commit -m "..." && git push origin main` → Vercel auto-deploy in ~1-2 min
+
+> ⚠️ **REGOLA OBBLIGATORIA: fare deploy dopo OGNI modifica ai file.**
+> Il deploy su Vercel Hobby Plan è **gratuito e illimitato**.
+> Senza deploy, le modifiche esistono solo in locale e non appaiono su captaindispatch.com.
 
 ---
 
