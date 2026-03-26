@@ -30,13 +30,17 @@ function fmtNow() {
   return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
-// ─── Raggruppa trip per trip_id ────────────────────────────────
+// ─── baseTripId: strip lettera finale (es. R_0326_01A → R_0326_01) ──
+function baseTripId(id) { return id ? id.replace(/[A-Z]$/, '') : id }
+
+// ─── Raggruppa trip per baseTripId + vehicle_id (stesso pattern di trips/page.js) ──
 function groupByTripId(tripRows) {
   const map = {}
   for (const t of tripRows) {
-    if (!map[t.trip_id]) {
-      map[t.trip_id] = {
-        trip_id:     t.trip_id,
+    const key = baseTripId(t.trip_id) + '::' + (t.vehicle_id || '__none__')
+    if (!map[key]) {
+      map[key] = {
+        trip_id:     baseTripId(t.trip_id),
         vehicle_id:  t.vehicle_id,
         driver_name: t.driver_name,
         sign_code:   t.sign_code,
@@ -50,7 +54,14 @@ function groupByTripId(tripRows) {
         rows:        [t],
       }
     } else {
-      map[t.trip_id].rows.push(t)
+      map[key].rows.push(t)
+      // Usa il pickup_min più basso del gruppo
+      if (t.pickup_min != null && (map[key].pickup_min == null || t.pickup_min < map[key].pickup_min)) {
+        map[key].pickup_min = t.pickup_min
+      }
+      if (t.call_min != null && (map[key].call_min == null || t.call_min < map[key].call_min)) {
+        map[key].call_min = t.call_min
+      }
     }
   }
   return Object.values(map).sort((a, b) =>

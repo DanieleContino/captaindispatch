@@ -888,7 +888,8 @@ export default function RocketPage() {
                                 <span style={{ flex: 1, fontSize: '13px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.full_name}</span>
                                 <span style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0, maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locMap[c.hotel_id] || c.hotel_id || '—'}</span>
                                 {destOvr && <span style={{ fontSize: '9px', color: '#7c3aed', fontWeight: '700', flexShrink: 0 }}>●</span>}
-                                <span style={{ fontSize: '12px', fontWeight: '800', color: hasCallOvr ? '#d97706' : '#374151', flexShrink: 0, minWidth: '42px', textAlign: 'right' }}>
+                                <span style={{ fontSize: '12px', fontWeight: '800', color: hasCallOvr ? '#d97706' : '#374151', flexShrink: 0, minWidth: '42px', textAlign: 'right', cursor: 'pointer' }}
+                                  title={hasCallOvr ? `Override: ${minToHHMM(displayCall)} (base: ${minToHHMM(deptEffCall)})` : `Call: ${minToHHMM(displayCall)}`}>
                                   {minToHHMM(displayCall)}{hasCallOvr && <span style={{ fontSize: '9px' }}>●</span>}
                                 </span>
                                 <span style={{ fontSize: '10px', color: '#cbd5e1', flexShrink: 0 }}>›</span>

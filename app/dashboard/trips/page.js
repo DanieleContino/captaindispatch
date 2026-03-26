@@ -236,7 +236,7 @@ function TripRow({ group, locations, selected, onClick }) {
       {/* ── Passeggeri ── */}
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: '11px', fontWeight: '800', color: paxColor, marginBottom: '3px' }}>
-          👥 {t.pax_count || 0}{t.capacity ? `/${t.capacity}` : ''} pax
+          👥 {isMixed ? group.reduce((s, r) => s + (r.pax_count || 0), 0) : (t.pax_count || 0)}{t.capacity ? `/${t.capacity}` : ''} pax
           {t.pax_conflict_flag && <span style={{ color: '#dc2626', marginLeft: '4px' }}>⚠ conflict</span>}
         </div>
         {paxNames.length > 0 ? (
