@@ -1,7 +1,8 @@
 /**
  * /api/productions
- * GET  → lista produzioni a cui l'utente ha accesso (via user_roles)
- * POST → crea nuova produzione + assegna ruolo CAPTAIN all'utente corrente
+ * GET  → list productions the user has access to (via user_roles)
+ * POST → create new production + assign CAPTAIN role to current user
+ * PATCH → update production details (name, slug, producer, production_director, logo_url)
  */
 import { createSupabaseServerClient } from '../../../lib/supabaseServer'
 import { NextResponse } from 'next/server'
@@ -14,7 +15,7 @@ export async function GET() {
 
     const { data: roles, error } = await supabase
       .from('user_roles')
-      .select('role, productions(id, name, slug, created_at)')
+      .select('role, productions(id, name, slug, logo_url, producer, production_director, created_at)')
       .eq('user_id', user.id)
       .order('created_at', { referencedTable: 'productions', ascending: false })
 
@@ -36,20 +37,25 @@ export async function POST(req) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { name, slug } = await req.json()
+    const { name, slug, producer, production_director } = await req.json()
     if (!name?.trim() || !slug?.trim())
-      return NextResponse.json({ error: 'name e slug obbligatori' }, { status: 400 })
+      return NextResponse.json({ error: 'name and slug are required' }, { status: 400 })
 
-    // Crea produzione
+    // Create production
     const { data: prod, error: prodErr } = await supabase
       .from('productions')
-      .insert({ name: name.trim(), slug: slug.trim().toLowerCase().replace(/\s+/g, '-') })
+      .insert({
+        name: name.trim(),
+        slug: slug.trim().toLowerCase().replace(/\s+/g, '-'),
+        producer: producer?.trim() || null,
+        production_director: production_director?.trim() || null,
+      })
       .select()
       .single()
 
     if (prodErr) return NextResponse.json({ error: prodErr.message }, { status: 500 })
 
-    // Assegna ruolo CAPTAIN al creatore
+    // Assign CAPTAIN role to creator
     await supabase.from('user_roles').upsert(
       { user_id: user.id, production_id: prod.id, role: 'CAPTAIN' },
       { onConflict: 'user_id,production_id', ignoreDuplicates: true }
@@ -67,12 +73,15 @@ export async function PATCH(req) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { id, name, slug } = await req.json()
-    if (!id) return NextResponse.json({ error: 'id obbligatorio' }, { status: 400 })
+    const { id, name, slug, producer, production_director, logo_url } = await req.json()
+    if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
     const updates = {}
-    if (name) updates.name = name.trim()
-    if (slug) updates.slug = slug.trim().toLowerCase().replace(/\s+/g, '-')
+    if (name !== undefined)                updates.name                = name.trim()
+    if (slug !== undefined)                updates.slug                = slug.trim().toLowerCase().replace(/\s+/g, '-')
+    if (producer !== undefined)            updates.producer            = producer?.trim() || null
+    if (production_director !== undefined) updates.production_director = production_director?.trim() || null
+    if (logo_url !== undefined)            updates.logo_url            = logo_url || null
 
     const { data, error } = await supabase
       .from('productions')
