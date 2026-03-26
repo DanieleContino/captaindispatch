@@ -4,8 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
-
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
+import { getProductionId } from '../../../lib/production'
 
 // ─── Utility ──────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
@@ -21,19 +20,23 @@ function isoAdd(d, n) {
   return dt.toISOString().split('T')[0]
 }
 function fmtDateLong(d) {
-  return new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', {
+  return new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
 }
 function fmtNow() {
   const d = new Date()
-  return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+  return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()} · ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+function fmtNowDate() {
+  const d = new Date()
+  return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`
 }
 
 // ─── baseTripId: strip lettera finale (es. R_0326_01A → R_0326_01) ──
 function baseTripId(id) { return id ? id.replace(/[A-Z]$/, '') : id }
 
-// ─── Raggruppa trip per baseTripId + vehicle_id (stesso pattern di trips/page.js) ──
+// ─── Raggruppa trip per baseTripId + vehicle_id ──
 function groupByTripId(tripRows) {
   const map = {}
   for (const t of tripRows) {
@@ -55,7 +58,6 @@ function groupByTripId(tripRows) {
       }
     } else {
       map[key].rows.push(t)
-      // Usa il pickup_min più basso del gruppo
       if (t.pickup_min != null && (map[key].pickup_min == null || t.pickup_min < map[key].pickup_min)) {
         map[key].pickup_min = t.pickup_min
       }
@@ -75,7 +77,6 @@ function TripTableRow({ group, locsMap, sectionColor }) {
   const callTime = minToHHMM(group.call_min)
   const totalPax = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
   const isMultiStop = group.rows.length > 1
-
   const pickupName = locsMap[group.pickup_id] || group.pickup_id || '–'
 
   return (
@@ -90,41 +91,26 @@ function TripTableRow({ group, locsMap, sectionColor }) {
       background: 'white',
       pageBreakInside: 'avoid',
     }}>
-      {/* TIME */}
       <div style={{ fontWeight: '900', color: '#0f172a', fontVariantNumeric: 'tabular-nums', textAlign: 'center', fontSize: '13px', lineHeight: 1.2 }}>
         {mainTime}
       </div>
-
-      {/* CALL */}
       <div style={{ fontWeight: '700', color: '#64748b', fontVariantNumeric: 'tabular-nums', textAlign: 'center', fontSize: '11px', lineHeight: 1.2, paddingTop: '1px' }}>
         {callTime}
       </div>
-
-      {/* TRIP ID */}
       <div style={{ fontWeight: '800', color: '#374151', fontFamily: 'monospace', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
         {group.trip_id}
       </div>
-
-      {/* VEHICLE */}
       <div style={{ fontWeight: '800', color: '#0f172a', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
         {group.vehicle_id || '–'}
       </div>
-
-      {/* DRIVER */}
       <div style={{ fontSize: '11px', color: '#1e293b', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
         {group.driver_name || '–'}
       </div>
-
-      {/* ROUTE */}
       <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.4 }}>
         {isMultiStop ? (
           <div>
-            {/* Riga 1: badge + tratte inline */}
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '2px' }}>
-              <span style={{
-                background: '#ea580c', color: 'white', fontWeight: '900',
-                fontSize: '9px', padding: '1px 5px', borderRadius: '4px', letterSpacing: '0.3px', flexShrink: 0
-              }}>
+              <span style={{ background: '#ea580c', color: 'white', fontWeight: '900', fontSize: '9px', padding: '1px 5px', borderRadius: '4px', letterSpacing: '0.3px', flexShrink: 0 }}>
                 🔀 {group.rows.length}
               </span>
               {group.rows.map((row, i) => {
@@ -143,9 +129,7 @@ function TripTableRow({ group, locsMap, sectionColor }) {
                 )
               })}
             </div>
-            {/* Righe crew: raggruppate per pickup_id */}
             {(() => {
-              // Raggruppa le righe per pickup_id
               const byPickup = {}
               for (const row of group.rows) {
                 const key = row.pickup_id || '__unknown__'
@@ -187,15 +171,209 @@ function TripTableRow({ group, locsMap, sectionColor }) {
           </div>
         )}
       </div>
-
-      {/* PAX */}
       <div style={{ fontWeight: '800', color: '#0f172a', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
         {totalPax}
       </div>
-
-      {/* CAPACITY */}
       <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'center', lineHeight: 1.2 }}>
         {group.capacity || '–'}
+      </div>
+    </div>
+  )
+}
+
+// ─── Transport List Header ─────────────────────────────────────
+function TransportListHeader({ production, date }) {
+  const prod = production || {}
+
+  // Format date for display
+  const dateDisplay = fmtDateLong(date)
+
+  // General call time
+  const callTime = prod.general_call_time
+    ? prod.general_call_time.slice(0, 5)
+    : '–'
+
+  // Set bar text
+  const setLabel = [prod.set_location, prod.set_address].filter(Boolean).join(', ') || '–'
+  const basecampLabel = prod.basecamp || '–'
+
+  const borderColor = '#e2e8f0'
+  const bgSecondary = '#f8fafc'
+  const textPrimary = '#0f172a'
+  const textSecondary = '#64748b'
+  const textTertiary = '#94a3b8'
+  const radius = '10px'
+  const radiusSm = '5px'
+
+  return (
+    <div style={{
+      border: `0.5px solid ${borderColor}`,
+      borderRadius: radius,
+      overflow: 'hidden',
+      background: 'white',
+      marginBottom: '10px',
+    }}>
+      {/* Top bar */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '56px 1fr auto',
+        alignItems: 'center',
+        gap: '14px',
+        padding: '8px 14px',
+        borderBottom: `0.5px solid ${borderColor}`,
+      }}>
+        {/* Logo */}
+        {prod.logo_url ? (
+          <img
+            src={prod.logo_url}
+            alt="logo"
+            style={{ width: '56px', height: '36px', objectFit: 'contain', borderRadius: radiusSm, background: 'white', border: `0.5px solid ${borderColor}`, padding: '2px' }}
+          />
+        ) : (
+          <div style={{
+            width: '56px', height: '36px',
+            border: `0.5px dashed ${borderColor}`,
+            borderRadius: radiusSm,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '10px', color: textTertiary,
+          }}>
+            LOGO
+          </div>
+        )}
+
+        {/* Center: production name + sub */}
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: '500', color: textPrimary }}>
+            {prod.name || 'Production Name'}
+            <span style={{
+              display: 'inline-block',
+              fontSize: '9px',
+              background: '#fef2f2',
+              color: '#dc2626',
+              padding: '1px 7px',
+              borderRadius: radiusSm,
+              marginLeft: '8px',
+              verticalAlign: 'middle',
+              fontWeight: '700',
+              letterSpacing: '0.05em',
+            }}>
+              CONFIDENTIAL
+            </span>
+          </div>
+          <div style={{ fontSize: '11px', color: textSecondary, marginTop: '2px' }}>
+            Transport List &nbsp;·&nbsp; {dateDisplay}
+            {prod.shoot_day ? ` · Shoot Day ${prod.shoot_day}` : ''}
+            {prod.revision  ? ` · Rev. ${prod.revision}`       : ''}
+          </div>
+        </div>
+
+        {/* Right: General Call */}
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '10px', color: textTertiary }}>General Call</div>
+          <div style={{ fontSize: '22px', fontWeight: '500', lineHeight: 1.1, color: textPrimary }}>
+            {callTime}
+          </div>
+        </div>
+      </div>
+
+      {/* Contacts row 1 — 4 columns */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        borderBottom: `0.5px solid ${borderColor}`,
+      }}>
+        {[
+          { label: 'Director',               name: prod.director,                 phone: null },
+          { label: 'Producer',               name: prod.producer,                 phone: null },
+          { label: 'Production Manager',     name: prod.production_manager,       phone: prod.production_manager_phone },
+          { label: 'Production Coordinator', name: prod.production_coordinator,   phone: prod.production_coordinator_phone },
+        ].map((c, i, arr) => (
+          <div key={c.label} style={{
+            padding: '6px 12px',
+            borderRight: i < arr.length - 1 ? `0.5px solid ${borderColor}` : 'none',
+            minWidth: 0,
+          }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: textSecondary, marginBottom: '2px' }}>{c.label}</div>
+            <div style={{ fontSize: '13px', color: textPrimary }}>{c.name || '–'}</div>
+            <div style={{ fontSize: '10px', color: textTertiary, marginTop: '1px' }}>{c.phone || '\u00a0'}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Contacts row 2 — 3 columns */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+      }}>
+        {[
+          { label: 'Transportation Coordinator', name: prod.transportation_coordinator, phone: prod.transportation_coordinator_phone },
+          { label: 'Transportation Captain',     name: prod.transportation_captain,     phone: prod.transportation_captain_phone },
+          { label: 'Production Office',          name: prod.production_office_phone,    phone: null, isPhone: true },
+        ].map((c, i, arr) => (
+          <div key={c.label} style={{
+            padding: '6px 12px',
+            borderRight: i < arr.length - 1 ? `0.5px solid ${borderColor}` : 'none',
+            minWidth: 0,
+          }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: textSecondary, marginBottom: '2px' }}>{c.label}</div>
+            {c.isPhone ? (
+              <>
+                <div style={{ fontSize: '13px', color: textPrimary }}>{c.name || '–'}</div>
+                <div style={{ fontSize: '10px', color: textTertiary, marginTop: '1px' }}>&nbsp;</div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: '13px', color: textPrimary }}>{c.name || '–'}</div>
+                <div style={{ fontSize: '10px', color: textTertiary, marginTop: '1px' }}>{c.phone || '\u00a0'}</div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Set bar */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '20px',
+        padding: '5px 14px',
+        background: bgSecondary,
+        borderTop: `0.5px solid ${borderColor}`,
+        fontSize: '11px',
+        color: textSecondary,
+      }}>
+        <span><strong style={{ color: textPrimary, fontWeight: '500' }}>Set:</strong> {setLabel}</span>
+        <span><strong style={{ color: textPrimary, fontWeight: '500' }}>Basecamp:</strong> {basecampLabel}</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Transport List Footer ─────────────────────────────────────
+function TransportListFooter() {
+  const borderColor = '#e2e8f0'
+  const bgSecondary = '#f8fafc'
+  const textTertiary = '#94a3b8'
+  const radius = '10px'
+
+  return (
+    <div style={{
+      border: `0.5px solid ${borderColor}`,
+      borderRadius: radius,
+      overflow: 'hidden',
+      marginTop: '10px',
+    }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        padding: '5px 14px',
+        background: bgSecondary,
+        fontSize: '10px',
+        color: textTertiary,
+      }}>
+        <span>Confidential — Not for Distribution</span>
+        <span style={{ textAlign: 'center' }}>Generated by CaptainDispatch</span>
+        <span style={{ textAlign: 'right' }}>{fmtNow()}</span>
       </div>
     </div>
   )
@@ -204,28 +382,45 @@ function TripTableRow({ group, locsMap, sectionColor }) {
 // ─── Pagina principale ─────────────────────────────────────────
 export default function ListsPage() {
   const router = useRouter()
-  const [user,    setUser]    = useState(null)
-  const [date,    setDate]    = useState(isoToday())
-  const [trips,   setTrips]   = useState([])
-  const [locsMap, setLocsMap] = useState({})
-  const [loading, setLoading] = useState(true)
+  const [user,       setUser]       = useState(null)
+  const [date,       setDate]       = useState(isoToday())
+  const [trips,      setTrips]      = useState([])
+  const [locsMap,    setLocsMap]    = useState({})
+  const [loading,    setLoading]    = useState(true)
+  const [production, setProduction] = useState(null)
+  const [prodId,     setProdId]     = useState('')
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) router.push('/login')
-      else setUser(user)
+      else {
+        setUser(user)
+        const id = getProductionId()
+        setProdId(id)
+        if (id) loadProduction(id)
+      }
     })
   }, [])
 
+  async function loadProduction(id) {
+    const { data } = await supabase
+      .from('productions')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (data) setProduction(data)
+  }
+
   const loadData = useCallback(async d => {
-    if (!PRODUCTION_ID) return
+    const id = getProductionId()
+    if (!id) { setLoading(false); return }
     setLoading(true)
     const [tR, lR] = await Promise.all([
       supabase.from('trips').select('*')
-        .eq('production_id', PRODUCTION_ID).eq('date', d)
+        .eq('production_id', id).eq('date', d)
         .neq('status', 'CANCELLED')
         .order('pickup_min', { ascending: true, nullsLast: true }),
-      supabase.from('locations').select('id,name').eq('production_id', PRODUCTION_ID),
+      supabase.from('locations').select('id,name').eq('production_id', id),
     ])
     setTrips(tR.data || [])
     if (lR.data) {
@@ -240,7 +435,7 @@ export default function ListsPage() {
   const arrivals   = groupByTripId(trips.filter(t => t.transfer_class === 'ARRIVAL'))
   const departures = groupByTripId(trips.filter(t => t.transfer_class === 'DEPARTURE'))
 
-  const totalPax = trips.reduce((s, t) => s + (t.pax_count || 0), 0)
+  const totalPax   = trips.reduce((s, t) => s + (t.pax_count || 0), 0)
   const totalTrips = standard.length + arrivals.length + departures.length
 
   if (!user) return (
@@ -252,55 +447,23 @@ export default function ListsPage() {
 
       {/* ══ STILI GLOBALI ══ */}
       <style>{`
-        /* ── SCHERMO: leggibile ── */
         .trip-row { font-size: 13px; }
 
-        /* ── STAMPA ── */
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-          /* Comprimi ogni riga al minimo */
           .trip-row {
             padding: 3px 4px !important;
             font-size: 9px !important;
           }
           .trip-row > div { font-size: 9px !important; }
-
-          /* TIME grande e leggibile anche in stampa */
           .trip-row .time-cell { font-size: 11px !important; }
-
-          /* Sezioni header compatte */
           .section-header { padding: 4px 0 2px !important; font-size: 8px !important; }
-
-          /* Intestazione documento compatta */
-          .doc-header { padding: 6px 10px !important; margin-bottom: 8px !important; }
-          .doc-header .title { font-size: 13px !important; }
-          .doc-header .subtitle { font-size: 9px !important; }
-          .doc-header .meta { font-size: 8px !important; }
-
-          /* Intestazione colonne compatta */
           .col-header { padding: 3px 4px !important; font-size: 8px !important; }
-
-          /* Footer compatto */
           .doc-footer { padding-top: 4px !important; margin-top: 6px !important; font-size: 8px !important; }
-
-          /* Nomi crew in stampa */
-          .crew-names { font-size: 8px !important; }
-
-          /* Stop label in stampa */
-          .stop-label { font-size: 8px !important; }
-          .stop-dest { font-size: 9px !important; }
-
-          /* Multi badge in stampa */
-          .multi-badge { font-size: 8px !important; padding: 0 4px !important; }
-          .multi-from { font-size: 8px !important; }
-
-          /* Contenitore principale */
           .print-wrap { padding: 0 !important; background: white !important; }
           .print-card { border-radius: 0 !important; padding: 0 !important; border: none !important; }
-
-          /* Toolbar nascosta */
           .toolbar { display: none !important; }
         }
 
@@ -310,12 +473,12 @@ export default function ListsPage() {
         }
       `}</style>
 
-      {/* ── Navbar (nascosta in stampa) ── */}
+      {/* ── Navbar ── */}
       <div className="no-print">
         <Navbar currentPath="/dashboard/lists" />
       </div>
 
-      {/* ── Toolbar (nascosta in stampa) ── */}
+      {/* ── Toolbar ── */}
       <div className="no-print toolbar" style={{
         background: 'white', borderBottom: '1px solid #e2e8f0',
         padding: '0 24px', height: '52px',
@@ -336,6 +499,12 @@ export default function ListsPage() {
           <span style={{ fontSize: '12px', color: '#64748b' }}>
             {totalTrips} trips · {totalPax} pax
           </span>
+          {production && (
+            <a href="/dashboard/settings/production"
+              style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', textDecoration: 'none', cursor: 'pointer' }}>
+              ⚙️ Edit Header
+            </a>
+          )}
           <button onClick={() => window.print()}
             style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 18px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
             🖨 Print / PDF
@@ -346,37 +515,19 @@ export default function ListsPage() {
       {/* ── Contenuto stampabile ── */}
       <div className="print-wrap" style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', background: '#f1f5f9', minHeight: '80vh' }}>
 
-        {/* Intestazione documento */}
-        <div className="doc-header" style={{
-          background: 'white', borderRadius: '10px', padding: '14px 20px',
-          marginBottom: '16px', border: '1px solid #e2e8f0',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
-          <div>
-            <div className="title" style={{ fontSize: '22px', fontWeight: '900', color: '#0f2340', letterSpacing: '-0.5px' }}>
-              CAPTAIN <span style={{ color: '#2563eb' }}>Dispatch</span>
-              <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', marginLeft: '12px' }}>Transport Lists</span>
-            </div>
-            <div className="subtitle" style={{ fontSize: '14px', color: '#0f172a', marginTop: '2px', fontWeight: '700' }}>
-              {fmtDateLong(date)}
-            </div>
-          </div>
-          <div className="meta" style={{ textAlign: 'right', fontSize: '12px', color: '#94a3b8', lineHeight: 1.6 }}>
-            <div style={{ fontWeight: '700', color: '#64748b' }}>{totalTrips} trips · {totalPax} pax</div>
-            <div>Printed: {fmtNow()}</div>
-          </div>
-        </div>
+        {/* ── Transport List Header (nuovo layout) ── */}
+        <TransportListHeader production={production} date={date} />
 
-        {!PRODUCTION_ID && (
+        {!prodId && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
-            ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> non impostato in .env.local
+            ⚠ No active production. Go to <a href="/dashboard/productions" style={{ color: '#2563eb' }}>Productions</a> and activate one.
           </div>
         )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Caricamento…</div>
+          <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Loading…</div>
         ) : trips.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px' }}>
+          <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '36px', marginBottom: '10px' }}>📋</div>
             <div style={{ color: '#64748b', fontSize: '15px', fontWeight: '600' }}>No trips for {fmtDateLong(date)}</div>
           </div>
@@ -470,18 +621,12 @@ export default function ListsPage() {
               </>
             )}
 
-            {/* Footer documento */}
-            <div className="doc-footer" style={{
-              borderTop: '1px solid #e2e8f0', paddingTop: '10px', marginTop: '14px',
-              display: 'flex', justifyContent: 'space-between',
-              fontSize: '11px', color: '#94a3b8',
-            }}>
-              <span>CAPTAIN Dispatch · {PRODUCTION_ID?.slice(0, 8) ?? 'N/A'}</span>
-              <span>{fmtDateLong(date)}</span>
-              <span>Total: {totalTrips} trips · {totalPax} pax</span>
-            </div>
           </div>
         )}
+
+        {/* ── Transport List Footer (nuovo layout) ── */}
+        <TransportListFooter />
+
       </div>
     </div>
   )

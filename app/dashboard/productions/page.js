@@ -4,7 +4,7 @@
  * Phase 5 — Multi-production + Production Switcher
  *
  * - Lists productions the user has access to
- * - Allows creating new productions with name, slug, producer, production director
+ * - Allows creating new productions with all transport list header fields
  * - Logo upload via Supabase Storage (bucket: production-logos)
  * - Switcher: sets active production in localStorage → all sub-pages use that value
  * - Shows current active production
@@ -21,6 +21,23 @@ function slugify(s) {
 
 const BUCKET = 'production-logos'
 
+const EMPTY_FORM = {
+  name: '', slug: '',
+  // Key creatives
+  director: '', producer: '',
+  // Production team
+  production_manager: '', production_manager_phone: '',
+  production_coordinator: '', production_coordinator_phone: '',
+  // Transportation team
+  transportation_coordinator: '', transportation_coordinator_phone: '',
+  transportation_captain: '', transportation_captain_phone: '',
+  production_office_phone: '',
+  // Set & Basecamp
+  set_location: '', set_address: '', basecamp: '',
+  // Schedule
+  general_call_time: '', shoot_day: '', revision: '1',
+}
+
 export default function ProductionsPage() {
   const router = useRouter()
   const [user,         setUser]         = useState(null)
@@ -30,11 +47,11 @@ export default function ProductionsPage() {
   const [creating,     setCreating]     = useState(false)
   const [saving,       setSaving]       = useState(false)
   const [error,        setError]        = useState(null)
-  const [form,         setForm]         = useState({ name: '', slug: '', producer: '', production_director: '' })
+  const [form,         setForm]         = useState({ ...EMPTY_FORM })
   const [logoFile,     setLogoFile]     = useState(null)
   const [logoPreview,  setLogoPreview]  = useState(null)
   const [editId,       setEditId]       = useState(null)
-  const [editForm,     setEditForm]     = useState({ name: '', slug: '', producer: '', production_director: '' })
+  const [editForm,     setEditForm]     = useState({ ...EMPTY_FORM })
   const [editLogoFile, setEditLogoFile] = useState(null)
   const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [editSaving,   setEditSaving]   = useState(false)
@@ -82,7 +99,6 @@ export default function ProductionsPage() {
       .upload(path, file, { upsert: true, contentType: file.type })
     if (upErr) throw new Error(upErr.message)
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-    // Append cache-buster so the browser always shows the latest logo
     return data.publicUrl + '?t=' + Date.now()
   }
 
@@ -91,21 +107,34 @@ export default function ProductionsPage() {
     if (!form.name.trim()) { setError('Production name is required'); return }
     setSaving(true)
     try {
-      // 1. Create production (without logo first)
       const res  = await fetch('/api/productions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name.trim(),
           slug: form.slug || slugify(form.name),
+          director: form.director.trim(),
           producer: form.producer.trim(),
-          production_director: form.production_director.trim(),
+          production_manager: form.production_manager.trim(),
+          production_manager_phone: form.production_manager_phone.trim(),
+          production_coordinator: form.production_coordinator.trim(),
+          production_coordinator_phone: form.production_coordinator_phone.trim(),
+          transportation_coordinator: form.transportation_coordinator.trim(),
+          transportation_coordinator_phone: form.transportation_coordinator_phone.trim(),
+          transportation_captain: form.transportation_captain.trim(),
+          transportation_captain_phone: form.transportation_captain_phone.trim(),
+          production_office_phone: form.production_office_phone.trim(),
+          set_location: form.set_location.trim(),
+          set_address: form.set_address.trim(),
+          basecamp: form.basecamp.trim(),
+          general_call_time: form.general_call_time || null,
+          shoot_day: form.shoot_day ? parseInt(form.shoot_day) : null,
+          revision: form.revision ? parseInt(form.revision) : 1,
         }),
       })
       const json = await res.json()
       if (!res.ok) { setError(json.error); setSaving(false); return }
 
-      // 2. Upload logo if provided
       if (logoFile) {
         try {
           const logoUrl = await uploadLogo(logoFile, json.production.id)
@@ -119,11 +148,10 @@ export default function ProductionsPage() {
         }
       }
 
-      setForm({ name: '', slug: '', producer: '', production_director: '' })
+      setForm({ ...EMPTY_FORM })
       setLogoFile(null); setLogoPreview(null)
       setCreating(false)
       loadProductions()
-      // Auto-activate first production created
       if (productions.length === 0) switchProduction(json.production.id)
     } finally {
       setSaving(false)
@@ -141,7 +169,28 @@ export default function ProductionsPage() {
           console.warn('Logo upload failed:', logoErr.message)
         }
       }
-      const body = { id: editId, ...editForm }
+      const body = {
+        id: editId,
+        name: editForm.name,
+        slug: editForm.slug,
+        director: editForm.director,
+        producer: editForm.producer,
+        production_manager: editForm.production_manager,
+        production_manager_phone: editForm.production_manager_phone,
+        production_coordinator: editForm.production_coordinator,
+        production_coordinator_phone: editForm.production_coordinator_phone,
+        transportation_coordinator: editForm.transportation_coordinator,
+        transportation_coordinator_phone: editForm.transportation_coordinator_phone,
+        transportation_captain: editForm.transportation_captain,
+        transportation_captain_phone: editForm.transportation_captain_phone,
+        production_office_phone: editForm.production_office_phone,
+        set_location: editForm.set_location,
+        set_address: editForm.set_address,
+        basecamp: editForm.basecamp,
+        general_call_time: editForm.general_call_time || null,
+        shoot_day: editForm.shoot_day ? parseInt(editForm.shoot_day) : null,
+        revision: editForm.revision ? parseInt(editForm.revision) : 1,
+      }
       if (logo_url !== undefined) body.logo_url = logo_url
 
       const res = await fetch('/api/productions', {
@@ -167,10 +216,25 @@ export default function ProductionsPage() {
   function openEdit(prod) {
     setEditId(prod.id)
     setEditForm({
-      name: prod.name || '',
-      slug: prod.slug || '',
-      producer: prod.producer || '',
-      production_director: prod.production_director || '',
+      name:                             prod.name                             || '',
+      slug:                             prod.slug                             || '',
+      director:                         prod.director                         || '',
+      producer:                         prod.producer                         || '',
+      production_manager:               prod.production_manager               || '',
+      production_manager_phone:         prod.production_manager_phone         || '',
+      production_coordinator:           prod.production_coordinator           || '',
+      production_coordinator_phone:     prod.production_coordinator_phone     || '',
+      transportation_coordinator:       prod.transportation_coordinator       || '',
+      transportation_coordinator_phone: prod.transportation_coordinator_phone || '',
+      transportation_captain:           prod.transportation_captain           || '',
+      transportation_captain_phone:     prod.transportation_captain_phone     || '',
+      production_office_phone:          prod.production_office_phone          || '',
+      set_location:                     prod.set_location                     || '',
+      set_address:                      prod.set_address                      || '',
+      basecamp:                         prod.basecamp                         || '',
+      general_call_time:                prod.general_call_time                || '',
+      shoot_day:                        prod.shoot_day != null ? String(prod.shoot_day) : '',
+      revision:                         prod.revision  != null ? String(prod.revision)  : '1',
     })
     setEditLogoFile(null)
     setEditLogoPreview(prod.logo_url || null)
@@ -182,6 +246,126 @@ export default function ProductionsPage() {
 
   const inp = { width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
   const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
+  const sectionTitle = (icon, title) => (
+    <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+      <span>{icon}</span> {title}
+    </div>
+  )
+
+  // ── Shared form fields (used in both create and edit) ──
+  function FormFields({ values, onChange, isEdit = false }) {
+    const s = (k, v) => onChange(k, v)
+    return (
+      <>
+        {/* Identity */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px', marginBottom: '4px' }}>
+          <div>
+            <label style={lbl}>Production Name *</label>
+            <input value={values.name}
+              onChange={e => { s('name', e.target.value); if (!isEdit) s('slug', slugify(e.target.value)) }}
+              style={inp} required placeholder="e.g. Palermo 2026" autoFocus={!isEdit} />
+          </div>
+          <div>
+            <label style={lbl}>Slug (URL)</label>
+            <input value={values.slug} onChange={e => s('slug', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="auto" />
+          </div>
+        </div>
+
+        {/* Schedule */}
+        {sectionTitle('🗓', 'Schedule')}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+          <div>
+            <label style={lbl}>General Call Time</label>
+            <input type="time" value={values.general_call_time} onChange={e => s('general_call_time', e.target.value)} style={inp} />
+          </div>
+          <div>
+            <label style={lbl}>Shoot Day</label>
+            <input type="number" value={values.shoot_day} onChange={e => s('shoot_day', e.target.value)} style={inp} placeholder="42" min="1" />
+          </div>
+          <div>
+            <label style={lbl}>Revision</label>
+            <input type="number" value={values.revision} onChange={e => s('revision', e.target.value)} style={inp} placeholder="1" min="1" />
+          </div>
+        </div>
+
+        {/* Key Creatives */}
+        {sectionTitle('🎭', 'Key Creatives')}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div>
+            <label style={lbl}>Director</label>
+            <input value={values.director} onChange={e => s('director', e.target.value)} style={inp} placeholder="e.g. John Smith" />
+          </div>
+          <div>
+            <label style={lbl}>Producer</label>
+            <input value={values.producer} onChange={e => s('producer', e.target.value)} style={inp} placeholder="e.g. Jane Doe" />
+          </div>
+        </div>
+
+        {/* Production Team */}
+        {sectionTitle('👥', 'Production Team')}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div>
+            <label style={lbl}>Production Manager — Name</label>
+            <input value={values.production_manager} onChange={e => s('production_manager', e.target.value)} style={inp} placeholder="e.g. Robert Brown" />
+          </div>
+          <div>
+            <label style={lbl}>Production Manager — Phone</label>
+            <input value={values.production_manager_phone} onChange={e => s('production_manager_phone', e.target.value)} style={inp} placeholder="+39 320 111 0000" />
+          </div>
+          <div>
+            <label style={lbl}>Production Coordinator — Name</label>
+            <input value={values.production_coordinator} onChange={e => s('production_coordinator', e.target.value)} style={inp} placeholder="e.g. Maria Rossi" />
+          </div>
+          <div>
+            <label style={lbl}>Production Coordinator — Phone</label>
+            <input value={values.production_coordinator_phone} onChange={e => s('production_coordinator_phone', e.target.value)} style={inp} placeholder="+39 320 000 0000" />
+          </div>
+        </div>
+
+        {/* Transportation Team */}
+        {sectionTitle('🚌', 'Transportation Team')}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div>
+            <label style={lbl}>Transportation Coordinator — Name</label>
+            <input value={values.transportation_coordinator} onChange={e => s('transportation_coordinator', e.target.value)} style={inp} placeholder="e.g. Daniele Contino" />
+          </div>
+          <div>
+            <label style={lbl}>Transportation Coordinator — Phone</label>
+            <input value={values.transportation_coordinator_phone} onChange={e => s('transportation_coordinator_phone', e.target.value)} style={inp} placeholder="+39 333 000 0000" />
+          </div>
+          <div>
+            <label style={lbl}>Transportation Captain — Name</label>
+            <input value={values.transportation_captain} onChange={e => s('transportation_captain', e.target.value)} style={inp} placeholder="e.g. Marco Bianchi" />
+          </div>
+          <div>
+            <label style={lbl}>Transportation Captain — Phone</label>
+            <input value={values.transportation_captain_phone} onChange={e => s('transportation_captain_phone', e.target.value)} style={inp} placeholder="+39 347 000 0000" />
+          </div>
+          <div>
+            <label style={lbl}>Production Office — Phone</label>
+            <input value={values.production_office_phone} onChange={e => s('production_office_phone', e.target.value)} style={inp} placeholder="+39 091 000 0000" />
+          </div>
+        </div>
+
+        {/* Set & Basecamp */}
+        {sectionTitle('📍', 'Set & Basecamp')}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div>
+            <label style={lbl}>Set Location — Name</label>
+            <input value={values.set_location} onChange={e => s('set_location', e.target.value)} style={inp} placeholder="e.g. Cinecitta Studio 5" />
+          </div>
+          <div>
+            <label style={lbl}>Set Location — Address</label>
+            <input value={values.set_address} onChange={e => s('set_address', e.target.value)} style={inp} placeholder="e.g. Via Tuscolana 1055" />
+          </div>
+          <div>
+            <label style={lbl}>Basecamp</label>
+            <input value={values.basecamp} onChange={e => s('basecamp', e.target.value)} style={inp} placeholder="e.g. Parking Area B" />
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
@@ -208,16 +392,17 @@ export default function ProductionsPage() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', letterSpacing: '0.07em' }}>ACTIVE PRODUCTION</div>
                 <div style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a' }}>{active.name}</div>
-                {(active.producer || active.production_director) && (
-                  <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px', display: 'flex', gap: '16px' }}>
-                    {active.producer && <span>👤 <strong>Producer:</strong> {active.producer}</span>}
-                    {active.production_director && <span>🎯 <strong>Production Director:</strong> {active.production_director}</span>}
-                  </div>
-                )}
+                <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  {active.director && <span>🎬 <strong>Director:</strong> {active.director}</span>}
+                  {active.producer && <span>👤 <strong>Producer:</strong> {active.producer}</span>}
+                  {active.general_call_time && <span>⏰ <strong>Call:</strong> {active.general_call_time.slice(0,5)}</span>}
+                  {active.shoot_day && <span>📅 <strong>Day:</strong> {active.shoot_day}</span>}
+                </div>
                 <div style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace', marginTop: '2px' }}>ID: {active.id}</div>
               </div>
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
                 <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#1d4ed8', color: 'white' }}>{active.role}</span>
+                <a href="/dashboard/lists" style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>→ View Transport List</a>
               </div>
             </div>
           ) : null
@@ -250,7 +435,7 @@ export default function ProductionsPage() {
                   <div key={prod.id} style={{ borderBottom: i < productions.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                     {!isEditing ? (
                       <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', background: isActive ? '#f8fbff' : 'white' }}>
-                        {/* Logo or dot */}
+                        {/* Logo or icon */}
                         {prod.logo_url ? (
                           <img src={prod.logo_url} alt="logo" style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '4px', flexShrink: 0 }} />
                         ) : (
@@ -264,13 +449,12 @@ export default function ProductionsPage() {
                             {isActive && <span style={{ padding: '2px 8px', borderRadius: '999px', background: '#22c55e', color: 'white', fontSize: '10px', fontWeight: '800' }}>ACTIVE</span>}
                             <span style={{ padding: '2px 8px', borderRadius: '5px', background: '#f1f5f9', color: '#64748b', fontSize: '10px', fontWeight: '700' }}>{prod.role}</span>
                           </div>
-                          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                            {prod.producer && (
-                              <span style={{ fontSize: '12px', color: '#475569' }}>👤 <strong>Producer:</strong> {prod.producer}</span>
-                            )}
-                            {prod.production_director && (
-                              <span style={{ fontSize: '12px', color: '#475569' }}>🎯 <strong>Prod. Director:</strong> {prod.production_director}</span>
-                            )}
+                          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '12px', color: '#475569' }}>
+                            {prod.director && <span>🎬 {prod.director}</span>}
+                            {prod.producer && <span>👤 {prod.producer}</span>}
+                            {prod.general_call_time && <span>⏰ {prod.general_call_time.slice(0,5)}</span>}
+                            {prod.shoot_day && <span>📅 Day {prod.shoot_day}</span>}
+                            {prod.set_location && <span>📍 {prod.set_location}</span>}
                           </div>
                           <div style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace', marginTop: '2px' }}>
                             slug: {prod.slug}
@@ -292,9 +476,9 @@ export default function ProductionsPage() {
                         </div>
                       </div>
                     ) : (
-                      /* Inline edit form */
-                      <form onSubmit={handleEdit} style={{ padding: '20px', background: '#f8fafc', borderTop: '2px solid #2563eb' }}>
-                        <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a', marginBottom: '14px' }}>✎ Edit Production</div>
+                      /* ── Inline edit form (full fields) ── */
+                      <form onSubmit={handleEdit} style={{ padding: '20px 24px', background: '#f8fafc', borderTop: '2px solid #2563eb' }}>
+                        <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a', marginBottom: '16px' }}>✎ Edit Production — {prod.name}</div>
 
                         {/* Logo upload */}
                         <div style={{ marginBottom: '14px' }}>
@@ -316,26 +500,9 @@ export default function ProductionsPage() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                          <div>
-                            <label style={lbl}>Production Name *</label>
-                            <input value={editForm.name} onChange={e => setE('name', e.target.value)} style={inp} required />
-                          </div>
-                          <div>
-                            <label style={lbl}>Slug (URL)</label>
-                            <input value={editForm.slug} onChange={e => setE('slug', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="auto" />
-                          </div>
-                          <div>
-                            <label style={lbl}>Producer</label>
-                            <input value={editForm.producer} onChange={e => setE('producer', e.target.value)} style={inp} placeholder="e.g. John Smith" />
-                          </div>
-                          <div>
-                            <label style={lbl}>Production Director</label>
-                            <input value={editForm.production_director} onChange={e => setE('production_director', e.target.value)} style={inp} placeholder="e.g. Jane Doe" />
-                          </div>
-                        </div>
+                        <FormFields values={editForm} onChange={setE} isEdit={true} />
 
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '18px' }}>
                           <button type="button" onClick={() => { setEditId(null); setEditLogoFile(null); setEditLogoPreview(null) }}
                             style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
                             ✕ Cancel
@@ -356,7 +523,7 @@ export default function ProductionsPage() {
 
         {/* Create new production */}
         {creating && (
-          <div style={{ background: 'white', borderRadius: '12px', border: '2px solid #2563eb', padding: '24px' }}>
+          <div style={{ background: 'white', borderRadius: '12px', border: '2px solid #2563eb', padding: '24px', marginBottom: '24px' }}>
             <div style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', marginBottom: '18px' }}>🎬 New Production</div>
             <form onSubmit={handleCreate}>
 
@@ -384,31 +551,12 @@ export default function ProductionsPage() {
                 </div>
               </div>
 
-              {/* Fields */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-                <div>
-                  <label style={lbl}>Production Name *</label>
-                  <input value={form.name} onChange={e => { set('name', e.target.value); set('slug', slugify(e.target.value)) }}
-                    style={inp} placeholder="e.g. Palermo 2026" required autoFocus />
-                </div>
-                <div>
-                  <label style={lbl}>Slug (URL) — auto</label>
-                  <input value={form.slug} onChange={e => set('slug', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="palermo-2026" />
-                </div>
-                <div>
-                  <label style={lbl}>Producer</label>
-                  <input value={form.producer} onChange={e => set('producer', e.target.value)} style={inp} placeholder="e.g. John Smith" />
-                </div>
-                <div>
-                  <label style={lbl}>Production Director</label>
-                  <input value={form.production_director} onChange={e => set('production_director', e.target.value)} style={inp} placeholder="e.g. Jane Doe" />
-                </div>
-              </div>
+              <FormFields values={form} onChange={set} isEdit={false} />
 
-              {error && <div style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '7px', color: '#dc2626', fontSize: '12px', marginBottom: '12px' }}>❌ {error}</div>}
+              {error && <div style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '7px', color: '#dc2626', fontSize: '12px', marginTop: '14px', marginBottom: '4px' }}>❌ {error}</div>}
 
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="button" onClick={() => { setCreating(false); setError(null); setLogoFile(null); setLogoPreview(null) }}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '18px' }}>
+                <button type="button" onClick={() => { setCreating(false); setError(null); setLogoFile(null); setLogoPreview(null); setForm({ ...EMPTY_FORM }) }}
                   style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
                   Cancel
                 </button>
@@ -422,14 +570,13 @@ export default function ProductionsPage() {
         )}
 
         {/* Info box */}
-        <div style={{ marginTop: '24px', padding: '16px 20px', background: 'white', border: '1px solid #e2e8f0', borderLeft: '4px solid #f59e0b', borderRadius: '10px', fontSize: '12px', color: '#374151', lineHeight: 1.7 }}>
+        <div style={{ marginTop: '8px', padding: '16px 20px', background: 'white', border: '1px solid #e2e8f0', borderLeft: '4px solid #f59e0b', borderRadius: '10px', fontSize: '12px', color: '#374151', lineHeight: 1.7 }}>
           <div style={{ fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>ℹ How multi-production works</div>
           <ul style={{ margin: 0, paddingLeft: '18px' }}>
             <li>Each production has its own trips, crew, vehicles and locations — completely <strong>separate</strong></li>
             <li>Click <strong>"↔ Activate"</strong> to switch to a different production — all pages will use that ID</li>
-            <li>You can invite other users (Managers, Production) via the Supabase dashboard (full RBAC on roadmap)</li>
-            <li>The <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '3px' }}>NEXT_PUBLIC_PRODUCTION_ID</code> in <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '3px' }}>.env.local</code> is the <em>default</em> — localStorage takes precedence</li>
-            <li>Logos are stored in Supabase Storage bucket <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '3px' }}>production-logos</code> — make sure the bucket exists and is public</li>
+            <li>All header fields (contacts, set, basecamp, call time) appear in the <a href="/dashboard/lists" style={{ color: '#2563eb' }}>Transport List</a></li>
+            <li>Logos are stored in Supabase Storage bucket <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '3px' }}>production-logos</code></li>
           </ul>
         </div>
 
