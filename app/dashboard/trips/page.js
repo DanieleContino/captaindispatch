@@ -470,6 +470,21 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         })
       }
 
+      // ── ARRIVAL fix: pickup_min = call_min (driver già all'hub al momento dell'arrivo volo)
+      // Per ARRIVAL, pickup NON dipende dalla duration Hub→Hotel — serve solo per end_dt.
+      // Se sibCalc è null (rotta non trovata), pickup_min può comunque essere = call_min.
+      const sibPickupMin = sibCalc?.pickupMin
+        ?? (selExistingTrip.transfer_class === 'ARRIVAL'
+          ? (selExistingTrip.call_min ?? null)
+          : null)
+
+      // start_dt calcolabile da sibPickupMin anche senza duration (per ARRIVAL)
+      const sibStartDt = sibCalc?.startDt ?? (() => {
+        if (sibPickupMin === null) return null
+        const [sy, smo, sdd] = selExistingTrip.date.split('-').map(Number)
+        return new Date(sy, smo - 1, sdd, Math.floor(sibPickupMin / 60), sibPickupMin % 60, 0, 0).toISOString()
+      })()
+
       // Sibling row: pickup/dropoff dipende da ARRIVAL vs DEPARTURE
       const siblingRow = {
         production_id: PRODUCTION_ID,
@@ -490,13 +505,13 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         capacity:        selExistingTrip.capacity        || null,
         service_type_id: selExistingTrip.service_type_id || null,
         call_min:        sibCalc?.callMin   ?? selExistingTrip.call_min   ?? null,
-        pickup_min:      sibCalc?.pickupMin ?? null,
+        pickup_min:      sibPickupMin,       // ← fix: ARRIVAL usa call_min anche senza duration
         arr_time:        selExistingTrip.arr_time        || null,
         flight_no:       selExistingTrip.flight_no       || null,
         terminal:        selExistingTrip.terminal        || null,
         notes:           selExistingTrip.notes           || null,
         duration_min:    sibDurationMin                  || null,  // ✓ usa la duration del sibling, non del leg principale
-        start_dt:        sibCalc?.startDt   ?? null,
+        start_dt:        sibStartDt,         // ← fix: calcolato da sibPickupMin anche senza duration
         end_dt:          sibCalc?.endDt     ?? null,
         status:          selExistingTrip.status          || 'PLANNED',
         pax_count: 0,
