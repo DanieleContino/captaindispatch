@@ -1368,6 +1368,25 @@ export default function TripsPage() {
 
   useEffect(() => { if (user) loadTrips(date) }, [user, date, loadTrips])
 
+  // ── Mantieni editTripGroup sincronizzato con trips dopo ogni reload ──────────
+  // Quando un sibling viene eliminato (removePax), loadTrips aggiorna `trips`
+  // ma editTripGroup era stale → ora si ricalcola automaticamente
+  useEffect(() => {
+    if (!editTripRow) return
+    const baseId = baseTripId(editTripRow.trip_id)
+    const vId    = editTripRow.vehicle_id || '__none__'
+    const newGroup = trips.filter(t =>
+      baseTripId(t.trip_id) === baseId && (t.vehicle_id || '__none__') === vId
+    )
+    if (newGroup.length === 0) {
+      // Trip eliminato → chiudi sidebar
+      setEditTripRow(null)
+      setEditTripGroup(null)
+    } else {
+      setEditTripGroup(newGroup)
+    }
+  }, [trips])
+
   // Filtered + grouped
   const filtered = trips.filter(t =>
     (filterClass   === 'ALL' || t.transfer_class === filterClass) &&
