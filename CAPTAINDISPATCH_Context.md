@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 26 marzo 2026 (S7f)**
+**Aggiornato: 27 marzo 2026 (S7g)**
 
 ---
 
@@ -95,6 +95,11 @@ GitHub: DanieleContino/captaindispatch
 - Route column espansa: leg-by-leg con pickup time e pax count
 - TIME mostra pickup più presto del gruppo
 
+**S7g — Rimozione colonna Trip ID (27 marzo 2026):**
+- Colonna Trip ID rimossa dalla lista principale (griglia: 6→5 colonne)
+- Al suo posto rimangono solo i badge classe (ARR/DEP/STD), MULTI-PKP/MULTI-DRP e status
+- Trip ID ancora visibile nell'header della sidebar di edit
+
 ---
 
 ## Database Supabase — Schema
@@ -169,17 +174,7 @@ Automazioni:
 
 ## TODO — Priorità
 
-### P1 (Prossima sessione)
-```
-[ ] BUG CRITICO — Lists page: groupByTripId usa trip_id esatto invece di baseTripId()
-    → Multi-stop (R_01A + R_01B) non vengono raggruppati → nessun badge MULTI visibile
-    → Fix: aggiungere baseTripId() e raggruppare per baseTripId(trip_id) + vehicle_id
-    → Stesso pattern già usato in trips/page.js
 
-[ ] Aggiungere env vars su Vercel (GMAIL_USER, GMAIL_APP_PASSWORD, ADMIN_EMAIL)
-[ ] Trips page — pax_count totale per gruppo multi-stop (ora mostra solo primo sub-trip)
-[ ] Rocket — crew call time override nella tabella Step 1
-```
 
 ### P2
 ```
