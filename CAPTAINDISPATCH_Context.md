@@ -196,6 +196,17 @@ Automazioni:
   - Accumulazione del campo terminal nei trip multi-stop
 - **Risultato:** Il terminal ora appare correttamente con icona 📍 dopo il badge volo nei trip hub (es. "T1", "T2", "Arrivi Nord")
 
+**S7j — Header Compatto 2 Colonne + Footer Fisso (27 marzo 2026):**
+- **Problema:** Header occupava troppo spazio verticale (120px) con info contatti su 2 righe separate, priorità visiva sbagliata
+- **Soluzione:** Layout a 2 colonne (60-40 split)
+  - Colonna SX (60%): Logo + nome produzione + info documento + General Call in grande (priorità alta)
+  - Colonna DX (40%): Box contatti compatto grigio chiaro con 7 ruoli (font 9px, leggibile su A4 landscape)
+  - Set bar in fondo con icone 🎬 Set e 🏕 Basecamp
+- **Footer fisso:** `position: sticky; bottom: 0` + `marginTop: auto` per restare sempre in fondo alla pagina
+- **Risultato:** Header ridotto a ~70px (-42% spazio) = 10-15 trip extra visibili per schermo
+- **Formato stampa:** Rimasto A4 landscape (mai cambiato)
+- ⚠️ **TODO P1:** Correggere abbreviazioni label contatti (DIR → Director, PRO → Producer, PM → Prod. Manager, etc.)
+
 ### Navbar Unificata (S7f)
 - Componente `Navbar` in `lib/navbar.js` riutilizzabile su tutte le pagine
 - NAV_ITEMS esportato per coerenza globale
