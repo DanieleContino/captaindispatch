@@ -1,0 +1,100 @@
+
+<style>
+  * { box-sizing: border-box; }
+  .tl { font-family: var(--font-sans); color: var(--color-text-primary); padding: 1rem 0; }
+  .header { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; background: var(--color-background-primary); margin-bottom: 10px; }
+  .top-bar { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 14px; padding: 8px 14px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .logo-box { width: 56px; height: 36px; border: 0.5px dashed var(--color-border-secondary); border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--color-text-tertiary); }
+  .prod-name { font-size: 14px; font-weight: 500; }
+  .prod-sub { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+  .badge { display: inline-block; font-size: 9px; background: var(--color-background-danger); color: var(--color-text-danger); padding: 1px 7px; border-radius: var(--border-radius-md); margin-left: 8px; vertical-align: middle; }
+  .calltime { text-align: right; }
+  .calltime-label { font-size: 10px; color: var(--color-text-tertiary); }
+  .calltime-value { font-size: 22px; font-weight: 500; line-height: 1.1; }
+  .contacts-row { display: grid; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .contacts-row-1 { grid-template-columns: repeat(4, 1fr); }
+  .contacts-row-2 { grid-template-columns: repeat(3, 1fr); border-bottom: none; }
+  .contact { padding: 6px 12px; border-right: 0.5px solid var(--color-border-tertiary); min-width: 0; }
+  .contact:last-child { border-right: none; }
+  .c-label { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 2px; }
+  .c-name { font-size: 13px; color: var(--color-text-primary); }
+  .c-phone { font-size: 10px; color: var(--color-text-tertiary); margin-top: 1px; }
+  .set-bar { display: flex; align-items: center; gap: 20px; padding: 5px 14px; background: var(--color-background-secondary); border-top: 0.5px solid var(--color-border-tertiary); font-size: 11px; color: var(--color-text-secondary); }
+  .set-bar strong { color: var(--color-text-primary); font-weight: 500; }
+  .footer { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; }
+  .footer-inner { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 5px 14px; background: var(--color-background-secondary); font-size: 10px; color: var(--color-text-tertiary); }
+  .footer-inner span:nth-child(2) { text-align: center; }
+  .footer-inner span:nth-child(3) { text-align: right; }
+</style>
+
+<div class="tl">
+  <div class="header">
+    <div class="top-bar">
+      <div class="logo-box">LOGO</div>
+      <div>
+        <div class="prod-name">Production Name <span class="badge">CONFIDENTIAL</span></div>
+        <div class="prod-sub">Transport List &nbsp;·&nbsp; Wednesday, March 26, 2026 &nbsp;·&nbsp; Shoot Day 42 &nbsp;·&nbsp; Rev. 1</div>
+      </div>
+      <div class="calltime">
+        <div class="calltime-label">General Call</div>
+        <div class="calltime-value">07:00</div>
+      </div>
+    </div>
+
+    <div class="contacts-row contacts-row-1">
+      <div class="contact">
+        <div class="c-label">Director</div>
+        <div class="c-name">John Smith</div>
+        <div class="c-phone">&nbsp;</div>
+      </div>
+      <div class="contact">
+        <div class="c-label">Producer</div>
+        <div class="c-name">Jane Doe</div>
+        <div class="c-phone">&nbsp;</div>
+      </div>
+      <div class="contact">
+        <div class="c-label">Production Manager</div>
+        <div class="c-name">Robert Brown</div>
+        <div class="c-phone">+39 320 111 0000</div>
+      </div>
+      <div class="contact">
+        <div class="c-label">Production Coordinator</div>
+        <div class="c-name">Maria Rossi</div>
+        <div class="c-phone">+39 320 000 0000</div>
+      </div>
+    </div>
+
+    <div class="contacts-row contacts-row-2">
+      <div class="contact">
+        <div class="c-label">Transportation Coordinator</div>
+        <div class="c-name">Daniele Contino</div>
+        <div class="c-phone">+39 333 000 0000</div>
+      </div>
+      <div class="contact">
+        <div class="c-label">Transportation Captain</div>
+        <div class="c-name">Marco Bianchi</div>
+        <div class="c-phone">+39 347 000 0000</div>
+      </div>
+      <div class="contact">
+        <div class="c-label">Production Office</div>
+        <div class="c-name">+39 091 000 0000</div>
+        <div class="c-phone">&nbsp;</div>
+      </div>
+    </div>
+
+    <div class="set-bar">
+      <span><strong>Set:</strong> Cinecitta Studio 5, Via Tuscolana 1055</span>
+      <span><strong>Basecamp:</strong> Parking Area B</span>
+    </div>
+  </div>
+
+  <div style="border-left: 0.5px dashed var(--color-border-tertiary); margin: 8px 0 8px 16px; padding: 4px 12px; font-size: 11px; color: var(--color-text-tertiary);">··· transfers ···</div>
+
+  <div class="footer">
+    <div class="footer-inner">
+      <span>Confidential — Not for Distribution</span>
+      <span>Generated by CaptainDispatch</span>
+      <span>26/03/2026 &nbsp;·&nbsp; 06:00</span>
+    </div>
+  </div>
+</div>

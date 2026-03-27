@@ -2,10 +2,24 @@
  * /api/productions
  * GET  → list productions the user has access to (via user_roles)
  * POST → create new production + assign CAPTAIN role to current user
- * PATCH → update production details (name, slug, producer, production_director, logo_url)
+ * PATCH → update production details (all fields)
  */
 import { createSupabaseServerClient } from '../../../lib/supabaseServer'
 import { NextResponse } from 'next/server'
+
+const PROD_FIELDS = `
+  id, name, slug, logo_url,
+  producer, production_director,
+  director,
+  production_manager, production_manager_phone,
+  production_coordinator, production_coordinator_phone,
+  transportation_coordinator, transportation_coordinator_phone,
+  transportation_captain, transportation_captain_phone,
+  production_office_phone,
+  set_location, set_address, basecamp,
+  general_call_time, shoot_day, revision,
+  created_at
+`.trim()
 
 export async function GET() {
   try {
@@ -15,7 +29,7 @@ export async function GET() {
 
     const { data: roles, error } = await supabase
       .from('user_roles')
-      .select('role, productions(id, name, slug, logo_url, producer, production_director, created_at)')
+      .select(`role, productions(${PROD_FIELDS})`)
       .eq('user_id', user.id)
       .order('created_at', { referencedTable: 'productions', ascending: false })
 
@@ -37,19 +51,32 @@ export async function POST(req) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { name, slug, producer, production_director } = await req.json()
+    const body = await req.json()
+    const { name, slug } = body
     if (!name?.trim() || !slug?.trim())
       return NextResponse.json({ error: 'name and slug are required' }, { status: 400 })
 
-    // Create production
+    const insert = {
+      name: name.trim(),
+      slug: slug.trim().toLowerCase().replace(/\s+/g, '-'),
+    }
+    const textFields = [
+      'producer','production_director','director',
+      'production_manager','production_manager_phone',
+      'production_coordinator','production_coordinator_phone',
+      'transportation_coordinator','transportation_coordinator_phone',
+      'transportation_captain','transportation_captain_phone',
+      'production_office_phone',
+      'set_location','set_address','basecamp',
+      'general_call_time',
+    ]
+    textFields.forEach(f => { if (body[f] !== undefined) insert[f] = body[f]?.trim() || null })
+    if (body.shoot_day !== undefined) insert.shoot_day = body.shoot_day || null
+    if (body.revision  !== undefined) insert.revision  = body.revision  || 1
+
     const { data: prod, error: prodErr } = await supabase
       .from('productions')
-      .insert({
-        name: name.trim(),
-        slug: slug.trim().toLowerCase().replace(/\s+/g, '-'),
-        producer: producer?.trim() || null,
-        production_director: production_director?.trim() || null,
-      })
+      .insert(insert)
       .select()
       .single()
 
@@ -73,15 +100,28 @@ export async function PATCH(req) {
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { id, name, slug, producer, production_director, logo_url } = await req.json()
+    const body = await req.json()
+    const { id } = body
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
     const updates = {}
-    if (name !== undefined)                updates.name                = name.trim()
-    if (slug !== undefined)                updates.slug                = slug.trim().toLowerCase().replace(/\s+/g, '-')
-    if (producer !== undefined)            updates.producer            = producer?.trim() || null
-    if (production_director !== undefined) updates.production_director = production_director?.trim() || null
-    if (logo_url !== undefined)            updates.logo_url            = logo_url || null
+    if (body.name !== undefined) updates.name = body.name.trim()
+    if (body.slug !== undefined) updates.slug = body.slug.trim().toLowerCase().replace(/\s+/g, '-')
+    if (body.logo_url !== undefined) updates.logo_url = body.logo_url || null
+
+    const textFields = [
+      'producer','production_director','director',
+      'production_manager','production_manager_phone',
+      'production_coordinator','production_coordinator_phone',
+      'transportation_coordinator','transportation_coordinator_phone',
+      'transportation_captain','transportation_captain_phone',
+      'production_office_phone',
+      'set_location','set_address','basecamp',
+      'general_call_time',
+    ]
+    textFields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]?.trim() || null })
+    if (body.shoot_day !== undefined) updates.shoot_day = body.shoot_day || null
+    if (body.revision  !== undefined) updates.revision  = body.revision  || 1
 
     const { data, error } = await supabase
       .from('productions')
