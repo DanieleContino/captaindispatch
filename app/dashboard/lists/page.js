@@ -280,10 +280,10 @@ function TransportListHeader({ production, date }) {
       background: 'white',
       marginBottom: '10px',
     }}>
-      {/* Layout 2 colonne: SX info produzione, DX contatti */}
+      {/* Layout 2 colonne: SX info produzione (70%), DX contatti (30%) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1.5fr 1fr',
+        gridTemplateColumns: '2.33fr 1fr',
         gap: '12px',
         padding: '10px 14px',
         borderBottom: `0.5px solid ${borderColor}`,
@@ -359,26 +359,26 @@ function TransportListHeader({ production, date }) {
           flexDirection: 'column',
           gap: '1px',
         }}>
-          <div><strong style={{ color: textPrimary, fontWeight: '600' }}>DIR:</strong> {prod.director || '–'}</div>
-          <div><strong style={{ color: textPrimary, fontWeight: '600' }}>PRO:</strong> {prod.producer || '–'}</div>
+          <div><strong style={{ color: textPrimary, fontWeight: '600' }}>Director:</strong> {prod.director || '–'}</div>
+          <div><strong style={{ color: textPrimary, fontWeight: '600' }}>Producer:</strong> {prod.producer || '–'}</div>
           <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>PM:</strong> {prod.production_manager || '–'}
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>Prod. Manager:</strong> {prod.production_manager || '–'}
             {prod.production_manager_phone && <span style={{ color: textTertiary }}> · 📱 {prod.production_manager_phone}</span>}
           </div>
           <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>PC:</strong> {prod.production_coordinator || '–'}
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>Prod. Coord:</strong> {prod.production_coordinator || '–'}
             {prod.production_coordinator_phone && <span style={{ color: textTertiary }}> · 📱 {prod.production_coordinator_phone}</span>}
           </div>
           <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>TC:</strong> {prod.transportation_coordinator || '–'}
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>Transport Coord:</strong> {prod.transportation_coordinator || '–'}
             {prod.transportation_coordinator_phone && <span style={{ color: textTertiary }}> · 📱 {prod.transportation_coordinator_phone}</span>}
           </div>
           <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>CAP:</strong> {prod.transportation_captain || '–'}
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>Captain:</strong> {prod.transportation_captain || '–'}
             {prod.transportation_captain_phone && <span style={{ color: textTertiary }}> · 📱 {prod.transportation_captain_phone}</span>}
           </div>
           <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>OFF:</strong> {prod.production_office_phone ? `📱 ${prod.production_office_phone}` : '–'}
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>Office:</strong> {prod.production_office_phone ? `📱 ${prod.production_office_phone}` : '–'}
           </div>
         </div>
       </div>
@@ -576,7 +576,7 @@ export default function ListsPage() {
       </div>
 
       {/* ── Contenuto stampabile ── */}
-      <div className="print-wrap" style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', background: '#f1f5f9', minHeight: '80vh' }}>
+      <div className="print-wrap" style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px', background: '#f1f5f9', minHeight: '80vh' }}>
 
         {/* ── Transport List Header (nuovo layout) ── */}
         <TransportListHeader production={production} date={date} />
