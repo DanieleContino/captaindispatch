@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 27 marzo 2026 (S7m)**
+**Aggiornato: 27 marzo 2026 (S7n)**
 
 ---
 
@@ -22,7 +22,9 @@ GitHub: DanieleContino/captaindispatch
 - Vercel: danielecontino
 - Supabase: captaindispatch (Project ID: lvxtvgxyancpegvfcnsk, West EU)
 
-**Deploy:** `git add . && git commit -m "..." && git push origin main` → Vercel auto-deploy in ~1-2 min
+**Deploy:** `git add . && git commit -m "..." && git push origin master` → Vercel auto-deploy in ~1-2 min
+
+> ⚠️ Il branch è **`master`** (non `main`)
 
 > ⚠️ **REGOLA OBBLIGATORIA: fare deploy dopo OGNI modifica ai file.**
 > Il deploy su Vercel Hobby Plan è **gratuito e illimitato**.
@@ -45,6 +47,7 @@ GitHub: DanieleContino/captaindispatch
 | `/pending` | Approvazione login con polling |
 | `/dashboard/lists` | Transport Lists print-optimized (S7d) |
 | `/dashboard/pax-coverage` | Pax Coverage + Assign integration (S7l) ✅ |
+| `/dashboard/locations` | Gestione locations + Google Places + Map Picker (S7n) ✅ |
 
 **API completate:**
 - `/api/auth/callback` — OAuth callback
@@ -52,6 +55,9 @@ GitHub: DanieleContino/captaindispatch
 - `/api/route-duration` — calcolo durata con traffico
 - `/api/cron/arrival-status` — trigger 5min ARRIVAL→PRESENT
 - `/api/cron/refresh-routes-traffic` — cron 5AM refresh rotte
+- `/api/places/autocomplete` — proxy server-side → Google Places Autocomplete API
+- `/api/places/details` — proxy server-side → Google Place Details API (ritorna lat/lng/address)
+- `/api/places/map` — serve HTML page con Google Maps JS API (map picker interattivo)
 
 ---
 
@@ -59,7 +65,6 @@ GitHub: DanieleContino/captaindispatch
 
 | Pagina | Priorità | Note |
 |--------|----------|-------|
-| `/dashboard/locations` | P2 | Gestione locations + coordinate |
 | `/dashboard/hub-coverage` | **P1** | Copertura hub — stessa Assign integration di pax-coverage |
 | `/dashboard/pax-coverage` | ✅ DONE S7l | Completata con Assign integration |
 | `/dashboard/reports` | P2 | Fleet reports |
@@ -276,6 +281,52 @@ Automazioni:
 - NAV_ITEMS esportato per coerenza globale
 - ✅ Migrata su tutte le pagine
 - Pattern: `<Navbar currentPath="/dashboard/xxx" />` sostituisce hardcoded nav header
+
+---
+
+## S7n — Google Places Autocomplete + Map Picker (27 marzo 2026)
+
+### Locations Page — Nuove Feature
+
+**`app/api/places/autocomplete/route.js`**
+- Proxy server-side verso Google Places Autocomplete API (classic, NON "Places API New")
+- Usa `GOOGLE_MAPS_API_KEY` da env — la chiave non appare mai nel client bundle
+- Ritorna `[{ place_id, description, main_text, secondary_text }]`
+
+**`app/api/places/details/route.js`**
+- Proxy server-side verso Google Place Details API (`fields: geometry,formatted_address,name`)
+- Ritorna `{ lat, lng, address, name }` dato un `place_id`
+
+**`app/api/places/map/route.js`**
+- Serve una pagina HTML completa con Google Maps JavaScript API (chiave iniettata server-side)
+- Click su qualunque punto della mappa → pin animato (DROP) → reverse geocoding automatico
+- `window.parent.postMessage({ type: 'MAP_PICK', lat, lng, address }, '*')` → invia dati alla sidebar
+- `gestureHandling: 'greedy'` — necessario per scroll/zoom dentro `<iframe>` (altrimenti scroll intercettato dalla pagina parent)
+- Switcher mappa/satellite/hybrid/terrain
+- Query params: `?lat=XX&lng=YY` — se presenti, la mappa si apre centrata su quel punto (zoom 14)
+
+**`app/dashboard/locations/page.js`**
+- Campo "🔍 Cerca su Google Maps": debounce 400ms, dropdown con suggerimenti, auto-fill lat/lng/indirizzo al click
+- Pulsante "🗺 Scegli posizione su mappa": apre modal fullscreen con iframe → map picker
+- `postMessage` listener: quando `MAP_PICK` arriva → compila lat, lng, default_pickup_point nella sidebar
+- Reset `mapOpen` all'apertura/chiusura sidebar
+- Il campo **Nome** NON viene mai sovrascritto (utente mantiene controllo)
+
+### ⚠️ Google Cloud Console — API da abilitare
+Per il corretto funzionamento serve abilitare queste API nella Google Cloud Console:
+- **Places API** (quella CLASSICA, NON "Places API (New)") → per autocomplete
+- **Maps JavaScript API** → per map picker + zoom interattivo
+- **Geocoding API** → per reverse geocoding (click su mappa → indirizzo)
+
+**Env var richiesta:** `GOOGLE_MAPS_API_KEY` (su Vercel e `.env.local`)
+
+### Build Fix S7n — useSearchParams senza Suspense
+**Problema:** `useSearchParams()` in `app/dashboard/trips/page.js` senza `<Suspense>` causava build failure su Next.js 16, bloccando tutti i deploy.
+
+**Fix applicato:**
+- Rinominato componente principale in `TripsPageInner`
+- Nuovo `export default function TripsPage()` wrappa `<TripsPageInner>` in `<Suspense fallback={null}>`
+- Pattern da replicare su QUALSIASI pagina che usa `useSearchParams()`
 
 ---
 
