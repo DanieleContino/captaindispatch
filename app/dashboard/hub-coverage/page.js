@@ -195,13 +195,13 @@ export default function HubCoveragePage() {
     if (!PRODUCTION_ID) return
     setLoading(true)
 
-    // Crew expected: IN con arrival_date=d OPPURE OUT con departure_date=d
+    // Crew expected: tutti quelli con travel_status IN o OUT e hotel_status CONFIRMED
     const [crewRes, tripsRes] = await Promise.all([
       supabase.from('crew')
         .select('id,full_name,department,hotel_id,travel_status,arrival_date,departure_date')
         .eq('production_id', PRODUCTION_ID)
         .eq('hotel_status', 'CONFIRMED')
-        .or(`and(travel_status.eq.IN,arrival_date.eq.${d}),and(travel_status.eq.OUT,departure_date.eq.${d})`)
+        .in('travel_status', ['IN', 'OUT'])
         .order('department', { nullsLast: true })
         .order('full_name'),
 
@@ -399,10 +399,10 @@ export default function HubCoveragePage() {
           <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '40px', marginBottom: '10px' }}>✈️</div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>
-              Nessun crew IN/OUT per {fmtDate(date)}
+              Nessun crew con travel_status IN o OUT
             </div>
             <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
-              I crew expected devono avere travel_status IN con arrival_date o OUT con departure_date uguale alla data selezionata
+              Hub Coverage mostra i crew con travel_status IN (in arrivo) o OUT (in partenza) e verifica se hanno un trip ARRIVAL/DEPARTURE assegnato per la data selezionata
             </div>
             <a href="/dashboard/crew" style={{ marginTop: '12px', display: 'inline-block', color: '#2563eb', fontSize: '13px' }}>→ Vai a Crew</a>
           </div>
