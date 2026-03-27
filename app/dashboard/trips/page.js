@@ -444,25 +444,27 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       // Calcola timing del sibling usando calcTimes (come per un trip normale)
       // Per DEPARTURE multi-PKP: cerca la rotta hotelSibling→hub per ottenere duration_min
       // Per ARRIVAL multi-DRP: cerca la rotta hub→hotelSibling
+      // NOTA: sibRoute e sibDurationMin devono restare nello stesso scope di siblingRow
+      //       per poter usare la duration corretta del sibling (non quella del trip principale)
+      const sibPickupId  = selExistingTrip.transfer_class === 'ARRIVAL'  ? selExistingTrip.pickup_id : assignCtx.hotel
+      const sibDropoffId = selExistingTrip.transfer_class === 'ARRIVAL'  ? assignCtx.hotel           : selExistingTrip.dropoff_id
+      const { data: sibRoute } = await supabase.from('routes')
+        .select('duration_min')
+        .eq('production_id', PRODUCTION_ID)
+        .eq('from_id', sibPickupId)
+        .eq('to_id', sibDropoffId)
+        .maybeSingle()
+      // duration_min specifica del sibling (Hotel B → Hub), diversa da quella del leg principale
+      const sibDurationMin = sibRoute?.duration_min || null
       let sibCalc = null
-      {
-        const sibPickupId  = selExistingTrip.transfer_class === 'ARRIVAL'  ? selExistingTrip.pickup_id : assignCtx.hotel
-        const sibDropoffId = selExistingTrip.transfer_class === 'ARRIVAL'  ? assignCtx.hotel           : selExistingTrip.dropoff_id
-        const { data: sibRoute } = await supabase.from('routes')
-          .select('duration_min')
-          .eq('production_id', PRODUCTION_ID)
-          .eq('from_id', sibPickupId)
-          .eq('to_id', sibDropoffId)
-          .maybeSingle()
-        if (sibRoute?.duration_min) {
-          sibCalc = calcTimes({
-            date:          selExistingTrip.date,
-            arrTimeMin:    selExistingTrip.arr_time ? timeStrToMin(selExistingTrip.arr_time.slice(0,5)) : null,
-            durationMin:   sibRoute.duration_min,
-            transferClass: selExistingTrip.transfer_class,
-            callMin:       selExistingTrip.call_min ?? null,
-          })
-        }
+      if (sibDurationMin) {
+        sibCalc = calcTimes({
+          date:          selExistingTrip.date,
+          arrTimeMin:    selExistingTrip.arr_time ? timeStrToMin(selExistingTrip.arr_time.slice(0,5)) : null,
+          durationMin:   sibDurationMin,
+          transferClass: selExistingTrip.transfer_class,
+          callMin:       selExistingTrip.call_min ?? null,
+        })
       }
 
       // Sibling row: pickup/dropoff dipende da ARRIVAL vs DEPARTURE
@@ -490,7 +492,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         flight_no:       selExistingTrip.flight_no       || null,
         terminal:        selExistingTrip.terminal        || null,
         notes:           selExistingTrip.notes           || null,
-        duration_min:    selExistingTrip.duration_min    || null,
+        duration_min:    sibDurationMin                  || null,  // ✓ usa la duration del sibling, non del leg principale
         start_dt:        sibCalc?.startDt   ?? null,
         end_dt:          sibCalc?.endDt     ?? null,
         status:          selExistingTrip.status          || 'PLANNED',
