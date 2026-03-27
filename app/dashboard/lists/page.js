@@ -280,122 +280,107 @@ function TransportListHeader({ production, date }) {
       background: 'white',
       marginBottom: '10px',
     }}>
-      {/* Top bar */}
+      {/* Layout 2 colonne: SX info produzione, DX contatti */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '56px 1fr auto',
-        alignItems: 'center',
-        gap: '14px',
-        padding: '8px 14px',
+        gridTemplateColumns: '1.5fr 1fr',
+        gap: '12px',
+        padding: '10px 14px',
         borderBottom: `0.5px solid ${borderColor}`,
       }}>
-        {/* Logo */}
-        {prod.logo_url ? (
-          <img
-            src={prod.logo_url}
-            alt="logo"
-            style={{ width: '56px', height: '36px', objectFit: 'contain', borderRadius: radiusSm, background: 'white', border: `0.5px solid ${borderColor}`, padding: '2px' }}
-          />
-        ) : (
-          <div style={{
-            width: '56px', height: '36px',
-            border: `0.5px dashed ${borderColor}`,
-            borderRadius: radiusSm,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '10px', color: textTertiary,
-          }}>
-            LOGO
-          </div>
-        )}
-
-        {/* Center: production name + sub */}
-        <div>
-          <div style={{ fontSize: '14px', fontWeight: '500', color: textPrimary }}>
-            {prod.name || 'Production Name'}
-            <span style={{
-              display: 'inline-block',
-              fontSize: '9px',
-              background: '#fef2f2',
-              color: '#dc2626',
-              padding: '1px 7px',
-              borderRadius: radiusSm,
-              marginLeft: '8px',
-              verticalAlign: 'middle',
-              fontWeight: '700',
-              letterSpacing: '0.05em',
-            }}>
-              CONFIDENTIAL
-            </span>
-          </div>
-          <div style={{ fontSize: '11px', color: textSecondary, marginTop: '2px' }}>
-            Transport List &nbsp;·&nbsp; {dateDisplay}
-            {prod.shoot_day ? ` · Shoot Day ${prod.shoot_day}` : ''}
-            {prod.revision  ? ` · Rev. ${prod.revision}`       : ''}
-          </div>
-        </div>
-
-        {/* Right: General Call */}
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '10px', color: textTertiary }}>General Call</div>
-          <div style={{ fontSize: '22px', fontWeight: '500', lineHeight: 1.1, color: textPrimary }}>
-            {callTime}
-          </div>
-        </div>
-      </div>
-
-      {/* Contacts row 1 — 4 columns */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        borderBottom: `0.5px solid ${borderColor}`,
-      }}>
-        {[
-          { label: 'Director',               name: prod.director,                 phone: null },
-          { label: 'Producer',               name: prod.producer,                 phone: null },
-          { label: 'Production Manager',     name: prod.production_manager,       phone: prod.production_manager_phone },
-          { label: 'Production Coordinator', name: prod.production_coordinator,   phone: prod.production_coordinator_phone },
-        ].map((c, i, arr) => (
-          <div key={c.label} style={{
-            padding: '6px 12px',
-            borderRight: i < arr.length - 1 ? `0.5px solid ${borderColor}` : 'none',
-            minWidth: 0,
-          }}>
-            <div style={{ fontSize: '11px', fontWeight: '500', color: textSecondary, marginBottom: '2px' }}>{c.label}</div>
-            <div style={{ fontSize: '13px', color: textPrimary }}>{c.name || '–'}</div>
-            <div style={{ fontSize: '10px', color: textTertiary, marginTop: '1px' }}>{c.phone || '\u00a0'}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Contacts row 2 — 3 columns */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-      }}>
-        {[
-          { label: 'Transportation Coordinator', name: prod.transportation_coordinator, phone: prod.transportation_coordinator_phone },
-          { label: 'Transportation Captain',     name: prod.transportation_captain,     phone: prod.transportation_captain_phone },
-          { label: 'Production Office',          name: prod.production_office_phone,    phone: null, isPhone: true },
-        ].map((c, i, arr) => (
-          <div key={c.label} style={{
-            padding: '6px 12px',
-            borderRight: i < arr.length - 1 ? `0.5px solid ${borderColor}` : 'none',
-            minWidth: 0,
-          }}>
-            <div style={{ fontSize: '11px', fontWeight: '500', color: textSecondary, marginBottom: '2px' }}>{c.label}</div>
-            {c.isPhone ? (
-              <>
-                <div style={{ fontSize: '13px', color: textPrimary }}>{c.name || '–'}</div>
-                <div style={{ fontSize: '10px', color: textTertiary, marginTop: '1px' }}>&nbsp;</div>
-              </>
+        {/* COLONNA SINISTRA: Logo + Info Produzione + General Call */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+            {/* Logo */}
+            {prod.logo_url ? (
+              <img
+                src={prod.logo_url}
+                alt="logo"
+                style={{ width: '48px', height: '32px', objectFit: 'contain', borderRadius: radiusSm, background: 'white', border: `0.5px solid ${borderColor}`, padding: '2px', flexShrink: 0 }}
+              />
             ) : (
-              <>
-                <div style={{ fontSize: '13px', color: textPrimary }}>{c.name || '–'}</div>
-                <div style={{ fontSize: '10px', color: textTertiary, marginTop: '1px' }}>{c.phone || '\u00a0'}</div>
-              </>
+              <div style={{
+                width: '48px', height: '32px',
+                border: `0.5px dashed ${borderColor}`,
+                borderRadius: radiusSm,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '9px', color: textTertiary,
+                flexShrink: 0,
+              }}>
+                LOGO
+              </div>
             )}
+
+            {/* Production name + info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: textPrimary, lineHeight: 1.3 }}>
+                {prod.name || 'Production Name'}
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '8px',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  padding: '1px 6px',
+                  borderRadius: radiusSm,
+                  marginLeft: '6px',
+                  verticalAlign: 'middle',
+                  fontWeight: '700',
+                  letterSpacing: '0.05em',
+                }}>
+                  CONFIDENTIAL
+                </span>
+              </div>
+              <div style={{ fontSize: '10px', color: textSecondary, marginTop: '2px', lineHeight: 1.3 }}>
+                Transport List · {dateDisplay}
+                {prod.shoot_day ? ` · Day ${prod.shoot_day}` : ''}
+                {prod.revision  ? ` · Rev. ${prod.revision}` : ''}
+              </div>
+            </div>
           </div>
-        ))}
+
+          {/* General Call */}
+          <div style={{ marginTop: '4px' }}>
+            <div style={{ fontSize: '9px', color: textTertiary, fontWeight: '600', letterSpacing: '0.5px' }}>GENERAL CALL</div>
+            <div style={{ fontSize: '26px', fontWeight: '700', lineHeight: 1, color: textPrimary, marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
+              {callTime}
+            </div>
+          </div>
+        </div>
+
+        {/* COLONNA DESTRA: Contatti compatti */}
+        <div style={{
+          background: bgSecondary,
+          padding: '8px 10px',
+          borderRadius: '6px',
+          fontSize: '9px',
+          lineHeight: 1.5,
+          color: textSecondary,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1px',
+        }}>
+          <div><strong style={{ color: textPrimary, fontWeight: '600' }}>DIR:</strong> {prod.director || '–'}</div>
+          <div><strong style={{ color: textPrimary, fontWeight: '600' }}>PRO:</strong> {prod.producer || '–'}</div>
+          <div>
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>PM:</strong> {prod.production_manager || '–'}
+            {prod.production_manager_phone && <span style={{ color: textTertiary }}> · 📱 {prod.production_manager_phone}</span>}
+          </div>
+          <div>
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>PC:</strong> {prod.production_coordinator || '–'}
+            {prod.production_coordinator_phone && <span style={{ color: textTertiary }}> · 📱 {prod.production_coordinator_phone}</span>}
+          </div>
+          <div>
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>TC:</strong> {prod.transportation_coordinator || '–'}
+            {prod.transportation_coordinator_phone && <span style={{ color: textTertiary }}> · 📱 {prod.transportation_coordinator_phone}</span>}
+          </div>
+          <div>
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>CAP:</strong> {prod.transportation_captain || '–'}
+            {prod.transportation_captain_phone && <span style={{ color: textTertiary }}> · 📱 {prod.transportation_captain_phone}</span>}
+          </div>
+          <div>
+            <strong style={{ color: textPrimary, fontWeight: '600' }}>OFF:</strong> {prod.production_office_phone ? `📱 ${prod.production_office_phone}` : '–'}
+          </div>
+        </div>
       </div>
 
       {/* Set bar */}
@@ -406,11 +391,11 @@ function TransportListHeader({ production, date }) {
         padding: '5px 14px',
         background: bgSecondary,
         borderTop: `0.5px solid ${borderColor}`,
-        fontSize: '11px',
+        fontSize: '10px',
         color: textSecondary,
       }}>
-        <span><strong style={{ color: textPrimary, fontWeight: '500' }}>Set:</strong> {setLabel}</span>
-        <span><strong style={{ color: textPrimary, fontWeight: '500' }}>Basecamp:</strong> {basecampLabel}</span>
+        <span>🎬 <strong style={{ color: textPrimary, fontWeight: '600' }}>Set:</strong> {setLabel}</span>
+        <span>🏕 <strong style={{ color: textPrimary, fontWeight: '600' }}>Basecamp:</strong> {basecampLabel}</span>
       </div>
     </div>
   )
@@ -424,11 +409,14 @@ function TransportListFooter() {
   const radius = '10px'
 
   return (
-    <div style={{
+    <div className="sticky-footer" style={{
       border: `0.5px solid ${borderColor}`,
       borderRadius: radius,
       overflow: 'hidden',
-      marginTop: '10px',
+      marginTop: 'auto',
+      position: 'sticky',
+      bottom: 0,
+      zIndex: 10,
     }}>
       <div style={{
         display: 'grid',
@@ -510,7 +498,7 @@ export default function ListsPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
+    <div style={{ minHeight: '100vh', background: '#f1f5f9', display: 'flex', flexDirection: 'column' }}>
 
       {/* ══ STILI GLOBALI ══ */}
       <style>{`
@@ -532,6 +520,14 @@ export default function ListsPage() {
           .print-wrap { padding: 0 !important; background: white !important; }
           .print-card { border-radius: 0 !important; padding: 0 !important; border: none !important; }
           .toolbar { display: none !important; }
+          
+          .sticky-footer {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            margin: 0 !important;
+          }
         }
 
         @page {
