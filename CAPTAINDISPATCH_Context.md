@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 27 marzo 2026 (S7i)**
+**Aggiornato: 27 marzo 2026 (S7l)**
 
 ---
 
@@ -44,6 +44,7 @@ GitHub: DanieleContino/captaindispatch
 | `/wrap-trip` | App mobile 4-step (LIVE) |
 | `/pending` | Approvazione login con polling |
 | `/dashboard/lists` | Transport Lists print-optimized (S7d) |
+| `/dashboard/pax-coverage` | Pax Coverage + Assign integration (S7l) ✅ |
 
 **API completate:**
 - `/api/auth/callback` — OAuth callback
@@ -59,8 +60,8 @@ GitHub: DanieleContino/captaindispatch
 | Pagina | Priorità | Note |
 |--------|----------|-------|
 | `/dashboard/locations` | P2 | Gestione locations + coordinate |
-| `/dashboard/hub-coverage` | P2 | Copertura hub |
-| `/dashboard/pax-coverage` | P2 | Copertura pax |
+| `/dashboard/hub-coverage` | **P1** | Copertura hub — stessa Assign integration di pax-coverage |
+| `/dashboard/pax-coverage` | ✅ DONE S7l | Completata con Assign integration |
 | `/dashboard/reports` | P2 | Fleet reports |
 | `/dashboard/qr-codes` | P2 | Generazione QR |
 | `/dashboard/productions` | P2 | Multi-produzione |
@@ -205,25 +206,140 @@ Automazioni:
 - **Footer fisso:** `position: sticky; bottom: 0` + `marginTop: auto` per restare sempre in fondo alla pagina
 - **Risultato:** Header ridotto a ~70px (-42% spazio) = 10-15 trip extra visibili per schermo
 - **Formato stampa:** Rimasto A4 landscape (mai cambiato)
-- ⚠️ **TODO P1:** Correggere abbreviazioni label contatti (DIR → Director, PRO → Producer, PM → Prod. Manager, etc.)
 
-### Navbar Unificata (S7f)
+**S7k — Transport Lists Refinement: Layout Preciso + Compattezza (27 marzo 2026):**
+- **Problemi identificati:**
+  1. Imprecisione calcoli grid: 60/40 usato invece di 70/30 richiesto
+  2. Abbreviazioni ruoli (Dir:, Pro:, PM:, TC:, Cap:) riducevano leggibilità
+  3. Ruoli vuoti mostrati con "–" occupavano spazio inutilmente
+  4. Single-stop trip: route e passengers su righe separate = spreco spazio verticale
+- **Soluzioni implementate:**
+  1. **Header 70/30 PRECISO**: `gridTemplateColumns: '7fr 3fr'` invece di `2.33fr 1fr` (errore)
+  2. **Ruoli completi**: Director, Producer, Production Manager, Production Coordinator, Transport Coordinator, Captain, Office
+  3. **Logica condizionale**: `{prod.director && <div>Director: {prod.director}</div>}` — mostra SOLO ruoli compilati
+  4. **Single-stop compatto**: route + passengers inline su 1 riga (`Hotel NH → Airport · Crew1, Crew2, Crew3`)
+  5. **Multi-stop invariato**: rimane su 2 righe (legs + passengers per hub)
+- **Lessons learned:**
+  - **Precisione nei calcoli CSS**: Usare unità `fr` esatte (es. `7fr 3fr` per 70/30) invece di calcoli decimali approssimati
+  - **Verificare SEMPRE i valori numerici esatti** richiesti dall'utente prima di implementare
+  - **Conditional rendering**: Non mostrare campi vuoti con placeholder "–" se occupano spazio prezioso
+  - **Compattezza orizzontale**: Inline layout (`flexWrap: 'wrap'`) per informazioni correlate riduce altezza totale
+- **Risultato:** Layout preciso, ruoli leggibili, spazio verticale ottimizzato per massima densità informativa su A4 landscape
+
+### S7l — Pax Coverage + Assign Integration (27 marzo 2026) ✅
+
+**Pagina:** `/dashboard/pax-coverage`
+
+**Funzione:** Per una data selezionata, mostra TUTTI i crew CONFIRMED divisi in:
+- ✅ WITH ASSIGNED TRANSFER — hanno almeno un trip in `trip_passengers`
+- ❌ WITHOUT TRANSFER — non hanno nessun trasferimento quella data
+
+**Filtri:** Travel Status (IN/PRESENT/OUT), Department, Hotel, search bar, toggle ASSIGNED/UNASSIGNED/ALL
+
+**Summary bar:** Progress bar copertura % + contatori totale / con transfer / senza transfer
+
+**Pulsante `+ Assign`** su ogni crew senza transfer → naviga a `/dashboard/trips` con params:
+```
+?assignCrewId=<uuid>
+&assignCrewName=<nome>
+&assignHotelId=<location_id>
+&assignTS=<IN|OUT|PRESENT>
+&assignDate=<YYYY-MM-DD>
+```
+
+---
+
+### Pattern Assign: Coverage → Trips (S7l)
+
+**Implementato in trips/page.js — da replicare su hub-coverage:**
+
+1. **`useSearchParams`** legge i 5 parametri URL all'apertura
+2. **`assignCtx` state** `{id, name, hotel, ts}` attivo finché l'utente non clicca "dismiss"
+3. **`suggestedBaseIds` useMemo** — filtra trips compatibili per hotel + ts:
+   - `ts === 'IN'` → `transfer_class === 'ARRIVAL' && dropoff_id === hotel`
+   - `ts === 'OUT'` → `transfer_class === 'DEPARTURE' && pickup_id === hotel`
+   - `ts === 'PRESENT'` → `transfer_class === 'STANDARD' && pickup_id === hotel`
+4. **Banner amber** in cima al contenuto — mostra nome, status, n° trip suggeriti o "No compatible trips"
+5. **TripRow highlight** — `isSuggested` prop: sfondo `#fffbeb`, bordo `#f59e0b`, badge ⭐ MATCH
+6. **Auto-open TripSidebar** se `suggestedBaseIds.size === 0` (nessun trip compatibile)
+7. **TripSidebar contestuale** riceve `assignCtx`:
+   - Header mostra `👤 {assignCtx.name}` in giallo
+   - Pre-popola pickup/dropoff con `hotel` in base a `ts` (IN→dropoff, OUT/PRESENT→pickup)
+   - Auto-seleziona il crew nella lista passengers quando pickup+dropoff matchano
+
+**File:** `app/dashboard/trips/page.js` — tutto self-contained, zero API aggiuntive
+
+---
+
+### Navbar Unificata (S7f) ✅ COMPLETA
 - Componente `Navbar` in `lib/navbar.js` riutilizzabile su tutte le pagine
 - NAV_ITEMS esportato per coerenza globale
-- ✅ Migrati: `/dashboard/fleet`, `/dashboard/trips`, `/dashboard/crew`, `/dashboard/lists`
-- ⏳ Ancora da migrare (8 pagine): rocket, vehicles, locations, hub-coverage, pax-coverage, reports, qr-codes, productions
+- ✅ Migrata su tutte le pagine
 - Pattern: `<Navbar currentPath="/dashboard/xxx" />` sostituisce hardcoded nav header
+
+---
+
+## BUG APERTI — Da fixare nella prossima task
+
+### BUG-1: Multi-stop DEPARTURE — pickup times uguali tra i leg
+**Flusso:** hub-coverage → Assign → Trips → "Add to Existing Trip" (hotel diverso) → crea sibling T001B
+
+**Sintomo:** T001A (Hotel NH → Aeroporto) e T001B (Hotel Marriott → Aeroporto) mostrano lo stesso orario di pickup nella colonna ROUTE della lista trips.
+
+**Root cause già indagato:**
+- `sibRoute` lookup in `handleAddToExisting` cerca `routes WHERE from_id=Hotel_B AND to_id=Hub`
+- Se la rotta NON esiste in `routes` → `sibDurationMin = null` → `sibCalc = null` → `pickup_min = null`
+- In `TripRow` multi-stop: `r.pickup_min ?? r.call_min` → cade back su `call_min` (uguale per tutti i leg) → stesso orario
+
+**Fix da implementare:**
+1. Verificare se la rotta Hotel B → Hub esiste in `routes` (è il check principale)
+2. Se non esiste: mostrare warning nella UI "⚠ Route not found — duration unknown" con badge arancione sul leg nel display TripRow
+3. Aggiungere campo `duration_min` editabile nel multi-stop leg della EditTripSidebar per i sibling (attualmente il form edita solo `initial` = primo leg)
+4. Quando si salva la duration dal form del sibling → ricalcola `pickup_min` del sibling
+
+**File:** `app/dashboard/trips/page.js`
+- `handleAddToExisting` (TripSidebar) — creazione sibling
+- `TripRow` — display multi-stop legs con pickup time
+- `EditTripSidebar` — allow editing sibling leg's duration_min
+
+---
+
+### BUG-2: Multi-stop — eliminare passeggero non rimuove il sibling/badge
+**Flusso:** Apri EditTripSidebar su un trip multi-stop → rimuovi l'unico passeggero del sibling leg → sibling rimane visibile con hotel e badge MULTI-PKP
+
+**Sintomo verificato:** Dopo removePax, `loadTrips` ricarica, ma il sibling trip T001B persiste nella lista (il badge MULTI-PKP e l'hotel rimangono).
+
+**Tentativo di fix già applicato (non ha funzionato):**
+- Aggiunto `useEffect([trips])` in TripsPage che ricalcola `editTripGroup`
+- La logica di cleanup in `removePax` dovrebbe già eliminare il sibling se 0 pax
+
+**Ipotesi ancora da verificare:**
+1. La RLS policy su `trips` potrebbe bloccare il DELETE del sibling
+2. `targetTripId` potrebbe essere uguale a `initial.id` per qualche motivo (crew.trip_row_id non impostato correttamente)
+3. Il sibling potrebbe avere altri trip_passengers non visibili nel gruppo corrente
+
+**Debug suggerito:** Aggiungere `console.log('removePax targetTripId:', targetTripId, 'initial.id:', initial.id)` per verificare che il sibling venga identificato correttamente prima del delete.
+
+**File:** `app/dashboard/trips/page.js` — funzione `removePax` in `EditTripSidebar`
 
 ---
 
 ## TODO — Priorità
 
-
+### P1
+```
+[ ] /dashboard/hub-coverage — Copertura hub per data
+    Stessa struttura di pax-coverage ma per HUB (aeroporti/stazioni):
+    - Mostra tutti i trip ARRIVAL/DEPARTURE per hub + data
+    - Per ogni trip: quanti pax assegnati vs capacità veicolo
+    - Trip under-capacity (posti vuoti) evidenziati
+    - Pulsante "+ Assign" su pax non assegnati → stesso pattern Assign → trips/page.js
+    - Eventuale "Add more crew" su trip con posti disponibili
+    NOTA: riusa esattamente lo stesso pattern assignCtx già funzionante in trips/page.js
+```
 
 ### P2
 ```
-[ ] Trips page — creazione trip manuale (date default, auto trip_id)
-[ ] Trips page — assegnazione pax/veicolo inline
 [ ] Crew page — edit Travel_Status in-row
 [ ] Multi-produzione (production switcher)
 [ ] Rocket — Step 2: durata stimata per ogni trip
@@ -256,6 +372,9 @@ Automazioni:
 ❌ NON sovrascrivere Travel_Status manuale con automazioni
 ❌ NON includere crew IN/OUT in run Rocket STANDARD
 ❌ NON crashare TripCard se vehicle è null → null guard obbligatorio
+❌ NON riscrivere interi file per aggiustamenti o variazioni → chirurgia con replace_in_file
+✅ Agire SEMPRE chirurgicamente: modifica SOLO le righe/sezioni necessarie
+✅ Usare replace_in_file con blocchi SEARCH/REPLACE precisi, mai write_to_file su file esistenti
 ```
 
 ---
