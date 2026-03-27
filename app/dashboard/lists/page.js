@@ -51,10 +51,11 @@ function groupByTripId(tripRows) {
         pickup_id:   t.pickup_id,
         pickup_min:  t.pickup_min,
         call_min:    t.call_min,
-        arr_time:    t.arr_time,
-        flight_no:   t.flight_no,
-        notes:       t.notes,
-        rows:        [t],
+        arr_time:       t.arr_time,
+        flight_no:      t.flight_no,
+        transfer_class: t.transfer_class,
+        notes:          t.notes,
+        rows:           [t],
       }
     } else {
       map[key].rows.push(t)
@@ -78,6 +79,14 @@ function TripTableRow({ group, locsMap, sectionColor }) {
   const totalPax = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
   const isMultiStop = group.rows.length > 1
   const pickupName = locsMap[group.pickup_id] || group.pickup_id || '–'
+
+  // Determina se mostrare info volo (solo per ARRIVAL/DEPARTURE con dati disponibili)
+  const transferClass = group.transfer_class
+  const showFlightInfo = (transferClass === 'ARRIVAL' || transferClass === 'DEPARTURE') && 
+                         (group.flight_no || group.arr_time)
+  
+  // Formatta orario arrivo volo (arr_time è in formato time HH:MM:SS)
+  const flightArrTime = group.arr_time ? group.arr_time.slice(0, 5) : null
 
   return (
     <div className="trip-row" style={{
@@ -104,6 +113,26 @@ function TripTableRow({ group, locsMap, sectionColor }) {
         {group.driver_name || '–'}
       </div>
       <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.4 }}>
+        {/* Badge info volo per ARRIVAL/DEPARTURE */}
+        {showFlightInfo && (
+          <div style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: '4px',
+            background: transferClass === 'ARRIVAL' ? '#dbeafe' : '#fed7aa',
+            color: transferClass === 'ARRIVAL' ? '#1e40af' : '#c2410c',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontSize: '10px',
+            fontWeight: '800',
+            marginBottom: '3px',
+            marginRight: '6px',
+          }}>
+            <span>✈️</span>
+            {group.flight_no && <span>{group.flight_no}</span>}
+            {flightArrTime && <span>@{flightArrTime}</span>}
+          </div>
+        )}
         {isMultiStop ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '2px' }}>
