@@ -82,7 +82,7 @@ function TripTableRow({ group, locsMap, sectionColor }) {
   return (
     <div className="trip-row" style={{
       display: 'grid',
-      gridTemplateColumns: '56px 50px 80px 58px 110px 1fr 36px 36px',
+      gridTemplateColumns: '56px 50px 58px 110px 1fr 36px 36px',
       gap: '0 6px',
       alignItems: 'flex-start',
       padding: '5px 6px',
@@ -96,9 +96,6 @@ function TripTableRow({ group, locsMap, sectionColor }) {
       </div>
       <div style={{ fontWeight: '700', color: '#64748b', fontVariantNumeric: 'tabular-nums', textAlign: 'center', fontSize: '11px', lineHeight: 1.2, paddingTop: '1px' }}>
         {callTime}
-      </div>
-      <div style={{ fontWeight: '800', color: '#374151', fontFamily: 'monospace', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
-        {group.trip_id}
       </div>
       <div style={{ fontWeight: '800', color: '#0f172a', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
         {group.vehicle_id || '–'}
@@ -537,7 +534,7 @@ export default function ListsPage() {
             {/* Intestazione colonne */}
             <div className="col-header" style={{
               display: 'grid',
-              gridTemplateColumns: '56px 50px 80px 58px 110px 1fr 36px 36px',
+              gridTemplateColumns: '56px 50px 58px 110px 1fr 36px 36px',
               gap: '0 6px',
               padding: '6px 6px',
               borderBottom: '2px solid #0f172a',
@@ -550,7 +547,6 @@ export default function ListsPage() {
             }}>
               <div style={{ textAlign: 'center' }}>TIME</div>
               <div style={{ textAlign: 'center' }}>CALL</div>
-              <div style={{ textAlign: 'center' }}>TRIP ID</div>
               <div style={{ textAlign: 'center' }}>VEH.</div>
               <div>DRIVER</div>
               <div>ROUTE &amp; CREW</div>
