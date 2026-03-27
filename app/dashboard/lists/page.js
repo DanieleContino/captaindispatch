@@ -53,16 +53,16 @@ function groupByTripId(tripRows) {
         call_min:    t.call_min,
         arr_time:       t.arr_time,
         flight_no:      t.flight_no,
+        terminal:       t.terminal,
         transfer_class: t.transfer_class,
         notes:          t.notes,
-        meeting_point:  t.meeting_point,
         rows:           [t],
       }
     } else {
       map[key].rows.push(t)
-      // Accumula notes e meeting_point se presenti in più rows
+      // Accumula notes e terminal se presenti in più rows
       if (t.notes && !map[key].notes) map[key].notes = t.notes
-      if (t.meeting_point && !map[key].meeting_point) map[key].meeting_point = t.meeting_point
+      if (t.terminal && !map[key].terminal) map[key].terminal = t.terminal
       if (t.pickup_min != null && (map[key].pickup_min == null || t.pickup_min < map[key].pickup_min)) {
         map[key].pickup_min = t.pickup_min
       }
@@ -95,8 +95,7 @@ function TripTableRow({ group, locsMap, sectionColor }) {
 
   // Info Hub/Terminal e Notes (solo per ARRIVAL/DEPARTURE)
   const showHubInfo = transferClass === 'ARRIVAL' || transferClass === 'DEPARTURE'
-  const pickupLocForHub = locsMap[group.pickup_id]
-  const hubTerminal = group.meeting_point || (typeof pickupLocForHub === 'object' ? pickupLocForHub.pickup_point : null)
+  const hubTerminal = group.terminal
   const tripNotes = group.notes
   const hasInfoBar = showHubInfo && (hubTerminal || tripNotes)
 
