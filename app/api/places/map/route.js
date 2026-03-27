@@ -82,6 +82,7 @@ export async function GET(request) {
       map = new google.maps.Map(document.getElementById('map'), {
         center: { lat: ${lat}, lng: ${lng} },
         zoom: ${zoom},
+        gestureHandling: 'greedy',
         mapTypeControl: true,
         streetViewControl: false,
         fullscreenControl: false,
