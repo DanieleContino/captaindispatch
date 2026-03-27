@@ -386,8 +386,9 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   // ── Existing trip assignment helpers (assignCtx only) ─────
   const locsById = Object.fromEntries(locations.map(l => [l.id, l.name]))
   const locShort = id => (locsById[id] || id || '–').split(' ').slice(0, 3).join(' ')
+  const correctClass = assignCtx?.ts === 'IN' ? 'ARRIVAL' : assignCtx?.ts === 'OUT' ? 'DEPARTURE' : 'STANDARD'
   const arrDepTrips = (trips || [])
-    .filter(t => t.transfer_class === 'ARRIVAL' || t.transfer_class === 'DEPARTURE')
+    .filter(t => t.transfer_class === correctClass)
     .sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999))
   function isCompatibleTrip(t) {
     if (!assignCtx?.hotel) return false
@@ -1218,14 +1219,12 @@ export default function TripsPage() {
     )
   }, [trips, assignCtx])
 
-  // ── No match → open new trip sidebar automatically ──
+  // ── Open new trip sidebar automatically when assignCtx is active ──
   useEffect(() => {
     if (!assignCtx || loading) return
-    if (suggestedBaseIds.size === 0) {
-      setNewTripOpen(true)
-      setEditTripRow(null)
-    }
-  }, [assignCtx, loading, suggestedBaseIds.size])
+    setNewTripOpen(true)
+    setEditTripRow(null)
+  }, [assignCtx, loading])
 
   if (!user) return <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
 
