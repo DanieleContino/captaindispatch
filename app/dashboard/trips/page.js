@@ -122,7 +122,8 @@ function TripRow({ group, locations, selected, onClick }) {
     <div onClick={onClick}
       style={{
         display: 'grid',
-        gridTemplateColumns: '80px 130px 1fr 180px 200px',
+        gridTemplateColumns: '80px 130px minmax(150px, auto) 180px 200px',
+        justifyContent: 'start',
         alignItems: 'start',
         padding: '10px 14px 10px 14px',
         borderBottom: '1px solid #f1f5f9',
@@ -1158,7 +1159,7 @@ export default function TripsPage() {
       <div style={{ transition: 'margin-right 0.25s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
 
         {trips.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 130px 1fr 180px 200px', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: '100px', zIndex: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 130px minmax(150px, auto) 180px 200px', justifyContent: 'start', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: '100px', zIndex: 10 }}>
             <div>TIME</div>
             <div>TRIP</div>
             <div>ROUTE</div>
