@@ -402,11 +402,77 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   async function handleAddToExisting() {
     if (!selExistingTrip || !assignCtx?.id || !PRODUCTION_ID) return
     setAddingToTrip(true)
-    const { error } = await supabase.from('trip_passengers').insert({
-      production_id: PRODUCTION_ID, trip_row_id: selExistingTrip.id, crew_id: assignCtx.id,
-    })
-    setAddingToTrip(false)
-    if (!error) { setAddedToTrip(selExistingTrip.trip_id); onSaved() }
+
+    if (isCompatibleTrip(selExistingTrip)) {
+      // ── Stesso hotel → solo INSERT trip_passengers ──
+      const { error } = await supabase.from('trip_passengers').insert({
+        production_id: PRODUCTION_ID, trip_row_id: selExistingTrip.id, crew_id: assignCtx.id,
+      })
+      setAddingToTrip(false)
+      if (!error) { setAddedToTrip(selExistingTrip.trip_id); onSaved() }
+    } else {
+      // ── Hotel diverso → crea sibling trip (MULTI-DRP o MULTI-PKP) ──
+      const base = baseTripId(selExistingTrip.trip_id)
+
+      // Trova la prossima lettera disponibile (B, C, D…)
+      const { data: siblings } = await supabase.from('trips')
+        .select('trip_id')
+        .eq('production_id', PRODUCTION_ID)
+        .eq('date', selExistingTrip.date)
+        .ilike('trip_id', `${base}%`)
+
+      const usedLetters = new Set((siblings || []).map(t => {
+        const suf = t.trip_id.slice(base.length)
+        return suf.length === 1 && /^[A-Z]$/.test(suf) ? suf : null
+      }).filter(Boolean))
+
+      let nextLetter = 'B'
+      for (const l of 'BCDEFGHIJKLMNOPQRSTUVWXYZ') {
+        if (!usedLetters.has(l)) { nextLetter = l; break }
+      }
+      const newTripId = base + nextLetter
+
+      // Sibling row: pickup/dropoff dipende da ARRIVAL vs DEPARTURE
+      const siblingRow = {
+        production_id: PRODUCTION_ID,
+        trip_id:        newTripId,
+        date:           selExistingTrip.date,
+        transfer_class: selExistingTrip.transfer_class,
+        // ARRIVAL  → MULTI-DRP: stesso pickup (hub), dropoff = hotel del crew
+        // DEPARTURE → MULTI-PKP: pickup = hotel del crew, stesso dropoff (hub)
+        pickup_id:  selExistingTrip.transfer_class === 'ARRIVAL'
+          ? selExistingTrip.pickup_id
+          : assignCtx.hotel,
+        dropoff_id: selExistingTrip.transfer_class === 'ARRIVAL'
+          ? assignCtx.hotel
+          : selExistingTrip.dropoff_id,
+        vehicle_id:      selExistingTrip.vehicle_id      || null,
+        driver_name:     selExistingTrip.driver_name     || null,
+        sign_code:       selExistingTrip.sign_code       || null,
+        capacity:        selExistingTrip.capacity        || null,
+        service_type_id: selExistingTrip.service_type_id || null,
+        call_min:        selExistingTrip.call_min        ?? null,
+        pickup_min:      selExistingTrip.pickup_min      ?? null,
+        arr_time:        selExistingTrip.arr_time        || null,
+        flight_no:       selExistingTrip.flight_no       || null,
+        terminal:        selExistingTrip.terminal        || null,
+        notes:           selExistingTrip.notes           || null,
+        duration_min:    selExistingTrip.duration_min    || null,
+        start_dt:        selExistingTrip.start_dt        || null,
+        end_dt:          selExistingTrip.end_dt          || null,
+        status:          selExistingTrip.status          || 'PLANNED',
+        pax_count: 0,
+      }
+
+      const { data: newRow, error: tripErr } = await supabase.from('trips').insert(siblingRow).select('id').single()
+      if (tripErr || !newRow?.id) { setAddingToTrip(false); return }
+
+      const { error: paxErr } = await supabase.from('trip_passengers').insert({
+        production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: assignCtx.id,
+      })
+      setAddingToTrip(false)
+      if (!paxErr) { setAddedToTrip(newTripId); onSaved() }
+    }
   }
 
   const cls = CLS[transferClass] || CLS.STANDARD
