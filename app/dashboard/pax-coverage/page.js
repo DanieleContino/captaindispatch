@@ -105,7 +105,7 @@ function AssignedRow({ member, trips, locsMap }) {
 }
 
 // ─── Riga crew NON assegnato ──────────────────────────────────
-function UnassignedRow({ member, locsMap }) {
+function UnassignedRow({ member, locsMap, onAssign }) {
   const tc = TC[member.travel_status] || TC.PRESENT
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
   const dep = isTomorrow(member.departure_date)
@@ -133,9 +133,9 @@ function UnassignedRow({ member, locsMap }) {
         </div>
         <div style={{ fontSize: '11px', color: '#64748b' }}>🏨 {hotel}</div>
       </div>
-      <a href="/dashboard/trips" style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fca5a5', padding: '4px 10px', borderRadius: '7px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+      <button onClick={onAssign} style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fca5a5', padding: '4px 10px', borderRadius: '7px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
         + Assign
-      </a>
+      </button>
     </div>
   )
 }
@@ -387,7 +387,16 @@ export default function PaxCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {unassigned.map(c => (
-                    <UnassignedRow key={c.id} member={c} locsMap={locsMap} />
+                    <UnassignedRow key={c.id} member={c} locsMap={locsMap} onAssign={() => {
+                      const params = new URLSearchParams({
+                        assignCrewId:   c.id,
+                        assignCrewName: c.full_name,
+                        assignHotelId:  c.hotel_id || '',
+                        assignTS:       c.travel_status || 'PRESENT',
+                        assignDate:     date,
+                      })
+                      router.push('/dashboard/trips?' + params.toString())
+                    }} />
                   ))}
                 </div>
               </div>

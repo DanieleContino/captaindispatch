@@ -38,6 +38,131 @@ const EMPTY_FORM = {
   general_call_time: '', shoot_day: '', revision: '1',
 }
 
+const inp = { width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
+function sectionTitle(icon, title) {
+  return (
+    <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+      <span>{icon}</span> {title}
+    </div>
+  )
+}
+
+// ── Shared form fields (used in both create and edit) ──
+function FormFields({ values, onChange, isEdit = false }) {
+  const s = (k, v) => onChange(k, v)
+  return (
+    <>
+      {/* Identity */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px', marginBottom: '4px' }}>
+        <div>
+          <label style={lbl}>Production Name *</label>
+          <input value={values.name}
+            onChange={e => { s('name', e.target.value); if (!isEdit) s('slug', slugify(e.target.value)) }}
+            style={inp} required placeholder="e.g. Palermo 2026" autoFocus={!isEdit} />
+        </div>
+        <div>
+          <label style={lbl}>Slug (URL)</label>
+          <input value={values.slug} onChange={e => s('slug', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="auto" />
+        </div>
+      </div>
+
+      {/* Schedule */}
+      {sectionTitle('🗓', 'Schedule')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+        <div>
+          <label style={lbl}>General Call Time</label>
+          <input type="time" value={values.general_call_time} onChange={e => s('general_call_time', e.target.value)} style={inp} />
+        </div>
+        <div>
+          <label style={lbl}>Shoot Day</label>
+          <input type="number" value={values.shoot_day} onChange={e => s('shoot_day', e.target.value)} style={inp} placeholder="42" min="1" />
+        </div>
+        <div>
+          <label style={lbl}>Revision</label>
+          <input type="number" value={values.revision} onChange={e => s('revision', e.target.value)} style={inp} placeholder="1" min="1" />
+        </div>
+      </div>
+
+      {/* Key Creatives */}
+      {sectionTitle('🎭', 'Key Creatives')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div>
+          <label style={lbl}>Director</label>
+          <input value={values.director} onChange={e => s('director', e.target.value)} style={inp} placeholder="e.g. John Smith" />
+        </div>
+        <div>
+          <label style={lbl}>Producer</label>
+          <input value={values.producer} onChange={e => s('producer', e.target.value)} style={inp} placeholder="e.g. Jane Doe" />
+        </div>
+      </div>
+
+      {/* Production Team */}
+      {sectionTitle('👥', 'Production Team')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div>
+          <label style={lbl}>Production Manager — Name</label>
+          <input value={values.production_manager} onChange={e => s('production_manager', e.target.value)} style={inp} placeholder="e.g. Robert Brown" />
+        </div>
+        <div>
+          <label style={lbl}>Production Manager — Phone</label>
+          <input value={values.production_manager_phone} onChange={e => s('production_manager_phone', e.target.value)} style={inp} placeholder="+39 320 111 0000" />
+        </div>
+        <div>
+          <label style={lbl}>Production Coordinator — Name</label>
+          <input value={values.production_coordinator} onChange={e => s('production_coordinator', e.target.value)} style={inp} placeholder="e.g. Maria Rossi" />
+        </div>
+        <div>
+          <label style={lbl}>Production Coordinator — Phone</label>
+          <input value={values.production_coordinator_phone} onChange={e => s('production_coordinator_phone', e.target.value)} style={inp} placeholder="+39 320 000 0000" />
+        </div>
+      </div>
+
+      {/* Transportation Team */}
+      {sectionTitle('🚌', 'Transportation Team')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div>
+          <label style={lbl}>Transportation Coordinator — Name</label>
+          <input value={values.transportation_coordinator} onChange={e => s('transportation_coordinator', e.target.value)} style={inp} placeholder="e.g. Daniele Contino" />
+        </div>
+        <div>
+          <label style={lbl}>Transportation Coordinator — Phone</label>
+          <input value={values.transportation_coordinator_phone} onChange={e => s('transportation_coordinator_phone', e.target.value)} style={inp} placeholder="+39 333 000 0000" />
+        </div>
+        <div>
+          <label style={lbl}>Transportation Captain — Name</label>
+          <input value={values.transportation_captain} onChange={e => s('transportation_captain', e.target.value)} style={inp} placeholder="e.g. Marco Bianchi" />
+        </div>
+        <div>
+          <label style={lbl}>Transportation Captain — Phone</label>
+          <input value={values.transportation_captain_phone} onChange={e => s('transportation_captain_phone', e.target.value)} style={inp} placeholder="+39 347 000 0000" />
+        </div>
+        <div>
+          <label style={lbl}>Production Office — Phone</label>
+          <input value={values.production_office_phone} onChange={e => s('production_office_phone', e.target.value)} style={inp} placeholder="+39 091 000 0000" />
+        </div>
+      </div>
+
+      {/* Set & Basecamp */}
+      {sectionTitle('📍', 'Set & Basecamp')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div>
+          <label style={lbl}>Set Location — Name</label>
+          <input value={values.set_location} onChange={e => s('set_location', e.target.value)} style={inp} placeholder="e.g. Cinecitta Studio 5" />
+        </div>
+        <div>
+          <label style={lbl}>Set Location — Address</label>
+          <input value={values.set_address} onChange={e => s('set_address', e.target.value)} style={inp} placeholder="e.g. Via Tuscolana 1055" />
+        </div>
+        <div>
+          <label style={lbl}>Basecamp</label>
+          <input value={values.basecamp} onChange={e => s('basecamp', e.target.value)} style={inp} placeholder="e.g. Parking Area B" />
+        </div>
+      </div>
+    </>
+  )
+}
+
 export default function ProductionsPage() {
   const router = useRouter()
   const [user,         setUser]         = useState(null)
@@ -243,129 +368,6 @@ export default function ProductionsPage() {
   if (!user) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
   )
-
-  const inp = { width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
-  const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
-  const sectionTitle = (icon, title) => (
-    <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '10px', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
-      <span>{icon}</span> {title}
-    </div>
-  )
-
-  // ── Shared form fields (used in both create and edit) ──
-  function FormFields({ values, onChange, isEdit = false }) {
-    const s = (k, v) => onChange(k, v)
-    return (
-      <>
-        {/* Identity */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px', marginBottom: '4px' }}>
-          <div>
-            <label style={lbl}>Production Name *</label>
-            <input value={values.name}
-              onChange={e => { s('name', e.target.value); if (!isEdit) s('slug', slugify(e.target.value)) }}
-              style={inp} required placeholder="e.g. Palermo 2026" autoFocus={!isEdit} />
-          </div>
-          <div>
-            <label style={lbl}>Slug (URL)</label>
-            <input value={values.slug} onChange={e => s('slug', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="auto" />
-          </div>
-        </div>
-
-        {/* Schedule */}
-        {sectionTitle('🗓', 'Schedule')}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-          <div>
-            <label style={lbl}>General Call Time</label>
-            <input type="time" value={values.general_call_time} onChange={e => s('general_call_time', e.target.value)} style={inp} />
-          </div>
-          <div>
-            <label style={lbl}>Shoot Day</label>
-            <input type="number" value={values.shoot_day} onChange={e => s('shoot_day', e.target.value)} style={inp} placeholder="42" min="1" />
-          </div>
-          <div>
-            <label style={lbl}>Revision</label>
-            <input type="number" value={values.revision} onChange={e => s('revision', e.target.value)} style={inp} placeholder="1" min="1" />
-          </div>
-        </div>
-
-        {/* Key Creatives */}
-        {sectionTitle('🎭', 'Key Creatives')}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div>
-            <label style={lbl}>Director</label>
-            <input value={values.director} onChange={e => s('director', e.target.value)} style={inp} placeholder="e.g. John Smith" />
-          </div>
-          <div>
-            <label style={lbl}>Producer</label>
-            <input value={values.producer} onChange={e => s('producer', e.target.value)} style={inp} placeholder="e.g. Jane Doe" />
-          </div>
-        </div>
-
-        {/* Production Team */}
-        {sectionTitle('👥', 'Production Team')}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div>
-            <label style={lbl}>Production Manager — Name</label>
-            <input value={values.production_manager} onChange={e => s('production_manager', e.target.value)} style={inp} placeholder="e.g. Robert Brown" />
-          </div>
-          <div>
-            <label style={lbl}>Production Manager — Phone</label>
-            <input value={values.production_manager_phone} onChange={e => s('production_manager_phone', e.target.value)} style={inp} placeholder="+39 320 111 0000" />
-          </div>
-          <div>
-            <label style={lbl}>Production Coordinator — Name</label>
-            <input value={values.production_coordinator} onChange={e => s('production_coordinator', e.target.value)} style={inp} placeholder="e.g. Maria Rossi" />
-          </div>
-          <div>
-            <label style={lbl}>Production Coordinator — Phone</label>
-            <input value={values.production_coordinator_phone} onChange={e => s('production_coordinator_phone', e.target.value)} style={inp} placeholder="+39 320 000 0000" />
-          </div>
-        </div>
-
-        {/* Transportation Team */}
-        {sectionTitle('🚌', 'Transportation Team')}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div>
-            <label style={lbl}>Transportation Coordinator — Name</label>
-            <input value={values.transportation_coordinator} onChange={e => s('transportation_coordinator', e.target.value)} style={inp} placeholder="e.g. Daniele Contino" />
-          </div>
-          <div>
-            <label style={lbl}>Transportation Coordinator — Phone</label>
-            <input value={values.transportation_coordinator_phone} onChange={e => s('transportation_coordinator_phone', e.target.value)} style={inp} placeholder="+39 333 000 0000" />
-          </div>
-          <div>
-            <label style={lbl}>Transportation Captain — Name</label>
-            <input value={values.transportation_captain} onChange={e => s('transportation_captain', e.target.value)} style={inp} placeholder="e.g. Marco Bianchi" />
-          </div>
-          <div>
-            <label style={lbl}>Transportation Captain — Phone</label>
-            <input value={values.transportation_captain_phone} onChange={e => s('transportation_captain_phone', e.target.value)} style={inp} placeholder="+39 347 000 0000" />
-          </div>
-          <div>
-            <label style={lbl}>Production Office — Phone</label>
-            <input value={values.production_office_phone} onChange={e => s('production_office_phone', e.target.value)} style={inp} placeholder="+39 091 000 0000" />
-          </div>
-        </div>
-
-        {/* Set & Basecamp */}
-        {sectionTitle('📍', 'Set & Basecamp')}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div>
-            <label style={lbl}>Set Location — Name</label>
-            <input value={values.set_location} onChange={e => s('set_location', e.target.value)} style={inp} placeholder="e.g. Cinecitta Studio 5" />
-          </div>
-          <div>
-            <label style={lbl}>Set Location — Address</label>
-            <input value={values.set_address} onChange={e => s('set_address', e.target.value)} style={inp} placeholder="e.g. Via Tuscolana 1055" />
-          </div>
-          <div>
-            <label style={lbl}>Basecamp</label>
-            <input value={values.basecamp} onChange={e => s('basecamp', e.target.value)} style={inp} placeholder="e.g. Parking Area B" />
-          </div>
-        </div>
-      </>
-    )
-  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>

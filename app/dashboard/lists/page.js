@@ -124,50 +124,37 @@ function TripTableRow({ group, locsMap, sectionColor }) {
         {group.driver_name || '–'}
       </div>
       <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.4 }}>
-        {/* Info bar orizzontale: volo, terminal, notes */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
-          {/* Badge info volo per ARRIVAL/DEPARTURE */}
-          {showFlightInfo && (
-            <span style={{ 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '4px',
-              background: transferClass === 'ARRIVAL' ? '#dbeafe' : '#fed7aa',
-              color: transferClass === 'ARRIVAL' ? '#1e40af' : '#c2410c',
-              padding: '2px 6px',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: '800',
-            }}>
-              <span>✈️</span>
-              {group.flight_no && <span>{group.flight_no}</span>}
-              {flightArrTime && <span>@{flightArrTime}</span>}
-            </span>
-          )}
-          {/* Terminal (solo ARRIVAL/DEPARTURE) */}
-          {showHubInfo && hubTerminal && (
-            <>
-              {showFlightInfo && <span style={{ color: '#cbd5e1', fontSize: '10px' }}>|</span>}
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', color: '#64748b' }}>
-                <span style={{ fontSize: '8px' }}>📍</span>
-                <span style={{ fontWeight: '600', color: '#475569' }}>{hubTerminal}</span>
-              </span>
-            </>
-          )}
-          {/* Notes (solo ARRIVAL/DEPARTURE) */}
-          {showHubInfo && tripNotes && (
-            <>
-              {(showFlightInfo || hubTerminal) && <span style={{ color: '#cbd5e1', fontSize: '10px' }}>|</span>}
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', color: '#64748b' }}>
-                <span style={{ fontSize: '8px' }}>📝</span>
-                <span style={{ fontWeight: '500', color: '#64748b' }}>{tripNotes}</span>
-              </span>
-            </>
-          )}
-        </div>
         {isMultiStop ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '2px' }}>
+              {/* Badge volo inline */}
+              {showFlightInfo && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '3px',
+                  background: transferClass === 'ARRIVAL' ? '#dbeafe' : '#fed7aa',
+                  color: transferClass === 'ARRIVAL' ? '#1e40af' : '#c2410c',
+                  padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', flexShrink: 0,
+                }}>
+                  <span>✈️</span>
+                  {group.flight_no && <span>{group.flight_no}</span>}
+                  {flightArrTime && <span>@{flightArrTime}</span>}
+                </span>
+              )}
+              {/* Terminal inline */}
+              {showHubInfo && hubTerminal && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '9px', color: '#475569', fontWeight: '600', flexShrink: 0 }}>
+                  <span style={{ fontSize: '8px' }}>📍</span>{hubTerminal}
+                </span>
+              )}
+              {/* Notes inline */}
+              {showHubInfo && tripNotes && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '9px', color: '#64748b', flexShrink: 0 }}>
+                  <span style={{ fontSize: '8px' }}>📝</span>{tripNotes}
+                </span>
+              )}
+              {(showFlightInfo || (showHubInfo && (hubTerminal || tripNotes))) && (
+                <span style={{ color: '#cbd5e1', fontSize: '9px' }}>|</span>
+              )}
               <span style={{ background: '#ea580c', color: 'white', fontWeight: '900', fontSize: '9px', padding: '1px 5px', borderRadius: '4px', letterSpacing: '0.3px', flexShrink: 0 }}>
                 🔀 {group.rows.length}
               </span>
@@ -217,23 +204,52 @@ function TripTableRow({ group, locsMap, sectionColor }) {
             })()}
           </div>
         ) : (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '10px', color: '#64748b' }}>
-                FROM: <strong style={{ color: '#0f172a' }}>{pickupName}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            {/* Badge volo inline */}
+            {showFlightInfo && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: '3px',
+                background: transferClass === 'ARRIVAL' ? '#dbeafe' : '#fed7aa',
+                color: transferClass === 'ARRIVAL' ? '#1e40af' : '#c2410c',
+                padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', flexShrink: 0,
+              }}>
+                <span>✈️</span>
+                {group.flight_no && <span>{group.flight_no}</span>}
+                {flightArrTime && <span>@{flightArrTime}</span>}
               </span>
-              <span style={{ color: '#94a3b8' }}>→</span>
-              <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '11px' }}>
-                {(() => {
-                  const dropoffLoc = locsMap[group.rows[0]?.dropoff_id]
-                  return typeof dropoffLoc === 'object' ? dropoffLoc.name : dropoffLoc || group.rows[0]?.dropoff_id || '–'
-                })()}
+            )}
+            {/* Terminal inline */}
+            {showHubInfo && hubTerminal && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '9px', color: '#475569', fontWeight: '600', flexShrink: 0 }}>
+                <span style={{ fontSize: '8px' }}>📍</span>{hubTerminal}
               </span>
-            </div>
+            )}
+            {/* Notes inline */}
+            {showHubInfo && tripNotes && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '9px', color: '#64748b', flexShrink: 0 }}>
+                <span style={{ fontSize: '8px' }}>📝</span>{tripNotes}
+              </span>
+            )}
+            {(showFlightInfo || (showHubInfo && (hubTerminal || tripNotes))) && (
+              <span style={{ color: '#cbd5e1', fontSize: '10px' }}>|</span>
+            )}
+            <span style={{ fontSize: '10px', color: '#64748b' }}>
+              <strong style={{ color: '#0f172a' }}>{pickupName}</strong>
+            </span>
+            <span style={{ color: '#94a3b8' }}>→</span>
+            <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '11px' }}>
+              {(() => {
+                const dropoffLoc = locsMap[group.rows[0]?.dropoff_id]
+                return typeof dropoffLoc === 'object' ? dropoffLoc.name : dropoffLoc || group.rows[0]?.dropoff_id || '–'
+              })()}
+            </span>
             {group.rows[0]?.passenger_list && (
-              <div style={{ fontSize: '10px', color: '#475569', marginTop: '2px', fontWeight: '500' }}>
-                {group.rows[0].passenger_list.split(',').map(s => s.trim()).filter(Boolean).join(' · ')}
-              </div>
+              <>
+                <span style={{ color: '#cbd5e1', fontSize: '10px' }}>·</span>
+                <span style={{ fontSize: '10px', color: '#475569', fontWeight: '500' }}>
+                  {group.rows[0].passenger_list.split(',').map(s => s.trim()).filter(Boolean).join(', ')}
+                </span>
+              </>
             )}
           </div>
         )}
@@ -269,150 +285,106 @@ function TransportListHeader({ production, date }) {
   const textPrimary = '#0f172a'
   const textSecondary = '#64748b'
   const textTertiary = '#94a3b8'
-  const radius = '10px'
-  const radiusSm = '5px'
 
-  // Compact contacts for print
-  const printContacts = [
-    prod.director ? `Dir: ${prod.director}` : null,
-    prod.producer ? `Pro: ${prod.producer}` : null,
-    prod.production_manager ? `PM: ${prod.production_manager}` : null,
-    prod.transportation_coordinator ? `TC: ${prod.transportation_coordinator}` : null,
-    prod.transportation_captain ? `Cap: ${prod.transportation_captain}` : null,
-  ].filter(Boolean).join(' · ')
+  // Check if any contacts exist
+  const hasContacts = prod.director || prod.producer || prod.production_manager || 
+                      prod.production_coordinator || prod.transportation_coordinator || 
+                      prod.transportation_captain || prod.production_office_phone
 
   return (
     <>
-      {/* Header stampabile - riga singola compatta */}
-      <div className="print-only-header" style={{ display: 'none', padding: '6px 8px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: '9px', lineHeight: 1.4 }}>
-        <strong>{prod.name || 'Production'}</strong> · {date} · Call: {callTime} · {printContacts}
-      </div>
+      {/* Header 2 colonne: 70% SX / 30% DX */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: hasContacts ? '7fr 3fr' : '1fr',
+        gap: '10px',
+        padding: '8px 10px', 
+        background: '#f9fafb', 
+        borderBottom: '1px solid #e5e7eb', 
+        fontSize: '10px', 
+        lineHeight: 1.5, 
+        marginBottom: '10px' 
+      }}>
+        {/* COLONNA SINISTRA (70%) */}
+        <div>
+          <div style={{ fontWeight: '700', color: textPrimary, marginBottom: '3px' }}>
+            {prod.name || 'Production'}
+            <span style={{
+              display: 'inline-block',
+              fontSize: '7px',
+              background: '#fef2f2',
+              color: '#dc2626',
+              padding: '1px 5px',
+              borderRadius: '3px',
+              marginLeft: '6px',
+              fontWeight: '800',
+              letterSpacing: '0.05em',
+            }}>
+              CONFIDENTIAL
+            </span>
+          </div>
+          <div style={{ color: textSecondary, fontSize: '9px' }}>
+            Transport List · {dateDisplay} · Call: <strong style={{ color: textPrimary }}>{callTime}</strong>
+          </div>
+          {(setLabel !== '–' || basecampLabel !== '–') && (
+            <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: `1px solid ${borderColor}`, fontSize: '9px', color: textSecondary }}>
+              {setLabel !== '–' && <span>🎬 Set: <strong style={{ color: textPrimary }}>{setLabel}</strong></span>}
+              {setLabel !== '–' && basecampLabel !== '–' && <span style={{ margin: '0 6px', color: '#cbd5e1' }}>·</span>}
+              {basecampLabel !== '–' && <span>🏕 Basecamp: <strong style={{ color: textPrimary }}>{basecampLabel}</strong></span>}
+            </div>
+          )}
+        </div>
 
-      {/* Header webapp - layout 2 colonne */}
-      <div className="no-print" style={{
-        border: `0.5px solid ${borderColor}`,
-        borderRadius: radius,
-        overflow: 'hidden',
-        background: 'white',
-        marginBottom: '10px',
-      }}>
-      {/* Layout 2 colonne: SX info produzione (70%), DX contatti (30%) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '2.33fr 1fr',
-        gap: '12px',
-        padding: '10px 14px',
-        borderBottom: `0.5px solid ${borderColor}`,
-      }}>
-        {/* COLONNA SINISTRA: Logo + Info Produzione + General Call */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-            {/* Logo */}
-            {prod.logo_url ? (
-              <img
-                src={prod.logo_url}
-                alt="logo"
-                style={{ width: '48px', height: '32px', objectFit: 'contain', borderRadius: radiusSm, background: 'white', border: `0.5px solid ${borderColor}`, padding: '2px', flexShrink: 0 }}
-              />
-            ) : (
-              <div style={{
-                width: '48px', height: '32px',
-                border: `0.5px dashed ${borderColor}`,
-                borderRadius: radiusSm,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '9px', color: textTertiary,
-                flexShrink: 0,
-              }}>
-                LOGO
+        {/* COLONNA DESTRA (30%) - Solo se ci sono contatti */}
+        {hasContacts && (
+          <div style={{
+            background: bgSecondary,
+            padding: '6px 8px',
+            borderRadius: '5px',
+            fontSize: '8px',
+            lineHeight: 1.4,
+            color: textSecondary,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+          }}>
+            {prod.director && (
+              <div><strong style={{ color: textPrimary, fontWeight: '600' }}>Director:</strong> {prod.director}</div>
+            )}
+            {prod.producer && (
+              <div><strong style={{ color: textPrimary, fontWeight: '600' }}>Producer:</strong> {prod.producer}</div>
+            )}
+            {prod.production_manager && (
+              <div>
+                <strong style={{ color: textPrimary, fontWeight: '600' }}>Production Manager:</strong> {prod.production_manager}
+                {prod.production_manager_phone && <span style={{ color: textTertiary }}> · 📱 {prod.production_manager_phone}</span>}
               </div>
             )}
-
-            {/* Production name + info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '13px', fontWeight: '600', color: textPrimary, lineHeight: 1.3 }}>
-                {prod.name || 'Production Name'}
-                <span style={{
-                  display: 'inline-block',
-                  fontSize: '8px',
-                  background: '#fef2f2',
-                  color: '#dc2626',
-                  padding: '1px 6px',
-                  borderRadius: radiusSm,
-                  marginLeft: '6px',
-                  verticalAlign: 'middle',
-                  fontWeight: '700',
-                  letterSpacing: '0.05em',
-                }}>
-                  CONFIDENTIAL
-                </span>
+            {prod.production_coordinator && (
+              <div>
+                <strong style={{ color: textPrimary, fontWeight: '600' }}>Production Coordinator:</strong> {prod.production_coordinator}
+                {prod.production_coordinator_phone && <span style={{ color: textTertiary }}> · 📱 {prod.production_coordinator_phone}</span>}
               </div>
-              <div style={{ fontSize: '10px', color: textSecondary, marginTop: '2px', lineHeight: 1.3 }}>
-                Transport List · {dateDisplay}
-                {prod.shoot_day ? ` · Day ${prod.shoot_day}` : ''}
-                {prod.revision  ? ` · Rev. ${prod.revision}` : ''}
+            )}
+            {prod.transportation_coordinator && (
+              <div>
+                <strong style={{ color: textPrimary, fontWeight: '600' }}>Transport Coordinator:</strong> {prod.transportation_coordinator}
+                {prod.transportation_coordinator_phone && <span style={{ color: textTertiary }}> · 📱 {prod.transportation_coordinator_phone}</span>}
               </div>
-            </div>
+            )}
+            {prod.transportation_captain && (
+              <div>
+                <strong style={{ color: textPrimary, fontWeight: '600' }}>Captain:</strong> {prod.transportation_captain}
+                {prod.transportation_captain_phone && <span style={{ color: textTertiary }}> · 📱 {prod.transportation_captain_phone}</span>}
+              </div>
+            )}
+            {prod.production_office_phone && (
+              <div>
+                <strong style={{ color: textPrimary, fontWeight: '600' }}>Office:</strong> 📱 {prod.production_office_phone}
+              </div>
+            )}
           </div>
-
-          {/* General Call */}
-          <div style={{ marginTop: '4px' }}>
-            <div style={{ fontSize: '9px', color: textTertiary, fontWeight: '600', letterSpacing: '0.5px' }}>GENERAL CALL</div>
-            <div style={{ fontSize: '26px', fontWeight: '700', lineHeight: 1, color: textPrimary, marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
-              {callTime}
-            </div>
-          </div>
-        </div>
-
-        {/* COLONNA DESTRA: Contatti compatti */}
-        <div style={{
-          background: bgSecondary,
-          padding: '8px 10px',
-          borderRadius: '6px',
-          fontSize: '9px',
-          lineHeight: 1.5,
-          color: textSecondary,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1px',
-        }}>
-          <div><strong style={{ color: textPrimary, fontWeight: '600' }}>Director:</strong> {prod.director || '–'}</div>
-          <div><strong style={{ color: textPrimary, fontWeight: '600' }}>Producer:</strong> {prod.producer || '–'}</div>
-          <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>Prod. Manager:</strong> {prod.production_manager || '–'}
-            {prod.production_manager_phone && <span style={{ color: textTertiary }}> · 📱 {prod.production_manager_phone}</span>}
-          </div>
-          <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>Prod. Coord:</strong> {prod.production_coordinator || '–'}
-            {prod.production_coordinator_phone && <span style={{ color: textTertiary }}> · 📱 {prod.production_coordinator_phone}</span>}
-          </div>
-          <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>Transport Coord:</strong> {prod.transportation_coordinator || '–'}
-            {prod.transportation_coordinator_phone && <span style={{ color: textTertiary }}> · 📱 {prod.transportation_coordinator_phone}</span>}
-          </div>
-          <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>Captain:</strong> {prod.transportation_captain || '–'}
-            {prod.transportation_captain_phone && <span style={{ color: textTertiary }}> · 📱 {prod.transportation_captain_phone}</span>}
-          </div>
-          <div>
-            <strong style={{ color: textPrimary, fontWeight: '600' }}>Office:</strong> {prod.production_office_phone ? `📱 ${prod.production_office_phone}` : '–'}
-          </div>
-        </div>
-      </div>
-
-      {/* Set bar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '20px',
-        padding: '5px 14px',
-        background: bgSecondary,
-        borderTop: `0.5px solid ${borderColor}`,
-        fontSize: '10px',
-        color: textSecondary,
-      }}>
-        <span>🎬 <strong style={{ color: textPrimary, fontWeight: '600' }}>Set:</strong> {setLabel}</span>
-        <span>🏕 <strong style={{ color: textPrimary, fontWeight: '600' }}>Basecamp:</strong> {basecampLabel}</span>
-      </div>
+        )}
       </div>
     </>
   )
@@ -523,7 +495,36 @@ export default function ListsPage() {
 
         @media print {
           .no-print { display: none !important; }
-          body { background: white !important; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          
+          * { 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important;
+          }
+          
+          html, body { 
+            background: white !important; 
+            margin: 0 !important; 
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+          }
+
+          .print-wrap { 
+            padding: 0 !important; 
+            margin: 0 !important;
+            background: white !important; 
+            max-width: none !important;
+            width: 100% !important;
+            min-height: auto !important;
+          }
+          
+          .print-card { 
+            border-radius: 0 !important; 
+            padding: 8px 10px !important; 
+            border: none !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
 
           .trip-row {
             padding: 3px 4px !important;
@@ -534,8 +535,6 @@ export default function ListsPage() {
           .section-header { padding: 4px 0 2px !important; font-size: 8px !important; }
           .col-header { padding: 3px 4px !important; font-size: 8px !important; }
           .doc-footer { padding-top: 4px !important; margin-top: 6px !important; font-size: 8px !important; }
-          .print-wrap { padding: 0 !important; background: white !important; }
-          .print-card { border-radius: 0 !important; padding: 0 !important; border: none !important; }
           .toolbar { display: none !important; }
           
           .sticky-footer {
@@ -544,17 +543,13 @@ export default function ListsPage() {
             left: 0 !important;
             right: 0 !important;
             margin: 0 !important;
-          }
-
-          /* Header stampabile compatto */
-          .print-only-header {
-            display: block !important;
+            width: 100% !important;
           }
         }
 
         @page {
           size: A4 landscape;
-          margin: 7mm 8mm;
+          margin: 8mm;
         }
       `}</style>
 

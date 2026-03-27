@@ -405,6 +405,26 @@ CREATE POLICY "Allow delete own production trips" ON trips
 [ ] Crew page — edit Travel_Status in-row
 [ ] Multi-produzione (production switcher)
 [ ] Rocket — Step 2: durata stimata per ogni trip
+[ ] SIBLING SEQUENTIAL ROUTING — calcolo pickup sequenziale per DEPARTURE multi-PKP
+    Problema: il sistema calcola i pickup dei sibling in modo INDIPENDENTE (ogni hotel→hub
+    diretta), NON sequenziale (Hotel A → Hotel B → Hub). Questo causa pickup identici quando
+    due hotel sono equidistanti dall'hub ma separati da qualche minuto tra loro.
+    
+    Esempio: Hotel A = 30 min da APT, Hotel B = 30 min da APT, ma A→B = 5 min.
+    - Sistema attuale: A pickup = call-30, B pickup = call-30 → UGUALI ❌
+    - Corretto: B pickup = call-30 = 07:30, A pickup = 07:30 - 5 = 07:25 ✓
+    
+    Soluzioni possibili:
+    1. Routes OPERATIVE: popolare routes con durations che includono le deviazioni tipiche
+       (es. Hotel A → APT = 35 min perché include fermata a Hotel B lungo il percorso)
+    2. Override manuale: ri-aggiungere SIBLING LEGS UI nell'EditTripSidebar con input
+       duration_min per ogni leg (state sibDurations rimosso in S7m — va rimesso)
+    3. Routing sequenziale auto: quando si crea un sibling DEPARTURE, query la rotta
+       Hotel A → Hotel B + stagger i pickup in sequenza (richiede inter-hotel routes in DB)
+    
+    File: app/dashboard/trips/page.js — handleAddToExisting + EditTripSidebar
+    Nota: attualmente se hotels equidistanti → pickup identici è matematicamente CORRETTO
+    per i dati in DB. Nessun bug nel codice, solo limitazione architetturale.
 ```
 
 ### P3
