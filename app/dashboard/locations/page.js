@@ -12,10 +12,12 @@ const SIDEBAR_W = 400
 function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
   const EMPTY = { id: '', name: '', is_hub: false, lat: '', lng: '', default_pickup_point: '' }
   const [form, setForm]     = useState(EMPTY)
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDel]  = useState(false)
-  const [confirmDel, setCd] = useState(false)
-  const [error, setError]   = useState(null)
+  const [saving, setSaving]       = useState(false)
+  const [deleting, setDel]        = useState(false)
+  const [confirmDel, setCd]       = useState(false)
+  const [error, setError]         = useState(null)
+  const [refreshing, setRefresh]  = useState(false)
+  const [refreshMsg, setRefMsg]   = useState(null)
 
   // ── Places Autocomplete state ──
   const [placeQuery,   setPlaceQuery]   = useState('')
@@ -53,10 +55,10 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
   useEffect(() => {
     if (!open) {
       setPlaceQuery(''); setPredictions([]); setPlaceOpen(false); setPlaceError(null)
-      setMapOpen(false)
+      setMapOpen(false); setRefMsg(null)
       return
     }
-    setError(null); setCd(false)
+    setError(null); setCd(false); setRefMsg(null)
     if (mode === 'edit' && initial) {
       setForm({ id: initial.id || '', name: initial.name || '', is_hub: !!initial.is_hub, lat: initial.lat ?? '', lng: initial.lng ?? '', default_pickup_point: initial.default_pickup_point || '' })
     } else {
@@ -131,7 +133,31 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
     }
     setSaving(false)
     if (err) { setError(err.message); return }
-    onSaved()
+
+    // ── Ricalcola rotte se lat/lng presenti ──────────────────
+    const savedId = mode === 'new' ? form.id.trim().toUpperCase() : initial.id
+    if (form.lat !== '' && form.lng !== '') {
+      setRefresh(true)
+      setRefMsg('🔄 Ricalcolo rotte con Google…')
+      try {
+        const r    = await fetch(`/api/routes/refresh-location?id=${encodeURIComponent(savedId)}`)
+        const data = await r.json()
+        if (data.error) {
+          setRefMsg(`⚠ Ricalcolo non riuscito: ${data.error}`)
+        } else if (data.message) {
+          setRefMsg(`ℹ ${data.message}`)
+        } else {
+          setRefMsg(`✅ Rotte aggiornate: ${data.updated} ricalcolate${data.skipped ? `, ${data.skipped} saltate (no coord)` : ''}${data.failed ? `, ${data.failed} fallite` : ''}`)
+        }
+      } catch {
+        setRefMsg('⚠ Errore di rete nel ricalcolo rotte')
+      }
+      setRefresh(false)
+      // chiude la sidebar dopo breve pausa per mostrare il messaggio
+      setTimeout(() => onSaved(), 1800)
+    } else {
+      onSaved()
+    }
   }
 
   async function handleDelete() {
@@ -285,10 +311,20 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
           </div>
 
           {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
+          {refreshMsg && (
+            <div style={{
+              margin: '0 18px 12px', padding: '9px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '600',
+              background: refreshing ? '#eff6ff' : refreshMsg.startsWith('✅') ? '#f0fdf4' : refreshMsg.startsWith('ℹ') ? '#f0f9ff' : '#fefce8',
+              border: `1px solid ${refreshing ? '#bfdbfe' : refreshMsg.startsWith('✅') ? '#86efac' : refreshMsg.startsWith('ℹ') ? '#bae6fd' : '#fde68a'}`,
+              color: refreshing ? '#1d4ed8' : refreshMsg.startsWith('✅') ? '#15803d' : refreshMsg.startsWith('ℹ') ? '#0369a1' : '#92400e',
+            }}>
+              {refreshMsg}
+            </div>
+          )}
           <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
             <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Annulla</button>
-            <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '800' }}>
-              {saving ? 'Salvataggio…' : mode === 'new' ? '+ Aggiungi' : '✓ Salva'}
+            <button type="submit" disabled={saving || refreshing} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: (saving || refreshing) ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: (saving || refreshing) ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Salvataggio…' : refreshing ? '🔄 Ricalcolo rotte…' : mode === 'new' ? '+ Aggiungi' : '✓ Salva'}
             </button>
           </div>
         </form>
