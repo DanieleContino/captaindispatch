@@ -26,10 +26,34 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
   const debounceRef = useRef(null)
   const dropdownRef = useRef(null)
 
+  // ── Map picker state ──
+  const [mapOpen, setMapOpen] = useState(false)
+
+  // postMessage listener per map picker
+  useEffect(() => {
+    function handleMessage(e) {
+      if (!e.data || typeof e.data !== 'object') return
+      if (e.data.type === 'MAP_PICK') {
+        setForm(f => ({
+          ...f,
+          lat: String(e.data.lat),
+          lng: String(e.data.lng),
+          default_pickup_point: e.data.address || f.default_pickup_point,
+        }))
+        setMapOpen(false)
+      } else if (e.data.type === 'MAP_CANCEL') {
+        setMapOpen(false)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
   // Reset sidebar state on open/close
   useEffect(() => {
     if (!open) {
       setPlaceQuery(''); setPredictions([]); setPlaceOpen(false); setPlaceError(null)
+      setMapOpen(false)
       return
     }
     setError(null); setCd(false)
@@ -189,6 +213,14 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
                 )}
               </div>
               {placeError && <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '3px' }}>⚠ {placeError}</div>}
+              {/* Pulsante mappa */}
+              <button
+                type="button"
+                onClick={() => setMapOpen(true)}
+                style={{ marginTop: '6px', width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                🗺 Scegli posizione su mappa
+              </button>
               {placeOpen && predictions.length > 0 && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden', marginTop: '2px' }}>
                   {predictions.map((p, i) => (
@@ -261,6 +293,30 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
           </div>
         </form>
       </div>
+
+      {/* ── Map Picker Modal ── */}
+      {mapOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column' }}>
+          {/* Header */}
+          <div style={{ background: '#0f2340', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <span style={{ color: 'white', fontWeight: '800', fontSize: '14px' }}>🗺 Scegli posizione sulla mappa</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8' }}>Clicca sul punto desiderato, poi "✓ Usa questo punto"</span>
+              <button
+                type="button"
+                onClick={() => setMapOpen(false)}
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '6px', padding: '5px 11px', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}
+              >✕</button>
+            </div>
+          </div>
+          {/* Iframe mappa */}
+          <iframe
+            src={`/api/places/map${form.lat && form.lng ? `?lat=${form.lat}&lng=${form.lng}` : ''}`}
+            style={{ flex: 1, border: 'none', width: '100%' }}
+            title="Scegli posizione su Google Maps"
+          />
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }`}</style>
     </>
