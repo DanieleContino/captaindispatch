@@ -122,7 +122,7 @@ function TripRow({ group, locations, selected, onClick }) {
     <div onClick={onClick}
       style={{
         display: 'grid',
-        gridTemplateColumns: '76px 68px 220px 180px 1fr 36px',
+        gridTemplateColumns: '76px 220px 180px 1fr 36px',
         alignItems: 'start',
         padding: '10px 14px 10px 14px',
         borderBottom: '1px solid #f1f5f9',
@@ -153,23 +153,16 @@ function TripRow({ group, locations, selected, onClick }) {
         )}
       </div>
 
-      {/* ── Trip ID + Classe ── */}
-      <div>
-        <div style={{ fontWeight: '900', color: '#0f172a', fontSize: '14px', fontFamily: 'monospace', letterSpacing: '-0.3px' }}>
-          {isMixed ? baseTripId(t.trip_id) : t.trip_id}
-        </div>
-        <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '9px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}`, letterSpacing: '0.04em' }}>
-            {t.transfer_class?.slice(0, 3) || 'STD'}
-          </span>
-          {isMultiPickup  && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>🔀 MULTI-PKP</span>}
-          {isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe' }}>🔀 MULTI-DRP</span>}
-        </div>
-        <div style={{ marginTop: '4px' }}>
-          <span style={{ padding: '2px 5px', borderRadius: '5px', fontSize: '9px', fontWeight: '700', background: sts.bg, color: sts.color }}>
-            {t.status || 'PLANNED'}
-          </span>
-        </div>
+      {/* ── Classe + Status (senza Trip ID) ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', justifyContent: 'flex-start' }}>
+        <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '9px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}`, letterSpacing: '0.04em', alignSelf: 'flex-start' }}>
+          {t.transfer_class?.slice(0, 3) || 'STD'}
+        </span>
+        {isMultiPickup  && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', alignSelf: 'flex-start' }}>🔀 MULTI-PKP</span>}
+        {isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe', alignSelf: 'flex-start' }}>🔀 MULTI-DRP</span>}
+        <span style={{ padding: '2px 5px', borderRadius: '5px', fontSize: '9px', fontWeight: '700', background: sts.bg, color: sts.color, alignSelf: 'flex-start' }}>
+          {t.status || 'PLANNED'}
+        </span>
       </div>
 
       {/* ── Rotta ── */}
@@ -1164,9 +1157,8 @@ export default function TripsPage() {
       <div style={{ transition: 'margin-right 0.25s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
 
         {trips.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '76px 68px 220px 180px 1fr 36px', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: '100px', zIndex: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '76px 220px 180px 1fr 36px', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: '100px', zIndex: 10 }}>
             <div>TIME</div>
-            <div>TRIP</div>
             <div>ROUTE</div>
             <div>VEHICLE</div>
             <div>PASSENGERS</div>
