@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
@@ -1356,7 +1356,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 }
 
 // ─── Pagina principale ─────────────────────────────────────────
-export default function TripsPage() {
+function TripsPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [user,          setUser]          = useState(null)
@@ -1490,7 +1490,7 @@ export default function TripsPage() {
   if (!user) return <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
+    <div style={{ minHeight: '100vh', background: '#f1f5f9', }}>
 
       {/* ── Header ── */}
       <Navbar currentPath="/dashboard/trips" />
@@ -1657,5 +1657,14 @@ export default function TripsPage() {
         onPaxChanged={() => loadTrips(date)}
       />
     </div>
+  )
+}
+
+// ─── Export default con Suspense (richiesto da Next.js 16 per useSearchParams) ──
+export default function TripsPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>}>
+      <TripsPageInner />
+    </Suspense>
   )
 }
