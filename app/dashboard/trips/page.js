@@ -465,7 +465,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       }
 
       const { data: newRow, error: tripErr } = await supabase.from('trips').insert(siblingRow).select('id').single()
-      if (tripErr || !newRow?.id) { setAddingToTrip(false); return }
+      if (tripErr || !newRow?.id) { setAddingToTrip(false); setError(tripErr?.message || 'Errore creazione trip sibling'); return }
 
       const { error: paxErr } = await supabase.from('trip_passengers').insert({
         production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: assignCtx.id,
@@ -511,6 +511,11 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                   onChange={e => {
                     const t = arrDepTrips.find(x => x.id === e.target.value) || null
                     setSelExistingTrip(t); setAddedToTrip(null)
+                    // Pre-popola l'hub nel form per il trip sibling (campo che rimane vuoto)
+                    if (t && !isCompatibleTrip(t)) {
+                      if (t.transfer_class === 'ARRIVAL')   set('pickup_id',  t.pickup_id)
+                      else                                   set('dropoff_id', t.dropoff_id)
+                    }
                   }}
                   style={{ ...inp, fontSize: '12px', marginBottom: selExistingTrip ? '8px' : 0 }}
                 >
