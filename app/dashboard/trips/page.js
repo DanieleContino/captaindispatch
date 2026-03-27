@@ -200,7 +200,9 @@ function TripRow({ group, locations, selected, onClick }) {
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dropoffLoc}</span>
             </div>
             {t.flight_no && (
-              <div style={{ fontSize: '10px', color: '#2563eb', fontWeight: '700', marginTop: '2px' }}>✈ {t.flight_no}</div>
+              <div style={{ fontSize: '10px', color: '#2563eb', fontWeight: '700', marginTop: '2px' }}>
+                ✈ {t.flight_no}{t.terminal ? ` · ${t.terminal}` : ''}
+              </div>
             )}
             {t.notes && (
               <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -263,7 +265,7 @@ function TripRow({ group, locations, selected, onClick }) {
 
 // ─── TripSidebar (CREATE new trip) ────────────────────────────
 function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved }) {
-  const EMPTY = { trip_id: '', date: defaultDate, pickup_id: '', dropoff_id: '', vehicle_id: '', service_type_id: '', arr_time: '', call_time: '', flight_no: '', notes: '', duration_min: '' }
+  const EMPTY = { trip_id: '', date: defaultDate, pickup_id: '', dropoff_id: '', vehicle_id: '', service_type_id: '', arr_time: '', call_time: '', flight_no: '', terminal: '', notes: '', duration_min: '' }
   const [form,        setForm]        = useState(EMPTY)
   const [saving,      setSaving]      = useState(false)
   const [error,       setError]       = useState(null)
@@ -344,7 +346,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       pickup_min: computed?.pickupMin ?? null,
       start_dt:   computed?.startDt   ?? null,
       end_dt:     computed?.endDt     ?? null,
-      flight_no: form.flight_no || null, notes: form.notes || null,
+      flight_no: form.flight_no || null, terminal: form.terminal || null, notes: form.notes || null,
       status: 'PLANNED', pax_count: 0,
     }
     const { data: ins, error: err } = await supabase.from('trips').insert(row).select('id').single()
@@ -467,12 +469,16 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                 <input value={form.flight_no} onChange={e => set('flight_no', e.target.value)} style={inp} placeholder="AZ 4568" />
               </div>
               <div>
-                <label style={lbl}>Service Type</label>
-                <select value={form.service_type_id} onChange={e => set('service_type_id', e.target.value)} style={inp}>
-                  <option value="">None</option>
-                  {serviceTypes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <label style={lbl}>Terminal</label>
+                <input value={form.terminal} onChange={e => set('terminal', e.target.value)} style={inp} placeholder="T1, T2, Arrivi Nord…" />
               </div>
+            </div>
+            <div>
+              <label style={lbl}>Service Type</label>
+              <select value={form.service_type_id} onChange={e => set('service_type_id', e.target.value)} style={inp}>
+                <option value="">None</option>
+                {serviceTypes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
             </div>
             <div>
               <label style={lbl}>Notes</label>
@@ -556,7 +562,7 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
   const EDIT_EMPTY = {
     date: '', pickup_id: '', dropoff_id: '', vehicle_id: '',
     service_type_id: '', arr_time: '', call_time: '',
-    duration_min: '', flight_no: '', notes: '', status: 'PLANNED',
+    duration_min: '', flight_no: '', terminal: '', notes: '', status: 'PLANNED',
   }
   const [form,       setForm]       = useState(EDIT_EMPTY)
   const [saving,     setSaving]     = useState(false)
@@ -599,6 +605,7 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
       call_time:       callStr,
       duration_min:    initial.duration_min ? String(initial.duration_min) : '',
       flight_no:       initial.flight_no || '',
+      terminal:        initial.terminal  || '',
       notes:           initial.notes     || '',
       status:          initial.status    || 'PLANNED',
     })
@@ -725,7 +732,7 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
       pickup_min: computed?.pickupMin ?? null,
       start_dt:   computed?.startDt   ?? null,
       end_dt:     computed?.endDt     ?? null,
-      flight_no: form.flight_no || null, notes: form.notes || null,
+      flight_no: form.flight_no || null, terminal: form.terminal || null, notes: form.notes || null,
       status: form.status,
     }
     const { error } = await supabase.from('trips').update(row).eq('id', initial.id)
@@ -854,19 +861,23 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
               </div>
             )}
 
-            {/* Flight + Notes */}
+            {/* Flight + Terminal + Notes */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
                 <label style={lbl}>Flight / Train</label>
                 <input value={form.flight_no} onChange={e => set('flight_no', e.target.value)} style={inp} placeholder="AZ 4568" />
               </div>
               <div>
-                <label style={lbl}>Service Type</label>
-                <select value={form.service_type_id} onChange={e => set('service_type_id', e.target.value)} style={inp}>
-                  <option value="">None</option>
-                  {serviceTypes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <label style={lbl}>Terminal</label>
+                <input value={form.terminal} onChange={e => set('terminal', e.target.value)} style={inp} placeholder="T1, T2, Arrivi Nord…" />
               </div>
+            </div>
+            <div>
+              <label style={lbl}>Service Type</label>
+              <select value={form.service_type_id} onChange={e => set('service_type_id', e.target.value)} style={inp}>
+                <option value="">None</option>
+                {serviceTypes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
             </div>
             <div>
               <label style={lbl}>Notes</label>
