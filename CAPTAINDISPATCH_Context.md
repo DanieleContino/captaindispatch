@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 27 marzo 2026 (S7g)**
+**Aggiornato: 27 marzo 2026 (S7h)**
 
 ---
 
@@ -156,12 +156,20 @@ Automazioni:
 ### Transport Lists Print-Optimized (S7e)
 - Layout unificato landscape: una sola tabella compatta per tutte le pagine
 - Stampa A4 landscape con `@page { size: A4 landscape; margin: 8mm; }`
-- 8 colonne: TIME | CALL | TRIP ID | VEHICLE | DRIVER | ROUTE | PAX | CAP
+- 7 colonne: TIME | CALL | VEHICLE | DRIVER | ROUTE & CREW | PAX | CAP
 - Multi-stop evidenti: badge 🔀 MULTI in arancione con numero fermate
 - Ogni fermata indentata con → e nomi passeggeri in font 7px
 - Colori sezione: bordo sinistro su ogni riga (blu TRANSPORT, verde ARRIVALS, arancione DEPARTURES)
 - Font 9px, spacing ottimizzato, tutto su un foglio singolo
 - Supporta 50+ trip mantenendo leggibilità
+
+**S7h — Flight Info Display (27 marzo 2026):**
+- Badge ✈️ con numero volo e orario arrivo nella colonna ROUTE & CREW
+- Mostrato SOLO per trip ARRIVAL/DEPARTURE con dati `flight_no` o `arr_time`
+- Colori distintivi: blu (#dbeafe) per ARRIVAL, arancione (#fed7aa) per DEPARTURE
+- Formato: `✈️ LH456 @14:30` — compatto e leggibile
+- Posizionato sopra le info route, non aggiunge colonne extra
+- Compatibile con stampa A4 landscape
 
 ### Navbar Unificata (S7f)
 - Componente `Navbar` in `lib/navbar.js` riutilizzabile su tutte le pagine
