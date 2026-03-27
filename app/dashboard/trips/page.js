@@ -122,7 +122,7 @@ function TripRow({ group, locations, selected, onClick }) {
     <div onClick={onClick}
       style={{
         display: 'grid',
-        gridTemplateColumns: '76px 220px 180px 1fr 36px',
+        gridTemplateColumns: '80px 130px 1fr 180px 200px',
         alignItems: 'start',
         padding: '10px 14px 10px 14px',
         borderBottom: '1px solid #f1f5f9',
@@ -153,8 +153,11 @@ function TripRow({ group, locations, selected, onClick }) {
         )}
       </div>
 
-      {/* ── Classe + Status (senza Trip ID) ── */}
+      {/* ── Trip ID + Classe + Status ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', justifyContent: 'flex-start' }}>
+        <div style={{ fontSize: '11px', fontWeight: '900', color: '#1e3a5f', fontFamily: 'monospace', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {baseTripId(t.trip_id) || '–'}
+        </div>
         <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '9px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}`, letterSpacing: '0.04em', alignSelf: 'flex-start' }}>
           {t.transfer_class?.slice(0, 3) || 'STD'}
         </span>
@@ -250,8 +253,6 @@ function TripRow({ group, locations, selected, onClick }) {
         )}
       </div>
 
-      {/* ── Colonna vuota (usata per spaziatura finale) ── */}
-      <div />
     </div>
   )
 }
@@ -1157,12 +1158,12 @@ export default function TripsPage() {
       <div style={{ transition: 'margin-right 0.25s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
 
         {trips.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '76px 220px 180px 1fr 36px', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: '100px', zIndex: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 130px 1fr 180px 200px', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: '100px', zIndex: 10 }}>
             <div>TIME</div>
+            <div>TRIP</div>
             <div>ROUTE</div>
             <div>VEHICLE</div>
             <div>PASSENGERS</div>
-            <div />
           </div>
         )}
 
