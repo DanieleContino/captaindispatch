@@ -1,13 +1,16 @@
 'use client'
 
 /**
- * Hub Coverage Assistant
- * Equivalente di HubCoverageAssistant.html in Apps Script (08_Sidebars.gs)
+ * /dashboard/hub-coverage
  *
- * Per un hub selezionato e una data:
- * - ARRIVALS: chi deve arrivare (crew IN) vs chi ha un trip ARRIVAL dal hub
- * - DEPARTURES: chi deve partire (crew OUT) vs chi ha un trip DEPARTURE al hub
- * - Tabella per hotel: Expected | Assigned | Status (✅/⚠/❌)
+ * Per una data selezionata, mostra tutti i crew EXPECTED (IN o OUT) divisi in:
+ *  ✅ COVERED   — hanno almeno un trip ARRIVAL/DEPARTURE assegnato
+ *  ❌ MISSING   — non hanno nessun transfer quella data
+ *
+ * "Expected" = crew con travel_status IN e arrival_date=date
+ *              OPPURE travel_status OUT e departure_date=date
+ *
+ * Pulsante + Assign → stesso pattern assignCtx di pax-coverage → trips/page.js
  */
 
 import { useEffect, useState, useCallback } from 'react'
@@ -23,7 +26,7 @@ function isoAdd(d, n) {
   return dt.toISOString().split('T')[0]
 }
 function fmtDate(d) {
-  return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+  return new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 const pad2 = n => String(n).padStart(2, '0')
 function minToHHMM(min) {
@@ -32,163 +35,120 @@ function minToHHMM(min) {
   return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60)
 }
 
-// ─── Status coverage ──────────────────────────────────────────
-function coverageStatus(expected, assigned) {
-  if (expected === 0 && assigned === 0) return { icon: '—',  label: 'None',      color: '#94a3b8', bg: '#f8fafc' }
-  if (expected === 0 && assigned > 0)  return { icon: '➕', label: 'Extra',     color: '#7c3aed', bg: '#f5f3ff' }
-  if (assigned === 0)                   return { icon: '❌', label: 'Missing',   color: '#dc2626', bg: '#fef2f2' }
-  if (assigned >= expected)             return { icon: '✅', label: 'Covered',   color: '#15803d', bg: '#f0fdf4' }
-  return                                       { icon: '⚠',  label: 'Partial',   color: '#d97706', bg: '#fefce8' }
+const TC = {
+  IN:  { bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+  OUT: { bg: '#fff7ed', color: '#c2410c', border: '#fdba74' },
+}
+const CLS_DOT = {
+  ARRIVAL:   '#16a34a',
+  DEPARTURE: '#ea580c',
 }
 
-// ─── Riga hotel nella tabella ──────────────────────────────────
-function HotelRow({ hotel, expected, assignedCrew, trips }) {
-  const [open, setOpen] = useState(false)
-  const sts = coverageStatus(expected.length, assignedCrew.length)
+// ─── Riga crew COVERED ──────────────────────────────────────
+function CoveredRow({ member, trips, locsMap }) {
+  const tc = TC[member.travel_status] || TC.IN
+  const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
+  const dateLabel = member.travel_status === 'IN'
+    ? member.arrival_date
+    : member.departure_date
+
   return (
-    <div style={{ borderBottom: '1px solid #f1f5f9' }}>
-      <div onClick={() => setOpen(o => !o)}
-        style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 90px 90px', gap: '8px', alignItems: 'center', padding: '9px 12px', cursor: 'pointer', background: open ? '#f8fafc' : 'white' }}
-        onMouseEnter={e => { if (!open) e.currentTarget.style.background = '#f8fafc' }}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.background = 'white' }}>
-        <div style={{ fontWeight: '600', fontSize: '13px', color: '#0f172a' }}>{hotel}</div>
-        <div style={{ textAlign: 'center', fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{expected.length}</div>
-        <div style={{ textAlign: 'center', fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{assignedCrew.length}</div>
-        <div style={{ textAlign: 'center' }}>
-          <span style={{ fontSize: '11px', fontWeight: '700', color: sts.color, background: sts.bg, padding: '2px 8px', borderRadius: '6px', display: 'inline-block' }}>
-            {sts.icon} {sts.label}
+    <div style={{
+      background: 'white',
+      border: '1px solid #e2e8f0',
+      borderLeft: '4px solid #22c55e',
+      borderRadius: '9px',
+      padding: '10px 14px',
+      display: 'grid',
+      gridTemplateColumns: '1fr auto',
+      gap: '12px',
+      alignItems: 'start',
+    }}>
+      <div>
+        {/* Nome + badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+          <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{member.full_name}</span>
+          <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{member.department || 'N/A'}</span>
+          <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
+            {member.travel_status === 'IN' ? '✈ IN' : '✈ OUT'}
           </span>
+          {dateLabel && (
+            <span style={{ fontSize: '10px', color: '#64748b' }}>
+              {member.travel_status === 'IN' ? '🛬' : '🛫'} {dateLabel}
+            </span>
+          )}
         </div>
-        <div style={{ textAlign: 'center', fontSize: '11px', color: '#94a3b8' }}>
-          {trips.length > 0 ? `${trips.length} trip${trips.length > 1 ? 's' : ''}` : '–'}
-          <span style={{ marginLeft: '6px', color: '#cbd5e1' }}>{open ? '▲' : '▼'}</span>
+        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>🏨 {hotel}</div>
+        {/* Trip assegnati */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          {trips.map(t => {
+            const dot = CLS_DOT[t.transfer_class] || '#2563eb'
+            const from = (locsMap[t.pickup_id] || t.pickup_id || '–').split(' ').slice(0, 3).join(' ')
+            const to   = (locsMap[t.dropoff_id] || t.dropoff_id || '–').split(' ').slice(0, 3).join(' ')
+            return (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '11px' }}>
+                <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: dot, flexShrink: 0 }} />
+                <span style={{ fontWeight: '800', fontFamily: 'monospace', color: '#374151' }}>{t.trip_id}</span>
+                <span style={{ color: '#94a3b8' }}>·</span>
+                <span style={{ fontWeight: '700', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{minToHHMM(t.pickup_min ?? t.call_min)}</span>
+                <span style={{ color: '#64748b' }}>{from} → {to}</span>
+                {t.vehicle_id && <span style={{ color: '#2563eb', marginLeft: '2px' }}>🚐 {t.vehicle_id}</span>}
+              </div>
+            )
+          })}
         </div>
       </div>
-
-      {open && (
-        <div style={{ background: '#f8fafc', padding: '8px 16px 12px', borderTop: '1px solid #f1f5f9' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            {/* Expected */}
-            <div>
-              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.05em', marginBottom: '6px' }}>EXPECTED ({expected.length})</div>
-              {expected.length === 0 ? (
-                <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>None</div>
-              ) : expected.map(c => (
-                <div key={c.id} style={{ fontSize: '11px', color: '#374151', padding: '2px 0', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{c.full_name}</span>
-                  <span style={{ color: '#94a3b8' }}>{c.department}</span>
-                </div>
-              ))}
-            </div>
-            {/* Assigned + Trips */}
-            <div>
-              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.05em', marginBottom: '6px' }}>ASSEGNATI ({assignedCrew.length})</div>
-              {trips.length === 0 ? (
-                <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>No trips</div>
-              ) : trips.map((t, i) => (
-                <div key={i} style={{ fontSize: '11px', color: '#374151', padding: '3px 0', borderBottom: '1px solid #f1f5f9' }}>
-                  <span style={{ fontWeight: '700', fontFamily: 'monospace' }}>{t.trip_id}</span>
-                  <span style={{ color: '#94a3b8', margin: '0 5px' }}>·</span>
-                  <span>{minToHHMM(t.pickup_min ?? t.call_min)}</span>
-                  {t.vehicle_id && <span style={{ color: '#2563eb', marginLeft: '5px' }}>🚐 {t.vehicle_id}</span>}
-                  <span style={{ color: '#94a3b8', marginLeft: '5px' }}>{t.pax_count || 0} pax</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <div style={{ fontSize: '11px', color: '#22c55e', fontWeight: '700', whiteSpace: 'nowrap', paddingTop: '2px' }}>
+        ✅ {trips.length} trip{trips.length > 1 ? 's' : ''}
+      </div>
     </div>
   )
 }
 
-// ─── Sezione (ARRIVAL o DEPARTURE) ────────────────────────────
-function CoverageSection({ title, icon, color, hotels, allExpected, allTrips, locsMap, transferClass }) {
-  // Raggruppa expected per hotel
-  const expectedByHotel = {}
-  for (const c of allExpected) {
-    const hname = locsMap[c.hotel_id] || c.hotel_id || 'Unknown'
-    if (!expectedByHotel[hname]) expectedByHotel[hname] = []
-    expectedByHotel[hname].push(c)
-  }
-
-  // Raggruppa assigned per hotel (dropoff per ARRIVAL, pickup per DEPARTURE)
-  const tripsByHotel = {}
-  for (const t of allTrips) {
-    const hotelId = transferClass === 'ARRIVAL' ? t.dropoff_id : t.pickup_id
-    const hname   = locsMap[hotelId] || hotelId || 'Unknown'
-    if (!tripsByHotel[hname]) tripsByHotel[hname] = []
-    if (!tripsByHotel[hname].find(x => x.trip_id === t.trip_id)) {
-      tripsByHotel[hname].push(t)
-    }
-  }
-
-  // Assigned crew per hotel (from passenger_list in trips)
-  const assignedByHotel = {}
-  for (const [hotel, tlist] of Object.entries(tripsByHotel)) {
-    const names = new Set()
-    for (const t of tlist) {
-      if (t.passenger_list) t.passenger_list.split(',').forEach(n => names.add(n.trim()))
-    }
-    assignedByHotel[hotel] = [...names]
-  }
-
-  // Unione di tutti gli hotel che compaiono in expected o in trips
-  const allHotels = [...new Set([...Object.keys(expectedByHotel), ...Object.keys(tripsByHotel)])].sort()
-
-  // Summary
-  const totalExpected = allExpected.length
-  const totalAssigned = Object.values(assignedByHotel).flat().length
-  const covered = allHotels.filter(h => coverageStatus((expectedByHotel[h] || []).length, (tripsByHotel[h] || []).length).icon === '✅').length
-  const missing  = allHotels.filter(h => coverageStatus((expectedByHotel[h] || []).length, (tripsByHotel[h] || []).length).icon === '❌').length
-  const partial  = allHotels.filter(h => coverageStatus((expectedByHotel[h] || []).length, (tripsByHotel[h] || []).length).icon === '⚠').length
+// ─── Riga crew MISSING ──────────────────────────────────────
+function MissingRow({ member, locsMap, onAssign }) {
+  const tc = TC[member.travel_status] || TC.IN
+  const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
+  const dateLabel = member.travel_status === 'IN'
+    ? member.arrival_date
+    : member.departure_date
 
   return (
-    <div style={{ marginBottom: '24px' }}>
-      {/* Section header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', paddingBottom: '8px', borderBottom: `2px solid ${color}` }}>
-        <span style={{ fontSize: '18px' }}>{icon}</span>
-        <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>{title}</span>
-        <div style={{ display: 'flex', gap: '6px', marginLeft: '8px' }}>
-          {[
-            { n: totalExpected, l: 'expected', c: '#64748b', bg: '#f1f5f9' },
-            { n: totalAssigned, l: 'assigned', c: '#1d4ed8', bg: '#eff6ff' },
-            { n: covered,       l: 'ok',       c: '#15803d', bg: '#dcfce7' },
-            { n: missing,       l: 'missing',  c: '#dc2626', bg: '#fef2f2' },
-            { n: partial,       l: 'partial',  c: '#d97706', bg: '#fefce8' },
-          ].filter(x => x.n > 0).map(x => (
-            <span key={x.l} style={{ fontSize: '10px', fontWeight: '700', color: x.c, background: x.bg, padding: '2px 7px', borderRadius: '6px' }}>
-              {x.n} {x.l}
+    <div style={{
+      background: '#fef2f2',
+      border: '1px solid #fecaca',
+      borderLeft: '4px solid #ef4444',
+      borderRadius: '9px',
+      padding: '10px 14px',
+      display: 'grid',
+      gridTemplateColumns: '1fr auto',
+      gap: '12px',
+      alignItems: 'center',
+    }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+          <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{member.full_name}</span>
+          <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{member.department || 'N/A'}</span>
+          <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
+            {member.travel_status === 'IN' ? '✈ IN' : '✈ OUT'}
+          </span>
+          {dateLabel && (
+            <span style={{ fontSize: '10px', color: '#64748b' }}>
+              {member.travel_status === 'IN' ? '🛬' : '🛫'} {dateLabel}
             </span>
-          ))}
+          )}
+          <span style={{ fontSize: '10px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: '5px', border: '1px solid #fecaca' }}>MISSING</span>
         </div>
+        <div style={{ fontSize: '11px', color: '#64748b' }}>🏨 {hotel}</div>
       </div>
-
-      {allHotels.length === 0 ? (
-        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
-          Nessun dato per questa sezione
-        </div>
-      ) : (
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-          {/* Column headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 90px 90px', gap: '8px', padding: '6px 12px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-            <div>Hotel</div>
-            <div style={{ textAlign: 'center' }}>Exp.</div>
-            <div style={{ textAlign: 'center' }}>Assigned</div>
-            <div style={{ textAlign: 'center' }}>Status</div>
-            <div style={{ textAlign: 'center' }}>Trips</div>
-          </div>
-          {allHotels.map(hotel => (
-            <HotelRow
-              key={hotel}
-              hotel={hotel}
-              expected={expectedByHotel[hotel] || []}
-              assignedCrew={assignedByHotel[hotel] || []}
-              trips={tripsByHotel[hotel] || []}
-            />
-          ))}
-        </div>
-      )}
+      <button onClick={onAssign} style={{
+        fontSize: '11px', fontWeight: '700', color: '#dc2626',
+        background: '#fef2f2', border: '1px solid #fca5a5',
+        padding: '4px 10px', borderRadius: '7px', cursor: 'pointer',
+        whiteSpace: 'nowrap', flexShrink: 0,
+      }}>
+        + Assign
+      </button>
     </div>
   )
 }
@@ -196,146 +156,309 @@ function CoverageSection({ title, icon, color, hotels, allExpected, allTrips, lo
 // ─── Pagina principale ─────────────────────────────────────────
 export default function HubCoveragePage() {
   const router = useRouter()
-  const [user,     setUser]     = useState(null)
-  const [date,     setDate]     = useState(isoToday())
-  const [hubs,     setHubs]     = useState([])
-  const [hubId,    setHubId]    = useState('')
-  const [locsMap,  setLocsMap]  = useState({})
-  const [loading,  setLoading]  = useState(false)
-  // Data
-  const [arrTrips,  setArrTrips]  = useState([])
-  const [depTrips,  setDepTrips]  = useState([])
-  const [crewIN,    setCrewIN]    = useState([])
-  const [crewOUT,   setCrewOUT]   = useState([])
+  const [user,    setUser]    = useState(null)
+  const [date,    setDate]    = useState(isoToday())
+  const [loading, setLoading] = useState(true)
 
+  // Raw data
+  const [crew,      setCrew]      = useState([])
+  const [locsMap,   setLocsMap]   = useState({})
+  // crewId → [trips] per la data selezionata
+  const [assignMap, setAssignMap] = useState({})
+
+  // Filtri
+  const [filterTS,    setFTS]   = useState('ALL')   // IN / OUT / ALL
+  const [filterDept,  setFD]    = useState('ALL')
+  const [filterHotel, setFH]    = useState('ALL')
+  const [showOnly,    setSO]    = useState('ALL')   // ALL | MISSING | COVERED
+  const [search,      setSearch] = useState('')
+
+  // Auth + location map
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/login'); return }
       setUser(user)
-      if (!PRODUCTION_ID) return
-      Promise.all([
-        supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name'),
-      ]).then(([lR]) => {
-        const locs = lR.data || []
-        const m = {}; locs.forEach(l => { m[l.id] = l.name })
-        setLocsMap(m)
-        const h = locs.filter(l => l.is_hub)
-        setHubs(h)
-        if (h.length > 0) setHubId(h[0].id)
-      })
+      if (PRODUCTION_ID) {
+        supabase.from('locations').select('id,name').eq('production_id', PRODUCTION_ID)
+          .then(({ data }) => {
+            if (data) {
+              const m = {}
+              data.forEach(l => { m[l.id] = l.name })
+              setLocsMap(m)
+            }
+          })
+      }
     })
   }, [])
 
-  const loadCoverage = useCallback(async () => {
-    if (!PRODUCTION_ID || !hubId || !date) return
+  const loadData = useCallback(async d => {
+    if (!PRODUCTION_ID) return
     setLoading(true)
-    const [arrR, depR, inR, outR] = await Promise.all([
-      // ARRIVAL trips FROM this hub
-      supabase.from('trips').select('*').eq('production_id', PRODUCTION_ID).eq('date', date)
-        .eq('pickup_id', hubId).eq('transfer_class', 'ARRIVAL').neq('status', 'CANCELLED')
-        .order('pickup_min', { nullsLast: true }),
-      // DEPARTURE trips TO this hub
-      supabase.from('trips').select('*').eq('production_id', PRODUCTION_ID).eq('date', date)
-        .eq('dropoff_id', hubId).eq('transfer_class', 'DEPARTURE').neq('status', 'CANCELLED')
-        .order('pickup_min', { nullsLast: true }),
-      // Crew attesi in arrivo (travel_status = IN)
-      supabase.from('crew').select('id,full_name,department,hotel_id')
-        .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED').eq('travel_status', 'IN'),
-      // Crew attesi in partenza (travel_status = OUT)
-      supabase.from('crew').select('id,full_name,department,hotel_id')
-        .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED').eq('travel_status', 'OUT'),
+
+    // Crew expected: IN con arrival_date=d OPPURE OUT con departure_date=d
+    const [crewRes, tripsRes] = await Promise.all([
+      supabase.from('crew')
+        .select('id,full_name,department,hotel_id,travel_status,arrival_date,departure_date')
+        .eq('production_id', PRODUCTION_ID)
+        .eq('hotel_status', 'CONFIRMED')
+        .or(`and(travel_status.eq.IN,arrival_date.eq.${d}),and(travel_status.eq.OUT,departure_date.eq.${d})`)
+        .order('department', { nullsLast: true })
+        .order('full_name'),
+
+      supabase.from('trips')
+        .select('id,trip_id,pickup_min,call_min,transfer_class,vehicle_id,pickup_id,dropoff_id,status')
+        .eq('production_id', PRODUCTION_ID)
+        .eq('date', d)
+        .in('transfer_class', ['ARRIVAL', 'DEPARTURE'])
+        .neq('status', 'CANCELLED'),
     ])
-    setArrTrips(arrR.data || [])
-    setDepTrips(depR.data || [])
-    setCrewIN(inR.data || [])
-    setCrewOUT(outR.data || [])
+
+    const crewData  = crewRes.data  || []
+    const tripsData = tripsRes.data || []
+    const tripIds   = tripsData.map(t => t.id)
+
+    setCrew(crewData)
+
+    if (tripIds.length === 0) {
+      setAssignMap({})
+      setLoading(false)
+      return
+    }
+
+    // trip_passengers per i trip di questa data
+    const { data: paxData } = await supabase
+      .from('trip_passengers')
+      .select('crew_id,trip_row_id')
+      .in('trip_row_id', tripIds)
+
+    // Costruisci mappa crewId → trips assegnati
+    const map = {}
+    for (const p of paxData || []) {
+      const trip = tripsData.find(t => t.id === p.trip_row_id)
+      if (!trip) continue
+      if (!map[p.crew_id]) map[p.crew_id] = []
+      if (!map[p.crew_id].find(x => x.id === trip.id)) {
+        map[p.crew_id].push(trip)
+      }
+    }
+    // Ordina i trip per pickup_min
+    for (const key of Object.keys(map)) {
+      map[key].sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999))
+    }
+
+    setAssignMap(map)
     setLoading(false)
-  }, [hubId, date])
+  }, [])
 
-  useEffect(() => { if (user && hubId) loadCoverage() }, [user, hubId, date, loadCoverage])
+  useEffect(() => { if (user) loadData(date) }, [user, date, loadData])
 
-  const hubName = locsMap[hubId] || hubId || '–'
+  // ── Filtri applicati ──────────────────────────────────────
+  const departments = [...new Set(crew.map(c => c.department || 'N/A'))].sort()
+  const hotels      = [...new Set(crew.map(c => c.hotel_id).filter(Boolean))].sort()
+
+  const filtered = crew.filter(c => {
+    if (filterTS    !== 'ALL' && c.travel_status !== filterTS) return false
+    if (filterDept  !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
+    if (filterHotel !== 'ALL' && c.hotel_id !== filterHotel) return false
+    const covered = !!assignMap[c.id]
+    if (showOnly === 'COVERED' && !covered) return false
+    if (showOnly === 'MISSING' &&  covered) return false
+    if (search) {
+      const q = search.toLowerCase()
+      if (!c.full_name.toLowerCase().includes(q) && !(c.department || '').toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  const covered  = filtered.filter(c =>  assignMap[c.id])
+  const missing  = filtered.filter(c => !assignMap[c.id])
+
+  const totalCovered = crew.filter(c =>  assignMap[c.id]).length
+  const totalMissing = crew.filter(c => !assignMap[c.id]).length
+  const pct = crew.length > 0 ? Math.round(totalCovered / crew.length * 100) : 0
+
+  if (!user) return (
+    <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-      {/* Header */}
+
       <Navbar currentPath="/dashboard/hub-coverage" />
 
-      {/* Toolbar */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: '52px', zIndex: 20 }}>
-        <span style={{ fontSize: '18px' }}>🛫</span>
-        <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Hub Coverage</span>
-        <span style={{ color: '#cbd5e1' }}>·</span>
-        {/* Hub selector */}
-        <select value={hubId} onChange={e => setHubId(e.target.value)}
-          style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: '180px' }}>
-          {hubs.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
-        </select>
-        {/* Date */}
-        <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>◀</button>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
-        <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
-        <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
-        <button onClick={loadCoverage} style={{ marginLeft: 'auto', background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-          🔄 Refresh
-        </button>
+      {/* ── Toolbar ── */}
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20, gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '18px' }}>✈️</span>
+          <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Hub Coverage</span>
+          <span style={{ color: '#cbd5e1' }}>·</span>
+          <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>◀</button>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
+          <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
+          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          {/* Show only toggle */}
+          {['ALL', 'MISSING', 'COVERED'].map(s => (
+            <button key={s} onClick={() => setSO(s)}
+              style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(showOnly === s
+                ? (s === 'MISSING'  ? { background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }
+                  : s === 'COVERED' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
+                  : { background: '#0f2340', color: 'white', borderColor: '#0f2340' })
+                : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+              {s === 'ALL'     ? `All (${crew.length})`
+                : s === 'MISSING' ? `❌ Missing (${totalMissing})`
+                : `✅ Covered (${totalCovered})`}
+            </button>
+          ))}
+
+          {/* Travel status filter (IN / OUT) */}
+          <div style={{ display: 'flex', gap: '3px' }}>
+            {['ALL', 'IN', 'OUT'].map(s => {
+              const active = filterTS === s
+              const c = TC[s]
+              return (
+                <button key={s} onClick={() => setFTS(s)}
+                  style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(active
+                    ? (s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: c.bg, color: c.color, borderColor: c.border })
+                    : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                  {s}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Dept filter */}
+          {departments.length > 1 && (
+            <select value={filterDept} onChange={e => setFD(e.target.value)}
+              style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
+              <option value="ALL">All depts</option>
+              {departments.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          )}
+
+          {/* Hotel filter */}
+          {hotels.length > 1 && (
+            <select value={filterHotel} onChange={e => setFH(e.target.value)}
+              style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
+              <option value="ALL">All hotels</option>
+              {hotels.map(h => <option key={h} value={h}>{locsMap[h] || h}</option>)}
+            </select>
+          )}
+
+          <input type="text" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
+            style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '120px' }} />
+          <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
+        </div>
       </div>
 
-      {/* Content */}
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px' }}>
+      {/* ── Content ── */}
+      <div style={{ maxWidth: '980px', margin: '0 auto', padding: '24px' }}>
+
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
             ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> not set in .env.local
           </div>
         )}
 
-        {/* Title bar */}
-        <div style={{ background: 'white', borderRadius: '10px', padding: '14px 20px', marginBottom: '20px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '22px' }}>🛫</span>
-          <div>
-            <div style={{ fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>{hubName}</div>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>{fmtDate(date)}</div>
+        {/* ── Summary bar ── */}
+        {!loading && crew.length > 0 && (
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+            {/* Progress bar */}
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>
+                <span>Hub coverage</span>
+                <span style={{ color: pct === 100 ? '#15803d' : pct >= 75 ? '#d97706' : '#dc2626' }}>{pct}%</span>
+              </div>
+              <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? '#22c55e' : pct >= 75 ? '#f59e0b' : '#ef4444', borderRadius: '999px', transition: 'width 0.5s ease' }} />
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+              {[
+                { n: crew.length,    l: 'Expected',  c: '#374151', bg: '#f8fafc', b: '#e2e8f0' },
+                { n: totalCovered,   l: 'Covered',   c: '#15803d', bg: '#f0fdf4', b: '#86efac' },
+                { n: totalMissing,   l: 'Missing',   c: totalMissing > 0 ? '#dc2626' : '#94a3b8', bg: totalMissing > 0 ? '#fef2f2' : '#f8fafc', b: totalMissing > 0 ? '#fecaca' : '#e2e8f0' },
+              ].map(s => (
+                <div key={s.l} style={{ textAlign: 'center', padding: '8px 14px', borderRadius: '10px', background: s.bg, border: `1px solid ${s.b}` }}>
+                  <div style={{ fontSize: '22px', fontWeight: '900', color: s.c, lineHeight: 1 }}>{s.n}</div>
+                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', fontWeight: '600' }}>{s.l}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-            <span style={{ padding: '4px 10px', borderRadius: '6px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '700' }}>
-              🛬 {arrTrips.length} ARR trips · {crewIN.length} crew IN
-            </span>
-            <span style={{ padding: '4px 10px', borderRadius: '6px', background: '#fff7ed', color: '#c2410c', fontSize: '11px', fontWeight: '700' }}>
-              🛫 {depTrips.length} DEP trips · {crewOUT.length} crew OUT
-            </span>
-          </div>
-        </div>
+        )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Caricamento…</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Caricamento…</div>
+        ) : crew.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '40px', marginBottom: '10px' }}>✈️</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>
+              Nessun crew IN/OUT per {fmtDate(date)}
+            </div>
+            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
+              I crew expected devono avere travel_status IN con arrival_date o OUT con departure_date uguale alla data selezionata
+            </div>
+            <a href="/dashboard/crew" style={{ marginTop: '12px', display: 'inline-block', color: '#2563eb', fontSize: '13px' }}>→ Vai a Crew</a>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '14px', color: '#64748b' }}>Nessun risultato con i filtri selezionati</div>
+          </div>
         ) : (
-          <div style={{ background: 'white', borderRadius: '10px', padding: '20px 24px', border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-            <CoverageSection
-              title={`ARRIVALS from ${hubName}`}
-              icon="🛬"
-              color="#16a34a"
-              transferClass="ARRIVAL"
-              allExpected={crewIN}
-              allTrips={arrTrips}
-              locsMap={locsMap}
-            />
+            {/* ══ MISSING (prima, più urgente) ══ */}
+            {(showOnly === 'ALL' || showOnly === 'MISSING') && missing.length > 0 && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #ef4444' }}>
+                  <span style={{ fontSize: '16px' }}>❌</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>MISSING</span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', background: '#ef4444', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
+                    {missing.length} crew
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— no trip assigned for {fmtDate(date)}</span>
+                  <a href="/dashboard/trips" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '3px 10px', borderRadius: '7px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    Vai a Trips →
+                  </a>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {missing.map(c => (
+                    <MissingRow key={c.id} member={c} locsMap={locsMap} onAssign={() => {
+                      const params = new URLSearchParams({
+                        assignCrewId:   c.id,
+                        assignCrewName: c.full_name,
+                        assignHotelId:  c.hotel_id || '',
+                        assignTS:       c.travel_status,   // 'IN' o 'OUT'
+                        assignDate:     date,
+                      })
+                      router.push('/dashboard/trips?' + params.toString())
+                    }} />
+                  ))}
+                </div>
+              </div>
+            )}
 
-            <CoverageSection
-              title={`DEPARTURES to ${hubName}`}
-              icon="🛫"
-              color="#ea580c"
-              transferClass="DEPARTURE"
-              allExpected={crewOUT}
-              allTrips={depTrips}
-              locsMap={locsMap}
-            />
-
-            {arrTrips.length === 0 && depTrips.length === 0 && crewIN.length === 0 && crewOUT.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🛫</div>
-                <div style={{ fontSize: '14px', fontWeight: '600' }}>Nessun dato per {hubName} — {fmtDate(date)}</div>
+            {/* ══ COVERED ══ */}
+            {(showOnly === 'ALL' || showOnly === 'COVERED') && covered.length > 0 && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #22c55e' }}>
+                  <span style={{ fontSize: '16px' }}>✅</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>COVERED</span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', background: '#22c55e', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
+                    {covered.length} crew
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {covered.map(c => (
+                    <CoveredRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} />
+                  ))}
+                </div>
               </div>
             )}
           </div>
