@@ -281,7 +281,7 @@ function TransportListHeader({ production, date }) {
       marginBottom: '10px',
     }}>
       {/* Layout 2 colonne: SX info produzione (70%), DX contatti (30%) */}
-      <div style={{
+      <div className="print-header-grid" style={{
         display: 'grid',
         gridTemplateColumns: '2.33fr 1fr',
         gap: '12px',
@@ -289,7 +289,7 @@ function TransportListHeader({ production, date }) {
         borderBottom: `0.5px solid ${borderColor}`,
       }}>
         {/* COLONNA SINISTRA: Logo + Info Produzione + General Call */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div className="print-header-left" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
             {/* Logo */}
             {prod.logo_url ? (
@@ -339,7 +339,7 @@ function TransportListHeader({ production, date }) {
           </div>
 
           {/* General Call */}
-          <div style={{ marginTop: '4px' }}>
+          <div className="print-general-call" style={{ marginTop: '4px' }}>
             <div style={{ fontSize: '9px', color: textTertiary, fontWeight: '600', letterSpacing: '0.5px' }}>GENERAL CALL</div>
             <div style={{ fontSize: '26px', fontWeight: '700', lineHeight: 1, color: textPrimary, marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
               {callTime}
@@ -348,7 +348,7 @@ function TransportListHeader({ production, date }) {
         </div>
 
         {/* COLONNA DESTRA: Contatti compatti */}
-        <div style={{
+        <div className="print-header-right" style={{
           background: bgSecondary,
           padding: '8px 10px',
           borderRadius: '6px',
@@ -527,6 +527,45 @@ export default function ListsPage() {
             left: 0 !important;
             right: 0 !important;
             margin: 0 !important;
+          }
+
+          /* Header compatto per stampa */
+          .print-header-grid {
+            display: block !important;
+            padding: 6px 10px !important;
+          }
+          
+          .print-header-left {
+            margin-bottom: 4px !important;
+          }
+          
+          .print-header-left > div:first-child {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+          }
+          
+          .print-header-left img,
+          .print-header-left > div:first-child > div:first-child {
+            width: 36px !important;
+            height: 24px !important;
+          }
+          
+          .print-general-call {
+            display: none !important;
+          }
+          
+          .print-header-right {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 8px !important;
+            font-size: 8px !important;
+            padding: 4px 6px !important;
+            margin-top: 4px !important;
+          }
+          
+          .print-header-right > div {
+            line-height: 1.3 !important;
           }
         }
 
