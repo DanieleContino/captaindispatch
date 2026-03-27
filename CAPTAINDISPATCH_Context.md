@@ -1,10 +1,47 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 27 marzo 2026 (S7n)**
+**Aggiornato: 27 marzo 2026 (S7n — i18n TASK 2 ✅)**
 
 ---
 
 > 🚀 **AZIONE IMMEDIATA: Quando leggi questo context, avvia subito `npm run dev` per testare in localhost!**
+
+---
+
+## 🎯 NEXT TASK — Multilingua i18n TASK 3
+
+**Stato i18n:**
+- ✅ TASK 1 COMPLETATA — Infrastruttura pronta
+  - `lib/i18n.js` — traduzioni EN+IT + hook `useT()` + `LanguageProvider`
+  - `app/providers.jsx` — client wrapper
+  - `app/layout.tsx` — wrappa `{children}` con `<Providers>`
+  - `lib/navbar.js` — toggle 🇬🇧 EN / 🇮🇹 IT funzionante
+- ✅ TASK 2 COMPLETATA — Pagine CRUD principali (commit 202dec3)
+  - `app/dashboard/crew/page.js` — `useT()` su `CrewSidebar` + `CrewPage` ✅
+  - `app/dashboard/vehicles/page.js` — `useT()` su `VehicleSidebar` + `VehiclesPage` ✅
+  - `app/dashboard/locations/page.js` — `useT()` su `LocationSidebar` + `LocationsPage` ✅
+- 🔄 TASK 3 DA FARE — Trips + Coverage pages
+- ⏳ TASK 4 — Pagine minori + deploy finale
+
+**Da fare in TASK 3:**
+Applica `useT()` su queste pagine — leggi ogni file prima di modificarlo:
+1. `app/dashboard/trips/page.js` — TripSidebar, EditTripSidebar, TripsPage
+2. `app/dashboard/pax-coverage/page.js` — label copertura, filtri, stati
+3. `app/dashboard/hub-coverage/page.js` — stessa struttura di pax-coverage
+
+**Pattern da seguire (uguale per tutti):**
+```js
+// 1. Import in cima al file:
+import { useT } from '../../lib/i18n'  // (aggiusta il path relativo)
+
+// 2. Dentro ogni componente che ha stringhe:
+const t = useT()
+
+// 3. Sostituisci stringhe hardcoded con chiavi t.*
+// (vedi lib/i18n.js per tutte le chiavi disponibili)
+```
+
+**Regola IMPORTANTE:** Usa `replace_in_file` chirurgico. NON riscrivere interi file.
 
 ---
 
