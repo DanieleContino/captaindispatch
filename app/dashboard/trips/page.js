@@ -1058,12 +1058,26 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           transferClass: sibTC,
           callMin:       computed?.callMin ?? null,
         }) : null
+
+        // ARRIVAL fix: pickup_min = call_min (driver già all'hub all'arrivo del volo)
+        // Non dipende dalla duration Hub→Hotel — preserva il valore anche senza rotta nel DB
+        const sibCallMin   = sibCalc?.callMin ?? computed?.callMin ?? null
+        const sibPickupMin = sibCalc?.pickupMin
+          ?? (sibTC === 'ARRIVAL' ? sibCallMin : null)
+
+        // start_dt calcolabile da sibPickupMin anche senza duration (per ARRIVAL)
+        const sibStartDt = sibCalc?.startDt ?? (() => {
+          if (sibPickupMin === null) return null
+          const [sy, smo, sdd] = form.date.split('-').map(Number)
+          return new Date(sy, smo - 1, sdd, Math.floor(sibPickupMin / 60), sibPickupMin % 60, 0, 0).toISOString()
+        })()
+
         await supabase.from('trips').update({
           ...sharedFields,
-          call_min:   sibCalc?.callMin   ?? computed?.callMin ?? null,
-          pickup_min: sibCalc?.pickupMin ?? null,
-          start_dt:   sibCalc?.startDt   ?? null,
-          end_dt:     sibCalc?.endDt     ?? null,
+          call_min:   sibCallMin,
+          pickup_min: sibPickupMin,   // ← fix: ARRIVAL usa call_min, non null
+          start_dt:   sibStartDt,     // ← fix: calcolato anche senza duration
+          end_dt:     sibCalc?.endDt ?? null,
         }).eq('id', sib.id)
       }
     }
