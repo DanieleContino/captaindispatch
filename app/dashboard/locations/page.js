@@ -4,12 +4,14 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
+import { useT } from '../../../lib/i18n'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
 
 // ─── Sidebar ─────────────────────────────────────────────────
 function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
+  const t = useT()
   const EMPTY = { id: '', name: '', is_hub: false, lat: '', lng: '', default_pickup_point: '' }
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving]       = useState(false)
@@ -180,7 +182,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
 
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
-            {mode === 'new' ? '📍 Nuova Location' : '📍 Modifica Location'}
+            {mode === 'new' ? t.newLocation : t.editLocation}
           </div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
         </div>
@@ -223,7 +225,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
 
             {/* ── Google Places Autocomplete ── */}
             <div style={{ ...fld, position: 'relative' }} ref={dropdownRef}>
-              <label style={lbl}>🔍 Cerca su Google Maps</label>
+              <label style={lbl}>{t.searchGoogleMaps}</label>
               <div style={{ position: 'relative' }}>
                 <input
                   type="text"
@@ -245,7 +247,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
                 onClick={() => setMapOpen(true)}
                 style={{ marginTop: '6px', width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
-                🗺 Scegli posizione su mappa
+                {t.chooseOnMap}
               </button>
               {placeOpen && predictions.length > 0 && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden', marginTop: '2px' }}>
@@ -293,15 +295,15 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
                 <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Zona pericolosa</div>
                 {!confirmDel ? (
                   <button type="button" onClick={handleDelete} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
-                    🗑 Elimina Location
+                    {t.deleteLocation}
                   </button>
                 ) : (
                   <div>
-                    <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>⚠ Sicuro? Rimuoverà anche tutte le rotte associate.</div>
+                    <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>{t.deleteLocationConfirm}</div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button type="button" onClick={() => setCd(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Annulla</button>
+                      <button type="button" onClick={() => setCd(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>{t.cancel}</button>
                       <button type="button" onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '800' }}>
-                        {deleting ? 'Eliminando…' : '⚠ Conferma'}
+                        {deleting ? t.deleting : t.confirm}
                       </button>
                     </div>
                   </div>
@@ -322,9 +324,9 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
             </div>
           )}
           <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Annulla</button>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>{t.cancel}</button>
             <button type="submit" disabled={saving || refreshing} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: (saving || refreshing) ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: (saving || refreshing) ? 'default' : 'pointer', fontWeight: '800' }}>
-              {saving ? 'Salvataggio…' : refreshing ? '🔄 Ricalcolo rotte…' : mode === 'new' ? '+ Aggiungi' : '✓ Salva'}
+              {saving ? t.saving : refreshing ? t.recalculating : mode === 'new' ? t.add : t.saveChanges}
             </button>
           </div>
         </form>
@@ -335,7 +337,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column' }}>
           {/* Header */}
           <div style={{ background: '#0f2340', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-            <span style={{ color: 'white', fontWeight: '800', fontSize: '14px' }}>🗺 Scegli posizione sulla mappa</span>
+            <span style={{ color: 'white', fontWeight: '800', fontSize: '14px' }}>{t.chooseOnMap}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '11px', color: '#94a3b8' }}>Clicca sul punto desiderato, poi "✓ Usa questo punto"</span>
               <button

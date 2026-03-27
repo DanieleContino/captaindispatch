@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
+import { useT } from '../../../lib/i18n'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
@@ -25,6 +26,7 @@ const CLASS_COLOR = {
 
 // ─── Sidebar ──────────────────────────────────────────────────
 function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
+  const t = useT()
   const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: '', license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', sign_code: '', unit_default: '', active: true }
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -96,7 +98,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
 
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
-            {mode === 'new' ? `${TYPE_ICON[form.vehicle_type] || '🚐'} Nuovo Veicolo` : `${TYPE_ICON[form.vehicle_type] || '🚐'} Modifica Veicolo`}
+            {mode === 'new' ? `${TYPE_ICON[form.vehicle_type] || '🚐'} ${t.newVehicle}` : `${TYPE_ICON[form.vehicle_type] || '🚐'} ${t.editVehicle}`}
           </div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
         </div>
@@ -117,13 +119,13 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
             <div style={fld}>
               <label style={lbl}>Tipo</label>
               <div style={{ display: 'flex', gap: '8px' }}>
-                {['VAN', 'CAR', 'BUS'].map(t => {
-                  const c = TYPE_COLOR[t]; const active = form.vehicle_type === t
+                {['VAN', 'CAR', 'BUS'].map(type => {
+                  const c = TYPE_COLOR[type]; const active = form.vehicle_type === type
                   return (
-                    <button key={t} type="button" onClick={() => set('vehicle_type', t)}
+                    <button key={type} type="button" onClick={() => set('vehicle_type', type)}
                       style={{ flex: 1, padding: '8px 4px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                      <span style={{ fontSize: '20px' }}>{TYPE_ICON[t]}</span>
-                      <span>{t}</span>
+                      <span style={{ fontSize: '20px' }}>{TYPE_ICON[type]}</span>
+                      <span>{type}</span>
                     </button>
                   )
                 })}
@@ -136,7 +138,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <button type="button" onClick={() => set('vehicle_class', '')}
                   style={{ padding: '4px 10px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${!form.vehicle_class ? '#0f2340' : '#e2e8f0'}`, background: !form.vehicle_class ? '#0f2340' : 'white', color: !form.vehicle_class ? 'white' : '#94a3b8' }}>
-                  Nessuna
+                  {t.noClassLabel}
                 </button>
                 {CLASS_OPTIONS.map(c => {
                   const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC; const active = form.vehicle_class === c
@@ -157,7 +159,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
                 <input value={form.license_plate} onChange={e => set('license_plate', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.1em' }} placeholder="AB123CD" />
               </div>
               <div>
-                <label style={lbl}>Capacità fisica (pax)</label>
+                <label style={lbl}>{t.physicalCapacity}</label>
                 <input type="number" value={form.capacity} onChange={e => set('capacity', e.target.value)} style={inp} placeholder="8" min="1" max="60" />
               </div>
             </div>
@@ -165,7 +167,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
             {/* Rocket: pax_suggested + pax_max */}
             <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #bfdbfe', background: '#eff6ff' }}>
               <div style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', marginBottom: '10px' }}>
-                🚀 Rocket — Capacità Viaggio
+                {t.rocketCapacity}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
@@ -218,15 +220,15 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
                 <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Zona pericolosa</div>
                 {!confirmDel ? (
                   <button type="button" onClick={handleDelete} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
-                    🗑 Elimina Veicolo
+                    {t.deleteVehicle}
                   </button>
                 ) : (
                   <div>
-                    <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>⚠ Sicuro? Il veicolo verrà rimosso dalla flotta.</div>
+                    <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>{t.deleteVehicleConfirm}</div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button type="button" onClick={() => setCd(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Annulla</button>
+                      <button type="button" onClick={() => setCd(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>{t.cancel}</button>
                       <button type="button" onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '800' }}>
-                        {deleting ? 'Eliminando…' : '⚠ Conferma'}
+                        {deleting ? t.deleting : t.confirm}
                       </button>
                     </div>
                   </div>
@@ -237,9 +239,9 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
 
           {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
           <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Annulla</button>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>{t.cancel}</button>
             <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '800' }}>
-              {saving ? 'Salvataggio…' : mode === 'new' ? '+ Aggiungi' : '✓ Salva'}
+              {saving ? t.saving : mode === 'new' ? t.add : t.saveChanges}
             </button>
           </div>
         </form>
@@ -282,6 +284,7 @@ function VehicleRow({ v, onEdit }) {
 
 // ─── Pagina ───────────────────────────────────────────────────
 export default function VehiclesPage() {
+  const t = useT()
   const router = useRouter()
   const [user,    setUser]   = useState(null)
   const [vhcs,    setVhcs]   = useState([])
@@ -348,9 +351,9 @@ export default function VehiclesPage() {
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>{vhcs.length} totale · {counts.active} attivi</span>
           <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
-            {[['VAN', '🚐'], ['CAR', '🚗'], ['BUS', '🚌']].map(([t, ic]) => counts[t.toLowerCase()] > 0 && (
-              <span key={t} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', ...(TYPE_COLOR[t]), border: `1px solid ${TYPE_COLOR[t].border}` }}>
-                {ic} {counts[t.toLowerCase()]} {t}
+            {[['VAN', '🚐'], ['CAR', '🚗'], ['BUS', '🚌']].map(([tp, ic]) => counts[tp.toLowerCase()] > 0 && (
+              <span key={tp} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', ...(TYPE_COLOR[tp]), border: `1px solid ${TYPE_COLOR[tp].border}` }}>
+                {ic} {counts[tp.toLowerCase()]} {tp}
               </span>
             ))}
           </div>
@@ -379,7 +382,7 @@ export default function VehiclesPage() {
           </div>
           <button onClick={load} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
           <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-            + Nuovo Veicolo
+            {t.addVehicleBtn}
           </button>
         </div>
       </div>
@@ -388,12 +391,12 @@ export default function VehiclesPage() {
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px', transition: 'margin-right 0.25s', marginRight: sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
         {!PRODUCTION_ID && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>⚠ NEXT_PUBLIC_PRODUCTION_ID non impostato</div>}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Caricamento…</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🚐</div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>{vhcs.length === 0 ? 'Nessun veicolo' : 'Nessun risultato'}</div>
-            {vhcs.length === 0 && <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', padding: '9px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', marginTop: '12px' }}>+ Aggiungi Veicolo</button>}
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>{vhcs.length === 0 ? t.noVehicles : t.noResults}</div>
+            {vhcs.length === 0 && <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', padding: '9px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', marginTop: '12px' }}>{t.addVehicleBtnAlt}</button>}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

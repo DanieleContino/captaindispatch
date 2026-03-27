@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
+import { useT } from '../../../lib/i18n'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
@@ -116,6 +117,7 @@ function CrewCard({ member, locations, onStatusChange, onEdit }) {
 
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
 function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
+  const t = useT()
   const EMPTY = { id: '', full_name: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '' }
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -221,7 +223,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
         {/* Header */}
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
-            {mode === 'new' ? 'New Crew Member' : 'Edit Crew Member'}
+            {mode === 'new' ? t.newCrew : t.editCrew}
           </div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
         </div>
@@ -329,21 +331,21 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
                 {!confirmDel ? (
                   <button type="button" onClick={handleDelete} disabled={deleting}
                     style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
-                    🗑 Delete Crew Member
+                    {t.deleteCrew}
                   </button>
                 ) : (
                   <div>
                     <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>
-                      ⚠ Sure? All trip assignments will also be removed.
+                      {t.deleteCrewConfirm}
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button type="button" onClick={() => setConfirmDel(false)}
                         style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
-                        Annulla
+                        {t.cancel}
                       </button>
                       <button type="button" onClick={handleDelete} disabled={deleting}
                         style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: deleting ? 'default' : 'pointer', fontSize: '12px', fontWeight: '800' }}>
-                        {deleting ? 'Deleting…' : '⚠ Confirm Delete'}
+                        {deleting ? t.deleting : t.confirm}
                       </button>
                     </div>
                   </div>
@@ -357,11 +359,11 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
           <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexShrink: 0, position: 'sticky', bottom: 0, background: 'white' }}>
             <button type="button" onClick={onClose}
               style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
-              Annulla
+              {t.cancel}
             </button>
             <button type="submit" disabled={saving}
               style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
-              {saving ? 'Saving…' : mode === 'new' ? '+ Add Crew Member' : '✓ Save Changes'}
+              {saving ? t.saving : mode === 'new' ? t.addCrew : t.saveChanges}
             </button>
           </div>
         </form>
@@ -372,6 +374,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
 
 // ─── Pagina principale ─────────────────────────────────────────
 export default function CrewPage() {
+  const t = useT()
   const router = useRouter()
   const [user, setUser]         = useState(null)
   const [crew, setCrew]         = useState([])
@@ -520,7 +523,7 @@ export default function CrewPage() {
           </button>
           <button onClick={openNew}
             style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-            + New Crew Member
+            {t.addCrew}
           </button>
         </div>
       </div>
@@ -546,16 +549,16 @@ export default function CrewPage() {
         )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Caricamento crew…</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>👤</div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>
-              {crew.length === 0 ? 'No crew in database' : 'No crew matching filters'}
+              {crew.length === 0 ? t.noCrew : t.noResultsFiltered}
             </div>
             {crew.length === 0 && (
               <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', padding: '9px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', marginTop: '8px' }}>
-                + Aggiungi Crew
+                {t.addCrew}
               </button>
             )}
           </div>
