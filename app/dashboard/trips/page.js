@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
@@ -80,7 +80,7 @@ async function checkVehicleAvail(vehicleId, date, startDt, endDt, excludeRowId) 
 }
 
 // ─── Trip row (info completa) ─────────────────────────────────
-function TripRow({ group, locations, selected, onClick }) {
+function TripRow({ group, locations, selected, onClick, isSuggested }) {
   const t   = group[0]
   const cls = CLS[t.transfer_class] || CLS.STANDARD
   const sts = STS[t.status] || STS.PLANNED
@@ -128,14 +128,14 @@ function TripRow({ group, locations, selected, onClick }) {
         padding: '10px 14px 10px 14px',
         borderBottom: '1px solid #f1f5f9',
         cursor: 'pointer',
-        background: selected ? '#eff6ff' : isMixed ? (isMultiPickup && isMultiDropoff ? '#fdf4ff' : isMultiPickup ? '#fffbeb' : '#fdf4ff') : 'white',
-        borderLeft: `4px solid ${selected ? '#2563eb' : isMixed ? (isMultiPickup ? '#d97706' : '#7c3aed') : cls.dot}`,
+        background: selected ? '#eff6ff' : isSuggested ? '#fffbeb' : isMixed ? (isMultiPickup && isMultiDropoff ? '#fdf4ff' : isMultiPickup ? '#fffbeb' : '#fdf4ff') : 'white',
+        borderLeft: `4px solid ${selected ? '#2563eb' : isSuggested ? '#f59e0b' : isMixed ? (isMultiPickup ? '#d97706' : '#7c3aed') : cls.dot}`,
         transition: 'background 0.1s',
         gap: '10px',
         fontSize: '12px',
       }}
       onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#f8fafc' }}
-      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'white' }}
+      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = isSuggested ? '#fffbeb' : 'white' }}
     >
       {/* ── Orari ── */}
       <div>
@@ -164,6 +164,7 @@ function TripRow({ group, locations, selected, onClick }) {
         </span>
         {isMultiPickup  && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', alignSelf: 'flex-start' }}>🔀 MULTI-PKP</span>}
         {isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe', alignSelf: 'flex-start' }}>🔀 MULTI-DRP</span>}
+        {isSuggested    && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef9c3', color: '#92400e', border: '1px solid #fbbf24', alignSelf: 'flex-start' }}>⭐ MATCH</span>}
         <span style={{ padding: '2px 5px', borderRadius: '5px', fontSize: '9px', fontWeight: '700', background: sts.bg, color: sts.color, alignSelf: 'flex-start' }}>
           {t.status || 'PLANNED'}
         </span>
@@ -259,16 +260,19 @@ function TripRow({ group, locations, selected, onClick }) {
 }
 
 // ─── TripSidebar (CREATE new trip) ────────────────────────────
-function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved }) {
+function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips }) {
   const EMPTY = { trip_id: '', date: defaultDate, pickup_id: '', dropoff_id: '', vehicle_id: '', service_type_id: '', arr_time: '', call_time: '', flight_no: '', terminal: '', notes: '', duration_min: '' }
-  const [form,        setForm]        = useState(EMPTY)
-  const [saving,      setSaving]      = useState(false)
-  const [error,       setError]       = useState(null)
-  const [durLoading,  setDurLoading]  = useState(false)
-  const [crewList,    setCrewList]    = useState([])
-  const [crewSearch,  setCrewSearch]  = useState('')
-  const [selCrew,     setSelCrew]     = useState([])
-  const [vCheck,      setVCheck]      = useState(null)  // vehicle availability
+  const [form,           setForm]           = useState(EMPTY)
+  const [saving,         setSaving]         = useState(false)
+  const [error,          setError]          = useState(null)
+  const [durLoading,     setDurLoading]     = useState(false)
+  const [crewList,       setCrewList]       = useState([])
+  const [crewSearch,     setCrewSearch]     = useState('')
+  const [selCrew,        setSelCrew]        = useState([])
+  const [vCheck,         setVCheck]         = useState(null)
+  const [selExistingTrip, setSelExistingTrip] = useState(null)
+  const [addingToTrip,    setAddingToTrip]    = useState(false)
+  const [addedToTrip,     setAddedToTrip]     = useState(null)
 
   const transferClass = getClass(form.pickup_id, form.dropoff_id)
   const arrMin  = timeStrToMin(form.arr_time)
@@ -280,8 +284,15 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   // Reset on open
   useEffect(() => {
     if (!open) return
-    setForm({ ...EMPTY, date: defaultDate })
+    const preForm = { ...EMPTY, date: defaultDate }
+    if (assignCtx?.hotel) {
+      if (assignCtx.ts === 'IN')       preForm.dropoff_id = assignCtx.hotel
+      else if (assignCtx.ts === 'OUT') preForm.pickup_id  = assignCtx.hotel
+      else                             preForm.pickup_id  = assignCtx.hotel
+    }
+    setForm(preForm)
     setError(null); setSelCrew([]); setCrewSearch(''); setVCheck(null)
+    setSelExistingTrip(null); setAddedToTrip(null)
     if (PRODUCTION_ID) {
       supabase.from('trips').select('trip_id').eq('production_id', PRODUCTION_ID).like('trip_id', 'T%')
         .order('trip_id', { ascending: false }).limit(1).maybeSingle()
@@ -316,7 +327,15 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     if (transferClass === 'ARRIVAL')        q = q.eq('hotel_id', form.dropoff_id).eq('travel_status', 'IN')
     else if (transferClass === 'DEPARTURE') q = q.eq('hotel_id', form.pickup_id).eq('travel_status', 'OUT')
     else                                    q = q.eq('hotel_id', form.pickup_id).eq('travel_status', 'PRESENT')
-    q.order('department').order('full_name').then(({ data }) => { if (data) setCrewList(data) })
+    q.order('department').order('full_name').then(({ data }) => {
+      if (data) {
+        setCrewList(data)
+        if (assignCtx?.id) {
+          const match = data.find(c => c.id === assignCtx.id)
+          if (match) setSelCrew(prev => prev.some(x => x.id === match.id) ? prev : [...prev, match])
+        }
+      }
+    })
   }, [form.pickup_id, form.dropoff_id, transferClass])
 
   const selVehicle = vehicles.find(v => v.id === form.vehicle_id)
@@ -364,6 +383,31 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     }
   }
 
+  // ── Existing trip assignment helpers (assignCtx only) ─────
+  const locsById = Object.fromEntries(locations.map(l => [l.id, l.name]))
+  const locShort = id => (locsById[id] || id || '–').split(' ').slice(0, 3).join(' ')
+  const arrDepTrips = (trips || [])
+    .filter(t => t.transfer_class === 'ARRIVAL' || t.transfer_class === 'DEPARTURE')
+    .sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999))
+  function isCompatibleTrip(t) {
+    if (!assignCtx?.hotel) return false
+    if (assignCtx.ts === 'IN')  return t.transfer_class === 'ARRIVAL'   && t.dropoff_id === assignCtx.hotel
+    if (assignCtx.ts === 'OUT') return t.transfer_class === 'DEPARTURE' && t.pickup_id  === assignCtx.hotel
+    return false
+  }
+  const compatibleTrips = arrDepTrips.filter(isCompatibleTrip)
+  const otherTrips      = arrDepTrips.filter(t => !isCompatibleTrip(t))
+
+  async function handleAddToExisting() {
+    if (!selExistingTrip || !assignCtx?.id || !PRODUCTION_ID) return
+    setAddingToTrip(true)
+    const { error } = await supabase.from('trip_passengers').insert({
+      production_id: PRODUCTION_ID, trip_row_id: selExistingTrip.id, crew_id: assignCtx.id,
+    })
+    setAddingToTrip(false)
+    if (!error) { setAddedToTrip(selExistingTrip.trip_id); onSaved() }
+  }
+
   const cls = CLS[transferClass] || CLS.STANDARD
   const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
   const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
@@ -374,7 +418,10 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${SIDEBAR_W}px)`, transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
-          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>New Trip</div>
+          <div>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>New Trip</div>
+            {assignCtx && <div style={{ fontSize: '11px', color: '#fbbf24', fontWeight: '700', marginTop: '2px' }}>👤 {assignCtx.name}</div>}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {(form.pickup_id && form.dropoff_id) && (
               <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{transferClass}</span>
@@ -385,6 +432,70 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+            {/* ── Add to existing trip (solo se assignCtx attivo) ── */}
+            {assignCtx && arrDepTrips.length > 0 && (
+              <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: '10px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                  📋 ADD TO EXISTING TRIP
+                </div>
+                <select
+                  value={selExistingTrip?.id || ''}
+                  onChange={e => {
+                    const t = arrDepTrips.find(x => x.id === e.target.value) || null
+                    setSelExistingTrip(t); setAddedToTrip(null)
+                  }}
+                  style={{ ...inp, fontSize: '12px', marginBottom: selExistingTrip ? '8px' : 0 }}
+                >
+                  <option value="">Select existing trip…</option>
+                  {compatibleTrips.length > 0 && (
+                    <optgroup label="⭐ Compatible">
+                      {compatibleTrips.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.trip_id} · {minToHHMM(t.pickup_min ?? t.call_min)} · {locShort(t.pickup_id)} → {locShort(t.dropoff_id)}{t.vehicle_id ? ` · 🚐${t.vehicle_id}` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {otherTrips.length > 0 && (
+                    <optgroup label="⚠ Other (multi-stop)">
+                      {otherTrips.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.trip_id} · {minToHHMM(t.pickup_min ?? t.call_min)} · {locShort(t.pickup_id)} → {locShort(t.dropoff_id)}{t.vehicle_id ? ` · 🚐${t.vehicle_id}` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+
+                {selExistingTrip && (
+                  <>
+                    <div style={{ fontSize: '11px', color: '#374151', background: 'white', border: '1px solid #fde68a', borderRadius: '7px', padding: '7px 10px', marginBottom: '8px' }}>
+                      <div style={{ fontWeight: '800' }}>{selExistingTrip.trip_id} · {minToHHMM(selExistingTrip.pickup_min ?? selExistingTrip.call_min)}</div>
+                      <div>{locShort(selExistingTrip.pickup_id)} → {locShort(selExistingTrip.dropoff_id)}</div>
+                      {selExistingTrip.vehicle_id && <div>🚐 {selExistingTrip.vehicle_id}</div>}
+                      {!isCompatibleTrip(selExistingTrip) && (
+                        <div style={{ color: '#a16207', fontWeight: '700', marginTop: '3px' }}>⚠ Route diversa — diventerà MULTI-STOP</div>
+                      )}
+                    </div>
+                    {addedToTrip ? (
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 10px', textAlign: 'center' }}>
+                        ✅ {assignCtx.name.split(' ')[0]} aggiunto a {addedToTrip}
+                      </div>
+                    ) : (
+                      <button type="button" disabled={addingToTrip} onClick={handleAddToExisting}
+                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: 'none', background: addingToTrip ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '13px', fontWeight: '800', cursor: addingToTrip ? 'default' : 'pointer' }}>
+                        {addingToTrip ? 'Adding…' : `✓ Add ${assignCtx.name.split(' ')[0]} to ${selExistingTrip.trip_id}`}
+                      </button>
+                    )}
+                  </>
+                )}
+
+                <div style={{ fontSize: '10px', color: '#92400e', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #fde68a', fontWeight: '700' }}>
+                  — oppure crea un nuovo trip qui sotto —
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
@@ -1003,6 +1114,7 @@ function EditTripSidebar({ open, initial, locations, vehicles, serviceTypes, onC
 // ─── Pagina principale ─────────────────────────────────────────
 export default function TripsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user,          setUser]          = useState(null)
   const [date,          setDate]          = useState(isoToday())
   const [trips,         setTrips]         = useState([])
@@ -1016,8 +1128,22 @@ export default function TripsPage() {
   const [filterClass,   setFilterClass]   = useState('ALL')
   const [filterStatus,  setFilterStatus]  = useState('ALL')
   const [filterVehicle, setFilterVehicle] = useState('ALL')
+  const [assignCtx,     setAssignCtx]     = useState(null)
 
   const anySidebarOpen = newTripOpen || !!editTripRow
+
+  // ── Read assign crew context from URL params (from pax-coverage → + Assign) ──
+  useEffect(() => {
+    const id    = searchParams.get('assignCrewId')
+    const name  = searchParams.get('assignCrewName')
+    const hotel = searchParams.get('assignHotelId')
+    const ts    = searchParams.get('assignTS')
+    const d     = searchParams.get('assignDate')
+    if (id && name) {
+      setAssignCtx({ id, name, hotel: hotel || '', ts: ts || 'PRESENT' })
+      if (d) setDate(d)
+    }
+  }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -1079,6 +1205,27 @@ export default function TripsPage() {
     D: trips.filter(t => t.transfer_class === 'DEPARTURE').length,
     S: trips.filter(t => t.transfer_class === 'STANDARD').length,
   }
+
+  // ── Suggested trips for assign context ──
+  const suggestedBaseIds = useMemo(() => {
+    if (!assignCtx) return new Set()
+    return new Set(
+      trips.filter(t => {
+        if (assignCtx.ts === 'IN')  return t.transfer_class === 'ARRIVAL'   && t.dropoff_id === assignCtx.hotel
+        if (assignCtx.ts === 'OUT') return t.transfer_class === 'DEPARTURE' && t.pickup_id  === assignCtx.hotel
+        return t.transfer_class === 'STANDARD' && t.pickup_id === assignCtx.hotel
+      }).map(t => baseTripId(t.trip_id))
+    )
+  }, [trips, assignCtx])
+
+  // ── No match → open new trip sidebar automatically ──
+  useEffect(() => {
+    if (!assignCtx || loading) return
+    if (suggestedBaseIds.size === 0) {
+      setNewTripOpen(true)
+      setEditTripRow(null)
+    }
+  }, [assignCtx, loading, suggestedBaseIds.size])
 
   if (!user) return <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
 
@@ -1158,6 +1305,22 @@ export default function TripsPage() {
       {/* ── Contenuto ── */}
       <div style={{ transition: 'margin-right 0.25s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
 
+        {/* ── Assign crew context banner ── */}
+        {assignCtx && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 18px', background: '#fffbeb', borderBottom: '2px solid #f59e0b', fontSize: '12px' }}>
+            <span style={{ fontSize: '14px' }}>👤</span>
+            <span style={{ fontWeight: '800', color: '#92400e' }}>Assigning:</span>
+            <span style={{ fontWeight: '700', color: '#0f172a' }}>{assignCtx.name}</span>
+            <span style={{ color: '#d97706' }}>·</span>
+            <span style={{ color: '#92400e' }}>Status: <strong>{assignCtx.ts}</strong></span>
+            {suggestedBaseIds.size > 0
+              ? <span style={{ color: '#15803d', fontWeight: '700' }}>⭐ {suggestedBaseIds.size} trip{suggestedBaseIds.size > 1 ? 's' : ''} suggested — click to open</span>
+              : <span style={{ color: '#dc2626', fontWeight: '700' }}>No compatible trips — New Trip sidebar opened</span>
+            }
+            <button onClick={() => setAssignCtx(null)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #fde68a', color: '#92400e', borderRadius: '5px', padding: '2px 8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>✕ dismiss</button>
+          </div>
+        )}
+
         {trips.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: '80px 130px minmax(150px, auto) 180px 200px', justifyContent: 'start', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: '100px', zIndex: 10 }}>
             <div>TIME</div>
@@ -1195,6 +1358,7 @@ export default function TripsPage() {
                 group={group}
                 locations={locsMap}
                 selected={editTripRow?.trip_id === group[0].trip_id}
+                isSuggested={!!assignCtx && suggestedBaseIds.has(baseTripId(group[0].trip_id))}
                 onClick={() => {
                   setEditTripRow(group[0])
                   setNewTripOpen(false)
@@ -1214,6 +1378,8 @@ export default function TripsPage() {
         vehicles={vhcList}
         serviceTypes={stList}
         onSaved={() => { loadTrips(date) }}
+        assignCtx={assignCtx}
+        trips={trips}
       />
 
       {/* ── EDIT sidebar ── */}
