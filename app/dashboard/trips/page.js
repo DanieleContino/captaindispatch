@@ -203,7 +203,10 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
                 <span style={{ fontWeight: '700', color: '#0f172a', flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {(locations[r.dropoff_id] || r.dropoff_id || '–').split(' ').slice(0, 2).join(' ')}
                 </span>
-                {r.pickup_min != null && <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>· 🕐{minToHHMM(r.pickup_min)}</span>}
+              {r.pickup_min != null
+                ? <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>· 🕐{minToHHMM(r.pickup_min)}</span>
+                : <span style={{ color: '#ea580c', flexShrink: 0, fontSize: '9px', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '3px', padding: '1px 4px' }}>⚠ no route</span>
+              }
                 {r.pax_count  > 0   && <span style={{ color: '#64748b', flexShrink: 0 }}>· {r.pax_count}pax</span>}
               </div>
             ))}
@@ -799,6 +802,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const [paxLoading,    setPaxLoading]    = useState(false)
   const [paxSearch,     setPaxSearch]     = useState('')
 
+  // Sibling legs durations (editable per-leg, keyed by trip row id)
+  const [sibDurations, setSibDurations] = useState({})
+
   // Vehicle check
   const [vCheck, setVCheck] = useState(null)
 
@@ -811,6 +817,17 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       return
     }
     setError(null); setConfirmDel(false); setPaxSearch(''); setVCheck(null)
+
+    // Initialize per-sibling duration state from the current group
+    if (group && group.length > 1) {
+      const init = {}
+      group.filter(g => g.id !== initial.id).forEach(sib => {
+        init[sib.id] = sib.duration_min != null ? String(sib.duration_min) : ''
+      })
+      setSibDurations(init)
+    } else {
+      setSibDurations({})
+    }
 
     const arrStr  = initial.arr_time ? initial.arr_time.slice(0, 5) : ''
     const callStr = (initial.transfer_class === 'STANDARD' && initial.call_min !== null)
@@ -933,35 +950,45 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (!initial?.id) return
     // Use the crew's own trip_row_id (set in loadPaxData) so multi-stop siblings are handled correctly
     const targetTripId = crew.trip_row_id ?? initial.id
+    console.log('[removePax] crew:', crew.full_name, '| crew.trip_row_id:', crew.trip_row_id, '| initial.id:', initial.id, '→ targetTripId:', targetTripId)
     const { error } = await supabase.from('trip_passengers')
       .delete().eq('trip_row_id', targetTripId).eq('crew_id', crew.id)
-    if (!error) {
-      const newPax = assignedPax.filter(c => c.id !== crew.id)
-      setAssignedPax(newPax)
-      setAvailableCrew(p =>
-        [...p, { id: crew.id, full_name: crew.full_name, department: crew.department }].sort((a, b) =>
-          (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name)
-        )
+    if (error) { console.error('[removePax] ERROR deleting trip_passengers:', error); setError(error.message); return }
+
+    const newPax = assignedPax.filter(c => c.id !== crew.id)
+    setAssignedPax(newPax)
+    setAvailableCrew(p =>
+      [...p, { id: crew.id, full_name: crew.full_name, department: crew.department }].sort((a, b) =>
+        (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name)
       )
+    )
 
-      // Update passenger_list only on the trip row that was actually modified
-      const tripPaxForTarget = newPax.filter(c => c.trip_row_id === targetTripId)
-      await supabase.from('trips').update({
-        pax_count:      tripPaxForTarget.length,
-        passenger_list: tripPaxForTarget.length > 0 ? tripPaxForTarget.map(c => c.full_name).join(', ') : null,
-      }).eq('id', targetTripId)
+    // Update passenger_list only on the trip row that was actually modified
+    const tripPaxForTarget = newPax.filter(c => c.trip_row_id === targetTripId)
+    await supabase.from('trips').update({
+      pax_count:      tripPaxForTarget.length,
+      passenger_list: tripPaxForTarget.length > 0 ? tripPaxForTarget.map(c => c.full_name).join(', ') : null,
+    }).eq('id', targetTripId)
 
-      // Cleanup: if targetTripId is a sibling (not the main leg) and now has 0 pax → delete the sibling row
-      if (targetTripId !== initial.id) {
-        const siblingStillHasPax = newPax.some(c => c.trip_row_id === targetTripId)
-        if (!siblingStillHasPax) {
-          await supabase.from('trip_passengers').delete().eq('trip_row_id', targetTripId)
-          await supabase.from('trips').delete().eq('id', targetTripId)
+    // Cleanup: if targetTripId is a sibling (not the main leg) and now has 0 pax → delete the sibling row
+    if (targetTripId !== initial.id) {
+      const siblingStillHasPax = newPax.some(c => c.trip_row_id === targetTripId)
+      console.log('[removePax] sibling check | siblingStillHasPax:', siblingStillHasPax, '| targetTripId:', targetTripId)
+      if (!siblingStillHasPax) {
+        const { error: delPaxErr } = await supabase.from('trip_passengers').delete().eq('trip_row_id', targetTripId)
+        if (delPaxErr) console.error('[removePax] ERROR deleting sibling pax:', delPaxErr)
+        const { error: delTripErr } = await supabase.from('trips').delete().eq('id', targetTripId)
+        if (delTripErr) {
+          console.error('[removePax] ERROR deleting sibling trip:', delTripErr)
+          setError(`Failed to delete sibling trip: ${delTripErr.message}`)
+          onPaxChanged?.()
+          return
         }
+        console.log('[removePax] sibling trip deleted successfully:', targetTripId)
       }
-
-      onPaxChanged?.()
     }
+
+    onPaxChanged?.()
   }
 
   // ── Save trip ─────────────────────────────────────────────
@@ -1005,7 +1032,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         status:      form.status,
       }
       for (const sib of siblings) {
-        const sibDurMin = parseInt(sib.duration_min) || null
+        // Use edited duration from form if available, fall back to DB value
+        const sibDurMin = parseInt(sibDurations[sib.id] ?? String(sib.duration_min ?? '')) || null
         const sibTC     = getClass(sib.pickup_id, sib.dropoff_id)
         // Ricalcola timing con la duration specifica del sibling
         const sibCalc   = sibDurMin ? calcTimes({
@@ -1155,6 +1183,70 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                 ))}
               </div>
             )}
+
+            {/* ── Sibling legs duration (multi-stop only) ── */}
+            {group && group.length > 1 && (() => {
+              const sibs = group.filter(g => g.id !== initial?.id)
+              if (!sibs.length) return null
+              return (
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                    🔀 SIBLING LEGS — PICKUP TIME
+                  </div>
+                  {sibs.map(sib => {
+                    const sibTC      = getClass(sib.pickup_id, sib.dropoff_id)
+                    const sibPkLoc   = (locations.find(l => l.id === sib.pickup_id)?.name  || sib.pickup_id  || '–').split(' ').slice(0, 3).join(' ')
+                    const sibDrLoc   = (locations.find(l => l.id === sib.dropoff_id)?.name || sib.dropoff_id || '–').split(' ').slice(0, 3).join(' ')
+                    const sibDurStr  = sibDurations[sib.id] ?? (sib.duration_min != null ? String(sib.duration_min) : '')
+                    const sibDurMin2 = parseInt(sibDurStr) || null
+                    const sibPreview = sibDurMin2 && computed ? calcTimes({
+                      date:          form.date,
+                      arrTimeMin:    arrMin,
+                      durationMin:   sibDurMin2,
+                      transferClass: sibTC,
+                      callMin:       computed.callMin ?? null,
+                    }) : null
+                    const hasNoRoute = sib.pickup_min == null && !sibDurMin2
+                    return (
+                      <div key={sib.id} style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span>{sibPkLoc} → {sibDrLoc}</span>
+                          {hasNoRoute && (
+                            <span style={{ color: '#ea580c', fontSize: '9px', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '3px', padding: '1px 5px' }}>
+                              ⚠ no route — duration unknown
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ ...lbl, marginBottom: '2px' }}>Duration (min)</label>
+                            <input
+                              type="number"
+                              value={sibDurStr}
+                              onChange={e => setSibDurations(prev => ({ ...prev, [sib.id]: e.target.value }))}
+                              style={{ ...inp, fontVariantNumeric: 'tabular-nums' }}
+                              placeholder="enter duration"
+                              min="1" max="240"
+                            />
+                          </div>
+                          {sibPreview ? (
+                            <div style={{ textAlign: 'center', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '4px 10px', flexShrink: 0 }}>
+                              <div style={{ fontSize: '9px', fontWeight: '800', color: '#64748b' }}>PICKUP</div>
+                              <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{minToHHMM(sibPreview.pickupMin)}</div>
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: 'center', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '4px 10px', flexShrink: 0 }}>
+                              <div style={{ fontSize: '9px', fontWeight: '800', color: '#94a3b8' }}>PICKUP</div>
+                              <div style={{ fontSize: '14px', fontWeight: '800', color: '#cbd5e1', fontVariantNumeric: 'tabular-nums' }}>–:–</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
 
             {/* Flight + Terminal + Notes */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
