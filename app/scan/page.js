@@ -11,8 +11,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-
-const TS_LABEL = { IN: 'IN ARRIVO', OUT: 'IN PARTENZA', PRESENT: 'PRESENTE' }
+import { useT } from '../../lib/i18n'
 const TS_COLOR = { IN: { bg: '#eff6ff', color: '#1d4ed8', dot: '#2563eb' }, OUT: { bg: '#fff7ed', color: '#c2410c', dot: '#ea580c' }, PRESENT: { bg: '#f0fdf4', color: '#15803d', dot: '#16a34a' } }
 const HS_COLOR = { CONFIRMED: { bg: '#f0fdf4', color: '#15803d' }, PENDING: { bg: '#fefce8', color: '#a16207' }, CHECKED_OUT: { bg: '#f1f5f9', color: '#64748b' } }
 
@@ -23,6 +22,8 @@ function fmtDate(d) {
 
 // ─── Crew Card ─────────────────────────────────────────────────
 function CrewCard({ data, onWrapTrip }) {
+  const t = useT()
+  const TS_LABEL = { IN: t.tsIn, OUT: t.tsOut, PRESENT: t.tsPresent }
   const ts = TS_COLOR[data.travel_status] || TS_COLOR.PRESENT
   const hs = HS_COLOR[data.hotel_status] || HS_COLOR.PENDING
   return (
@@ -60,14 +61,14 @@ function CrewCard({ data, onWrapTrip }) {
           {/* Arrival */}
           {data.arrival_date && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#f0fdf4', borderRadius: '8px' }}>
-              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>🛬 Arrivo</span>
+              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>{t.arrivalLabel}</span>
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>{fmtDate(data.arrival_date)}</span>
             </div>
           )}
           {/* Departure */}
           {data.departure_date && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#fff7ed', borderRadius: '8px' }}>
-              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>🛫 Partenza</span>
+              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>{t.departureLabel}</span>
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#c2410c' }}>{fmtDate(data.departure_date)}</span>
             </div>
           )}
@@ -89,6 +90,7 @@ function CrewCard({ data, onWrapTrip }) {
 
 // ─── Vehicle Card ──────────────────────────────────────────────
 function VehicleCard({ data }) {
+  const t = useT()
   const hasCurrent = !!data.current_trip
   return (
     <div style={{ maxWidth: '400px', margin: '0 auto', padding: '24px 16px' }}>
@@ -99,7 +101,7 @@ function VehicleCard({ data }) {
         {data.sign_code && <div style={{ fontSize: '13px', color: '#93c5fd', marginTop: '4px', fontWeight: '700' }}>{data.sign_code}</div>}
         <div style={{ marginTop: '10px' }}>
           <span style={{ padding: '4px 14px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: hasCurrent ? '#fef9c3' : '#f0fdf4', color: hasCurrent ? '#a16207' : '#15803d' }}>
-            {hasCurrent ? '🟡 IN SERVIZIO' : '🟢 LIBERO'}
+            {hasCurrent ? t.inService : t.freeStatus}
           </span>
         </div>
       </div>
@@ -114,12 +116,12 @@ function VehicleCard({ data }) {
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px' }}>
-            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Capacità</span>
+            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>{t.capacity}</span>
             <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>{data.capacity ? `×${data.capacity}` : '–'} · {data.vehicle_type || 'VAN'}</span>
           </div>
           {hasCurrent && (
             <div style={{ padding: '12px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '8px' }}>
-              <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.05em', marginBottom: '6px' }}>TRIP CORRENTE</div>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.05em', marginBottom: '6px' }}>{t.currentTrip}</div>
               <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>{data.current_trip.trip_id}</div>
               <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
                 {data.current_trip.pax_count || 0} pax
@@ -145,6 +147,7 @@ function VehicleCard({ data }) {
 
 // ─── Componente inner (usa useSearchParams) ───────────────────
 function ScanContent() {
+  const t = useT()
   const searchParams = useSearchParams()
   const qr = searchParams.get('qr') || ''
   const [state, setState] = useState('loading')  // loading | ok | error
@@ -152,7 +155,7 @@ function ScanContent() {
   const [err,   setErr]   = useState('')
 
   useEffect(() => {
-    if (!qr) { setState('error'); setErr('Nessun codice QR fornito. Usa ?qr=CR:xxx o ?qr=VH:xxx'); return }
+    if (!qr) { setState('error'); setErr(t.noQrCode); return }
     setState('loading')
     fetch(`/api/qr/resolve?qr=${encodeURIComponent(qr)}`)
       .then(r => r.json())
@@ -166,7 +169,7 @@ function ScanContent() {
   if (state === 'loading') return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', gap: '16px' }}>
       <div style={{ fontSize: '40px' }}>🔍</div>
-      <div style={{ color: '#64748b', fontSize: '14px', fontWeight: '600' }}>Risoluzione QR…</div>
+      <div style={{ color: '#64748b', fontSize: '14px', fontWeight: '600' }}>{t.resolvingQr}</div>
       <div style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace' }}>{qr}</div>
     </div>
   )
@@ -174,7 +177,7 @@ function ScanContent() {
   if (state === 'error') return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', gap: '16px', padding: '24px' }}>
       <div style={{ fontSize: '48px' }}>❌</div>
-      <div style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626', textAlign: 'center' }}>QR non valido</div>
+      <div style={{ fontSize: '16px', fontWeight: '700', color: '#dc2626', textAlign: 'center' }}>{t.qrInvalid}</div>
       <div style={{ fontSize: '12px', color: '#64748b', textAlign: 'center' }}>{err}</div>
       {qr && <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace', background: '#f1f5f9', padding: '6px 12px', borderRadius: '6px' }}>{qr}</div>}
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, Suspense } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
+import { useT } from '../../../lib/i18n'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 440
@@ -82,6 +83,7 @@ async function checkVehicleAvail(vehicleId, date, startDt, endDt, excludeRowIds)
 
 // ─── Trip row (info completa) ─────────────────────────────────
 function TripRow({ group, locations, selected, onClick, isSuggested }) {
+  const i18n = useT()
   const t   = group[0]
   const cls = CLS[t.transfer_class] || CLS.STANDARD
   const sts = STS[t.status] || STS.PLANNED
@@ -186,7 +188,7 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
             </div>
           </>
         ) : (
-          <span style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>No vehicle</span>
+          <span style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>{i18n.noVehicle}</span>
         )}
       </div>
 
@@ -255,7 +257,7 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
             )}
           </>
         ) : (
-          <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic' }}>No passengers assigned</div>
+          <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic' }}>{i18n.noPaxAssigned}</div>
         )}
       </div>
 
@@ -265,6 +267,7 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
 
 // ─── TripSidebar (CREATE new trip) ────────────────────────────
 function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips }) {
+  const t = useT()
   const EMPTY = { trip_id: '', date: defaultDate, pickup_id: '', dropoff_id: '', vehicle_id: '', service_type_id: '', arr_time: '', call_time: '', flight_no: '', terminal: '', notes: '', duration_min: '' }
   const [form,           setForm]           = useState(EMPTY)
   const [saving,         setSaving]         = useState(false)
@@ -518,7 +521,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       }
 
       const { data: newRow, error: tripErr } = await supabase.from('trips').insert(siblingRow).select('id').single()
-      if (tripErr || !newRow?.id) { setAddingToTrip(false); setError(tripErr?.message || 'Errore creazione trip sibling'); return }
+      if (tripErr || !newRow?.id) { setAddingToTrip(false); setError(tripErr?.message || t.errorSiblingTrip); return }
 
       const { error: paxErr } = await supabase.from('trip_passengers').insert({
         production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: assignCtx.id,
@@ -547,7 +550,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>New Trip</div>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>{t.newTrip}</div>
             {assignCtx && <div style={{ fontSize: '11px', color: '#fbbf24', fontWeight: '700', marginTop: '2px' }}>👤 {assignCtx.name}</div>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -565,7 +568,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             {assignCtx && arrDepTrips.length > 0 && (
               <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: '10px', padding: '12px 14px' }}>
                 <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.06em', marginBottom: '8px' }}>
-                  📋 ADD TO EXISTING TRIP
+                  {t.addToExistingTrip}
                 </div>
                 <select
                   value={selExistingTrip?.id || ''}
@@ -582,7 +585,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                 >
                   <option value="">Select existing trip…</option>
                   {compatibleTrips.length > 0 && (
-                    <optgroup label="⭐ Compatible">
+                    <optgroup label={t.compatible}>
                       {compatibleTrips.map(t => (
                         <option key={t.id} value={t.id}>
                           {t.trip_id} · {minToHHMM(t.pickup_min ?? t.call_min)} · {locShort(t.pickup_id)} → {locShort(t.dropoff_id)}{t.vehicle_id ? ` · 🚐${t.vehicle_id}` : ''}
@@ -591,7 +594,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     </optgroup>
                   )}
                   {otherTrips.length > 0 && (
-                    <optgroup label="⚠ Other (multi-stop)">
+                    <optgroup label={t.otherMultiStop}>
                       {otherTrips.map(t => (
                         <option key={t.id} value={t.id}>
                           {t.trip_id} · {minToHHMM(t.pickup_min ?? t.call_min)} · {locShort(t.pickup_id)} → {locShort(t.dropoff_id)}{t.vehicle_id ? ` · 🚐${t.vehicle_id}` : ''}
@@ -608,7 +611,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                       <div>{locShort(selExistingTrip.pickup_id)} → {locShort(selExistingTrip.dropoff_id)}</div>
                       {selExistingTrip.vehicle_id && <div>🚐 {selExistingTrip.vehicle_id}</div>}
                       {!isCompatibleTrip(selExistingTrip) && (
-                        <div style={{ color: '#a16207', fontWeight: '700', marginTop: '3px' }}>⚠ Route diversa — diventerà MULTI-STOP</div>
+                        <div style={{ color: '#a16207', fontWeight: '700', marginTop: '3px' }}>{t.differentRoute}</div>
                       )}
                     </div>
                     {addedToTrip ? (
@@ -625,7 +628,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                 )}
 
                 <div style={{ fontSize: '10px', color: '#92400e', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #fde68a', fontWeight: '700' }}>
-                  — oppure crea un nuovo trip qui sotto —
+                  {t.orCreateBelow}
                 </div>
               </div>
             )}
@@ -751,7 +754,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                   <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                     {crewList.length === 0 ? (
                       <div style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
-                        No crew — check Travel_Status ({transferClass === 'ARRIVAL' ? 'IN' : transferClass === 'DEPARTURE' ? 'OUT' : 'PRESENT'})
+                        {t.noCrewStatus} ({transferClass === 'ARRIVAL' ? 'IN' : transferClass === 'DEPARTURE' ? 'OUT' : 'PRESENT'})
                       </div>
                     ) : crewList.filter(c => !crewSearch || c.full_name.toLowerCase().includes(crewSearch.toLowerCase()) || (c.department || '').toLowerCase().includes(crewSearch.toLowerCase())).map(c => {
                       const sel = selCrew.some(x => x.id === c.id)
@@ -777,7 +780,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                 </>
               ) : (
                 <div style={{ padding: '10px', textAlign: 'center', color: '#cbd5e1', fontSize: '12px', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
-                  Select pickup &amp; dropoff first
+                  {t.selectPickupFirst}
                 </div>
               )}
             </div>
@@ -785,9 +788,9 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
           {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
           <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexShrink: 0, position: 'sticky', bottom: 0, background: 'white' }}>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>{t.cancel}</button>
             <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
-              {saving ? 'Saving…' : '✓ Save Trip'}
+              {saving ? t.saving : t.saveTrip}
             </button>
           </div>
         </form>
@@ -798,6 +801,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
 // ─── EditTripSidebar (EDIT + PAX management) ──────────────────
 function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTypes, onClose, onSaved, onPaxChanged }) {
+  const t = useT()
   const EDIT_EMPTY = {
     date: '', pickup_id: '', dropoff_id: '', vehicle_id: '',
     service_type_id: '', arr_time: '', call_time: '',
@@ -1111,7 +1115,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         {/* Header */}
         <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1e3a5f', flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: '10px', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Edit Trip</div>
+            <div style={{ fontSize: '10px', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t.editTrip}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ fontSize: '18px', fontWeight: '900', color: 'white', fontFamily: 'monospace', letterSpacing: '-0.5px' }}>{initial?.trip_id}</div>
               {group && group.length > 1 && (
@@ -1241,14 +1245,14 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               </div>
 
               {paxLoading ? (
-                <div style={{ padding: '10px', color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>Loading passengers…</div>
+                <div style={{ padding: '10px', color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>{t.loadingPax}</div>
               ) : (
                 <>
                   {/* ASSIGNED */}
                   {assignedPax.length > 0 && (
                     <div style={{ marginBottom: '12px' }}>
                       <div style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                        ✓ ASSIGNED ({assignedPax.length})
+                        {t.assignedSection} ({assignedPax.length})
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         {assignedPax.map(c => (
@@ -1272,7 +1276,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
                         <div style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', letterSpacing: '0.05em' }}>
-                          AVAILABLE ({freeCount})
+                          {t.availableSection} ({freeCount})
                           {busyCount > 0 && <span style={{ color: '#a16207', marginLeft: '6px' }}>· {busyCount} BUSY</span>}
                         </div>
                         {freeCount > 0 && (
@@ -1286,7 +1290,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                         style={{ ...inp, padding: '5px 9px', fontSize: '12px', marginBottom: '4px' }} />
                       <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                         {filtered.length === 0 ? (
-                          <div style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No results</div>
+                          <div style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>{t.noResults}</div>
                         ) : filtered.map(c => {
                           const isBusy = !!busyMap[c.id]
                           return (
@@ -1311,7 +1315,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                   ) : (
                     assignedPax.length === 0 && (
                       <div style={{ padding: '10px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
-                        No eligible crew (check hotel and Travel_Status)
+                        {t.noEligibleCrew}
                       </div>
                     )
                   )}
@@ -1328,14 +1332,14 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                 </button>
               ) : (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '600', flexShrink: 0 }}>Confirm delete?</span>
+                  <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '600', flexShrink: 0 }}>{t.deleteTripConfirm}</span>
                   <button type="button" onClick={handleDelete} disabled={deleting}
                     style={{ flex: 1, padding: '6px', border: 'none', background: '#dc2626', color: 'white', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '800' }}>
-                    {deleting ? '…' : 'Yes, delete'}
+                    {deleting ? '…' : t.yesDelete}
                   </button>
                   <button type="button" onClick={() => setConfirmDel(false)}
                     style={{ flex: 1, padding: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
-                    Annulla
+                    {t.cancel}
                   </button>
                 </div>
               )}
@@ -1344,9 +1348,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
           {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
           <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexShrink: 0, background: 'white' }}>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>{t.cancel}</button>
             <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#1e3a5f', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
-              {saving ? 'Saving…' : '✓ Save Changes'}
+              {saving ? t.saving : t.saveChanges}
             </button>
           </div>
         </form>
@@ -1357,6 +1361,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
 // ─── Pagina principale ─────────────────────────────────────────
 function TripsPageInner() {
+  const t = useT()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [user,          setUser]          = useState(null)
@@ -1502,7 +1507,7 @@ function TripsPageInner() {
           <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>◀</button>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
           <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>▶</button>
-          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
+          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
           <div style={{ display: 'flex', gap: '5px', marginLeft: '8px' }}>
             {[
               { n: trips.length, l: 'total', c: '#374151', bg: '#f8fafc', b: '#e2e8f0' },
@@ -1547,7 +1552,7 @@ function TripsPageInner() {
           {vehicles.length > 0 && (
             <select value={filterVehicle} onChange={e => setFilterVehicle(e.target.value)}
               style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white', cursor: 'pointer' }}>
-              <option value="ALL">All vehicles</option>
+              <option value="ALL">{t.allVehicles}</option>
               {vehicles.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           )}
@@ -1566,15 +1571,15 @@ function TripsPageInner() {
       {assignCtx && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 18px', background: '#fffbeb', borderBottom: '2px solid #f59e0b', fontSize: '12px', transition: 'margin-right 0.25s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
           <span style={{ fontSize: '14px' }}>👤</span>
-          <span style={{ fontWeight: '800', color: '#92400e' }}>Assigning:</span>
+          <span style={{ fontWeight: '800', color: '#92400e' }}>{t.assigningLabel}</span>
           <span style={{ fontWeight: '700', color: '#0f172a' }}>{assignCtx.name}</span>
           <span style={{ color: '#d97706' }}>·</span>
           <span style={{ color: '#92400e' }}>Status: <strong>{assignCtx.ts}</strong></span>
           {suggestedBaseIds.size > 0
             ? <span style={{ color: '#15803d', fontWeight: '700' }}>⭐ {suggestedBaseIds.size} trip{suggestedBaseIds.size > 1 ? 's' : ''} suggested — click to open</span>
-            : <span style={{ color: '#dc2626', fontWeight: '700' }}>No compatible trips — New Trip sidebar opened</span>
+            : <span style={{ color: '#dc2626', fontWeight: '700' }}>{t.noCompatibleTrips}</span>
           }
-          <button onClick={() => setAssignCtx(null)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #fde68a', color: '#92400e', borderRadius: '5px', padding: '2px 8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>✕ dismiss</button>
+          <button onClick={() => setAssignCtx(null)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #fde68a', color: '#92400e', borderRadius: '5px', padding: '2px 8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>{t.dismiss}</button>
         </div>
       )}
 
@@ -1593,12 +1598,12 @@ function TripsPageInner() {
       <div style={{ transition: 'margin-right 0.25s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading trips…</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
         ) : grouped.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>📋</div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>
-              {trips.length === 0 ? 'No trips for this date' : 'No trips match the filters'}
+              {trips.length === 0 ? t.noTripsDate : t.noResultsFiltered}
             </div>
             {trips.length === 0 && (
               <button onClick={() => setNewTripOpen(true)} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', padding: '9px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', marginTop: '8px' }}>

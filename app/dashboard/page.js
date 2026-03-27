@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 
 import { Navbar } from '../../lib/navbar'
+import { useT } from '../../lib/i18n'
 
 const NAV = [
   { l: 'Fleet',      p: '/dashboard/fleet' },
@@ -23,88 +24,7 @@ const NAV = [
   { l: '🎬 Prods',  p: '/dashboard/productions' },
 ]
 
-const CARDS = [
-  {
-    emoji: '🚦',
-    title: 'Fleet Monitor',
-    desc: 'Stato live di tutti i veicoli: BUSY, FREE, IDLE, DONE con progress bar e ETA',
-    href: '/dashboard/fleet',
-    accent: '#f59e0b',
-    bg: '#fffbeb',
-  },
-  {
-    emoji: '🗓',
-    title: 'Trips',
-    desc: 'Gestione transfer giornalieri: crea, modifica, assegna passeggeri e veicoli',
-    href: '/dashboard/trips',
-    accent: '#2563eb',
-    bg: '#eff6ff',
-  },
-  {
-    emoji: '🎬',
-    title: 'Crew',
-    desc: 'Anagrafica crew: hotel, Travel_Status (IN / PRESENT / OUT) e partenze',
-    href: '/dashboard/crew',
-    accent: '#16a34a',
-    bg: '#f0fdf4',
-  },
-  {
-    emoji: '📋',
-    title: 'Transport Lists',
-    desc: 'Liste stampabili per driver: TRANSPORT LIST, TRAVEL ARRIVAL, TRAVEL DEPARTURE',
-    href: '/dashboard/lists',
-    accent: '#0891b2',
-    bg: '#ecfeff',
-  },
-  {
-    emoji: '🛫',
-    title: 'Hub Coverage',
-    desc: 'Copertura aeroporto/stazione: expected vs assigned per hotel, status ✅⚠❌',
-    href: '/dashboard/hub-coverage',
-    accent: '#7c3aed',
-    bg: '#f5f3ff',
-  },
-  {
-    emoji: '📍',
-    title: 'Locations',
-    desc: 'Hotels e hub: coordinate, meeting point e tipo',
-    href: '/dashboard/locations',
-    accent: '#6366f1',
-    bg: '#eef2ff',
-  },
-  {
-    emoji: '📱',
-    title: 'QR Codes',
-    desc: 'Genera e stampa QR per veicoli e crew. Driver scansiona → scheda live + Wrap Trip.',
-    href: '/dashboard/qr-codes',
-    accent: '#0891b2',
-    bg: '#ecfeff',
-  },
-  {
-    emoji: '📊',
-    title: 'Fleet Reports',
-    desc: 'Report giornaliero e settimanale: ore lavorate, pax, trip per veicolo. Stampabile PDF.',
-    href: '/dashboard/reports',
-    accent: '#db2777',
-    bg: '#fdf2f8',
-  },
-  {
-    emoji: '🚐',
-    title: 'Vehicles',
-    desc: 'Flotta veicoli: tipo, capacità, driver e sign code',
-    href: '/dashboard/vehicles',
-    accent: '#64748b',
-    bg: '#f8fafc',
-  },
-  {
-    emoji: '🚀',
-    title: 'Rocket — Trip Generator',
-    desc: 'Genera automaticamente tutti i trip del giorno: assegna crew ai veicoli per hotel e dipartimento, anteprima e conferma con un click.',
-    href: '/dashboard/rocket',
-    accent: '#7c3aed',
-    bg: '#f5f3ff',
-  },
-]
+// CARDS defined inside component to use t (i18n)
 
 function isoTomorrow() {
   const d = new Date(); d.setDate(d.getDate() + 1)
@@ -115,11 +35,25 @@ function fmtDate(d) {
 }
 
 export default function Dashboard() {
+  const t = useT()
   const [user,       setUser]       = useState(null)
   const [departures, setDepartures] = useState([])   // crew in partenza domani
   const [arrivals,   setArrivals]   = useState([])   // crew in arrivo domani
   const router = useRouter()
   const tomorrow = isoTomorrow()
+
+  const CARDS = [
+    { emoji: '🚦', title: 'Fleet Monitor',          desc: t.fleetMonitorDesc,    href: '/dashboard/fleet',        accent: '#f59e0b', bg: '#fffbeb' },
+    { emoji: '🗓', title: 'Trips',                   desc: t.tripsDesc || 'Manage daily transfers: create, edit, assign passengers and vehicles', href: '/dashboard/trips', accent: '#2563eb', bg: '#eff6ff' },
+    { emoji: '🎬', title: 'Crew',                    desc: t.crewDesc,            href: '/dashboard/crew',         accent: '#16a34a', bg: '#f0fdf4' },
+    { emoji: '📋', title: 'Transport Lists',         desc: t.listsDesc,           href: '/dashboard/lists',        accent: '#0891b2', bg: '#ecfeff' },
+    { emoji: '🛫', title: 'Hub Coverage',            desc: t.hubCoverageCardDesc, href: '/dashboard/hub-coverage', accent: '#7c3aed', bg: '#f5f3ff' },
+    { emoji: '📍', title: 'Locations',               desc: t.locationsDesc,       href: '/dashboard/locations',    accent: '#6366f1', bg: '#eef2ff' },
+    { emoji: '📱', title: 'QR Codes',                desc: t.qrCodesDesc,         href: '/dashboard/qr-codes',     accent: '#0891b2', bg: '#ecfeff' },
+    { emoji: '📊', title: 'Fleet Reports',           desc: t.reportsDesc,         href: '/dashboard/reports',      accent: '#db2777', bg: '#fdf2f8' },
+    { emoji: '🚐', title: 'Vehicles',                desc: t.vehiclesDesc,        href: '/dashboard/vehicles',     accent: '#64748b', bg: '#f8fafc' },
+    { emoji: '🚀', title: 'Rocket — Trip Generator', desc: t.rocketCardDesc,      href: '/dashboard/rocket',       accent: '#7c3aed', bg: '#f5f3ff' },
+  ]
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -170,7 +104,7 @@ export default function Dashboard() {
           <span style={{ color: '#64748b', fontSize: '12px' }}>{user.email}</span>
           <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
             style={{ background: 'transparent', border: '1px solid #334155', color: '#94a3b8', padding: '5px 12px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px' }}>
-            Sign out
+            {t.signOut}
           </button>
         </div>
       </div>
@@ -182,7 +116,7 @@ export default function Dashboard() {
           CAPTAIN Dispatch
         </h1>
         <p style={{ color: '#94a3b8', margin: '0', fontSize: '13px' }}>
-          Sistema di gestione transfer per produzioni cinematografiche
+          {t.systemTitle}
           {PRODUCTION_ID && <span style={{ color: '#2563eb', marginLeft: '8px', fontWeight: '600' }}>· {PRODUCTION_ID.slice(0, 8)}…</span>}
         </p>
       </div>
@@ -197,7 +131,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '16px' }}>🛫</span>
                   <span style={{ fontWeight: '800', fontSize: '13px', color: '#c2410c' }}>
-                    {departures.length} partenze domani — {fmtDate(tomorrow)}
+                    {departures.length} {t.departuresTomorrow} — {fmtDate(tomorrow)}
                   </span>
                   <a href="/dashboard/hub-coverage" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#c2410c', textDecoration: 'none', background: '#fed7aa', padding: '2px 8px', borderRadius: '6px' }}>
                     Hub Coverage →
@@ -219,7 +153,7 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '16px' }}>🛬</span>
                   <span style={{ fontWeight: '800', fontSize: '13px', color: '#15803d' }}>
-                    {arrivals.length} arrivi domani — {fmtDate(tomorrow)}
+                    {arrivals.length} {t.arrivalsTomorrow} — {fmtDate(tomorrow)}
                   </span>
                   <a href="/dashboard/hub-coverage" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#15803d', textDecoration: 'none', background: '#bbf7d0', padding: '2px 8px', borderRadius: '6px' }}>
                     Hub Coverage →
@@ -274,12 +208,7 @@ export default function Dashboard() {
         <div style={{ marginTop: '24px', padding: '14px 18px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
           <span style={{ fontSize: '18px', flexShrink: 0 }}>💡</span>
           <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.6 }}>
-            <strong style={{ color: '#374151' }}>Workflow:</strong> Aggiungi Locations → Vehicles → Crew,
-            poi crea i Trips del giorno e assegna passeggeri. Transfer Class (ARRIVAL/DEPARTURE/STANDARD)
-            calcolato automaticamente. Usa <strong>Transport Lists</strong> per stampare le liste driver
-            e <strong>Hub Coverage</strong> per verificare la copertura aeroporto/stazione.
-            Il cron ARRIVAL→PRESENT gira ogni 5 minuti su Vercel.
-            I driver usano <strong>Wrap Trip</strong> (<a href="/wrap-trip" style={{ color: '#2563eb' }}>/wrap-trip</a>) via QR veicolo per creare trip di rientro dal set.
+            <strong style={{ color: '#374151' }}>{t.workflowTitle}</strong> {t.workflowText}
           </div>
         </div>
       </div>

@@ -17,6 +17,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
+import { useT } from '../../../lib/i18n'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 
@@ -107,6 +108,7 @@ function CoveredRow({ member, trips, locsMap }) {
 
 // ─── Riga crew MISSING ──────────────────────────────────────
 function MissingRow({ member, locsMap, onAssign }) {
+  const t = useT()
   const tc = TC[member.travel_status] || TC.IN
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
   const dateLabel = member.travel_status === 'IN'
@@ -147,7 +149,7 @@ function MissingRow({ member, locsMap, onAssign }) {
         padding: '4px 10px', borderRadius: '7px', cursor: 'pointer',
         whiteSpace: 'nowrap', flexShrink: 0,
       }}>
-        + Assign
+        {t.assignBtn}
       </button>
     </div>
   )
@@ -155,6 +157,7 @@ function MissingRow({ member, locsMap, onAssign }) {
 
 // ─── Pagina principale ─────────────────────────────────────────
 export default function HubCoveragePage() {
+  const t = useT()
   const router = useRouter()
   const [user,    setUser]    = useState(null)
   const [date,    setDate]    = useState(isoToday())
@@ -296,7 +299,7 @@ export default function HubCoveragePage() {
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
           <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
-          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
+          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -309,8 +312,8 @@ export default function HubCoveragePage() {
                   : { background: '#0f2340', color: 'white', borderColor: '#0f2340' })
                 : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
               {s === 'ALL'     ? `All (${crew.length})`
-                : s === 'MISSING' ? `❌ Missing (${totalMissing})`
-                : `✅ Covered (${totalCovered})`}
+                : s === 'MISSING' ? `❌ ${t.missingLabel} (${totalMissing})`
+                : `✅ ${t.coveredLabel} (${totalCovered})`}
             </button>
           ))}
 
@@ -334,7 +337,7 @@ export default function HubCoveragePage() {
           {departments.length > 1 && (
             <select value={filterDept} onChange={e => setFD(e.target.value)}
               style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
-              <option value="ALL">All depts</option>
+              <option value="ALL">{t.allDepts}</option>
               {departments.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           )}
@@ -343,12 +346,12 @@ export default function HubCoveragePage() {
           {hotels.length > 1 && (
             <select value={filterHotel} onChange={e => setFH(e.target.value)}
               style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
-              <option value="ALL">All hotels</option>
+              <option value="ALL">{t.allHotels}</option>
               {hotels.map(h => <option key={h} value={h}>{locsMap[h] || h}</option>)}
             </select>
           )}
 
-          <input type="text" placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder={t.search} value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '120px' }} />
           <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
@@ -369,7 +372,7 @@ export default function HubCoveragePage() {
             {/* Progress bar */}
             <div style={{ flex: 1, minWidth: '200px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>
-                <span>Hub coverage</span>
+                <span>{t.hubCoverageLabel}</span>
                 <span style={{ color: pct === 100 ? '#15803d' : pct >= 75 ? '#d97706' : '#dc2626' }}>{pct}%</span>
               </div>
               <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '999px', overflow: 'hidden' }}>
@@ -380,9 +383,9 @@ export default function HubCoveragePage() {
             {/* Stats */}
             <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
               {[
-                { n: crew.length,    l: 'Expected',  c: '#374151', bg: '#f8fafc', b: '#e2e8f0' },
-                { n: totalCovered,   l: 'Covered',   c: '#15803d', bg: '#f0fdf4', b: '#86efac' },
-                { n: totalMissing,   l: 'Missing',   c: totalMissing > 0 ? '#dc2626' : '#94a3b8', bg: totalMissing > 0 ? '#fef2f2' : '#f8fafc', b: totalMissing > 0 ? '#fecaca' : '#e2e8f0' },
+                { n: crew.length,    l: t.expectedLabel,  c: '#374151', bg: '#f8fafc', b: '#e2e8f0' },
+                { n: totalCovered,   l: t.coveredLabel,   c: '#15803d', bg: '#f0fdf4', b: '#86efac' },
+                { n: totalMissing,   l: t.missingLabel,   c: totalMissing > 0 ? '#dc2626' : '#94a3b8', bg: totalMissing > 0 ? '#fef2f2' : '#f8fafc', b: totalMissing > 0 ? '#fecaca' : '#e2e8f0' },
               ].map(s => (
                 <div key={s.l} style={{ textAlign: 'center', padding: '8px 14px', borderRadius: '10px', background: s.bg, border: `1px solid ${s.b}` }}>
                   <div style={{ fontSize: '22px', fontWeight: '900', color: s.c, lineHeight: 1 }}>{s.n}</div>
@@ -394,21 +397,21 @@ export default function HubCoveragePage() {
         )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Caricamento…</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
         ) : crew.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '40px', marginBottom: '10px' }}>✈️</div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>
-              Nessun crew con travel_status IN o OUT
+              {t.noCrewInOut}
             </div>
             <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
-              Hub Coverage mostra i crew con travel_status IN (in arrivo) o OUT (in partenza) e verifica se hanno un trip ARRIVAL/DEPARTURE assegnato per la data selezionata
+              {t.hubCoverageDesc}
             </div>
-            <a href="/dashboard/crew" style={{ marginTop: '12px', display: 'inline-block', color: '#2563eb', fontSize: '13px' }}>→ Vai a Crew</a>
+            <a href="/dashboard/crew" style={{ marginTop: '12px', display: 'inline-block', color: '#2563eb', fontSize: '13px' }}>{t.goToCrewLink}</a>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '14px', color: '#64748b' }}>Nessun risultato con i filtri selezionati</div>
+            <div style={{ fontSize: '14px', color: '#64748b' }}>{t.noResultsFiltered}</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -418,13 +421,13 @@ export default function HubCoveragePage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #ef4444' }}>
                   <span style={{ fontSize: '16px' }}>❌</span>
-                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>MISSING</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>{t.missingSection}</span>
                   <span style={{ fontSize: '11px', fontWeight: '700', background: '#ef4444', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
                     {missing.length} crew
                   </span>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— no trip assigned for {fmtDate(date)}</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— {t.noTripAssignedFor} {fmtDate(date)}</span>
                   <a href="/dashboard/trips" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '3px 10px', borderRadius: '7px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                    Vai a Trips →
+                    {t.goToTrips}
                   </a>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -449,7 +452,7 @@ export default function HubCoveragePage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #22c55e' }}>
                   <span style={{ fontSize: '16px' }}>✅</span>
-                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>COVERED</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>{t.coveredSection}</span>
                   <span style={{ fontSize: '11px', fontWeight: '700', background: '#22c55e', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
                     {covered.length} crew
                   </span>

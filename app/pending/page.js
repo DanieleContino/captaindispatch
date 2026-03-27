@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useT } from '../../lib/i18n'
 
 export default function PendingPage() {
+  const t = useT()
   const [user, setUser] = useState(null)
   const [isApproved, setIsApproved] = useState(false)
   const router = useRouter()
@@ -87,7 +89,7 @@ export default function PendingPage() {
                 letterSpacing: '-0.5px',
               }}
             >
-              Accesso in Attesa
+              {t.pendingAccessTitle}
             </h1>
 
             <p
@@ -120,7 +122,7 @@ export default function PendingPage() {
                   fontWeight: '600',
                 }}
               >
-                ⚠️ Il tuo accesso è in attesa di approvazione
+                {t.pendingTitle}
               </p>
               <p
                 style={{
@@ -130,10 +132,7 @@ export default function PendingPage() {
                   lineHeight: '1.6',
                 }}
               >
-                L'amministratore ha ricevuto una notifica della tua richiesta di accesso.
-                <br />
-                <br />
-                Una volta approvato, verrai reindirizzato automaticamente alla dashboard.
+                {t.pendingDesc}
               </p>
             </div>
 
@@ -153,7 +152,7 @@ export default function PendingPage() {
                   color: '#166534',
                 }}
               >
-                🔄 Verifico ogni 3 secondi...
+                {t.pendingChecking}
               </p>
             </div>
 
@@ -174,7 +173,7 @@ export default function PendingPage() {
                 cursor: 'pointer',
               }}
             >
-              Torna al Login
+              {t.pendingBackToLogin}
             </button>
           </>
         ) : (
@@ -197,7 +196,7 @@ export default function PendingPage() {
                 letterSpacing: '-0.5px',
               }}
             >
-              Approvato!
+              {t.pendingApproved}
             </h1>
 
             <p
@@ -207,7 +206,7 @@ export default function PendingPage() {
                 margin: '0',
               }}
             >
-              Reindirizzamento in corso...
+              {t.pendingRedirecting}
             </p>
           </>
         )}
