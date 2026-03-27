@@ -1,6 +1,10 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 27 marzo 2026 (S7h)**
+**Aggiornato: 27 marzo 2026 (S7i)**
+
+---
+
+> 🚀 **AZIONE IMMEDIATA: Quando leggi questo context, avvia subito `npm run dev` per testare in localhost!**
 
 ---
 
@@ -182,6 +186,15 @@ Automazioni:
   - Passenger list location names — estrae `.name` da oggetti
   - Single-stop dropoff — gestisce oggetti location
 - **Pattern:** `const loc = locsMap[id]; const name = typeof loc === 'object' ? loc.name : loc || id || '–'`
+
+**S7i — Terminal Display Fix (27 marzo 2026):**
+- **Problema:** Il campo `terminal` inserito nei trip ARRIVAL/DEPARTURE non appariva nelle Transport Lists stampabili
+- **Causa:** La funzione `groupByTripId` non preservava il campo `terminal` dal database e `TripTableRow` cercava erroneamente `meeting_point` o `pickup_point` invece di usare `trips.terminal`
+- **Fix:** 
+  - Aggiunto campo `terminal` nel mapping della funzione `groupByTripId`
+  - Cambiato `const hubTerminal = group.terminal` per usare direttamente il valore dal database
+  - Accumulazione del campo terminal nei trip multi-stop
+- **Risultato:** Il terminal ora appare correttamente con icona 📍 dopo il badge volo nei trip hub (es. "T1", "T2", "Arrivi Nord")
 
 ### Navbar Unificata (S7f)
 - Componente `Navbar` in `lib/navbar.js` riutilizzabile su tutte le pagine
