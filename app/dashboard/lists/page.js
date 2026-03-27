@@ -55,10 +55,14 @@ function groupByTripId(tripRows) {
         flight_no:      t.flight_no,
         transfer_class: t.transfer_class,
         notes:          t.notes,
+        meeting_point:  t.meeting_point,
         rows:           [t],
       }
     } else {
       map[key].rows.push(t)
+      // Accumula notes e meeting_point se presenti in più rows
+      if (t.notes && !map[key].notes) map[key].notes = t.notes
+      if (t.meeting_point && !map[key].meeting_point) map[key].meeting_point = t.meeting_point
       if (t.pickup_min != null && (map[key].pickup_min == null || t.pickup_min < map[key].pickup_min)) {
         map[key].pickup_min = t.pickup_min
       }
@@ -78,7 +82,8 @@ function TripTableRow({ group, locsMap, sectionColor }) {
   const callTime = minToHHMM(group.call_min)
   const totalPax = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
   const isMultiStop = group.rows.length > 1
-  const pickupName = locsMap[group.pickup_id] || group.pickup_id || '–'
+  const pickupLoc = locsMap[group.pickup_id]
+  const pickupName = typeof pickupLoc === 'object' ? pickupLoc.name : pickupLoc || group.pickup_id || '–'
 
   // Determina se mostrare info volo (solo per ARRIVAL/DEPARTURE con dati disponibili)
   const transferClass = group.transfer_class
@@ -87,6 +92,13 @@ function TripTableRow({ group, locsMap, sectionColor }) {
   
   // Formatta orario arrivo volo (arr_time è in formato time HH:MM:SS)
   const flightArrTime = group.arr_time ? group.arr_time.slice(0, 5) : null
+
+  // Info Hub/Terminal e Notes (solo per ARRIVAL/DEPARTURE)
+  const showHubInfo = transferClass === 'ARRIVAL' || transferClass === 'DEPARTURE'
+  const pickupLocForHub = locsMap[group.pickup_id]
+  const hubTerminal = group.meeting_point || (typeof pickupLocForHub === 'object' ? pickupLocForHub.pickup_point : null)
+  const tripNotes = group.notes
+  const hasInfoBar = showHubInfo && (hubTerminal || tripNotes)
 
   return (
     <div className="trip-row" style={{
@@ -113,26 +125,47 @@ function TripTableRow({ group, locsMap, sectionColor }) {
         {group.driver_name || '–'}
       </div>
       <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.4 }}>
-        {/* Badge info volo per ARRIVAL/DEPARTURE */}
-        {showFlightInfo && (
-          <div style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: '4px',
-            background: transferClass === 'ARRIVAL' ? '#dbeafe' : '#fed7aa',
-            color: transferClass === 'ARRIVAL' ? '#1e40af' : '#c2410c',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontSize: '10px',
-            fontWeight: '800',
-            marginBottom: '3px',
-            marginRight: '6px',
-          }}>
-            <span>✈️</span>
-            {group.flight_no && <span>{group.flight_no}</span>}
-            {flightArrTime && <span>@{flightArrTime}</span>}
-          </div>
-        )}
+        {/* Info bar orizzontale: volo, terminal, notes */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
+          {/* Badge info volo per ARRIVAL/DEPARTURE */}
+          {showFlightInfo && (
+            <span style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              background: transferClass === 'ARRIVAL' ? '#dbeafe' : '#fed7aa',
+              color: transferClass === 'ARRIVAL' ? '#1e40af' : '#c2410c',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              fontSize: '10px',
+              fontWeight: '800',
+            }}>
+              <span>✈️</span>
+              {group.flight_no && <span>{group.flight_no}</span>}
+              {flightArrTime && <span>@{flightArrTime}</span>}
+            </span>
+          )}
+          {/* Terminal (solo ARRIVAL/DEPARTURE) */}
+          {showHubInfo && hubTerminal && (
+            <>
+              {showFlightInfo && <span style={{ color: '#cbd5e1', fontSize: '10px' }}>|</span>}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', color: '#64748b' }}>
+                <span style={{ fontSize: '8px' }}>📍</span>
+                <span style={{ fontWeight: '600', color: '#475569' }}>{hubTerminal}</span>
+              </span>
+            </>
+          )}
+          {/* Notes (solo ARRIVAL/DEPARTURE) */}
+          {showHubInfo && tripNotes && (
+            <>
+              {(showFlightInfo || hubTerminal) && <span style={{ color: '#cbd5e1', fontSize: '10px' }}>|</span>}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', color: '#64748b' }}>
+                <span style={{ fontSize: '8px' }}>📝</span>
+                <span style={{ fontWeight: '500', color: '#64748b' }}>{tripNotes}</span>
+              </span>
+            </>
+          )}
+        </div>
         {isMultiStop ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '2px' }}>
@@ -140,8 +173,10 @@ function TripTableRow({ group, locsMap, sectionColor }) {
                 🔀 {group.rows.length}
               </span>
               {group.rows.map((row, i) => {
-                const fromName = (locsMap[row.pickup_id] || row.pickup_id || '–').split(' ').slice(0, 2).join(' ')
-                const toName   = (locsMap[row.dropoff_id] || row.dropoff_id || '–').split(' ').slice(0, 2).join(' ')
+                const fromLoc = locsMap[row.pickup_id]
+                const fromName = (typeof fromLoc === 'object' ? fromLoc.name : fromLoc || row.pickup_id || '–').split(' ').slice(0, 2).join(' ')
+                const toLoc = locsMap[row.dropoff_id]
+                const toName = (typeof toLoc === 'object' ? toLoc.name : toLoc || row.dropoff_id || '–').split(' ').slice(0, 2).join(' ')
                 const legTime  = minToHHMM(row.pickup_min)
                 return (
                   <span key={row.id || i} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '10px', whiteSpace: 'nowrap' }}>
@@ -166,16 +201,20 @@ function TripTableRow({ group, locsMap, sectionColor }) {
               }
               const pickupGroups = Object.values(byPickup).filter(g => g.names.length > 0)
               if (!pickupGroups.length) return null
-              return pickupGroups.map(pg => (
-                <div key={pg.pickup_id} style={{ display: 'flex', alignItems: 'baseline', gap: '4px', fontSize: '10px', marginTop: '1px', lineHeight: 1.3 }}>
-                  <span style={{ color: '#ea580c', fontWeight: '800', flexShrink: 0 }}>
-                    📍 {(locsMap[pg.pickup_id] || pg.pickup_id || '?').split(' ').slice(0, 3).join(' ')}:
-                  </span>
-                  <span style={{ color: '#475569', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {pg.names.join(' · ')}
-                  </span>
-                </div>
-              ))
+              return pickupGroups.map(pg => {
+                const pgLoc = locsMap[pg.pickup_id]
+                const pgLocName = typeof pgLoc === 'object' ? pgLoc.name : pgLoc || pg.pickup_id || '?'
+                return (
+                  <div key={pg.pickup_id} style={{ display: 'flex', alignItems: 'baseline', gap: '4px', fontSize: '10px', marginTop: '1px', lineHeight: 1.3 }}>
+                    <span style={{ color: '#ea580c', fontWeight: '800', flexShrink: 0 }}>
+                      📍 {pgLocName.split(' ').slice(0, 3).join(' ')}:
+                    </span>
+                    <span style={{ color: '#475569', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {pg.names.join(' · ')}
+                    </span>
+                  </div>
+                )
+              })
             })()}
           </div>
         ) : (
@@ -186,7 +225,10 @@ function TripTableRow({ group, locsMap, sectionColor }) {
               </span>
               <span style={{ color: '#94a3b8' }}>→</span>
               <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '11px' }}>
-                {locsMap[group.rows[0]?.dropoff_id] || group.rows[0]?.dropoff_id || '–'}
+                {(() => {
+                  const dropoffLoc = locsMap[group.rows[0]?.dropoff_id]
+                  return typeof dropoffLoc === 'object' ? dropoffLoc.name : dropoffLoc || group.rows[0]?.dropoff_id || '–'
+                })()}
               </span>
             </div>
             {group.rows[0]?.passenger_list && (
@@ -446,11 +488,11 @@ export default function ListsPage() {
         .eq('production_id', id).eq('date', d)
         .neq('status', 'CANCELLED')
         .order('pickup_min', { ascending: true, nullsLast: true }),
-      supabase.from('locations').select('id,name').eq('production_id', id),
+      supabase.from('locations').select('id,name,default_pickup_point').eq('production_id', id),
     ])
     setTrips(tR.data || [])
     if (lR.data) {
-      const m = {}; lR.data.forEach(l => { m[l.id] = l.name }); setLocsMap(m)
+      const m = {}; lR.data.forEach(l => { m[l.id] = { name: l.name, pickup_point: l.default_pickup_point } }); setLocsMap(m)
     }
     setLoading(false)
   }, [])

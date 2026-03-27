@@ -171,6 +171,18 @@ Automazioni:
 - Posizionato sopra le info route, non aggiunge colonne extra
 - Compatibile con stampa A4 landscape
 
+**S7h — Bug Fix: Object Rendering Error (27 marzo 2026):**
+- **Problema:** Runtime error "Objects are not valid as a React child" in Transport Lists
+- **Causa:** `locsMap` memorizza oggetti `{name, pickup_point}` ma il codice tentava di renderizzarli direttamente come children React
+- **Fix:** Aggiunto type checking `typeof loc === 'object'` prima di accedere alle proprietà
+- **Aree corrette:**
+  - `pickupName` — estrae `.name` da oggetto location
+  - `hubTerminal` — estrae `.pickup_point` da oggetto location
+  - `fromName`/`toName` in multi-stop — gestisce oggetti location
+  - Passenger list location names — estrae `.name` da oggetti
+  - Single-stop dropoff — gestisce oggetti location
+- **Pattern:** `const loc = locsMap[id]; const name = typeof loc === 'object' ? loc.name : loc || id || '–'`
+
 ### Navbar Unificata (S7f)
 - Componente `Navbar` in `lib/navbar.js` riutilizzabile su tutte le pagine
 - NAV_ITEMS esportato per coerenza globale
@@ -234,3 +246,9 @@ Automazioni:
 - JavaScript (non TypeScript), Tailwind CSS, App Router
 - Usa `claude-sonnet-4-6` con thinking per problemi complessi
 - Manuale VINCE sempre sull'automatico per Travel_Status
+
+### Workflow Localhost (27 marzo 2026)
+- **All'inizio di ogni task**: avviare `npm run dev` per testare modifiche in tempo reale
+- Server locale su `http://localhost:3000` con hot reload automatico
+- Testare sempre le modifiche su localhost prima del deploy
+- Comando: `npm run dev` → attende in background, aggiorna automaticamente al salvataggio file
