@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
@@ -17,8 +17,21 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
   const [confirmDel, setCd] = useState(false)
   const [error, setError]   = useState(null)
 
+  // ── Places Autocomplete state ──
+  const [placeQuery,   setPlaceQuery]   = useState('')
+  const [predictions,  setPredictions]  = useState([])
+  const [placeOpen,    setPlaceOpen]    = useState(false)
+  const [placeLoading, setPlaceLoading] = useState(false)
+  const [placeError,   setPlaceError]   = useState(null)
+  const debounceRef = useRef(null)
+  const dropdownRef = useRef(null)
+
+  // Reset sidebar state on open/close
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      setPlaceQuery(''); setPredictions([]); setPlaceOpen(false); setPlaceError(null)
+      return
+    }
     setError(null); setCd(false)
     if (mode === 'edit' && initial) {
       setForm({ id: initial.id || '', name: initial.name || '', is_hub: !!initial.is_hub, lat: initial.lat ?? '', lng: initial.lng ?? '', default_pickup_point: initial.default_pickup_point || '' })
@@ -26,6 +39,49 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
       setForm({ ...EMPTY })
     }
   }, [open, mode, initial])
+
+  // Debounce Google Places search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!placeQuery.trim() || placeQuery.length < 2) { setPredictions([]); setPlaceOpen(false); return }
+    debounceRef.current = setTimeout(async () => {
+      setPlaceLoading(true); setPlaceError(null)
+      try {
+        const res  = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(placeQuery)}`)
+        const data = await res.json()
+        if (data.predictions) { setPredictions(data.predictions); setPlaceOpen(data.predictions.length > 0) }
+        else { setPlaceError(data.error || 'Errore ricerca'); setPlaceOpen(false) }
+      } catch { setPlaceError('Network error'); setPlaceOpen(false) }
+      setPlaceLoading(false)
+    }, 400)
+    return () => clearTimeout(debounceRef.current)
+  }, [placeQuery])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handler(e) { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setPlaceOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  async function handleSelectPlace(prediction) {
+    setPlaceOpen(false)
+    setPlaceQuery(prediction.description)
+    setPlaceLoading(true); setPlaceError(null)
+    try {
+      const res  = await fetch(`/api/places/details?place_id=${encodeURIComponent(prediction.place_id)}`)
+      const data = await res.json()
+      if (data.lat != null) {
+        setForm(f => ({
+          ...f,
+          lat: String(data.lat),
+          lng: String(data.lng),
+          default_pickup_point: data.address || f.default_pickup_point,
+        }))
+      } else { setPlaceError(data.error || 'Dettagli non disponibili') }
+    } catch { setPlaceError('Network error') }
+    setPlaceLoading(false)
+  }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -46,7 +102,6 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
     if (mode === 'new') {
       const r = await supabase.from('locations').insert(row); err = r.error
     } else {
-      // id è PK text, non si può cambiare
       const { id, ...upd } = row
       const r = await supabase.from('locations').update(upd).eq('id', initial.id); err = r.error
     }
@@ -116,6 +171,43 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
               </div>
             </div>
 
+            {/* ── Google Places Autocomplete ── */}
+            <div style={{ ...fld, position: 'relative' }} ref={dropdownRef}>
+              <label style={lbl}>🔍 Cerca su Google Maps</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={placeQuery}
+                  onChange={e => setPlaceQuery(e.target.value)}
+                  onFocus={() => predictions.length > 0 && setPlaceOpen(true)}
+                  style={{ ...inp, paddingRight: placeLoading ? '32px' : '10px', borderColor: placeOpen ? '#2563eb' : '#e2e8f0' }}
+                  placeholder="Es: Grand Hotel Palermo, Aeroporto di Palermo…"
+                  autoComplete="off"
+                />
+                {placeLoading && (
+                  <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', border: '2px solid #e2e8f0', borderTop: '2px solid #2563eb', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                )}
+              </div>
+              {placeError && <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '3px' }}>⚠ {placeError}</div>}
+              {placeOpen && predictions.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden', marginTop: '2px' }}>
+                  {predictions.map((p, i) => (
+                    <button
+                      key={p.place_id}
+                      type="button"
+                      onMouseDown={() => handleSelectPlace(p)}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none', borderBottom: i < predictions.length - 1 ? '1px solid #f1f5f9' : 'none', background: 'white', cursor: 'pointer', transition: 'background 0.1s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                    >
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', marginBottom: '1px' }}>📍 {p.main_text}</div>
+                      {p.secondary_text && <div style={{ fontSize: '11px', color: '#94a3b8' }}>{p.secondary_text}</div>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Lat / Lng */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
@@ -131,7 +223,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
               ⚠ Usa il <strong>punto</strong> come separatore decimale (non la virgola). Coordinate usate per Haversine fallback.
             </div>
 
-            {/* Meeting Point */}
+            {/* Default Pickup Point */}
             <div style={fld}>
               <label style={lbl}>Default Pickup Point</label>
               <input value={form.default_pickup_point} onChange={e => set('default_pickup_point', e.target.value)} style={inp} placeholder="Uscita Arrivi, Terminal 2…" />
@@ -169,6 +261,8 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
           </div>
         </form>
       </div>
+
+      <style>{`@keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }`}</style>
     </>
   )
 }
