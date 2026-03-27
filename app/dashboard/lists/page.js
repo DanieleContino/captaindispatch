@@ -272,16 +272,32 @@ function TransportListHeader({ production, date }) {
   const radius = '10px'
   const radiusSm = '5px'
 
+  // Compact contacts for print
+  const printContacts = [
+    prod.director ? `Dir: ${prod.director}` : null,
+    prod.producer ? `Pro: ${prod.producer}` : null,
+    prod.production_manager ? `PM: ${prod.production_manager}` : null,
+    prod.transportation_coordinator ? `TC: ${prod.transportation_coordinator}` : null,
+    prod.transportation_captain ? `Cap: ${prod.transportation_captain}` : null,
+  ].filter(Boolean).join(' · ')
+
   return (
-    <div style={{
-      border: `0.5px solid ${borderColor}`,
-      borderRadius: radius,
-      overflow: 'hidden',
-      background: 'white',
-      marginBottom: '10px',
-    }}>
+    <>
+      {/* Header stampabile - riga singola compatta */}
+      <div className="print-only-header" style={{ display: 'none', padding: '6px 8px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: '9px', lineHeight: 1.4 }}>
+        <strong>{prod.name || 'Production'}</strong> · {date} · Call: {callTime} · {printContacts}
+      </div>
+
+      {/* Header webapp - layout 2 colonne */}
+      <div className="no-print" style={{
+        border: `0.5px solid ${borderColor}`,
+        borderRadius: radius,
+        overflow: 'hidden',
+        background: 'white',
+        marginBottom: '10px',
+      }}>
       {/* Layout 2 colonne: SX info produzione (70%), DX contatti (30%) */}
-      <div className="print-header-grid" style={{
+      <div style={{
         display: 'grid',
         gridTemplateColumns: '2.33fr 1fr',
         gap: '12px',
@@ -289,7 +305,7 @@ function TransportListHeader({ production, date }) {
         borderBottom: `0.5px solid ${borderColor}`,
       }}>
         {/* COLONNA SINISTRA: Logo + Info Produzione + General Call */}
-        <div className="print-header-left" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
             {/* Logo */}
             {prod.logo_url ? (
@@ -339,7 +355,7 @@ function TransportListHeader({ production, date }) {
           </div>
 
           {/* General Call */}
-          <div className="print-general-call" style={{ marginTop: '4px' }}>
+          <div style={{ marginTop: '4px' }}>
             <div style={{ fontSize: '9px', color: textTertiary, fontWeight: '600', letterSpacing: '0.5px' }}>GENERAL CALL</div>
             <div style={{ fontSize: '26px', fontWeight: '700', lineHeight: 1, color: textPrimary, marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
               {callTime}
@@ -348,7 +364,7 @@ function TransportListHeader({ production, date }) {
         </div>
 
         {/* COLONNA DESTRA: Contatti compatti */}
-        <div className="print-header-right" style={{
+        <div style={{
           background: bgSecondary,
           padding: '8px 10px',
           borderRadius: '6px',
@@ -397,7 +413,8 @@ function TransportListHeader({ production, date }) {
         <span>🎬 <strong style={{ color: textPrimary, fontWeight: '600' }}>Set:</strong> {setLabel}</span>
         <span>🏕 <strong style={{ color: textPrimary, fontWeight: '600' }}>Basecamp:</strong> {basecampLabel}</span>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 
@@ -529,43 +546,9 @@ export default function ListsPage() {
             margin: 0 !important;
           }
 
-          /* Header compatto per stampa */
-          .print-header-grid {
+          /* Header stampabile compatto */
+          .print-only-header {
             display: block !important;
-            padding: 6px 10px !important;
-          }
-          
-          .print-header-left {
-            margin-bottom: 4px !important;
-          }
-          
-          .print-header-left > div:first-child {
-            display: flex !important;
-            align-items: center !important;
-            gap: 8px !important;
-          }
-          
-          .print-header-left img,
-          .print-header-left > div:first-child > div:first-child {
-            width: 36px !important;
-            height: 24px !important;
-          }
-          
-          .print-general-call {
-            display: none !important;
-          }
-          
-          .print-header-right {
-            display: grid !important;
-            grid-template-columns: repeat(4, 1fr) !important;
-            gap: 8px !important;
-            font-size: 8px !important;
-            padding: 4px 6px !important;
-            margin-top: 4px !important;
-          }
-          
-          .print-header-right > div {
-            line-height: 1.3 !important;
           }
         }
 
