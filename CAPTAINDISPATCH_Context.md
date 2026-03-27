@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 27 marzo 2026 (S7l)**
+**Aggiornato: 27 marzo 2026 (S7m)**
 
 ---
 
@@ -279,46 +279,108 @@ Automazioni:
 
 ---
 
-## BUG APERTI — Da fixare nella prossima task
+## S7m — Multi-stop Bug Fixes (27 marzo 2026)
 
-### BUG-1: Multi-stop DEPARTURE — pickup times uguali tra i leg
-**Flusso:** hub-coverage → Assign → Trips → "Add to Existing Trip" (hotel diverso) → crea sibling T001B
+### BUG-1 FIX ✅ — Sibling pickup time mancante + editabile in sidebar
 
-**Sintomo:** T001A (Hotel NH → Aeroporto) e T001B (Hotel Marriott → Aeroporto) mostrano lo stesso orario di pickup nella colonna ROUTE della lista trips.
+**Cosa è stato fatto:**
 
-**Root cause già indagato:**
-- `sibRoute` lookup in `handleAddToExisting` cerca `routes WHERE from_id=Hotel_B AND to_id=Hub`
-- Se la rotta NON esiste in `routes` → `sibDurationMin = null` → `sibCalc = null` → `pickup_min = null`
-- In `TripRow` multi-stop: `r.pickup_min ?? r.call_min` → cade back su `call_min` (uguale per tutti i leg) → stesso orario
+1. **`TripRow` multi-stop** — ogni leg ora mostra:
+   - `🕐 HH:MM` se `pickup_min` è valorizzato
+   - `⚠ no route` (badge arancione) se `pickup_min` è null (rotta non in DB)
+   
+2. **`EditTripSidebar`** — nuova sezione "🔀 SIBLING LEGS — PICKUP TIME":
+   - Compare solo quando il trip è multi-stop (group.length > 1)
+   - Per ogni sibling: mostra il percorso (Hotel X → Hub), input `duration_min` editabile
+   - Preview PICKUP calcolato in real-time mentre si digita la durata
+   - Badge `⚠ no route — duration unknown` se `pickup_min` è null e duration vuota
+   - `sibDurations` state: `{[sib.id]: string}` — inizializzato dai valori DB, modificabile
+   - Al salvataggio: `handleSubmit` usa `sibDurations[sib.id]` invece di `sib.duration_min`
 
-**Fix da implementare:**
-1. Verificare se la rotta Hotel B → Hub esiste in `routes` (è il check principale)
-2. Se non esiste: mostrare warning nella UI "⚠ Route not found — duration unknown" con badge arancione sul leg nel display TripRow
-3. Aggiungere campo `duration_min` editabile nel multi-stop leg della EditTripSidebar per i sibling (attualmente il form edita solo `initial` = primo leg)
-4. Quando si salva la duration dal form del sibling → ricalcola `pickup_min` del sibling
+**Workflow per fixare un sibling senza route in DB:**
+1. Aprire EditTripSidebar sul trip multi-stop (badge 🔀 MULTI)
+2. Sezione "SIBLING LEGS" mostra `⚠ no route` sul leg con pickup mancante
+3. Inserire la durata manualmente nel campo "Duration (min)"
+4. Preview PICKUP si aggiorna live
+5. Cliccare "Save Changes" → `pickup_min` calcolato e salvato
 
 **File:** `app/dashboard/trips/page.js`
-- `handleAddToExisting` (TripSidebar) — creazione sibling
-- `TripRow` — display multi-stop legs con pickup time
-- `EditTripSidebar` — allow editing sibling leg's duration_min
 
 ---
 
-### BUG-2: Multi-stop — eliminare passeggero non rimuove il sibling/badge
-**Flusso:** Apri EditTripSidebar su un trip multi-stop → rimuovi l'unico passeggero del sibling leg → sibling rimane visibile con hotel e badge MULTI-PKP
+### BUG-2 DEBUG ✅ — removePax: console.log + error handling esplicito
 
-**Sintomo verificato:** Dopo removePax, `loadTrips` ricarica, ma il sibling trip T001B persiste nella lista (il badge MULTI-PKP e l'hotel rimangono).
+**Cosa è stato fatto:**
 
-**Tentativo di fix già applicato (non ha funzionato):**
-- Aggiunto `useEffect([trips])` in TripsPage che ricalcola `editTripGroup`
-- La logica di cleanup in `removePax` dovrebbe già eliminare il sibling se 0 pax
+`removePax` ora:
+1. **console.log** all'inizio: `[removePax] crew: ... | crew.trip_row_id: ... | initial.id: ... → targetTripId: ...`
+2. **Error handling** sul primo DELETE (`trip_passengers`): se fallisce → `setError(msg)` + return
+3. **console.log sibling check**: `[removePax] sibling check | siblingStillHasPax: ... | targetTripId: ...`
+4. **Error handling esplicito** sul DELETE sibling trip: cattura `delTripErr` → `setError(...)` + return
+5. **console.log** su sibling eliminato con successo
 
-**Ipotesi ancora da verificare:**
-1. La RLS policy su `trips` potrebbe bloccare il DELETE del sibling
-2. `targetTripId` potrebbe essere uguale a `initial.id` per qualche motivo (crew.trip_row_id non impostato correttamente)
-3. Il sibling potrebbe avere altri trip_passengers non visibili nel gruppo corrente
+**Come usare il debug:**
+- Aprire DevTools → Console
+- Rimuovere un passeggero da un trip multi-stop
+- Osservare i log per capire:
+  - Se `targetTripId === initial.id` → il sibling non viene identificato correttamente (problema crew.trip_row_id)
+  - Se `siblingStillHasPax: true` → altri pax rimasti (non dovrebbe succedere se era l'unico)
+  - Se appare un errore → è RLS che blocca il DELETE → verificare policy su `trips`
 
-**Debug suggerito:** Aggiungere `console.log('removePax targetTripId:', targetTripId, 'initial.id:', initial.id)` per verificare che il sibling venga identificato correttamente prima del delete.
+**File:** `app/dashboard/trips/page.js` — funzione `removePax` in `EditTripSidebar`
+
+---
+
+## BUG ANCORA APERTI — Da verificare dopo test
+
+### BUG-2 (parziale): Sibling non eliminato — causa ancora incerta
+**Stato:** Debug aggiunto, causa non ancora confermata da test reale.
+
+**Ipotesi principale (da verificare con i log):**
+1. RLS su `trips` blocca il DELETE del sibling → verificare policy `trips` in Supabase
+2. `crew.trip_row_id` non impostato → `targetTripId === initial.id` → la branch sibling non viene mai eseguita
+
+**Se RLS blocca il DELETE:** Aggiungere policy su Supabase:
+```sql
+CREATE POLICY "Allow delete own production trips" ON trips
+  FOR DELETE USING (production_id = current_setting('app.production_id', true)::uuid);
+```
+O in alternativa usare la service role key per le operazioni di delete.
+## BUG APERTI — Da fixare nella prossima task
+
+### BUG-1: Multi-stop DEPARTURE — pickup times uguali tra i leg
+**Stato S7m:** ✅ Fix UI implementato. Nella lista trips ora appare `⚠ no route` badge sui leg senza pickup_min. Nella EditTripSidebar esiste la sezione "SIBLING LEGS" con input duration_min editabile e preview pickup live.
+
+**Workflow per fixare un sibling senza rotta in DB:**
+1. Aprire EditTripSidebar sul trip multi-stop
+2. Sezione "🔀 SIBLING LEGS" mostra il leg con `⚠ no route — duration unknown`
+3. Inserire la durata nel campo → preview PICKUP si aggiorna live
+4. "Save Changes" → `pickup_min` calcolato e salvato su DB
+
+**Root cause originale ancora aperta (a monte, in DB):**
+- Se la rotta Hotel B → Hub non esiste in `routes`, il sibling viene creato con `pickup_min = null`
+- Fix definitivo: aggiungere la rotta mancante in `routes` + editare la duration nel sidebar
+
+---
+
+### BUG-2: Sibling non eliminato — causa ancora incerta dopo debug
+**Stato S7m:** Console.log e error handling aggiunti. Causa non ancora confermata da test reale.
+
+**Come debuggare:**
+1. Aprire DevTools → Console
+2. Aprire EditTripSidebar su un trip multi-stop
+3. Rimuovere l'unico passeggero del sibling leg
+4. Osservare i log `[removePax]`:
+   - `targetTripId === initial.id` → `crew.trip_row_id` non impostato → bug in loadPaxData
+   - `siblingStillHasPax: true` → ci sono altri pax (inatteso)
+   - Errore visibile in UI → è RLS che blocca il DELETE trips
+
+**Se RLS blocca il DELETE:** In Supabase SQL Editor:
+```sql
+CREATE POLICY "Allow delete own production trips" ON trips
+  FOR DELETE USING (production_id = current_setting('app.production_id', true)::uuid);
+```
+(sostituire con la policy corretta per il progetto)
 
 **File:** `app/dashboard/trips/page.js` — funzione `removePax` in `EditTripSidebar`
 
