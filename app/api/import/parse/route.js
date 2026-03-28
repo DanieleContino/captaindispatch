@@ -46,8 +46,11 @@ Never invent values. If absent, use null.`
 /**
  * Estrae testo dal file in base all'estensione.
  * Usa require() (non import) perché i pacchetti sono in serverExternalPackages.
+ *
+ * Per XLSX: usa solo il foglio specificato nelle istruzioni (o il primo per default),
+ * evitando di convertire tutti i fogli nascosti/extra che possono generare decine di MB.
  */
-async function extractTextFromFile(buffer, filename) {
+async function extractTextFromFile(buffer, filename, instructions = '') {
   const ext = (filename.split('.').pop() || '').toLowerCase()
 
   if (ext === 'pdf') {
@@ -66,12 +69,30 @@ async function extractTextFromFile(buffer, filename) {
   if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
     const XLSX = require('xlsx')
     const workbook = XLSX.read(buffer, { type: 'buffer' })
-    let text = ''
-    for (const sheetName of workbook.SheetNames) {
-      const sheet = workbook.Sheets[sheetName]
-      text += XLSX.utils.sheet_to_csv(sheet) + '\n'
+
+    // Determina il foglio da usare: cerca nelle istruzioni, default = primo foglio
+    let targetSheet = workbook.SheetNames[0]
+    if (instructions && workbook.SheetNames.length > 1) {
+      const lower = instructions.toLowerCase()
+      // 1. Match esatto per nome foglio (case-insensitive)
+      const exactMatch = workbook.SheetNames.find(n => lower.includes(n.toLowerCase()))
+      if (exactMatch) {
+        targetSheet = exactMatch
+      } else {
+        // 2. "foglio N" o "sheet N" → indice 1-based
+        const byIndex = lower.match(/(?:foglio|sheet)\s*(\d+)/i)
+        if (byIndex) {
+          const idx = parseInt(byIndex[1]) - 1
+          if (idx >= 0 && idx < workbook.SheetNames.length) {
+            targetSheet = workbook.SheetNames[idx]
+          }
+        }
+      }
     }
-    return text
+
+    console.log(`[import/parse] XLSX: using sheet "${targetSheet}" (available: ${workbook.SheetNames.join(', ')})`)
+    const sheet = workbook.Sheets[targetSheet]
+    return XLSX.utils.sheet_to_csv(sheet)
   }
 
   throw new Error(`Formato non supportato: .${ext}. Usa .xlsx, .xls, .csv, .pdf o .docx`)
@@ -157,10 +178,18 @@ export async function POST(req) {
     const filename = file.name || 'file'
 
     // ── STEP 1: Estrazione testo ────────────────────────────
-    const text = await extractTextFromFile(buffer, filename)
+    // Passa le istruzioni all'extractor per XLSX (sheet selection)
+    let text = await extractTextFromFile(buffer, filename, instructions)
 
     if (!text || text.trim().length < 10) {
       return NextResponse.json({ error: 'Impossibile estrarre testo dal file. Verifica che non sia vuoto o protetto.' }, { status: 400 })
+    }
+
+    // ── STEP 1b: Truncate — limite Claude (byte + token rate limit) ──
+    const MAX_CHARS = 100_000   // ~25k token, ampiamente sufficiente per liste crew/fleet
+    if (text.length > MAX_CHARS) {
+      console.warn(`[import/parse] Testo troncato: ${text.length} → ${MAX_CHARS} chars`)
+      text = text.slice(0, MAX_CHARS)
     }
 
     // ── STEP 2: System prompt ───────────────────────────────
@@ -178,7 +207,12 @@ export async function POST(req) {
     }
 
     // ── STEP 3: Claude API ──────────────────────────────────
-    const extracted = await callClaude(systemPrompt, text)
+    // Per fleet/crew: se l'utente ha fornito istruzioni aggiuntive, le appendiamo
+    // al contenuto utente come contesto extra (senza alterare il system prompt strutturato)
+    const userContent = (mode !== 'custom' && instructions.trim())
+      ? `${text}\n\n---\nAdditional instructions from user: ${instructions.trim()}`
+      : text
+    const extracted = await callClaude(systemPrompt, userContent)
 
     // ── STEP 4a: Fleet — duplicate detection ────────────────
     if (mode === 'fleet') {
