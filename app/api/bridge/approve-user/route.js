@@ -14,6 +14,7 @@
  */
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabaseServer'
 import { NextResponse } from 'next/server'
+import { sendPushToUser } from '@/lib/webpush'
 
 function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -71,6 +72,17 @@ export async function POST(req) {
       { onConflict: 'user_id,production_id', ignoreDuplicates: true }
     )
     if (roleErr) return NextResponse.json({ error: roleErr.message }, { status: 500 })
+
+    // S11 TASK 3 — Push all'utente approvato
+    try {
+      await sendPushToUser(userId, {
+        title: 'CaptainDispatch',
+        body: '✅ Il tuo accesso a CaptainDispatch è stato approvato!',
+        url: '/dashboard',
+      })
+    } catch (pushErr) {
+      console.error('❌ Push approve user error:', pushErr.message)
+    }
 
     return NextResponse.json({ success: true, productionId: resolvedProductionId, mode })
   } catch (e) {

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createSupabaseServiceClient } from '@/lib/supabaseServer'
 import { sendLoginNotification } from '@/lib/sendLoginNotification'
+import { sendPushToUser } from '@/lib/webpush'
 
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url)
@@ -47,7 +48,30 @@ export async function GET(request) {
           
           // Invia notifica email
           await sendLoginNotification(user.email, isApproved)
-          
+
+          // S11 TASK 3 — Push a CAPTAIN/ADMIN se utente è in attesa di approvazione
+          if (!isApproved) {
+            try {
+              const { data: captains } = await serviceClient
+                .from('user_roles')
+                .select('user_id')
+                .in('role', ['CAPTAIN', 'ADMIN'])
+
+              const uniqueUserIds = [...new Set((captains || []).map(r => r.user_id))]
+              await Promise.allSettled(
+                uniqueUserIds.map(uid =>
+                  sendPushToUser(uid, {
+                    title: 'CaptainDispatch',
+                    body: `👤 Nuovo utente in attesa: ${user.email}`,
+                    url: '/dashboard/bridge',
+                  })
+                )
+              )
+            } catch (pushErr) {
+              console.error('❌ Push pending user error:', pushErr.message)
+            }
+          }
+
           // Se approvato → dashboard, altrimenti → pending
           const redirectUrl = isApproved 
             ? `${origin}/dashboard`

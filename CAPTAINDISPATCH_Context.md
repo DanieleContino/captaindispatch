@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅)**
 
 ---
 
@@ -234,7 +234,7 @@ const { supported, permission, subscribed, subscribe, unsubscribe } = useNotific
 
 ---
 
-### TASK 3 — Notifiche Real-Time (eventi utente) [ ]
+### TASK 3 — Notifiche Real-Time (eventi utente) ✅
 > *Push istantanei su eventi già esistenti nel sistema*
 
 **File da modificare:**
