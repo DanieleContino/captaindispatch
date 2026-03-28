@@ -27,7 +27,7 @@ const CLASS_COLOR = {
 // ─── Sidebar ──────────────────────────────────────────────────
 function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
   const t = useT()
-  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: '', license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', sign_code: '', unit_default: '', active: true }
+  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: '', license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', sign_code: '', unit_default: '', active: true, available_from: '', available_to: '' }
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [deleting, setDel]  = useState(false)
@@ -38,7 +38,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
     if (!open) return
     setError(null); setCd(false)
     if (mode === 'edit' && initial) {
-      setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: initial.vehicle_class || '', license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false })
+      setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: initial.vehicle_class || '', license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, available_from: initial.available_from || '', available_to: initial.available_to || '' })
     } else {
       setForm({ ...EMPTY })
     }
@@ -63,6 +63,8 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
       sign_code:      form.sign_code.trim() || null,
       unit_default:   form.unit_default.trim() || null,
       active:         form.active,
+      available_from: form.available_from || null,
+      available_to:   form.available_to   || null,
     }
     let err
     if (mode === 'new') {
@@ -201,6 +203,24 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
               </div>
             </div>
 
+            {/* Availability Dates */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #d1d5db', background: '#f8fafc' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px' }}>{t.availabilityDates}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={lbl}>{t.availableFrom}</label>
+                  <input type="date" value={form.available_from} onChange={e => set('available_from', e.target.value)}
+                    style={{ ...inp, borderColor: '#d1d5db' }} />
+                </div>
+                <div>
+                  <label style={lbl}>{t.availableTo}</label>
+                  <input type="date" value={form.available_to} onChange={e => set('available_to', e.target.value)}
+                    style={{ ...inp, borderColor: '#d1d5db' }} />
+                </div>
+              </div>
+              <div style={{ fontSize: '9px', color: '#94a3b8', marginTop: '6px' }}>{t.availabilityHint}</div>
+            </div>
+
             {/* Active toggle */}
             <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.active ? '#86efac' : '#e2e8f0'}`, background: form.active ? '#f0fdf4' : '#f8fafc', cursor: 'pointer' }}
               onClick={() => set('active', !form.active)}>
@@ -250,10 +270,23 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
   )
 }
 
+// ─── Helper: format ISO date → "01 Apr" ───────────────────────
+function fmtAvailDate(iso) {
+  if (!iso) return null
+  return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+}
+
 // ─── Row veicolo ──────────────────────────────────────────────
 function VehicleRow({ v, onEdit }) {
   const tc = TYPE_COLOR[v.vehicle_type] || TYPE_COLOR.VAN
   const icon = TYPE_ICON[v.vehicle_type] || '🚐'
+
+  // Availability badge
+  const hasAvail = v.available_from || v.available_to
+  const availLabel = hasAvail
+    ? `${v.available_from ? fmtAvailDate(v.available_from) : '∞'} → ${v.available_to ? fmtAvailDate(v.available_to) : '∞'}`
+    : null
+
   return (
     <div style={{ background: 'white', border: '1px solid #e2e8f0', borderLeft: `4px solid ${v.active ? tc.border : '#e2e8f0'}`, borderRadius: '9px', padding: '12px 16px', display: 'grid', gridTemplateColumns: '40px 1fr auto', alignItems: 'center', gap: '12px', opacity: v.active ? 1 : 0.55 }}>
       <div style={{ fontSize: '28px', textAlign: 'center' }}>{icon}</div>
@@ -267,6 +300,11 @@ function VehicleRow({ v, onEdit }) {
           {(v.pax_suggested || v.pax_max) && (
             <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 7px', borderRadius: '5px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
               🚀 {v.pax_suggested ?? '?'}/{v.pax_max ?? '?'}
+            </span>
+          )}
+          {availLabel && (
+            <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '5px', background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', fontVariantNumeric: 'tabular-nums' }}>
+              📅 {availLabel}
             </span>
           )}
           {!v.active && <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #e2e8f0' }}>INATTIVO</span>}

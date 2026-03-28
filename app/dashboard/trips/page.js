@@ -63,6 +63,18 @@ const STS = {
   CANCELLED: { bg: '#fef2f2', color: '#dc2626' },
 }
 
+// ─── Vehicle date-range check (available_from / available_to) ─
+// A vehicle can be assigned from the day BEFORE its available_from date.
+function isVehicleAvailableForDate(v, date) {
+  if (!date || !v) return true
+  if (v.available_from) {
+    const dayBefore = isoAdd(v.available_from, -1)
+    if (date < dayBefore) return false
+  }
+  if (v.available_to && date > v.available_to) return false
+  return true
+}
+
 // ─── Vehicle availability check ───────────────────────────────
 async function checkVehicleAvail(vehicleId, date, startDt, endDt, excludeRowIds) {
   if (!vehicleId || !startDt || !endDt || !PRODUCTION_ID) return null
@@ -666,7 +678,14 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               <label style={lbl}>Vehicle</label>
               <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={inp}>
                 <option value="">No vehicle</option>
-                {vehicles.map(v => <option key={v.id} value={v.id}>{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}</option>)}
+                {vehicles.map(v => {
+                  const avail = isVehicleAvailableForDate(v, form.date)
+                  return (
+                    <option key={v.id} value={v.id}>
+                      {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
+                    </option>
+                  )
+                })}
               </select>
               {form.vehicle_id && vCheck && (
                 <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: '700', color: vCheck.available ? '#15803d' : '#dc2626' }}>
@@ -1174,7 +1193,14 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               <label style={lbl}>Vehicle</label>
               <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={inp}>
                 <option value="">No vehicle</option>
-                {vehicles.map(v => <option key={v.id} value={v.id}>{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}</option>)}
+                {vehicles.map(v => {
+                  const avail = isVehicleAvailableForDate(v, form.date)
+                  return (
+                    <option key={v.id} value={v.id}>
+                      {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
+                    </option>
+                  )
+                })}
               </select>
               {form.vehicle_id && vCheck && (
                 <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: '700', color: vCheck.available ? '#15803d' : '#dc2626' }}>
@@ -1405,7 +1431,7 @@ function TripsPageInner() {
         )
         const [locsR, vhcR, stR] = await Promise.all([
           supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name'),
-          supabase.from('vehicles').select('id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
+          supabase.from('vehicles').select('id,driver_name,sign_code,capacity,vehicle_type,available_from,available_to').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
           supabase.from('service_types').select('id,name').eq('production_id', PRODUCTION_ID).order('sort_order'),
         ])
         if (locsR.data) { const m = {}; locsR.data.forEach(l => { m[l.id] = l.name }); setLocsMap(m); setLocsList(locsR.data) }
