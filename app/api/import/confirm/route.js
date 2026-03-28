@@ -114,11 +114,18 @@ export async function POST(req) {
           }
         }
 
+        // Default capacity e pax_suggested per tipo se non specificati nel file
+        const CAP_DEFAULT   = { VAN: 8, CAR: 4, BUS: null }
+        const PAX_DEFAULT   = { VAN: 8, CAR: 4, BUS: null }
+
         const toInsert = insertRows.map(r => {
           const vtype = (r.vehicle_type || 'VAN').toUpperCase()
           const safeType = maxByType[vtype] !== undefined ? vtype : 'VAN'
           maxByType[safeType] = (maxByType[safeType] || 0) + 1
           const autoId = `${safeType}-${String(maxByType[safeType]).padStart(2, '0')}`
+
+          const capDefault = CAP_DEFAULT[safeType] ?? null
+          const paxDefault = PAX_DEFAULT[safeType] ?? null
 
           return {
             id:             autoId,
@@ -126,8 +133,9 @@ export async function POST(req) {
             driver_name:    r.driver_name    ?? null,
             vehicle_type:   r.vehicle_type   || 'VAN',
             license_plate:  r.license_plate  ?? null,
-            capacity:       r.capacity       ?? null,
-            pax_suggested:  r.pax_suggested  ?? null,
+            capacity:       r.capacity       ?? capDefault,
+            pax_suggested:  r.pax_suggested  ?? paxDefault,
+            pax_max:        r.pax_max        ?? null,
             sign_code:      r.sign_code      ?? null,
             available_from: r.available_from ?? null,
             available_to:   r.available_to   ?? null,
@@ -162,6 +170,7 @@ export async function POST(req) {
             license_plate:  r.license_plate  ?? null,
             capacity:       r.capacity       ?? null,
             pax_suggested:  r.pax_suggested  ?? null,
+            pax_max:        r.pax_max        ?? null,
             sign_code:      r.sign_code      ?? null,
             available_from: r.available_from ?? null,
             available_to:   r.available_to   ?? null,

@@ -35,6 +35,7 @@ Fields per vehicle:
   license_plate  (string uppercase|null)
   capacity       (number|null)
   pax_suggested  (number|null)
+  pax_max        (number|null)
   sign_code      (string|null)
   available_from ("YYYY-MM-DD"|null)
   available_to   ("YYYY-MM-DD"|null)
