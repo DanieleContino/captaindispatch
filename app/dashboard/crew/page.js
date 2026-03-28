@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
+import { ImportModal } from '../../../lib/ImportModal'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
@@ -391,6 +392,7 @@ export default function CrewPage() {
   const [sidebarOpen, setSO]    = useState(false)
   const [sidebarMode, setSM]    = useState('new')  // 'new' | 'edit'
   const [editTarget, setET]     = useState(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   function openNew()          { setSM('new');  setET(null); setSO(true) }
   function openEdit(member)   { setSM('edit'); setET(member); setSO(true) }
@@ -521,6 +523,10 @@ export default function CrewPage() {
             style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
             ↻
           </button>
+          <button onClick={() => setImportOpen(true)}
+            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151' }}>
+            {t.importFromFile}
+          </button>
           <button onClick={openNew}
             style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
             {t.addCrew}
@@ -599,6 +605,15 @@ export default function CrewPage() {
         locations={locations}
         onClose={() => setSO(false)}
         onSaved={handleSaved}
+      />
+
+      <ImportModal
+        open={importOpen}
+        mode="crew"
+        productionId={PRODUCTION_ID}
+        locations={locations}
+        onClose={() => setImportOpen(false)}
+        onImported={() => { setImportOpen(false); loadCrew() }}
       />
     </div>
   )

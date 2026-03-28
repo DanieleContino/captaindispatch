@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
+import { ImportModal } from '../../../lib/ImportModal'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
@@ -333,6 +334,7 @@ export default function VehiclesPage() {
   const [sidebarOpen, setSO] = useState(false)
   const [mode,    setMode]   = useState('new')
   const [editItem, setEdit]  = useState(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -419,6 +421,9 @@ export default function VehiclesPage() {
             })}
           </div>
           <button onClick={load} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
+          <button onClick={() => setImportOpen(true)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151' }}>
+            {t.importFromFile}
+          </button>
           <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
             {t.addVehicleBtn}
           </button>
@@ -444,6 +449,15 @@ export default function VehiclesPage() {
       </div>
 
       <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} />
+
+      <ImportModal
+        open={importOpen}
+        mode="fleet"
+        productionId={PRODUCTION_ID}
+        locations={[]}
+        onClose={() => setImportOpen(false)}
+        onImported={() => { setImportOpen(false); load() }}
+      />
     </div>
   )
 }
