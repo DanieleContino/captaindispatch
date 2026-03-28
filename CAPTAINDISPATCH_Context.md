@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅ | S13 — Vehicles Delete + Bulk Select ✅)**
 
 ---
 
@@ -35,7 +35,7 @@ GitHub: DanieleContino/captaindispatch (branch: master)
 | `/dashboard/fleet` | Fleet Monitor realtime |
 | `/dashboard/trips` | Multi-stop indicators, Assign integration, i18n |
 | `/dashboard/crew` | Anagrafica + Travel_Status, i18n |
-| `/dashboard/vehicles` | Fleet con pax_suggested/max, i18n |
+| `/dashboard/vehicles` | Fleet con pax_suggested/max, i18n — Delete inline + Checkbox Select All + Bulk Delete ✅ |
 | `/dashboard/locations` | Google Places Autocomplete + Map Picker |
 | `/dashboard/rocket` | Rocket Trip Generator v2 — completo (TASK 1-7) ✅ |
 | `/dashboard/lists` | Transport Lists print-optimized (A4 landscape) |
@@ -392,6 +392,18 @@ idle → parsing (spinner "Extracting data…") → preview → confirming (spin
 - `app/dashboard/crew/page.js` → import `ImportModal`, stato `importOpen`, bottone `📂 Import from file` nella toolbar (prima di `+ Add Crew`), `<ImportModal mode="crew" locations={locations} ... onImported={() => { setImportOpen(false); loadCrew() }}>` montato
 
 **Dopo import:** ricarica automatica della lista (`load()` / `loadCrew()`).
+
+---
+
+### Vehicles — Delete + Bulk Select ✅ (28/03/26)
+
+**Feature aggiunte a `/dashboard/vehicles`:**
+
+- **Delete inline per riga** — icona 🗑 rossa accanto a ✎ Edit; click → conferma inline a 2 step (`⚠ Confirm` / `✕ Annulla`) senza aprire la sidebar; chiama `supabase.from('vehicles').delete().eq('id', id)` + reload
+- **Checkbox per riga** — checkbox a sinistra di ogni `VehicleRow`; riga selezionata → highlight azzurro (`#eff6ff`, border `#bfdbfe`, left border `#3b82f6`)
+- **Select All** — header riga con checkbox che supporta stato `indeterminate` (⊟ parziale / ☑ tutti / ☐ nessuno); seleziona/deseleziona tutti i veicoli filtrati visibili
+- **Barra Bulk Actions** — appare quando `selectedIds.length > 0`: `☑ N selezionati | [🗑 Elimina selezionati] | [✕ Annulla selezione]`; conferma → `supabase.from('vehicles').delete().in('id', selectedIds)` + reload
+- **i18n** — 5 nuove chiavi EN+IT: `deleteSelected`, `selectedCount`, `cancelSelection`, `deleteSelectedConfirm`, `selectAll`
 
 ---
 
