@@ -4,11 +4,16 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useT } from '../../lib/i18n'
+import { switchProduction } from '../../lib/production'
 
 export default function PendingPage() {
   const t = useT()
-  const [user, setUser] = useState(null)
-  const [isApproved, setIsApproved] = useState(false)
+  const [user,         setUser]         = useState(null)
+  const [isApproved,   setIsApproved]   = useState(false)
+  const [inviteCode,   setInviteCode]   = useState('')
+  const [inviteError,  setInviteError]  = useState(null)
+  const [inviteLoading,setInviteLoading]= useState(false)
+  const [inviteSuccess,setInviteSuccess]= useState(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -19,7 +24,7 @@ export default function PendingPage() {
       }
       setUser(user)
 
-      // Polling ogni 3 secondi per verificare se l'utente è stato approvato
+      // ── Polling every 3s to detect when approved ──────────────────
       const interval = setInterval(async () => {
         try {
           const { data: { user: currentUser } } = await supabase.auth.getUser()
@@ -46,6 +51,34 @@ export default function PendingPage() {
       return () => clearInterval(interval)
     })
   }, [router])
+
+  async function handleRedeemCode(e) {
+    e.preventDefault()
+    const code = inviteCode.trim()
+    if (!code) return
+    setInviteError(null)
+    setInviteLoading(true)
+    try {
+      const res  = await fetch('/api/invites/redeem', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ code }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setInviteError(json.error || 'Invalid code')
+      } else {
+        setInviteSuccess(json.production?.name || 'Production')
+        // Switch to the newly joined production and redirect
+        if (json.production?.id) switchProduction(json.production.id)
+        else setTimeout(() => router.push('/dashboard'), 1200)
+      }
+    } catch (err) {
+      setInviteError('Network error — please try again')
+    } finally {
+      setInviteLoading(false)
+    }
+  }
 
   return (
     <div
@@ -156,6 +189,53 @@ export default function PendingPage() {
               </p>
             </div>
 
+            {/* ── Invite code ─────────────────────────────── */}
+            {!inviteSuccess && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '8px', textAlign: 'left' }}>
+                  🔑 Have an invite code?
+                </div>
+                <form onSubmit={handleRedeemCode} style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    value={inviteCode}
+                    onChange={e => { setInviteCode(e.target.value); setInviteError(null) }}
+                    placeholder="e.g. CREW-X7K2"
+                    style={{
+                      flex: 1, padding: '10px 12px',
+                      border: `1px solid ${inviteError ? '#fca5a5' : '#e2e8f0'}`,
+                      borderRadius: '8px', fontSize: '14px',
+                      fontFamily: 'monospace', letterSpacing: '0.05em',
+                      color: '#0f172a', outline: 'none',
+                    }}
+                  />
+                  <button type="submit" disabled={inviteLoading || !inviteCode.trim()}
+                    style={{
+                      padding: '10px 16px', borderRadius: '8px',
+                      background: inviteLoading ? '#94a3b8' : '#0f2340',
+                      color: 'white', border: 'none', fontSize: '13px',
+                      fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>
+                    {inviteLoading ? '…' : '→ Enter'}
+                  </button>
+                </form>
+                {inviteError && (
+                  <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '6px', textAlign: 'left' }}>
+                    ❌ {inviteError}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {inviteSuccess && (
+              <div style={{
+                padding: '12px', background: '#f0fdf4', border: '1px solid #86efac',
+                borderRadius: '10px', marginBottom: '16px', fontSize: '13px', color: '#166534', fontWeight: '600',
+              }}>
+                ✅ Joined <strong>{inviteSuccess}</strong>! Redirecting…
+              </div>
+            )}
+
+            {/* ── Sign out ─────────────────────────────────── */}
             <button
               onClick={async () => {
                 await supabase.auth.signOut()
