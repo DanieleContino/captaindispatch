@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅ | S13 — Vehicles Delete + Bulk Select ✅ | S14 — UI Components Batch1+2+3 ✅)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅ | S13 — Vehicles Delete + Bulk Select ✅ | S14 — UI Components Batch1+2+3+4 ✅ COMPLETO)**
 
 ---
 
@@ -565,18 +565,15 @@ CREATE POLICY "Allow delete own production trips" ON trips
 />
 ```
 
-### TODO Batch rimanenti
+### Batch 4 — Pagine speciali ✅ (28/03/26) — commit `01f7e11`
 
-```
-Batch 4 — Pagine speciali:
-- [ ] app/dashboard/reports/page.js — PageHeader + toolbar uniforme
-- [ ] app/dashboard/fleet/page.js — PageHeader + toolbar uniforme
-- [ ] app/dashboard/rocket/page.js — PageHeader solo (non toccare logica)
-- [ ] app/dashboard/page.js — body container uniforme
+**File migrati a `<PageHeader left={...} right={...} />`:**
+- `app/dashboard/reports/page.js` — PageHeader con `className="no-print"` → toolbar scompare in stampa/PDF (comportamento preservato)
+- `app/dashboard/fleet/page.js` — PageHeader con date nav, badge BUSY/FREE/IDLE/DONE, pulsanti Refresh e 🚦 Traffico
+- `app/dashboard/rocket/page.js` — PageHeader con step indicators + CTA contestuale (Launch/Confirm); pulsanti Step 2 wrappati in fragment `<>...</>`; logica algoritmo intatta
+- `app/dashboard/page.js` — body container normalizzato a `padding: '24px'`; Hero e card grid invariati
 
-Batch 5:
-- [ ] git push finale Batch 4
-```
+**S14 — UI Components: COMPLETO** — tutte le pagine dashboard usano `PageHeader` per la sub-toolbar sticky.
 
 ---
 
