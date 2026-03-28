@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 🔄 TASK 2 ⏳ TASK 3 ⏳)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅)**
 
 ---
 
@@ -353,60 +353,42 @@ Flusso:
 
 ---
 
-### TASK 2 — ImportModal Component ⏳
-> *Da eseguire in conversazione separata dopo TASK 1*
+### TASK 2 — ImportModal Component ✅ (28/03/26)
+> *Componente condiviso per import fleet/crew da file*
 
-**File da creare:** `lib/ImportModal.js` — componente React condiviso
+**File creato:** `lib/ImportModal.js`
 
-**Props:** `{ open, mode ('fleet'|'crew'), productionId, locations, onClose, onImported }`
+**Props:** `{ open, mode ('fleet'|'crew'|'custom'), productionId, locations, onClose, onImported }`
 
-**State machine:**
+**State machine implementata:**
 ```
 idle → parsing (spinner "Extracting data…") → preview → confirming (spinner "Saving…") → done
 ```
 
-**Preview table columns:**
-- Fleet: `vehicle_type`, `driver_name`, `license_plate`, `capacity`, `pax_suggested`, `sign_code`
-- Crew: `full_name`, `department`, `hotel` (nome), `arrival_date`, `departure_date`
-
-**Color coding righe:**
-- 🟢 Tutti i campi OK — sfondo bianco
-- 🟡 Giallo (`#fefce8`) — alcuni campi null (campi editabili inline)
-- 🔴 Rosso (`#fef2f2`) — tutti i campi chiave null → mostrate in fondo con "Row not recognized"
-- 🟠 Arancione (`#fff7ed`) — duplicato con badge "Already exists" + toggle Skip/Update
-
-**Banner preview:**
-```
-"18 rows ready · 3 fields need review · 2 duplicates found"
-```
-
-**Sezione "New data detected"** (sopra la preview, solo crew):
-- Hotel non trovato in locations: `🏨 Hotel Excelsior` → [Add to Locations] [Skip]
-- Se "Add" → include in `newLocations` al momento del confirm
-
-**Interfaccia upload:**
-- Drag & drop + click to browse
-- Formati accettati: `.xlsx`, `.xls`, `.csv`, `.pdf`, `.docx`
-- Mode selector: 🚗 Fleet list | 👥 Crew list | ✏️ Custom instructions...
-- Se Custom: textarea per istruzioni libere
+**Feature implementate:**
+- Drag & drop zone + click to browse (`.xlsx`, `.xls`, `.csv`, `.pdf`, `.docx`)
+- Mode selector: 🚗 Fleet list | 👥 Crew list | ✏️ Custom instructions (textarea AI)
+- **Preview table Fleet**: `vehicle_type` (select), `driver_name`, `license_plate`, `capacity`, `pax_suggested`, `sign_code` — tutti editabili inline
+- **Preview table Crew**: `full_name`, `department` (select), `hotel` (nome/warning), `arrival_date`, `departure_date` — tutti editabili inline
+- **Color coding righe**: 🟢 bianco (OK) | 🟡 `#fefce8` (missing fields) | 🔴 `#fef2f2` (not recognized) | 🟠 `#fff7ed` (duplicate → toggle Update/Skip)
+- **Banner statistiche**: `N rows found · X new · Y update · Z skip · W need review · K duplicates`
+- **Sezione "New hotels"** (solo crew): hotel non in locations → [+ Add to Locations] / [Skip]
+- **Legenda colori** in preview
+- **Righe non riconosciute** mostrate in fondo in JSON monospace
+- **Confirm footer**: bottone "✓ Confirm import (N rows)" disabilitato se 0 righe attive
+- **Schermata done**: contatori inserted/updated/skipped + lista errori se presenti
+- i18n: chiave `importFromFile` in EN ("📂 Import from file") e IT ("📂 Importa da file")
 
 ---
 
-### TASK 3 — Integrazione nelle Pagine ⏳
-> *Da eseguire in conversazione separata dopo TASK 2*
+### TASK 3 — Integrazione nelle Pagine ✅ (28/03/26)
+> *Bottone + modal integrati in vehicles e crew*
 
-**File da modificare:**
-- `app/dashboard/vehicles/page.js` → aggiungere bottone "📂 Import from file" nella toolbar + `<ImportModal mode="fleet">`
-- `app/dashboard/crew/page.js` → aggiungere bottone "📂 Import from file" nella toolbar + `<ImportModal mode="crew">`
+**File modificati:**
+- `app/dashboard/vehicles/page.js` → import `ImportModal`, stato `importOpen`, bottone `📂 Import from file` nella toolbar (prima di `+ New Vehicle`), `<ImportModal mode="fleet" ... onImported={() => { setImportOpen(false); load() }}>` montato
+- `app/dashboard/crew/page.js` → import `ImportModal`, stato `importOpen`, bottone `📂 Import from file` nella toolbar (prima di `+ Add Crew`), `<ImportModal mode="crew" locations={locations} ... onImported={() => { setImportOpen(false); loadCrew() }}>` montato
 
-**Bottone da aggiungere** (prima del bottone "Add Vehicle"/"Add Crew"):
-```jsx
-<button onClick={() => setImportOpen(true)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151' }}>
-  📂 Import from file
-</button>
-```
-
-**Dopo import:** chiamare `load()` / `loadCrew()` per ricaricare la lista.
+**Dopo import:** ricarica automatica della lista (`load()` / `loadCrew()`).
 
 ---
 
