@@ -48,6 +48,14 @@
  *   - handleConfirm() usa t.serviceType per ogni trip al posto del globale
  *   - TripCard: badge viola quando il service type del trip ≠ globale
  *   - Stats bar Step 2 e riepilogo Step 3: mostra "N service types" se misti
+ *
+ * v2.7 (28 marzo 2026) — TASK 2: Durata Stimata Trip nello Step 2:
+ *   - TripCard header: badge ⏱ Xmin e chip "arr. HH:MM" sempre visibili,
+ *     anche a card collassata
+ *   - Subtitle semplificata: mostra solo driver · vehicle_type
+ *     (timing rimosso dal testo per evitare duplicazione)
+ *   - Multi-pickup: mostra la durata totale stimata (dal primo pickup
+ *     all'arrivo) nel sotto-header, calcolata dal pickupMin al callMin
  */
 
 
@@ -468,6 +476,17 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
   // TASK 7: does this trip have a non-global service type?
   const hasServiceTypeOverride = trip.serviceType && trip.serviceType !== globalServiceType
 
+  // TASK 2: total estimated duration badge value
+  // For multi-pickup cascade: time from the earliest pickup to callMin
+  // For single route: use durationMin directly
+  const totalDurationMin = (() => {
+    if (isMultiPickup && allHotelsSameDest && Object.keys(cascadePickups).length > 0) {
+      const earliestPickup = Math.min(...Object.values(cascadePickups))
+      return trip.callMin - earliestPickup
+    }
+    return trip.durationMin
+  })()
+
   return (
     <div style={{ background: 'white', border: `1.5px solid ${isUnassigned ? '#fecaca' : isMixed ? '#fde68a' : '#e2e8f0'}`, borderRadius: '13px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
       <div onClick={() => setOpen(o => !o)} style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: isUnassigned ? '#fef2f2' : isMixed ? '#fffbeb' : '#fafafa', borderBottom: open ? '1px solid #f1f5f9' : 'none' }}>
@@ -484,14 +503,26 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
               {/* TASK 7: service type override badge in card header */}
               {hasServiceTypeOverride && <span style={{ fontSize: '9px', fontWeight: '800', color: '#7c3aed', background: '#fdf4ff', padding: '1px 5px', borderRadius: '4px', border: '1px solid #c4b5fd' }}>📋 {trip.serviceType}</span>}
             </div>
+            {/* TASK 2: subtitle — driver + vehicle type only; timing moved to dedicated chips */}
             <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {isUnassigned
                 ? `${locMap[trip.hotelId] || trip.hotelId} → ${locMap[trip.destId] || trip.destId} · ${minToHHMM(trip.callMin)} call`
-                : `${trip.vehicle?.driver_name || 'No driver'} · ${trip.vehicle?.vehicle_type || ''} · ${trip.durationMin ?? '?'}min · arr. ${minToHHMM(trip.callMin)}`}
+                : `${trip.vehicle?.driver_name || 'No driver'} · ${trip.vehicle?.vehicle_type || ''}`}
             </div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          {/* TASK 2: duration + arrival chips — always visible, even when card is collapsed */}
+          {!isUnassigned && totalDurationMin != null && (
+            <span style={{ fontSize: '11px', color: '#374151', fontWeight: '700', background: '#f1f5f9', padding: '2px 7px', borderRadius: '5px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+              ⏱ {totalDurationMin} min
+            </span>
+          )}
+          {!isUnassigned && (
+            <span style={{ fontSize: '11px', color: '#065f46', fontWeight: '800', background: '#dcfce7', padding: '2px 7px', borderRadius: '5px', border: '1px solid #86efac', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+              arr. {minToHHMM(trip.callMin)}
+            </span>
+          )}
           <span style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '12px', fontWeight: '800', background: paxBg, color: paxColor, border: `1px solid ${paxColor}20` }}>
             {pax}/{capSug}{capMax > capSug && <span style={{ color: '#94a3b8', fontWeight: '600' }}> (max {capMax})</span>}
           </span>
