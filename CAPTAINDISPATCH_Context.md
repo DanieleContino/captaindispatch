@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅)**
 
 ---
 
@@ -65,6 +65,7 @@ GitHub: DanieleContino/captaindispatch (branch: master)
 - `/api/routes/refresh-location` (POST) — aggiornamento singola rotta
 - `/api/rocket/templates` (GET/POST/DELETE) — CRUD template Rocket su Supabase
 - `/api/rocket/suggestions` (GET) — suggerimenti statistici basati su run storici
+- `/api/cron/daily-briefing` (GET/cron) — push 07:00 UTC: riepilogo arrivi+partenze domani per CAPTAIN/ADMIN di ogni produzione
 
 ---
 
@@ -252,7 +253,7 @@ const { supported, permission, subscribed, subscribe, unsubscribe } = useNotific
 
 ---
 
-### TASK 4 — Notifiche Cron (daily briefing) [ ]
+### TASK 4 — Notifiche Cron (daily briefing) ✅
 > *Push schedulate ogni mattina + alert traffico*
 
 **File da creare/modificare:**
