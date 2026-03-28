@@ -44,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
       <head>
         {/* PWA iOS Safari */}
@@ -55,7 +55,7 @@ export default function RootLayout({
         {/* PWA Android */}
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="min-h-full flex flex-col"><Providers>{children}</Providers></body>
+      <body className="min-h-screen flex flex-col"><Providers>{children}</Providers></body>
     </html>
   );
 }
