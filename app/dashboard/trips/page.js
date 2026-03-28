@@ -1538,8 +1538,8 @@ function TripsPageInner() {
       <Navbar currentPath="/dashboard/trips" />
 
       {/* ── Sub-toolbar ── */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20 }}>
-
+      <PageHeader
+        left={
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>◀</button>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
@@ -1555,8 +1555,8 @@ function TripsPageInner() {
               <span key={s.l} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: s.c, background: s.bg, border: `1px solid ${s.b}` }}>{s.n} {s.l}</span>
             ))}
           </div>
-        </div>
-
+        </div>}
+        right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* Class filter */}
           <div style={{ display: 'flex', gap: '3px' }}>
@@ -1601,8 +1601,8 @@ function TripsPageInner() {
             style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '4px', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', whiteSpace: 'nowrap' }}>
             + New Trip
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
       {/* ── Assign crew context banner (fuori dal marginRight div) ── */}
       {assignCtx && (

@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅ | S13 — Vehicles Delete + Bulk Select ✅ | S14 — UI Components Batch1+2 ✅)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅ | S13 — Vehicles Delete + Bulk Select ✅ | S14 — UI Components Batch1+2+3 ✅)**
 
 ---
 
@@ -533,29 +533,41 @@ CREATE POLICY "Allow delete own production trips" ON trips
 - `TableHeader.jsx` — header colonne sticky. Props: `columns` (array `{key, label, width}`), `style` (override per top/marginRight). Genera `gridTemplateColumns` da `columns.map(c => c.width).join(' ')`.
 - `DataTable.jsx` — wrapper tabella con CSS var `--col-template` per widths.
 
-### Batch 2 — trips/page.js ✅ (parziale)
+### Batch 2 — trips/page.js ✅ (completo)
 
 **Modifiche a `app/dashboard/trips/page.js`:**
 - Import `PageHeader` e `TableHeader` da `components/ui/`
 - Costante `TRIP_COLS` (module-level): `[{time,80px}, {trip,130px}, {vehicle,180px}, {route,210px}, {pax,200px}]`
 - `TripRow.gridTemplateColumns` ora usa `TRIP_COLS.map(c => c.width).join(' ')` → risolto il bug di disallineamento (era `minmax(150px, auto)`)
 - Column header inline `<div>` sostituito con `<TableHeader columns={TRIP_COLS} style={{ top: assignCtx ? '144px' : '104px', ... }}>`
-  - Top sticky aggiornato: `104px` (52px Navbar + 52px sub-toolbar PageHeader) e `144px` (+ banner assignCtx ~40px)
+  - Top sticky: `104px` (52px Navbar + 52px sub-toolbar PageHeader) e `144px` (+ banner assignCtx ~40px)
+- **Sub-toolbar migrata a `<PageHeader left={dateNav} right={filters} />`** ✅
 
-**PENDENTE per il prossimo batch:**
-- Sub-toolbar di trips (`{/* ── Sub-toolbar ── */}`) ancora usa un `<div>` inline — NON ancora migrato a `<PageHeader left={...} right={...} />`. `PageHeader` è importato ma non ancora usato nel render. Da fare nel prossimo batch (Batch 2 completo).
+### Batch 3 — Pagine semplici ✅
+
+**File migrati a `<PageHeader left={...} right={...} />`:**
+- `app/dashboard/vehicles/page.js` — import PageHeader + toolbar migrata
+- `app/dashboard/crew/page.js` — import PageHeader + toolbar migrata
+- `app/dashboard/locations/page.js` — import PageHeader + toolbar migrata
+
+**Pattern di migrazione applicato:**
+```jsx
+// PRIMA:
+<div style={{ background: 'white', borderBottom:'...', height:'50px', sticky... }}>
+  <div>left content</div>
+  <div>right content</div>
+</div>
+
+// DOPO:
+<PageHeader
+  left={<div style={{ display:'flex', gap:'8px' }}>...left content...</div>}
+  right={<div style={{ display:'flex', gap:'8px' }}>...right content...</div>}
+/>
+```
 
 ### TODO Batch rimanenti
 
 ```
-Batch 2 (completare):
-- [ ] Sostituire sub-toolbar trips <div> con <PageHeader left={dateNav} right={filters} />
-
-Batch 3 — Pagine con layout semplice:
-- [ ] app/dashboard/vehicles/page.js — PageHeader + toolbar uniforme
-- [ ] app/dashboard/crew/page.js — PageHeader + toolbar uniforme
-- [ ] app/dashboard/locations/page.js — PageHeader + toolbar uniforme
-
 Batch 4 — Pagine speciali:
 - [ ] app/dashboard/reports/page.js — PageHeader + toolbar uniforme
 - [ ] app/dashboard/fleet/page.js — PageHeader + toolbar uniforme
@@ -563,7 +575,7 @@ Batch 4 — Pagine speciali:
 - [ ] app/dashboard/page.js — body container uniforme
 
 Batch 5:
-- [ ] git push finale Batch 3-4
+- [ ] git push finale Batch 4
 ```
 
 ---

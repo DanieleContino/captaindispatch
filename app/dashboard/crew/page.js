@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
+import { PageHeader } from '../../../components/ui/PageHeader'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
@@ -462,7 +463,8 @@ export default function CrewPage() {
       <Navbar currentPath="/dashboard/crew" />
 
       {/* Sub-toolbar */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20, gap: '12px', flexWrap: 'wrap' }}>
+      <PageHeader
+        left={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <input type="text" placeholder="Search name, dept, ID…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px' }} />
@@ -505,9 +507,8 @@ export default function CrewPage() {
             <button onClick={() => { setFT('ALL'); setFH('ALL'); setFD('ALL'); setSearch('') }}
               style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626' }}>✕ Reset</button>
           )}
-        </div>
-
-        {/* Summary + New Crew */}
+        </div>}
+        right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {[
             { n: counts.conf, l: 'CONF',    c: '#15803d', bg: '#f0fdf4', b: '#86efac' },
@@ -531,8 +532,8 @@ export default function CrewPage() {
             style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
             {t.addCrew}
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
       {/* Body */}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', transition: 'margin-right 0.25s', marginRight: sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>

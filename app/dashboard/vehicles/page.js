@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
+import { PageHeader } from '../../../components/ui/PageHeader'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
@@ -454,7 +455,8 @@ export default function VehiclesPage() {
       <Navbar currentPath="/dashboard/vehicles" />
 
       {/* Toolbar */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20 }}>
+      <PageHeader
+        left={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>🚐</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
@@ -466,7 +468,8 @@ export default function VehiclesPage() {
               </span>
             ))}
           </div>
-        </div>
+        </div>}
+        right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <input type="text" placeholder="Cerca ID, driver…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px' }} />
@@ -496,8 +499,8 @@ export default function VehiclesPage() {
           <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
             {t.addVehicleBtn}
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
       {/* Body */}
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px', transition: 'margin-right 0.25s', marginRight: sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>

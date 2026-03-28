@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
+import { PageHeader } from '../../../components/ui/PageHeader'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
@@ -442,7 +443,8 @@ export default function LocationsPage() {
       <Navbar currentPath="/dashboard/locations" />
 
       {/* Toolbar */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20 }}>
+      <PageHeader
+        left={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>📍</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Locations</span>
@@ -451,7 +453,8 @@ export default function LocationsPage() {
             <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#d97706', background: '#fefce8', border: '1px solid #fde68a' }}>{hubs} hub</span>
             <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#6366f1', background: '#eef2ff', border: '1px solid #c7d2fe' }}>{hotels} hotel</span>
           </div>
-        </div>
+        </div>}
+        right={
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <input type="text" placeholder="Cerca…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px' }} />
@@ -465,8 +468,8 @@ export default function LocationsPage() {
           <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
             + Nuova Location
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
       {/* Body */}
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px', transition: 'margin-right 0.25s', marginRight: sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
