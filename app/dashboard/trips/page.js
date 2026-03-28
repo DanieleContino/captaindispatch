@@ -5,6 +5,8 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
+import { PageHeader } from '../../../components/ui/PageHeader'
+import { TableHeader } from '../../../components/ui/TableHeader'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 440
@@ -62,6 +64,15 @@ const STS = {
   DONE:      { bg: '#f0fdf4', color: '#15803d' },
   CANCELLED: { bg: '#fef2f2', color: '#dc2626' },
 }
+
+// ─── Colonne tabella trips ────────────────────────────────────
+const TRIP_COLS = [
+  { key: 'time',    label: 'TIME',       width: '80px'  },
+  { key: 'trip',    label: 'TRIP',       width: '130px' },
+  { key: 'vehicle', label: 'VEHICLE',    width: '180px' },
+  { key: 'route',   label: 'ROUTE',      width: '210px' },
+  { key: 'pax',     label: 'PASSENGERS', width: '200px' },
+]
 
 // ─── Vehicle date-range check (available_from / available_to) ─
 // A vehicle can be assigned from the day BEFORE its available_from date.
@@ -137,7 +148,7 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
     <div onClick={onClick}
       style={{
         display: 'grid',
-        gridTemplateColumns: '80px 130px 180px minmax(150px, auto) 200px',
+        gridTemplateColumns: TRIP_COLS.map(c => c.width).join(' '),
         justifyContent: 'start',
         alignItems: 'start',
         padding: '10px 14px 10px 14px',
@@ -1611,13 +1622,14 @@ function TripsPageInner() {
 
       {/* ── Column header sticky — fuori dal marginRight div, con proprio marginRight ── */}
       {trips.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '80px 130px 180px minmax(150px, auto) 200px', justifyContent: 'start', padding: '0 14px 0 18px', height: '28px', alignItems: 'center', gap: '10px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', position: 'sticky', top: assignCtx ? '140px' : '100px', zIndex: 10, transition: 'margin-right 0.25s, top 0.15s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
-          <div>TIME</div>
-          <div>TRIP</div>
-          <div>VEHICLE</div>
-          <div>ROUTE</div>
-          <div>PASSENGERS</div>
-        </div>
+        <TableHeader
+          columns={TRIP_COLS}
+          style={{
+            top: assignCtx ? '144px' : '104px',
+            transition: 'margin-right 0.25s, top 0.15s',
+            marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0,
+          }}
+        />
       )}
 
       {/* ── Contenuto ── */}
