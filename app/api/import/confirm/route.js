@@ -121,14 +121,16 @@ export async function POST(req) {
           const autoId = `${safeType}-${String(maxByType[safeType]).padStart(2, '0')}`
 
           return {
-            id:            autoId,
-            production_id: productionId,
-            driver_name:   r.driver_name   ?? null,
-            vehicle_type:  r.vehicle_type  || 'VAN',
-            license_plate: r.license_plate ?? null,
-            capacity:      r.capacity      ?? null,
-            pax_suggested: r.pax_suggested ?? null,
-            sign_code:     r.sign_code     ?? null,
+            id:             autoId,
+            production_id:  productionId,
+            driver_name:    r.driver_name    ?? null,
+            vehicle_type:   r.vehicle_type   || 'VAN',
+            license_plate:  r.license_plate  ?? null,
+            capacity:       r.capacity       ?? null,
+            pax_suggested:  r.pax_suggested  ?? null,
+            sign_code:      r.sign_code      ?? null,
+            available_from: r.available_from ?? null,
+            available_to:   r.available_to   ?? null,
             active: true,
           }
         })
@@ -155,12 +157,14 @@ export async function POST(req) {
         const { error: updateErr } = await supabase
           .from('vehicles')
           .update({
-            driver_name:   r.driver_name   ?? null,
-            vehicle_type:  r.vehicle_type  || 'VAN',
-            license_plate: r.license_plate ?? null,
-            capacity:      r.capacity      ?? null,
-            pax_suggested: r.pax_suggested ?? null,
-            sign_code:     r.sign_code     ?? null,
+            driver_name:    r.driver_name    ?? null,
+            vehicle_type:   r.vehicle_type   || 'VAN',
+            license_plate:  r.license_plate  ?? null,
+            capacity:       r.capacity       ?? null,
+            pax_suggested:  r.pax_suggested  ?? null,
+            sign_code:      r.sign_code      ?? null,
+            available_from: r.available_from ?? null,
+            available_to:   r.available_to   ?? null,
           })
           .eq('id', r.existingId)
           .eq('production_id', productionId)

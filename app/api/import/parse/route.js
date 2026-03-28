@@ -29,18 +29,28 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 const SYSTEM_PROMPT_FLEET = `You extract vehicle fleet data from documents.
 Return ONLY a raw JSON array, no backticks, no markdown, no explanation.
-Fields per vehicle: driver_name (string|null), vehicle_type ("VAN"|"CAR"|"BUS", default "VAN"),
-license_plate (string uppercase|null), capacity (number|null), pax_suggested (number|null), sign_code (string|null).
+Fields per vehicle:
+  driver_name    (string|null)
+  vehicle_type   ("VAN"|"CAR"|"BUS", default "VAN")
+  license_plate  (string uppercase|null)
+  capacity       (number|null)
+  pax_suggested  (number|null)
+  sign_code      (string|null)
+  available_from ("YYYY-MM-DD"|null)
+  available_to   ("YYYY-MM-DD"|null)
 If a field cannot be determined, use null. Never invent values.
 IMPORTANT: Each row in the document represents a DISTINCT vehicle entry. Return ALL rows found,
 even if they appear identical (same type, no driver, no plate). Do NOT merge, deduplicate or summarize rows.
 
-The document may be a vehicle budget/cost sheet. Common column patterns to handle:
+PRIORITY RULE: If the user provides "Additional instructions" about column mappings or field meanings,
+follow them STRICTLY and they override any default interpretation below.
+
+Default column interpretation for budget/cost sheet format (apply only when no user instructions override):
 - First column (BRAND/TYPE): map to vehicle_type — MERCEDES/NCC/MINIVAN/MINIVAN CREW → "VAN", AUTO/DOBLO/PASINO → "CAR", BUS/TRUCK/DUCATO/PUP/75Q/CAMION → "BUS"; when in doubt default to "VAN"
 - Second column (MODEL): use as license_plate ONLY if it looks like a vehicle plate (e.g. "AB 123 CD", "GR 448 JY"); otherwise null
 - Third column (DRIVER): driver_name ONLY if it is a real person's full name or surname; IGNORE department siglas/abbreviations like "SD", "TBC", "A CHIAMATA", "TRANSP. DEPT.", "CO LINE PRODUCER", "DRIVERS CINETECNICA" etc.
 - Fourth column (DEPT./ROLE): use as sign_code (the department or role label the vehicle is assigned to)
-- Financial, cost, date and quantity columns (IN, OUT, DAYS, PO, TOTAL, DAILY COST, WEEKLY COST, etc.): ignore entirely
+- Columns whose meaning is not specified by the user and not listed above (e.g. cost, quantity, totals): ignore
 - Subtotal rows, header rows, summary rows: skip — do NOT include them as vehicle entries
 - Rows with no vehicle type info in the first column (e.g. completely empty or just spaces): skip`
 
