@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 27 marzo 2026 (S8 — Dashboard Navbar fix ✅)**
+**Aggiornato: 28 marzo 2026 (S9 — Captain Bridge ✅)**
 
 ---
 
@@ -22,7 +22,7 @@ GitHub: DanieleContino/captaindispatch (branch: master)
 - Supabase: captaindispatch (Project ID: lvxtvgxyancpegvfcnsk, West EU)
 
 > ⚠️ **REGOLA: fare deploy dopo OGNI modifica.** `git add . && git commit -m "..." && git push origin master`
-> Su PowerShell usare `;` invece di `&&` come separatore di comandi.
+> Shell default: **CMD** (non PowerShell) — usare `&&` per concatenare comandi.
 
 ---
 
@@ -42,13 +42,18 @@ GitHub: DanieleContino/captaindispatch (branch: master)
 | `/dashboard/pax-coverage` | Pax Coverage + Assign integration, i18n |
 | `/dashboard/hub-coverage` | Hub Coverage + Assign integration, i18n |
 | `/wrap-trip` | App mobile 4-step |
-| `/pending` | Approvazione login con polling |
+| `/pending` | Approvazione login con polling + box invite code ✅ |
 | `/scan` | Scanner QR |
+| `/dashboard/bridge` | ⚓ Captain Bridge — Pending Users + Invite Codes (solo CAPTAIN/ADMIN) ✅ |
 
 **API completate:**
 - `/api/auth/callback`, `/api/check-approval`
 - `/api/route-duration`, `/api/cron/arrival-status`, `/api/cron/refresh-routes-traffic`
 - `/api/places/autocomplete`, `/api/places/details`, `/api/places/map`
+- `/api/bridge/pending-users` (GET) — lista utenti in attesa di approvazione
+- `/api/bridge/approve-user` (POST) — approva utente con sandbox o produzione
+- `/api/bridge/invites` (GET/POST/PATCH/DELETE) — CRUD invite codes
+- `/api/invites/redeem` (POST) — riscatta invite code dalla pagina `/pending`
 
 ---
 
@@ -102,6 +107,28 @@ URL params da pax/hub-coverage verso trips: `?assignCrewId=&assignCrewName=&assi
 - Raggruppa per (hotel_id, effectiveDest, effectiveCallMin) → assegna greedy fino a pax_suggested
 - Trip ID: `R_MMDD_NN` (singolo) / `R_MMDD_NNA`, `R_MMDD_NNB` (multi-stop)
 
+### Captain Bridge (S9)
+- Accesso esclusivo a utenti con ruolo `CAPTAIN` o `ADMIN` (verificato lato API)
+- **Tab Pending Users** — lista utenti che hanno fatto login ma non hanno ancora `user_roles`
+  - ✓ Sandbox: crea produzione isolata per l'utente
+  - ⊕ Add to prod: aggiunge l'utente a una produzione esistente con ruolo scelto
+  - ✕ Ignore: nasconde dalla lista (senza azione DB)
+- **Tab Invite Codes** — CRUD codici invito per produzione
+  - Codice uppercase 8 char (es. `ABCD-1234`), unico case-insensitive
+  - Parametri: `role`, `max_uses` (null=illimitato), `expires_at` (null=mai), `active`
+  - Counter `uses_count` incrementato ad ogni riscatto
+- **Pending page** — box "Have an invite code?" → `POST /api/invites/redeem`
+  - Riscatto: valida codice, verifica expiry+max_uses, inserisce `user_roles`, redirect dashboard
+
+> ⚠️ **IMPORTANTE:** Le query su `production_invites` usano **join manuale** (non PostgREST relationship)
+> per evitare l'errore `schema cache` di Supabase. Pattern:
+> ```js
+> const { data: invites } = await supabase.from('production_invites').select('*')...
+> const { data: prods }   = await supabase.from('productions').select('id, name').in('id', prodIds)
+> const prodMap = Object.fromEntries(prods.map(p => [p.id, p]))
+> const enriched = invites.map(inv => ({ ...inv, productions: prodMap[inv.production_id] }))
+> ```
+
 ---
 
 ## Database Schema (Supabase)
@@ -113,7 +140,11 @@ routes (duration_min, google_duration_min, traffic_updated_at),
 crew (hotel_id, travel_status, hotel_status, arrival_date, departure_date, department),
 vehicles (capacity, pax_suggested, pax_max, driver_name, sign_code, active),
 trips (pickup_id, dropoff_id, call_min, pickup_min, start_dt, end_dt, service_type, status, terminal),
-trip_passengers, service_types
+trip_passengers, service_types,
+production_invites (code, label, role, max_uses, uses_count, expires_at, active, created_by)
+  → FK: production_id → productions(id) ON DELETE CASCADE
+  → UNIQUE INDEX su UPPER(code)
+  → RLS: solo CAPTAIN/ADMIN della produzione possono gestire i propri invite
 RLS abilitato su tutte le tabelle
 ```
 
