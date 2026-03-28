@@ -43,12 +43,25 @@ export async function GET() {
 
     const { data: invites, error } = await supabase
       .from('production_invites')
-      .select('*, productions(id, name)')
+      .select('*')
       .in('production_id', prodIds)
       .order('created_at', { ascending: false })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ invites: invites || [] })
+
+    // Manual join: fetch production names separately (avoids schema cache issues)
+    const { data: prods } = await supabase
+      .from('productions')
+      .select('id, name')
+      .in('id', prodIds)
+    const prodMap = Object.fromEntries((prods || []).map(p => [p.id, p]))
+
+    const enriched = (invites || []).map(inv => ({
+      ...inv,
+      productions: prodMap[inv.production_id] || null,
+    }))
+
+    return NextResponse.json({ invites: enriched })
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
@@ -92,7 +105,7 @@ export async function POST(req) {
         created_by: user.id,
         active:     true,
       })
-      .select('*, productions(id, name)')
+      .select('*')
       .single()
 
     if (invErr) {
@@ -101,7 +114,15 @@ export async function POST(req) {
       }
       return NextResponse.json({ error: invErr.message }, { status: 500 })
     }
-    return NextResponse.json({ invite }, { status: 201 })
+
+    // Manual join: fetch production name separately
+    const { data: prod } = await service
+      .from('productions')
+      .select('id, name')
+      .eq('id', production_id)
+      .single()
+
+    return NextResponse.json({ invite: { ...invite, productions: prod || null } }, { status: 201 })
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
@@ -143,11 +164,19 @@ export async function PATCH(req) {
       .from('production_invites')
       .update(patch)
       .eq('id', id)
-      .select('*, productions(id, name)')
+      .select('*')
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ invite: data })
+
+    // Manual join: fetch production name separately
+    const { data: prod } = await service
+      .from('productions')
+      .select('id, name')
+      .eq('id', data.production_id)
+      .single()
+
+    return NextResponse.json({ invite: { ...data, productions: prod || null } })
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
