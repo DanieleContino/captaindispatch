@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅)**
 
 ---
 
@@ -184,17 +184,21 @@ TASK 1 (infrastruttura) ──▶ TASK 2 (UI Navbar)
                         ──▶ TASK 4 (cron daily)
 ```
 
-### TASK 1 — Infrastruttura Base [ ]
+### TASK 1 — Infrastruttura Base ✅ (28/03/26)
 > *Fondamenta: SW, subscription API, utility server*
 
-**File da creare:**
-- `npm install web-push` — pacchetto server
+**File creati:**
+- `web-push` installato in package.json
 - `scripts/migrate-push-subscriptions.sql` — tabella Supabase
 - `public/sw.js` — Service Worker: gestisce `push` event + `notificationclick`
-- `lib/webpush.js` — utility server: `sendPushToProduction(productionId, payload)`
+- `lib/webpush.js` — utility server: `sendPushToProduction(productionId, payload)` + `sendPushToUser(userId, payload)` (VAPID init lazy)
 - `app/api/push/subscribe/route.js` — POST: salva subscription `{ endpoint, p256dh, auth }`
 - `app/api/push/unsubscribe/route.js` — DELETE: rimuove subscription per endpoint
 - `app/api/push/send/route.js` — POST interno: invia push a tutti device di una produzione
+
+> ⚠️ **Deploy fix (28/03/26):** `next.config.ts` → `serverExternalPackages: ['web-push', 'nodemailer']`
+> Senza questa config, Next.js/Turbopack tenta di bundlare `web-push` (che usa crypto nativo Node.js) causando errori su Vercel.
+> Anche `lib/webpush.js` ora usa inizializzazione VAPID **lazy** (`ensureVapidInit()`) per evitare crash se le env vars non sono configurate.
 
 **Schema SQL:**
 ```sql
@@ -217,18 +221,19 @@ CREATE POLICY "Users manage own push subscriptions" ON push_subscriptions
 
 ---
 
-### TASK 2 — UI Toggle Notifiche in Navbar [ ]
+### TASK 2 — UI Toggle Notifiche in Navbar ✅ (28/03/26)
 > *L'utente abilita/disabilita le notifiche con 🔔/🔕 in Navbar*
 
-**File da creare/modificare:**
-- `lib/useNotifications.js` — hook React: stato permesso, `subscribe()`, `unsubscribe()`
-- `lib/navbar.js` — aggiungere icona 🔔/🔕 accanto al toggle lingua
+**File creati/modificati:**
+- `lib/useNotifications.js` — hook React: stato permesso, `subscribe(productionId)`, `unsubscribe()`
+- `lib/navbar.js` — icona 🔔/🔕 accanto al toggle lingua; si nasconde se browser non supporta push
 
 **Pattern hook:**
 ```js
-const { supported, permission, subscribed, subscribe, unsubscribe } = useNotifications()
+const { supported, permission, subscribed, loading, subscribe, unsubscribe } = useNotifications()
 // permission: 'default' | 'granted' | 'denied'
 // subscribed: bool (subscription salvata su Supabase)
+// loading: bool (operazione in corso)
 ```
 
 **Output verificabile:** click 🔔 in Navbar → browser chiede permesso → subscription salvata su Supabase.
