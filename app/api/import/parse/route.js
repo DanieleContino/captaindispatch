@@ -33,7 +33,16 @@ Fields per vehicle: driver_name (string|null), vehicle_type ("VAN"|"CAR"|"BUS", 
 license_plate (string uppercase|null), capacity (number|null), pax_suggested (number|null), sign_code (string|null).
 If a field cannot be determined, use null. Never invent values.
 IMPORTANT: Each row in the document represents a DISTINCT vehicle entry. Return ALL rows found,
-even if they appear identical (same type, no driver, no plate). Do NOT merge, deduplicate or summarize rows.`
+even if they appear identical (same type, no driver, no plate). Do NOT merge, deduplicate or summarize rows.
+
+The document may be a vehicle budget/cost sheet. Common column patterns to handle:
+- First column (BRAND/TYPE): map to vehicle_type — MERCEDES/NCC/MINIVAN/MINIVAN CREW → "VAN", AUTO/DOBLO/PASINO → "CAR", BUS/TRUCK/DUCATO/PUP/75Q/CAMION → "BUS"; when in doubt default to "VAN"
+- Second column (MODEL): use as license_plate ONLY if it looks like a vehicle plate (e.g. "AB 123 CD", "GR 448 JY"); otherwise null
+- Third column (DRIVER): driver_name ONLY if it is a real person's full name or surname; IGNORE department siglas/abbreviations like "SD", "TBC", "A CHIAMATA", "TRANSP. DEPT.", "CO LINE PRODUCER", "DRIVERS CINETECNICA" etc.
+- Fourth column (DEPT./ROLE): use as sign_code (the department or role label the vehicle is assigned to)
+- Financial, cost, date and quantity columns (IN, OUT, DAYS, PO, TOTAL, DAILY COST, WEEKLY COST, etc.): ignore entirely
+- Subtotal rows, header rows, summary rows: skip — do NOT include them as vehicle entries
+- Rows with no vehicle type info in the first column (e.g. completely empty or just spaces): skip`
 
 const SYSTEM_PROMPT_CREW = `You extract crew member data from film/TV production documents.
 Return ONLY a raw JSON array, no backticks, no markdown, no explanation.
@@ -94,7 +103,25 @@ async function extractTextFromFile(buffer, filename, instructions = '') {
 
     console.log(`[import/parse] XLSX: using sheet "${targetSheet}" (available: ${workbook.SheetNames.join(', ')})`)
     const sheet = workbook.Sheets[targetSheet]
-    return XLSX.utils.sheet_to_csv(sheet)
+    const rawCsv = XLSX.utils.sheet_to_csv(sheet)
+
+    // Fix: strip trailing empty fields from each CSV row.
+    // Excel files with formatted/extended cells produce rows with hundreds of empty
+    // comma-separated fields, making the CSV enormous (100K+ chars) and triggering
+    // truncation before Claude sees the actual data rows.
+    const csvLines = rawCsv.split('\n')
+    const cleanedLines = csvLines
+      .map(line => {
+        const fields = line.split(',')
+        while (fields.length > 0 && fields[fields.length - 1].trim() === '') {
+          fields.pop()
+        }
+        return fields.join(',')
+      })
+      .filter(line => line.trim() !== '')
+    const csvText = cleanedLines.join('\n')
+    console.log(`[import/parse] CSV: ${rawCsv.length} chars → ${csvText.length} chars after trailing-cell strip`)
+    return csvText
   }
 
   throw new Error(`Formato non supportato: .${ext}. Usa .xlsx, .xls, .csv, .pdf o .docx`)
@@ -117,7 +144,7 @@ async function callClaude(systemPrompt, userContent) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: systemPrompt,
       messages: [{ role: 'user', content: userContent }],
     }),
