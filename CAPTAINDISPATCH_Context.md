@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix completi ✅)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅)**
 
 ---
 
@@ -323,11 +323,13 @@ Flusso:
 
 Fleet:
 ```
-You extract vehicle fleet data from documents.
-Return ONLY a raw JSON array, no backticks, no markdown, no explanation.
-Fields per vehicle: driver_name (string|null), vehicle_type ("VAN"|"CAR"|"BUS", default "VAN"),
-license_plate (string uppercase|null), capacity (number|null), pax_suggested (number|null), sign_code (string|null).
-If a field cannot be determined, use null. Never invent values.
+Fields per vehicle: driver_name, vehicle_type ("VAN"|"CAR"|"BUS"), license_plate (uppercase),
+capacity (number|null), pax_suggested (number|null), pax_max (number|null),
+sign_code (string|null), available_from ("YYYY-MM-DD"|null), available_to ("YYYY-MM-DD"|null).
+PRIORITY RULE: Additional instructions from user override ALL default column interpretations.
+Each row = 1 distinct vehicle (no merging). Skip subtotals/headers/empty rows.
+Default column mapping (overrideable): col1=vehicle_type, col2=license_plate (if plate-like),
+col3=driver_name (real name only, ignore dept siglas), col4=sign_code.
 ```
 
 Crew:
@@ -368,7 +370,7 @@ idle → parsing (spinner "Extracting data…") → preview → confirming (spin
 **Feature implementate:**
 - Drag & drop zone + click to browse (`.xlsx`, `.xls`, `.csv`, `.pdf`, `.docx`)
 - Mode selector: 🚗 Fleet list | 👥 Crew list | ✏️ Custom instructions (textarea AI)
-- **Preview table Fleet**: `vehicle_type` (select), `driver_name`, `license_plate`, `capacity`, `pax_suggested`, `sign_code` — tutti editabili inline
+- **Preview table Fleet** (10 colonne): `vehicle_type` (select), `driver_name`, `license_plate`, `capacity`, `pax_suggested`, `pax_max`, `sign_code`, `available_from`, `available_to` — tutti editabili inline
 - **Preview table Crew**: `full_name`, `department` (select), `hotel` (nome/warning), `arrival_date`, `departure_date` — tutti editabili inline
 - **Color coding righe**: 🟢 bianco (OK) | 🟡 `#fefce8` (missing fields) | 🔴 `#fef2f2` (not recognized) | 🟠 `#fff7ed` (duplicate → toggle Update/Skip)
 - **Banner statistiche**: `N rows found · X new · Y update · Z skip · W need review · K duplicates`
@@ -378,6 +380,7 @@ idle → parsing (spinner "Extracting data…") → preview → confirming (spin
 - **Confirm footer**: bottone "✓ Confirm import (N rows)" disabilitato se 0 righe attive
 - **Schermata done**: contatori inserted/updated/skipped + lista errori se presenti
 - i18n: chiave `importFromFile` in EN ("📂 Import from file") e IT ("📂 Importa da file")
+- **Modal width**: `maxWidth: 1400px` (era 900px), padding esterno `16px 12px` — adatto per 10 colonne fleet
 
 ---
 
@@ -428,6 +431,28 @@ idle → parsing (spinner "Extracting data…") → preview → confirming (spin
 - Stesso problema per nuovi hotel in import crew
 - `locations.id TEXT PRIMARY KEY` senza default → ora auto-generato `H001`, `H002`, ecc.
 
+**Fix 8 — Fleet import: parità completa con sidebar vehicles**
+- La preview table fleet ora include tutti i campi presenti nella `VehicleSidebar`:
+  - `pax_max` — campo Rocket (massimo assoluto pax)
+  - `available_from` / `available_to` — Availability Dates (date input YYYY-MM-DD)
+- System prompt Claude aggiornato: include `pax_max (number|null)`, `available_from`, `available_to`
+- **PRIORITY RULE** nel system prompt: istruzioni utente nelle "Additional instructions" sovrascrivono SEMPRE le interpretazioni default delle colonne
+- `confirm/route.js`: salva `pax_max`, `available_from`, `available_to` in insert e update
+
+**Fix 9 — Default capacity/pax_suggested per tipo veicolo**
+- Se il file non specifica i posti, vengono pre-riempiti con default logici visibili nella preview:
+  - VAN → capacity = 8, pax_suggested = 8
+  - CAR → capacity = 4, pax_suggested = 4
+  - BUS → null (variabile)
+- Pre-fill in `ImportModal.js` client-side → utente vede i valori e può correggerli prima di confermare
+- Safety net anche in `confirm/route.js` server-side per i valori ancora null al save
+- `const FLEET_DEFAULTS = { VAN: { capacity: 8, pax_suggested: 8 }, CAR: { capacity: 4, pax_suggested: 4 }, BUS: {} }`
+
+**Fix 10 — Modal troppo stretto per 10 colonne fleet**
+- `maxWidth` portato da `900px` a `1400px`
+- Padding esterno ridotto da `32px 20px` a `16px 12px`
+- La tabella mantiene `overflowX: auto` per schermi piccoli
+
 > ⚠️ **Pattern importante — primary key text senza default:**
 > Le tabelle `vehicles`, `locations`, `crew` usano `TEXT PRIMARY KEY` con formato human-readable (VAN-01, H001, CR0001).
 > **Qualsiasi insert da API deve sempre includere l'`id` generato lato server** — non esiste auto-increment.
@@ -450,7 +475,7 @@ user_roles,
 locations (is_hub bool),
 routes (duration_min, google_duration_min, traffic_updated_at),
 crew (hotel_id, travel_status, hotel_status, arrival_date, departure_date, department),
-vehicles (capacity, pax_suggested, pax_max, driver_name, sign_code, active),
+vehicles (capacity, pax_suggested, pax_max, driver_name, sign_code, active, available_from, available_to),
 trips (pickup_id, dropoff_id, call_min, pickup_min, start_dt, end_dt, service_type, status, terminal),
 trip_passengers, service_types,
 production_invites (code, label, role, max_uses, uses_count, expires_at, active, created_by)
