@@ -31,7 +31,9 @@ const SYSTEM_PROMPT_FLEET = `You extract vehicle fleet data from documents.
 Return ONLY a raw JSON array, no backticks, no markdown, no explanation.
 Fields per vehicle: driver_name (string|null), vehicle_type ("VAN"|"CAR"|"BUS", default "VAN"),
 license_plate (string uppercase|null), capacity (number|null), pax_suggested (number|null), sign_code (string|null).
-If a field cannot be determined, use null. Never invent values.`
+If a field cannot be determined, use null. Never invent values.
+IMPORTANT: Each row in the document represents a DISTINCT vehicle entry. Return ALL rows found,
+even if they appear identical (same type, no driver, no plate). Do NOT merge, deduplicate or summarize rows.`
 
 const SYSTEM_PROMPT_CREW = `You extract crew member data from film/TV production documents.
 Return ONLY a raw JSON array, no backticks, no markdown, no explanation.
@@ -127,27 +129,38 @@ async function callClaude(systemPrompt, userContent) {
   }
 
   const data = await response.json()
-  const rawText = data.content?.[0]?.text || ''
+  const rawText = (data.content?.[0]?.text || '').trim()
 
-  // Ripulisce eventuali backtick markdown (```json ... ```)
-  const cleaned = rawText
-    .trim()
-    .replace(/^```[a-z]*\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim()
+  // Estrazione JSON robusta — 3 strategie in cascata:
+  // Claude a volte aggiunge testo descrittivo prima/dopo il JSON nonostante le istruzioni
 
-  let parsed
+  // Strategia 1: estrai contenuto da blocco ```json ... ``` o ``` ... ```
+  const codeBlockMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+  if (codeBlockMatch) {
+    try {
+      const parsed = JSON.parse(codeBlockMatch[1].trim())
+      if (Array.isArray(parsed)) return parsed
+    } catch (_) { /* prova strategia 2 */ }
+  }
+
+  // Strategia 2: trova il primo '[' e l'ultimo ']' nel testo
+  const arrStart = rawText.indexOf('[')
+  const arrEnd   = rawText.lastIndexOf(']')
+  if (arrStart !== -1 && arrEnd > arrStart) {
+    try {
+      const parsed = JSON.parse(rawText.slice(arrStart, arrEnd + 1))
+      if (Array.isArray(parsed)) return parsed
+    } catch (_) { /* prova strategia 3 */ }
+  }
+
+  // Strategia 3: parse diretto del testo intero
   try {
-    parsed = JSON.parse(cleaned)
-  } catch (e) {
-    throw new Error(`Claude ha restituito JSON non valido: ${cleaned.slice(0, 200)}`)
-  }
-
-  if (!Array.isArray(parsed)) {
+    const parsed = JSON.parse(rawText)
+    if (Array.isArray(parsed)) return parsed
     throw new Error('Claude non ha restituito un array JSON')
+  } catch (e) {
+    throw new Error(`Claude ha restituito JSON non valido: ${rawText.slice(0, 300)}`)
   }
-
-  return parsed
 }
 
 // ── POST handler ─────────────────────────────────────────────
