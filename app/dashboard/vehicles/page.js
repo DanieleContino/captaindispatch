@@ -278,9 +278,12 @@ function fmtAvailDate(iso) {
 }
 
 // ─── Row veicolo ──────────────────────────────────────────────
-function VehicleRow({ v, onEdit }) {
+function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect }) {
+  const t = useT()
   const tc = TYPE_COLOR[v.vehicle_type] || TYPE_COLOR.VAN
   const icon = TYPE_ICON[v.vehicle_type] || '🚐'
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Availability badge
   const hasAvail = v.available_from || v.available_to
@@ -288,8 +291,24 @@ function VehicleRow({ v, onEdit }) {
     ? `${v.available_from ? fmtAvailDate(v.available_from) : '∞'} → ${v.available_to ? fmtAvailDate(v.available_to) : '∞'}`
     : null
 
+  async function handleDelete() {
+    if (!confirmDel) { setConfirmDel(true); return }
+    setDeleting(true)
+    await onDelete(v.id)
+    setDeleting(false)
+    setConfirmDel(false)
+  }
+
   return (
-    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderLeft: `4px solid ${v.active ? tc.border : '#e2e8f0'}`, borderRadius: '9px', padding: '12px 16px', display: 'grid', gridTemplateColumns: '40px 1fr auto', alignItems: 'center', gap: '12px', opacity: v.active ? 1 : 0.55 }}>
+    <div style={{ background: selected ? '#eff6ff' : 'white', border: `1px solid ${selected ? '#bfdbfe' : '#e2e8f0'}`, borderLeft: `4px solid ${selected ? '#3b82f6' : v.active ? tc.border : '#e2e8f0'}`, borderRadius: '9px', padding: '12px 16px', display: 'grid', gridTemplateColumns: '20px 40px 1fr auto', alignItems: 'center', gap: '12px', opacity: v.active ? 1 : 0.55 }}>
+      {/* Checkbox */}
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={() => onToggleSelect(v.id)}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '16px', height: '16px', accentColor: '#2563eb', cursor: 'pointer', flexShrink: 0 }}
+      />
       <div style={{ fontSize: '28px', textAlign: 'center' }}>{icon}</div>
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
@@ -316,7 +335,24 @@ function VehicleRow({ v, onEdit }) {
           {v.unit_default && <span>📋 {v.unit_default}</span>}
         </div>
       </div>
-      <button onClick={() => onEdit(v)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>✎ Edit</button>
+      {/* Azioni */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <button onClick={() => onEdit(v)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>✎ Edit</button>
+        {!confirmDel ? (
+          <button
+            onClick={handleDelete}
+            style={{ background: '#fff1f2', border: '1px solid #fecaca', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#dc2626', whiteSpace: 'nowrap', lineHeight: 1 }}
+            title={t.deleteVehicle}
+          >🗑</button>
+        ) : (
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <button onClick={() => setConfirmDel(false)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 8px', cursor: 'pointer', fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>✕</button>
+            <button onClick={handleDelete} disabled={deleting} style={{ background: '#dc2626', border: 'none', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '800', color: 'white', whiteSpace: 'nowrap' }}>
+              {deleting ? '…' : '⚠ ' + t.confirm}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -335,6 +371,9 @@ export default function VehiclesPage() {
   const [mode,    setMode]   = useState('new')
   const [editItem, setEdit]  = useState(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState([])   // bulk selection
+  const [bulkDeleting, setBulkDel] = useState(false)
+  const [bulkConfirm, setBulkConfirm] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -358,6 +397,36 @@ export default function VehiclesPage() {
   function openEdit(v) { setMode('edit'); setEdit(v);    setSO(true) }
   function onSaved()   { setSO(false); load() }
 
+  // ─── Selezione ────────────────────────────────────────────
+  function toggleSelect(id) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+  function selectAll() {
+    const allIds = filtered.map(v => v.id)
+    const allSelected = allIds.every(id => selectedIds.includes(id))
+    setSelectedIds(allSelected ? [] : allIds)
+  }
+  function clearSelection() { setSelectedIds([]); setBulkConfirm(false) }
+
+  // ─── Delete singolo (da riga) ─────────────────────────────
+  async function handleDeleteSingle(id) {
+    const { error } = await supabase.from('vehicles').delete().eq('id', id)
+    if (!error) {
+      setSelectedIds(prev => prev.filter(x => x !== id))
+      load()
+    }
+  }
+
+  // ─── Bulk delete ─────────────────────────────────────────
+  async function handleBulkDelete() {
+    if (!bulkConfirm) { setBulkConfirm(true); return }
+    setBulkDel(true)
+    const { error } = await supabase.from('vehicles').delete().in('id', selectedIds)
+    setBulkDel(false)
+    if (!error) { setSelectedIds([]); setBulkConfirm(false); load() }
+  }
+
+  // Reset selezione quando cambiano i filtri
   const filtered = vhcs.filter(v => {
     if (filterActive === 'ACTIVE'   && !v.active) return false
     if (filterActive === 'INACTIVE' &&  v.active) return false
@@ -443,7 +512,65 @@ export default function VehiclesPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {filtered.map(v => <VehicleRow key={v.id} v={v} onEdit={openEdit} />)}
+            {/* Barra bulk actions */}
+            {selectedIds.length > 0 && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '9px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#dc2626' }}>
+                  ☑ {selectedIds.length} {t.selectedCount}
+                </span>
+                <div style={{ flex: 1 }} />
+                {!bulkConfirm ? (
+                  <button onClick={handleBulkDelete}
+                    style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '7px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
+                    {t.deleteSelected}
+                  </button>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>
+                      {t.deleteSelectedConfirm.replace('{n}', selectedIds.length)}
+                    </span>
+                    <button onClick={() => setBulkConfirm(false)}
+                      style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
+                      {t.cancel}
+                    </button>
+                    <button onClick={handleBulkDelete} disabled={bulkDeleting}
+                      style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '7px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
+                      {bulkDeleting ? t.deleting : t.confirm}
+                    </button>
+                  </>
+                )}
+                <button onClick={clearSelection}
+                  style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
+                  {t.cancelSelection}
+                </button>
+              </div>
+            )}
+
+            {/* Header riga con Select All */}
+            <div style={{ display: 'grid', gridTemplateColumns: '20px 40px 1fr auto', alignItems: 'center', gap: '12px', padding: '4px 16px' }}>
+              <input
+                type="checkbox"
+                checked={filtered.length > 0 && filtered.every(v => selectedIds.includes(v.id))}
+                ref={el => { if (el) el.indeterminate = selectedIds.length > 0 && !filtered.every(v => selectedIds.includes(v.id)) }}
+                onChange={selectAll}
+                style={{ width: '16px', height: '16px', accentColor: '#2563eb', cursor: 'pointer' }}
+                title={t.selectAll}
+              />
+              <div />
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.selectAll}</span>
+              <div />
+            </div>
+
+            {filtered.map(v => (
+              <VehicleRow
+                key={v.id}
+                v={v}
+                onEdit={openEdit}
+                onDelete={handleDeleteSingle}
+                selected={selectedIds.includes(v.id)}
+                onToggleSelect={toggleSelect}
+              />
+            ))}
           </div>
         )}
       </div>
