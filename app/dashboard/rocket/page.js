@@ -63,6 +63,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase }  from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
+import { PageHeader } from '../../../components/ui/PageHeader'
 
 const PRODUCTION_ID      = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const LS_DEPT_KEY        = 'rocket_dept_config'
@@ -1434,46 +1435,52 @@ export default function RocketPage() {
       <Navbar currentPath="/dashboard/rocket" />
 
       {/* ── Sub-toolbar ── */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '22px' }}>🚀</span>
-          <span style={{ fontWeight: '900', fontSize: '17px', color: '#0f172a' }}>Rocket</span>
-          <span style={{ fontWeight: '400', fontSize: '13px', color: '#94a3b8' }}>Trip Generator v2</span>
-          <div style={{ display: 'flex', gap: '3px', marginLeft: '8px' }}>
-            {[1, 2, 3].map(n => {
-              const active = step === n, done = step > n
-              return (
-                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700',
-                  background: active ? '#0f2340' : done ? '#dcfce7' : '#f1f5f9', color: active ? 'white' : done ? '#15803d' : '#94a3b8',
-                  border: `1px solid ${active ? '#0f2340' : done ? '#86efac' : '#e2e8f0'}` }}>
-                  <span>{done ? '✓' : n}</span><span>{stepLabel[n]}</span>
-                </div>
-              )
-            })}
+      <PageHeader
+        left={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '22px' }}>🚀</span>
+            <span style={{ fontWeight: '900', fontSize: '17px', color: '#0f172a' }}>Rocket</span>
+            <span style={{ fontWeight: '400', fontSize: '13px', color: '#94a3b8' }}>Trip Generator v2</span>
+            <div style={{ display: 'flex', gap: '3px', marginLeft: '8px' }}>
+              {[1, 2, 3].map(n => {
+                const active = step === n, done = step > n
+                return (
+                  <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700',
+                    background: active ? '#0f2340' : done ? '#dcfce7' : '#f1f5f9', color: active ? 'white' : done ? '#15803d' : '#94a3b8',
+                    border: `1px solid ${active ? '#0f2340' : done ? '#86efac' : '#e2e8f0'}` }}>
+                    <span>{done ? '✓' : n}</span><span>{stepLabel[n]}</span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
-        {step === 1 && !loading && (
-          <button onClick={handleLaunch} disabled={!canLaunch}
-            style={{ background: canLaunch ? 'linear-gradient(135deg, #2563eb, #7c3aed)' : '#e2e8f0', color: canLaunch ? 'white' : '#94a3b8',
-              border: 'none', borderRadius: '9px', padding: '8px 20px', fontSize: '14px', fontWeight: '900',
-              cursor: canLaunch ? 'pointer' : 'default', letterSpacing: '-0.3px',
-              boxShadow: canLaunch ? '0 3px 12px rgba(37,99,235,0.35)' : 'none' }}>
-            🚀 Launch Rocket ({selectedCrew.length} crew · {includedVehicles.length} vehicle{includedVehicles.length !== 1 ? 's' : ''})
-          </button>
-        )}
-        {step === 2 && (
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>{activeTrips} trip{activeTrips !== 1 ? 's' : ''} · {totalPax} pax</span>
-            <button onClick={() => setStep(1)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#374151' }}>← Edit Setup</button>
-            <button onClick={handleConfirm} disabled={saving || activeTrips === 0}
-              style={{ background: (saving || activeTrips === 0) ? '#94a3b8' : '#16a34a', color: 'white', border: 'none', borderRadius: '9px', padding: '8px 20px',
-                cursor: (saving || activeTrips === 0) ? 'wait' : 'pointer', fontSize: '13px', fontWeight: '800',
-                boxShadow: (saving || activeTrips === 0) ? 'none' : '0 3px 12px rgba(22,163,74,0.35)' }}>
-              {saving ? '⏳ Creating…' : `✅ Confirm ${activeTrips} trip${activeTrips !== 1 ? 's' : ''}`}
-            </button>
-          </div>
-        )}
-      </div>
+        }
+        right={
+          <>
+            {step === 1 && !loading && (
+              <button onClick={handleLaunch} disabled={!canLaunch}
+                style={{ background: canLaunch ? 'linear-gradient(135deg, #2563eb, #7c3aed)' : '#e2e8f0', color: canLaunch ? 'white' : '#94a3b8',
+                  border: 'none', borderRadius: '9px', padding: '8px 20px', fontSize: '14px', fontWeight: '900',
+                  cursor: canLaunch ? 'pointer' : 'default', letterSpacing: '-0.3px',
+                  boxShadow: canLaunch ? '0 3px 12px rgba(37,99,235,0.35)' : 'none' }}>
+                🚀 Launch Rocket ({selectedCrew.length} crew · {includedVehicles.length} vehicle{includedVehicles.length !== 1 ? 's' : ''})
+              </button>
+            )}
+            {step === 2 && (
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>{activeTrips} trip{activeTrips !== 1 ? 's' : ''} · {totalPax} pax</span>
+                <button onClick={() => setStep(1)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#374151' }}>← Edit Setup</button>
+                <button onClick={handleConfirm} disabled={saving || activeTrips === 0}
+                  style={{ background: (saving || activeTrips === 0) ? '#94a3b8' : '#16a34a', color: 'white', border: 'none', borderRadius: '9px', padding: '8px 20px',
+                    cursor: (saving || activeTrips === 0) ? 'wait' : 'pointer', fontSize: '13px', fontWeight: '800',
+                    boxShadow: (saving || activeTrips === 0) ? 'none' : '0 3px 12px rgba(22,163,74,0.35)' }}>
+                  {saving ? '⏳ Creating…' : `✅ Confirm ${activeTrips} trip${activeTrips !== 1 ? 's' : ''}`}
+                </button>
+              </div>
+            )}
+          </>
+        }
+      />
 
       {/* ── Body ── */}
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px 24px' }}>

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
+import { PageHeader } from '../../../components/ui/PageHeader'
 
 const PRODUCTION_ID    = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const REFRESH_INTERVAL = 30_000  // auto-reload dati ogni 30s
@@ -605,92 +606,89 @@ export default function FleetPage() {
       <Navbar currentPath="/dashboard/fleet" />
 
       {/* ── Sub-toolbar ── */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20 }}>
-
-        {/* Sinistra: titolo + date nav */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '18px' }}>🚦</span>
-          <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Fleet Monitor</span>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '8px' }}>
-            <button onClick={() => setDate(isoAdd(date, -1))}
-              style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>◀</button>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
-            <button onClick={() => setDate(isoAdd(date, 1))}
-              style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>▶</button>
-            <button onClick={() => setDate(isoToday())}
-              style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
+      <PageHeader
+        left={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '18px' }}>🚦</span>
+            <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Fleet Monitor</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '8px' }}>
+              <button onClick={() => setDate(isoAdd(date, -1))}
+                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>◀</button>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
+              <button onClick={() => setDate(isoAdd(date, 1))}
+                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>▶</button>
+              <button onClick={() => setDate(isoToday())}
+                style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
+            </div>
+            <div style={{ display: 'flex', gap: '5px', marginLeft: '4px' }}>
+              {Object.entries(counts).map(([s, n]) => n > 0 && (
+                <span key={s} style={{
+                  padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700',
+                  background: SS[s].badgeBg, color: SS[s].badge, border: `1px solid ${SS[s].border}`,
+                }}>
+                  {n} {s}
+                </span>
+              ))}
+            </div>
           </div>
-
-          {/* Badge stats */}
-          <div style={{ display: 'flex', gap: '5px', marginLeft: '4px' }}>
-            {Object.entries(counts).map(([s, n]) => n > 0 && (
-              <span key={s} style={{
-                padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700',
-                background: SS[s].badgeBg, color: SS[s].badge, border: `1px solid ${SS[s].border}`,
+        }
+        right={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#94a3b8' }}>
+            {lastRefresh && <span>{fmtLastRefresh(lastRefresh)}</span>}
+            <span style={{ color: '#cbd5e1' }}>·</span>
+            <span>Refresh in {countdown}s</span>
+            <button onClick={() => loadData(date)}
+              style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {loading ? '…' : '↻'} Refresh
+            </button>
+            <button
+              onClick={async () => {
+                setRefreshingTraffic(true)
+                setTrafficMsg(null)
+                setTrafficAlerts([])
+                try {
+                  const res  = await fetch('/api/routes/traffic-check', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ date }),
+                  })
+                  const data = await res.json()
+                  if (data.error) throw new Error(data.error)
+                  setTrafficAlerts(data.alerts || [])
+                  const w = data.warningsCount || 0
+                  setTrafficMsg(
+                    w > 0
+                      ? `${data.alerts.some(a => a.severity === 'CRITICAL') ? '🚨' : '⚠️'} ${w} warning${w > 1 ? 's' : ''} on ${data.checkedRoutes} routes`
+                      : `✅ No issues — ${data.checkedRoutes} routes checked`
+                  )
+                } catch (e) {
+                  setTrafficMsg(`⚠ ${e.message}`)
+                } finally {
+                  setRefreshingTraffic(false)
+                  setTimeout(() => setTrafficMsg(null), 10000)
+                }
+              }}
+              disabled={refreshingTraffic}
+              title="Aggiorna durate rotte con traffico reale Google"
+              style={{
+                background: '#f0fdf4',
+                border: '1px solid #bbf7d0', borderRadius: '7px',
+                padding: '5px 12px', cursor: refreshingTraffic ? 'wait' : 'pointer',
+                fontSize: '12px', fontWeight: '700', color: '#15803d',
+                display: 'flex', alignItems: 'center', gap: '4px',
+                opacity: refreshingTraffic ? 0.7 : 1,
               }}>
-                {n} {s}
+              {refreshingTraffic ? '⏳' : '🚦'} Traffico
+            </button>
+            {trafficMsg && (
+              <span style={{ fontSize: '11px', color: trafficMsg.startsWith('✅') ? '#15803d' : '#b91c1c', fontWeight: '600' }}>
+                {trafficMsg}
               </span>
-            ))}
+            )}
           </div>
-        </div>
-
-        {/* Destra: refresh info + pulsante */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#94a3b8' }}>
-          {lastRefresh && <span>{fmtLastRefresh(lastRefresh)}</span>}
-          <span style={{ color: '#cbd5e1' }}>·</span>
-          <span>Refresh in {countdown}s</span>
-          <button onClick={() => loadData(date)}
-            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {loading ? '…' : '↻'} Refresh
-          </button>
-          <button
-            onClick={async () => {
-              setRefreshingTraffic(true)
-              setTrafficMsg(null)
-              setTrafficAlerts([])
-              try {
-                const res  = await fetch('/api/routes/traffic-check', {
-                  method:  'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body:    JSON.stringify({ date }),
-                })
-                const data = await res.json()
-                if (data.error) throw new Error(data.error)
-                setTrafficAlerts(data.alerts || [])
-                const w = data.warningsCount || 0
-                setTrafficMsg(
-                  w > 0
-                    ? `${data.alerts.some(a => a.severity === 'CRITICAL') ? '🚨' : '⚠️'} ${w} warning${w > 1 ? 's' : ''} on ${data.checkedRoutes} routes`
-                    : `✅ No issues — ${data.checkedRoutes} routes checked`
-                )
-              } catch (e) {
-                setTrafficMsg(`⚠ ${e.message}`)
-              } finally {
-                setRefreshingTraffic(false)
-                setTimeout(() => setTrafficMsg(null), 10000)
-              }
-            }}
-            disabled={refreshingTraffic}
-            title="Aggiorna durate rotte con traffico reale Google"
-            style={{
-              background: refreshingTraffic ? '#f0fdf4' : '#f0fdf4',
-              border: '1px solid #bbf7d0', borderRadius: '7px',
-              padding: '5px 12px', cursor: refreshingTraffic ? 'wait' : 'pointer',
-              fontSize: '12px', fontWeight: '700', color: '#15803d',
-              display: 'flex', alignItems: 'center', gap: '4px',
-              opacity: refreshingTraffic ? 0.7 : 1,
-            }}>
-            {refreshingTraffic ? '⏳' : '🚦'} Traffico
-          </button>
-          {trafficMsg && (
-            <span style={{ fontSize: '11px', color: trafficMsg.startsWith('✅') ? '#15803d' : '#b91c1c', fontWeight: '600' }}>
-              {trafficMsg}
-            </span>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Body ── */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>

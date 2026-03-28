@@ -13,6 +13,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
+import { PageHeader } from '../../../components/ui/PageHeader'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 
@@ -145,29 +146,33 @@ export default function ReportsPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="no-print" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20, gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>📊 Fleet Reports</span>
-          <span style={{ color: '#cbd5e1' }}>·</span>
-          {/* Mode toggle */}
-          {['daily', 'weekly'].map(m => (
-            <button key={m} onClick={() => setMode(m)}
-              style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(mode === m ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#64748b', borderColor: '#e2e8f0' }) }}>
-              {m === 'daily' ? 'Daily' : 'Weekly'}
-            </button>
-          ))}
-          <span style={{ color: '#cbd5e1' }}>·</span>
-          <button onClick={() => setDate(isoAdd(date, mode === 'weekly' ? -7 : -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>◀</button>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
-          <button onClick={() => setDate(isoAdd(date, mode === 'weekly' ? 7 : 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
-          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
-        </div>
-        <button onClick={() => window.print()}
-          style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
-          🖨 Print / PDF
-        </button>
-      </div>
+      <PageHeader
+        className="no-print"
+        left={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>📊 Fleet Reports</span>
+            <span style={{ color: '#cbd5e1' }}>·</span>
+            {['daily', 'weekly'].map(m => (
+              <button key={m} onClick={() => setMode(m)}
+                style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(mode === m ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#64748b', borderColor: '#e2e8f0' }) }}>
+                {m === 'daily' ? 'Daily' : 'Weekly'}
+              </button>
+            ))}
+            <span style={{ color: '#cbd5e1' }}>·</span>
+            <button onClick={() => setDate(isoAdd(date, mode === 'weekly' ? -7 : -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>◀</button>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
+            <button onClick={() => setDate(isoAdd(date, mode === 'weekly' ? 7 : 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>▶</button>
+            <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
+          </div>
+        }
+        right={
+          <button onClick={() => window.print()}
+            style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
+            🖨 Print / PDF
+          </button>
+        }
+      />
 
       {/* Content */}
       <div className="print-content" style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>

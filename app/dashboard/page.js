@@ -88,7 +88,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 24px 40px' }}>
+      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px' }}>
 
         {/* ── Banner partenze/arrivi domani ── */}
         {(departures.length > 0 || arrivals.length > 0) && (
