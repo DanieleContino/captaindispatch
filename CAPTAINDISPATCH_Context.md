@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix completi ✅)**
 
 ---
 
@@ -389,6 +389,48 @@ idle → parsing (spinner "Extracting data…") → preview → confirming (spin
 - `app/dashboard/crew/page.js` → import `ImportModal`, stato `importOpen`, bottone `📂 Import from file` nella toolbar (prima di `+ Add Crew`), `<ImportModal mode="crew" locations={locations} ... onImported={() => { setImportOpen(false); loadCrew() }}>` montato
 
 **Dopo import:** ricarica automatica della lista (`load()` / `loadCrew()`).
+
+---
+
+### Bug Fix S12 ✅ (28/03/26)
+
+> Tutti i bug scoperti durante il primo utilizzo reale dell'Import Intelligente.
+
+**Fix 1 — XLSX: solo il primo foglio (o foglio specificato nelle istruzioni)**
+- Prima: `xlsx` convertiva in CSV **tutti i fogli** inclusi quelli nascosti → fino a 33MB di testo → Claude 400/429
+- Dopo: viene usato solo il primo foglio di default; se nelle istruzioni c'è "foglio2" / "sheet Cast" viene selezionato quello
+- `extractTextFromFile(buffer, filename, instructions)` — sheet detection da istruzioni (match esatto nome o "foglio N"/"sheet N")
+
+**Fix 2 — Truncate 100K chars (safety net)**
+- Dopo l'estrazione, il testo viene troncato a 100.000 chars (~25K token) prima di essere inviato a Claude
+- Previene sia il 400 (byte limit 32MB) sia il 429 (rate limit 800K token/min)
+
+**Fix 3 — Istruzioni opzionali per fleet/crew**
+- La textarea "Additional instructions" è ora visibile per tutti i mode (fleet/crew/custom)
+- Per fleet/crew è opzionale (sfondo grigio, placeholder descrittivo es. "Read sheet named Vehicles")
+- Per custom rimane richiesta come prima
+- Le istruzioni vengono sempre inviate al backend se non vuote; per fleet/crew vengono appese al testo utente come contesto extra
+
+**Fix 4 — Estrazione JSON robusta da risposta Claude (3 strategie)**
+- Prima: regex fragile che faliva se Claude aggiungeva testo prima del JSON ("Looking at this document…")
+- Dopo: 3 strategie in cascata: 1) estrai blocco ` ```json``` `, 2) trova `[...primo...ultimo...]`, 3) parse diretto
+
+**Fix 5 — System prompt fleet: "return ALL rows, no merging"**
+- Claude collassava righe identiche (es. 5 × VAN senza autista) in una sola
+- Aggiunta istruzione esplicita al `SYSTEM_PROMPT_FLEET`: ogni riga è un veicolo distinto, non mergeare mai
+
+**Fix 6 — `vehicles.id` auto-generato in confirm**
+- `vehicles.id TEXT PRIMARY KEY` non ha default → insert senza id falliva silenziosamente
+- Ora viene auto-generato `VAN-01`, `CAR-01`, `BUS-01` progressivi per tipo (come `CR0001` per crew)
+- Logica: query id esistenti per tipo → trova max → incrementa
+
+**Fix 7 — `locations.id` auto-generato in confirm**
+- Stesso problema per nuovi hotel in import crew
+- `locations.id TEXT PRIMARY KEY` senza default → ora auto-generato `H001`, `H002`, ecc.
+
+> ⚠️ **Pattern importante — primary key text senza default:**
+> Le tabelle `vehicles`, `locations`, `crew` usano `TEXT PRIMARY KEY` con formato human-readable (VAN-01, H001, CR0001).
+> **Qualsiasi insert da API deve sempre includere l'`id` generato lato server** — non esiste auto-increment.
 
 ---
 
