@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅)**
+**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 🔄 TASK 2 ⏳ TASK 3 ⏳)**
 
 ---
 
@@ -274,6 +274,139 @@ const { supported, permission, subscribed, loading, subscribe, unsubscribe } = u
 | Traffico anomalo | 05:00 (cron esistente) | ⚠️ Traffico su `N` rotte — verifica Fleet Monitor |
 
 **Output verificabile:** cron trigger manuale → push ricevuto con lista crew.
+
+---
+
+## Import Intelligente da File — S12 📂
+
+### Panoramica
+Funzionalità di import tramite file per `/dashboard/vehicles` e `/dashboard/crew`.
+Utilizza **Claude API** (`claude-sonnet-4-20250514`) per estrarre dati strutturati da qualsiasi formato.
+
+**Env vars:**
+```
+ANTHROPIC_API_KEY=sk-ant-api03-...   ← in .env.local e Vercel
+```
+
+**Librerie installate:**
+- `xlsx` — parsing Excel (.xlsx) e CSV
+- `pdf-parse` — estrazione testo da PDF
+- `mammoth` — conversione DOCX → testo
+
+> ⚠️ **Deploy fix:** `next.config.ts` → `serverExternalPackages: ['web-push', 'nodemailer', 'pdf-parse', 'mammoth', 'xlsx']`
+> Queste librerie usano moduli Node.js nativi e non devono essere bundlate da Turbopack.
+
+### Dipendenze tra TASK
+```
+TASK 1 (API backend) ──▶ TASK 2 (ImportModal component)
+                     ──▶ TASK 3 (integrazione pagine)
+```
+
+---
+
+### TASK 1 — Setup & Backend API 🔄 (in corso)
+> *Prerequisiti già completati: npm install ✅ | .env.local ANTHROPIC_API_KEY ✅ | next.config.ts ✅*
+
+**File da creare:**
+
+#### `app/api/import/parse/route.js` — POST (multipart/form-data)
+Input: `file`, `mode` (`fleet`|`crew`|`custom`), `instructions`, `productionId`
+
+Flusso:
+1. Parsing per estensione: `.xlsx`/`.csv` → xlsx | `.pdf` → pdf-parse | `.docx` → mammoth
+2. Claude API call con system prompt specifico per mode (risposta: JSON puro, no backtick)
+3. Duplicate detection su Supabase (`license_plate`+`driver_name` per fleet, `full_name` per crew)
+4. Hotel matching (crew): confronta hotel estratti con `locations` Supabase → assegna `hotel_id` se trovato
+5. Return: `{ rows, newData: { hotels: [] } }`
+
+**System prompts Claude:**
+
+Fleet:
+```
+You extract vehicle fleet data from documents.
+Return ONLY a raw JSON array, no backticks, no markdown, no explanation.
+Fields per vehicle: driver_name (string|null), vehicle_type ("VAN"|"CAR"|"BUS", default "VAN"),
+license_plate (string uppercase|null), capacity (number|null), pax_suggested (number|null), sign_code (string|null).
+If a field cannot be determined, use null. Never invent values.
+```
+
+Crew:
+```
+You extract crew member data from film/TV production documents.
+Return ONLY a raw JSON array, no backticks, no markdown, no explanation.
+Fields per person: full_name (string), department (one of: CAMERA, GRIP, ELECTRIC, SOUND, ART,
+COSTUME, MAKEUP, PRODUCTION, TRANSPORT, CATERING, SECURITY, MEDICAL, VFX, DIRECTING, CAST, OTHER —
+map role titles: Gaffer→ELECTRIC, Focus Puller→CAMERA, Key Grip→GRIP, etc.),
+hotel (hotel name as in document|null), arrival_date ("YYYY-MM-DD"|null), departure_date ("YYYY-MM-DD"|null).
+Never invent values. If absent, use null.
+```
+
+#### `app/api/import/confirm/route.js` — POST (JSON)
+Input: `{ rows (con action: 'insert'|'update'|'skip'), mode, productionId, newLocations }`
+
+Flusso:
+1. Se `newLocations.length > 0` → inserisce prima in `locations` table
+2. Per crew: auto-genera IDs `CR####` sequenziali per righe nuove
+3. Per vehicles: usa `vehicle_type`+progressivo per ID se mancante
+4. Batch insert righe `insert` + batch update righe `update`
+5. Return: `{ inserted, updated, skipped, errors }`
+
+---
+
+### TASK 2 — ImportModal Component ⏳
+> *Da eseguire in conversazione separata dopo TASK 1*
+
+**File da creare:** `lib/ImportModal.js` — componente React condiviso
+
+**Props:** `{ open, mode ('fleet'|'crew'), productionId, locations, onClose, onImported }`
+
+**State machine:**
+```
+idle → parsing (spinner "Extracting data…") → preview → confirming (spinner "Saving…") → done
+```
+
+**Preview table columns:**
+- Fleet: `vehicle_type`, `driver_name`, `license_plate`, `capacity`, `pax_suggested`, `sign_code`
+- Crew: `full_name`, `department`, `hotel` (nome), `arrival_date`, `departure_date`
+
+**Color coding righe:**
+- 🟢 Tutti i campi OK — sfondo bianco
+- 🟡 Giallo (`#fefce8`) — alcuni campi null (campi editabili inline)
+- 🔴 Rosso (`#fef2f2`) — tutti i campi chiave null → mostrate in fondo con "Row not recognized"
+- 🟠 Arancione (`#fff7ed`) — duplicato con badge "Already exists" + toggle Skip/Update
+
+**Banner preview:**
+```
+"18 rows ready · 3 fields need review · 2 duplicates found"
+```
+
+**Sezione "New data detected"** (sopra la preview, solo crew):
+- Hotel non trovato in locations: `🏨 Hotel Excelsior` → [Add to Locations] [Skip]
+- Se "Add" → include in `newLocations` al momento del confirm
+
+**Interfaccia upload:**
+- Drag & drop + click to browse
+- Formati accettati: `.xlsx`, `.xls`, `.csv`, `.pdf`, `.docx`
+- Mode selector: 🚗 Fleet list | 👥 Crew list | ✏️ Custom instructions...
+- Se Custom: textarea per istruzioni libere
+
+---
+
+### TASK 3 — Integrazione nelle Pagine ⏳
+> *Da eseguire in conversazione separata dopo TASK 2*
+
+**File da modificare:**
+- `app/dashboard/vehicles/page.js` → aggiungere bottone "📂 Import from file" nella toolbar + `<ImportModal mode="fleet">`
+- `app/dashboard/crew/page.js` → aggiungere bottone "📂 Import from file" nella toolbar + `<ImportModal mode="crew">`
+
+**Bottone da aggiungere** (prima del bottone "Add Vehicle"/"Add Crew"):
+```jsx
+<button onClick={() => setImportOpen(true)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151' }}>
+  📂 Import from file
+</button>
+```
+
+**Dopo import:** chiamare `load()` / `loadCrew()` per ricaricare la lista.
 
 ---
 
