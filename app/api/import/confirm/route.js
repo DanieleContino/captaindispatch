@@ -48,15 +48,31 @@ export async function POST(req) {
     const newLocationMap = {}
 
     if (newLocations.length > 0) {
+      // Calcola massimo ID H#### già esistente per questa produzione
+      const { data: existingLocs } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('production_id', productionId)
+        .like('id', 'H%')
+
+      let maxLocNum = 0
+      for (const l of (existingLocs || [])) {
+        const n = parseInt((l.id || '').replace(/^H/i, ''), 10)
+        if (!isNaN(n) && n > maxLocNum) maxLocNum = n
+      }
+
       for (const loc of newLocations) {
         if (!loc.name?.trim()) continue
+        maxLocNum++
+        const autoLocId = `H${String(maxLocNum).padStart(3, '0')}`
 
         const { data: newLoc, error: locErr } = await supabase
           .from('locations')
           .insert({
-            name: loc.name.trim(),
+            id:            autoLocId,
+            name:          loc.name.trim(),
             production_id: productionId,
-            is_hub: false,
+            is_hub:        false,
           })
           .select('id, name')
           .single()
@@ -79,16 +95,43 @@ export async function POST(req) {
     if (mode === 'fleet') {
       // INSERT batch
       if (insertRows.length > 0) {
-        const toInsert = insertRows.map(r => ({
-          production_id: productionId,
-          driver_name:   r.driver_name   ?? null,
-          vehicle_type:  r.vehicle_type  || 'VAN',
-          license_plate: r.license_plate ?? null,
-          capacity:      r.capacity      ?? null,
-          pax_suggested: r.pax_suggested ?? null,
-          sign_code:     r.sign_code     ?? null,
-          active: true,
-        }))
+        // Calcola numero massimo già usato per ogni tipo (VAN-01, CAR-02, BUS-03)
+        const { data: existingVhcs } = await supabase
+          .from('vehicles')
+          .select('id')
+          .eq('production_id', productionId)
+
+        const maxByType = { VAN: 0, CAR: 0, BUS: 0 }
+        for (const v of (existingVhcs || [])) {
+          if (!v.id) continue
+          const parts = v.id.split('-')
+          if (parts.length >= 2) {
+            const type = parts[0].toUpperCase()
+            const n = parseInt(parts[parts.length - 1], 10)
+            if (maxByType[type] !== undefined && !isNaN(n) && n > maxByType[type]) {
+              maxByType[type] = n
+            }
+          }
+        }
+
+        const toInsert = insertRows.map(r => {
+          const vtype = (r.vehicle_type || 'VAN').toUpperCase()
+          const safeType = maxByType[vtype] !== undefined ? vtype : 'VAN'
+          maxByType[safeType] = (maxByType[safeType] || 0) + 1
+          const autoId = `${safeType}-${String(maxByType[safeType]).padStart(2, '0')}`
+
+          return {
+            id:            autoId,
+            production_id: productionId,
+            driver_name:   r.driver_name   ?? null,
+            vehicle_type:  r.vehicle_type  || 'VAN',
+            license_plate: r.license_plate ?? null,
+            capacity:      r.capacity      ?? null,
+            pax_suggested: r.pax_suggested ?? null,
+            sign_code:     r.sign_code     ?? null,
+            active: true,
+          }
+        })
 
         const { data: insertedData, error: insertErr } = await supabase
           .from('vehicles')
