@@ -334,6 +334,7 @@ function enrichSuggestions(suggestions, draftTrips, routeMap, locMap) {
 
 // ─── Crew Quick-Edit Modal ────────────────────────────────────
 function CrewQuickEditModal({ crew, deptDestOverrides, crewCallOverrides, excludedCrewIds, globalCallMin, globalDestId, locMap, onUpdate, onClose }) {
+  const t = useT()
   const isExcluded = excludedCrewIds.has(crew.id)
   const deptCfg  = (crew.department && deptDestOverrides[crew.department]) || {}
   const deptBase = deptCfg.callMin ?? globalCallMin
@@ -365,14 +366,14 @@ function CrewQuickEditModal({ crew, deptDestOverrides, crewCallOverrides, exclud
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', color: '#94a3b8', cursor: 'pointer', lineHeight: 1, padding: '0 0 0 8px' }}>×</button>
         </div>
         <div style={{ marginBottom: '18px' }}>
-          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>Include in run</div>
+          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>{t.rocketIncludeInRun}</div>
           <button onClick={() => setIncluded(v => !v)}
             style={{ width: '100%', padding: '10px', borderRadius: '9px', border: `2px solid ${included ? '#16a34a' : '#e2e8f0'}`, background: included ? '#f0fdf4' : '#f8fafc', color: included ? '#15803d' : '#94a3b8', cursor: 'pointer', fontSize: '14px', fontWeight: '800', textAlign: 'center', transition: 'all 0.12s' }}>
-            {included ? '✅ Included' : '☐ Excluded'}
+            {included ? t.rocketIncluded : t.rocketExcluded}
           </button>
         </div>
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>Call Time</div>
+          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>{t.rocketCallTimeLabel}</div>
           <div style={{ display: 'flex', gap: '5px', marginBottom: '6px' }}>
             {[-15, -5].map(d => (
               <button key={d} onClick={() => adjust(d)} style={{ flex: 1, padding: '8px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151' }}>{d}</button>
@@ -393,7 +394,7 @@ function CrewQuickEditModal({ crew, deptDestOverrides, crewCallOverrides, exclud
           → <strong style={{ color: '#374151' }}>{locMap[effectDest] || effectDest || '—'}</strong>
           {deptCfg.destId && <span style={{ color: '#7c3aed', marginLeft: '4px' }}>(dept override)</span>}
         </div>
-        <button onClick={handleDone} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '800' }}>✓ Done</button>
+        <button onClick={handleDone} style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', cursor: 'pointer', fontSize: '14px', fontWeight: '800' }}>{t.rocketDoneBtn}</button>
       </div>
     </div>
   )
@@ -401,42 +402,43 @@ function CrewQuickEditModal({ crew, deptDestOverrides, crewCallOverrides, exclud
 
 // ─── Move Crew Modal (Step 2) ─────────────────────────────────
 function MoveCrewModal({ crewMember, currentTripKey, trips, locMap, onMove, onClose }) {
+  const t = useT()
   const [target, setTarget] = useState('')
-  const otherTrips = trips.filter(t => t.key !== currentTripKey && !t.isUnassigned)
+  const otherTrips = trips.filter(trip => trip.key !== currentTripKey && !trip.isUnassigned)
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div style={{ background: 'white', borderRadius: '16px', padding: '22px', width: '420px', maxWidth: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.2)' }}>
-        <div style={{ fontWeight: '900', fontSize: '16px', color: '#0f172a', marginBottom: '4px' }}>Move passenger</div>
+        <div style={{ fontWeight: '900', fontSize: '16px', color: '#0f172a', marginBottom: '4px' }}>{t.rocketMovePassenger}</div>
         <div style={{ fontSize: '13px', color: '#2563eb', fontWeight: '700', marginBottom: '4px' }}>{crewMember.full_name}</div>
         <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '16px' }}>{crewMember.department || '—'}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '300px', overflowY: 'auto', marginBottom: '16px' }}>
-          {otherTrips.map(t => {
-            const cap = t.vehicle.pax_suggested || t.vehicle.capacity || 6
-            const pax = t.crewList.length
+          {otherTrips.map(trip => {
+            const cap = trip.vehicle.pax_suggested || trip.vehicle.capacity || 6
+            const pax = trip.crewList.length
             const over = pax >= cap
             return (
-              <div key={t.key} onClick={() => setTarget(t.key)}
-                style={{ padding: '10px 14px', borderRadius: '10px', border: `2px solid ${target === t.key ? '#2563eb' : '#e2e8f0'}`, background: target === t.key ? '#eff6ff' : 'white', cursor: 'pointer' }}>
+              <div key={trip.key} onClick={() => setTarget(trip.key)}
+                style={{ padding: '10px 14px', borderRadius: '10px', border: `2px solid ${target === trip.key ? '#2563eb' : '#e2e8f0'}`, background: target === trip.key ? '#eff6ff' : 'white', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a', fontFamily: 'monospace' }}>{t.vehicleId}</span>
+                  <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a', fontFamily: 'monospace' }}>{trip.vehicleId}</span>
                   <span style={{ fontSize: '12px', fontWeight: '700', color: over ? '#b91c1c' : '#15803d' }}>{pax}/{cap} pax {over ? '⚠' : ''}</span>
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                  {minToHHMM(t.pickupMin)} · {t.vehicle.driver_name || 'No driver'} · {locMap[t.destId] || t.destId}
+                  {minToHHMM(trip.pickupMin)} · {trip.vehicle.driver_name || t.rocketNoDriver} · {locMap[trip.destId] || trip.destId}
                 </div>
               </div>
             )
           })}
           <div onClick={() => setTarget('__remove__')}
             style={{ padding: '10px 14px', borderRadius: '10px', border: `2px solid ${target === '__remove__' ? '#dc2626' : '#e2e8f0'}`, background: target === '__remove__' ? '#fef2f2' : 'white', cursor: 'pointer' }}>
-            <div style={{ fontWeight: '700', fontSize: '13px', color: '#dc2626' }}>↩ Remove from all trips</div>
+            <div style={{ fontWeight: '700', fontSize: '13px', color: '#dc2626' }}>{t.rocketRemoveFromAll}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: '9px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Cancel</button>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: '9px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>{t.rocketCancelBtn}</button>
           <button onClick={() => { if (target) { onMove(crewMember, currentTripKey, target); onClose() } }} disabled={!target}
             style={{ flex: 2, padding: '10px', borderRadius: '9px', border: 'none', background: target ? '#2563eb' : '#e2e8f0', color: target ? 'white' : '#94a3b8', cursor: target ? 'pointer' : 'default', fontSize: '13px', fontWeight: '800' }}>
-            Move →
+            {t.rocketMoveBtn}
           </button>
         </div>
       </div>
@@ -448,6 +450,7 @@ function MoveCrewModal({ crewMember, currentTripKey, trips, locMap, onMove, onCl
 // TASK 7: added globalServiceType prop — shows a badge when trip's service
 // type differs from the global default.
 function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceType }) {
+  const t = useT()
   const [open, setOpen] = useState(true)
   const isUnassigned = !!trip.isUnassigned
   const pax    = trip.crewList.length
@@ -510,7 +513,7 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
             <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {isUnassigned
                 ? `${locMap[trip.hotelId] || trip.hotelId} → ${locMap[trip.destId] || trip.destId} · ${minToHHMM(trip.callMin)} call`
-                : `${trip.vehicle?.driver_name || 'No driver'} · ${trip.vehicle?.vehicle_type || ''}`}
+                : `${trip.vehicle?.driver_name || t.rocketNoDriver} · ${trip.vehicle?.vehicle_type || ''}`}
             </div>
           </div>
         </div>
@@ -558,7 +561,7 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
             ) : (
               <>
                 <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '5px', fontStyle: 'italic' }}>
-                  auto-split on confirm · 🏁 all arrive {minToHHMM(trip.callMin)}
+                  {t.rocketAutoSplit} · {t.rocketAllArrive} {minToHHMM(trip.callMin)}
                 </div>
                 {/* Multi-pickup breakdown — pickup calcolati in cascata */}
                 {isMultiPickup && pickupHotels.map(hId => {
@@ -593,7 +596,7 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
           </div>
           {/* Crew list */}
           {pax === 0 ? (
-            <div style={{ padding: '12px 14px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>No passengers</div>
+            <div style={{ padding: '12px 14px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>{t.rocketNoPassengers}</div>
           ) : (
             <div>
               {trip.crewList.map(c => {
@@ -647,6 +650,7 @@ function LocSelect({ value, onChange, locations, placeholder = '— Select —',
 
 // ─── Last Run Banner (TASK 3) ─────────────────────────────────
 function LastRunBanner({ lastConfig, locMap, onLoad, onDismiss }) {
+  const t = useT()
   function cfgSummary(cfg) {
     const dest    = locMap[cfg.destId] || cfg.destId || '—'
     const time    = cfg.globalCallTime || '—'
@@ -687,6 +691,7 @@ function LastRunBanner({ lastConfig, locMap, onLoad, onDismiss }) {
 
 // ─── Templates Panel Modal (TASK 3 + TASK 4) ─────────────────
 function TemplatesPanel({ currentConfig, locMap, onLoad, onClose }) {
+  const t = useT()
   // ── Local (localStorage) state ────────────────────────────
   const [localTemplates, setLocalTemplates] = useState(() => loadSavedTemplates())
   const [newName,        setNewName]        = useState('')
@@ -983,6 +988,7 @@ function TemplatesPanel({ currentConfig, locMap, onLoad, onClose }) {
  *   onDismiss(k) — callback con la chiave da marcare come dismissed
  */
 function SuggestionsHint({ suggestions, weekday, locMap, onApply, onDismiss }) {
+  const t = useT()
   const [collapsed, setCollapsed] = useState(false)
   if (!suggestions || suggestions.length === 0) return null
   const dayName = WEEKDAY_NAMES[weekday] || 'Today'
@@ -1103,6 +1109,7 @@ function SuggestionsHint({ suggestions, weekday, locMap, onApply, onDismiss }) {
 // ─── Main Page ─────────────────────────────────────────────────
 export default function RocketPage() {
   const router = useRouter()
+  const t = useT()
   const [user,    setUser]    = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
@@ -1423,7 +1430,7 @@ export default function RocketPage() {
   const destLabel          = uniqueDestIds.length === 1 ? (locMap[uniqueDestIds[0]] || uniqueDestIds[0])
     : uniqueDestIds.length > 1 ? `${uniqueDestIds.length} destinations` : (locMap[destId] || destId || '—')
   const canLaunch     = !!destId && selectedCrew.length > 0 && includedVehicles.length > 0
-  const stepLabel     = ['', 'Setup', 'Preview', 'Done']
+  const stepLabel     = ['', t.rocketStepSetup, t.rocketStepPreview, t.rocketStepDone]
   // TASK 7: activeDeptOverrides also counts service type overrides
   const activeDeptOverrides = Object.keys(deptDestOverrides).filter(d =>
     deptDestOverrides[d]?.destId !== destId ||
