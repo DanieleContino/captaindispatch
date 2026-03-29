@@ -193,18 +193,18 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
 
             {/* ID */}
             <div style={fld}>
-              <label style={lbl}>Location ID</label>
+              <label style={lbl}>{t.locationIdLabel}</label>
               <input value={form.id} onChange={e => set('id', e.target.value.toUpperCase())}
                 style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em', background: mode === 'edit' ? '#f8fafc' : 'white' }}
                 placeholder="H001 / APT_PMO" required readOnly={mode === 'edit'} />
               <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>
-                Hotels: H001, H002… · Aeroporti: APT_XXX · Stazioni: STN_XXX · Porti: PRT_XXX
+                {t.locationIdHint}
               </div>
             </div>
 
             {/* Nome */}
             <div style={fld}>
-              <label style={lbl}>Nome</label>
+              <label style={lbl}>{t.locationNameLabel}</label>
               <input value={form.name} onChange={e => set('name', e.target.value)} style={inp} placeholder="Grand Hotel Palermo" required />
             </div>
 
@@ -216,10 +216,10 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
               </div>
               <div>
                 <div style={{ fontSize: '13px', fontWeight: '700', color: form.is_hub ? '#15803d' : '#374151' }}>
-                  {form.is_hub ? '✈ Hub (Aeroporto / Stazione / Porto)' : '🏨 Hotel / Location normale'}
+                  {form.is_hub ? t.isHubLabel : t.isHotelLabel}
                 </div>
                 <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                  {form.is_hub ? 'ID inizia con APT_ STN_ PRT_ — Transfer class calcolato automaticamente' : 'Luogo di pickup/dropoff per crew'}
+                  {form.is_hub ? t.isHubHint : t.isHotelHint}
                 </div>
               </div>
             </div>
@@ -272,28 +272,28 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
             {/* Lat / Lng */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
-                <label style={lbl}>Latitudine</label>
+                <label style={lbl}>{t.latitudeLabel}</label>
                 <input type="text" value={form.lat} onChange={e => set('lat', e.target.value)} style={inp} placeholder="38.175600" />
               </div>
               <div>
-                <label style={lbl}>Longitudine</label>
+                <label style={lbl}>{t.longitudeLabel}</label>
                 <input type="text" value={form.lng} onChange={e => set('lng', e.target.value)} style={inp} placeholder="13.091000" />
               </div>
             </div>
             <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '12px', padding: '6px 10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
-              ⚠ Usa il <strong>punto</strong> come separatore decimale (non la virgola). Coordinate usate per Haversine fallback.
+              {t.coordDecimalHint}
             </div>
 
             {/* Default Pickup Point */}
             <div style={fld}>
-              <label style={lbl}>Default Pickup Point</label>
+              <label style={lbl}>{t.defaultPickupPointLabel}</label>
               <input value={form.default_pickup_point} onChange={e => set('default_pickup_point', e.target.value)} style={inp} placeholder="Uscita Arrivi, Terminal 2…" />
             </div>
 
             {/* Delete */}
             {mode === 'edit' && (
               <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Zona pericolosa</div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>{t.dangerZone}</div>
                 {!confirmDel ? (
                   <button type="button" onClick={handleDelete} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
                     {t.deleteLocation}
@@ -340,7 +340,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
           <div style={{ background: '#0f2340', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <span style={{ color: 'white', fontWeight: '800', fontSize: '14px' }}>{t.chooseOnMap}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>Clicca sul punto desiderato, poi "✓ Usa questo punto"</span>
+              <span style={{ fontSize: '11px', color: '#94a3b8' }}>{t.mapPickerHint}</span>
               <button
                 type="button"
                 onClick={() => setMapOpen(false)}
@@ -389,6 +389,7 @@ function LocationRow({ loc, onEdit }) {
 
 // ─── Pagina ───────────────────────────────────────────────────
 export default function LocationsPage() {
+  const t = useT()
   const router = useRouter()
   const [user,      setUser]  = useState(null)
   const [locs,      setLocs]  = useState([])
@@ -466,7 +467,7 @@ export default function LocationsPage() {
           ))}
           <button onClick={load} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
           <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-            + Nuova Location
+            {t.addLocationBtn}
           </button>
         </div>}
       />
@@ -475,12 +476,12 @@ export default function LocationsPage() {
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px', transition: 'margin-right 0.25s', marginRight: sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
         {!PRODUCTION_ID && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>⚠ NEXT_PUBLIC_PRODUCTION_ID non impostato</div>}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Caricamento…</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>📍</div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>{locs.length === 0 ? 'Nessuna location' : 'Nessun risultato'}</div>
-            {locs.length === 0 && <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', padding: '9px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', marginTop: '12px' }}>+ Aggiungi</button>}
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>{locs.length === 0 ? t.noLocations : t.noResults}</div>
+            {locs.length === 0 && <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', padding: '9px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', marginTop: '12px' }}>{t.addNew}</button>}
           </div>
         ) : (
           <>

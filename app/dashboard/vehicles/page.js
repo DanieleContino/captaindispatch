@@ -116,12 +116,12 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
               <input value={form.id} onChange={e => set('id', e.target.value.toUpperCase())}
                 style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em', background: mode === 'edit' ? '#f8fafc' : 'white' }}
                 placeholder="VAN-01 / BUS-20 / CAR-05" required readOnly={mode === 'edit'} />
-              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Formato: VAN-01, BUS-20, CAR-05 — usato in Trips e Fleet Monitor</div>
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>{t.vehicleIdHint}</div>
             </div>
 
             {/* Tipo veicolo */}
             <div style={fld}>
-              <label style={lbl}>Tipo</label>
+              <label style={lbl}>{t.vehicleTypeLabel}</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {['VAN', 'CAR', 'BUS'].map(type => {
                   const c = TYPE_COLOR[type]; const active = form.vehicle_type === type
@@ -138,7 +138,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
 
             {/* Vehicle Class */}
             <div style={fld}>
-              <label style={lbl}>Classe Veicolo</label>
+              <label style={lbl}>{t.vehicleClassLabel}</label>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <button type="button" onClick={() => set('vehicle_class', '')}
                   style={{ padding: '4px 10px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${!form.vehicle_class ? '#0f2340' : '#e2e8f0'}`, background: !form.vehicle_class ? '#0f2340' : 'white', color: !form.vehicle_class ? 'white' : '#94a3b8' }}>
@@ -159,7 +159,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
             {/* Targa + Capacità */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
-                <label style={lbl}>Targa</label>
+                <label style={lbl}>{t.licensePlateLabel}</label>
                 <input value={form.license_plate} onChange={e => set('license_plate', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.1em' }} placeholder="AB123CD" />
               </div>
               <div>
@@ -189,18 +189,18 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
 
             {/* Driver */}
             <div style={fld}>
-              <label style={lbl}>Driver</label>
+              <label style={lbl}>{t.driverLabel}</label>
               <input value={form.driver_name} onChange={e => set('driver_name', e.target.value)} style={inp} placeholder="Mario Rossi" />
             </div>
 
             {/* Sign code */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
-                <label style={lbl}>Sign Code</label>
+                <label style={lbl}>{t.signCodeLabel}</label>
                 <input value={form.sign_code} onChange={e => set('sign_code', e.target.value)} style={inp} placeholder="GRIP1, PROD2…" />
               </div>
               <div>
-                <label style={lbl}>Unit Default</label>
+                <label style={lbl}>{t.unitDefaultLabel}</label>
                 <input value={form.unit_default} onChange={e => set('unit_default', e.target.value)} style={inp} placeholder="MAIN, SECOND…" />
               </div>
             </div>
@@ -231,7 +231,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
               </div>
               <div>
                 <div style={{ fontSize: '13px', fontWeight: '700', color: form.active ? '#15803d' : '#64748b' }}>
-                  {form.active ? '✅ Veicolo attivo — visibile in Fleet Monitor' : '⏸ Veicolo inattivo — nascosto da Fleet Monitor'}
+                  {form.active ? t.vehicleActive : t.vehicleInactive}
                 </div>
               </div>
             </div>
@@ -239,7 +239,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
             {/* Delete */}
             {mode === 'edit' && (
               <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
-                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Zona pericolosa</div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>{t.dangerZone}</div>
                 {!confirmDel ? (
                   <button type="button" onClick={handleDelete} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
                     {t.deleteVehicle}

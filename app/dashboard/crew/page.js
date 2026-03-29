@@ -268,7 +268,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
               <div style={row}>
                 <label style={lbl}>Crew ID</label>
                 <input value={form.id} onChange={e => set('id', e.target.value.toUpperCase())} style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em' }} placeholder="CR0001" required />
-                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Auto-generato · modificabile se necessario · usato per QR code</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>{t.crewIdHint}</div>
               </div>
             ) : (
               <div style={{ ...row, display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
@@ -279,13 +279,13 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
 
             {/* Nome */}
             <div style={row}>
-              <label style={lbl}>Full Name *</label>
+              <label style={lbl}>{t.fullNameLabel} *</label>
               <input value={form.full_name} onChange={e => set('full_name', e.target.value)} style={inp} placeholder="Mario Rossi" required />
             </div>
 
             {/* Dipartimento */}
             <div style={row}>
-              <label style={lbl}>Department</label>
+              <label style={lbl}>{t.departmentLabel}</label>
               <input value={form.department} onChange={e => set('department', e.target.value)} style={inp} placeholder="GRIP, CAMERA, PRODUCTION…" />
             </div>
 
@@ -293,7 +293,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
             <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
               <div>
                 <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151' }}>🚐 {t.selfDrive} / {t.ntnShort}</div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Excluded from Rocket auto-assignment</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>{t.ntnExcludedHint}</div>
               </div>
               <button type="button" onClick={() => set('no_transport_needed', !form.no_transport_needed)}
                 style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.no_transport_needed ? '#6b7280' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
@@ -303,7 +303,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
 
             {/* Hotel */}
             <div style={row}>
-              <label style={lbl}>Hotel / Location</label>
+              <label style={lbl}>{t.hotelLocationLabel}</label>
               <select value={form.hotel_id} onChange={e => set('hotel_id', e.target.value)} style={inp}>
                 <option value="">– No hotel –</option>
                 {locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name} ({l.id})</option>)}
@@ -318,7 +318,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
             {/* Hotel Status + Travel Status */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
-                <label style={lbl}>Hotel Status</label>
+                <label style={lbl}>{t.hotelStatusLabel}</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {['CONFIRMED', 'PENDING', 'CHECKED_OUT'].map(s => {
                     const c = HC[s]; const active = form.hotel_status === s
@@ -332,7 +332,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
                 </div>
               </div>
               <div>
-                <label style={lbl}>Travel Status</label>
+                <label style={lbl}>{t.travelStatusLabel}</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {['IN', 'PRESENT', 'OUT'].map(s => {
                     const c = TC[s]; const active = form.travel_status === s
@@ -350,26 +350,26 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
             {/* Date */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
-                <label style={lbl}>Arrival Date</label>
+                <label style={lbl}>{t.arrivalDateLabel}</label>
                 <input type="date" value={form.arrival_date} onChange={e => set('arrival_date', e.target.value)} style={inp} />
               </div>
               <div>
-                <label style={lbl}>Departure Date</label>
+                <label style={lbl}>{t.departureDateLabel}</label>
                 <input type="date" value={form.departure_date} onChange={e => set('departure_date', e.target.value)} style={inp} />
               </div>
             </div>
 
             {/* Note */}
             <div style={row}>
-              <label style={lbl}>Notes</label>
-              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Notes, special requests…" />
+              <label style={lbl}>{t.notesLabel}</label>
+              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder={t.notesPlaceholder} />
             </div>
 
             {/* Elimina (solo edit) */}
             {mode === 'edit' && (
               <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>
-                  Zona pericolosa
+                  {t.dangerZone}
                 </div>
                 {!confirmDel ? (
                   <button type="button" onClick={handleDelete} disabled={deleting}
