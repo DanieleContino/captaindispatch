@@ -1544,31 +1544,31 @@ export default function RocketPage() {
                     <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '13px', padding: '16px 20px' }}>
                       {/* Header row with Templates button */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>⚙️ Trip Configuration</span>
+                        <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>{t.rocketTripConfig}</span>
                         <button onClick={() => setShowTemplates(true)}
                           style={{ padding: '4px 10px', borderRadius: '7px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#374151', cursor: 'pointer', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          📋 Templates
+                          {t.rocketTemplatesBtn}
                         </button>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div>
-                          <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Date</label>
+                          <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{t.rocketDateLabel}</label>
                           <input type="date" value={date} onChange={e => setDate(e.target.value)}
                             style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: '700', boxSizing: 'border-box', color: '#0f172a' }} />
                         </div>
                         <div>
-                          <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Default Destination</label>
+                          <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{t.rocketDefaultDest}</label>
                           <LocSelect value={destId} onChange={e => setDestId(e.target.value)} locations={locations}
                             placeholder="— Select destination —" style={{ width: '100%', fontSize: '12px', boxSizing: 'border-box' }} />
                         </div>
                         <div>
-                          <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Default Call Time</label>
+                          <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{t.rocketDefaultCall}</label>
                           <input type="time" value={globalCallTime} onChange={e => setGlobalCallTime(e.target.value)}
                             style={{ width: '100%', padding: '8px 10px', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '16px', fontWeight: '900', boxSizing: 'border-box', textAlign: 'center', color: '#0f172a', background: '#fffbeb' }} />
-                          <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Pickup = call − route duration</div>
+                          <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>{t.rocketPickupHint}</div>
                         </div>
                         <div>
-                          <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Service Type</label>
+                          <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{t.rocketServiceTypeLabel}</label>
                           <select value={serviceType} onChange={e => setServiceType(e.target.value)}
                             style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', fontWeight: '600', boxSizing: 'border-box', background: 'white', color: '#0f172a' }}>
                             {SERVICE_TYPES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -1582,7 +1582,7 @@ export default function RocketPage() {
                       <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '13px', overflow: 'hidden' }}>
                         <div style={{ padding: '10px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>🎯 Dept Destinations</span>
+                            <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>{t.rocketDeptDest}</span>
                             {activeDeptOverrides > 0 && (
                               <span style={{ padding: '1px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#ede9fe', color: '#6d28d9' }}>
                                 {activeDeptOverrides} override{activeDeptOverrides > 1 ? 's' : ''}
@@ -1590,7 +1590,7 @@ export default function RocketPage() {
                             )}
                           </div>
                           <button onClick={() => setDeptDestOverrides({})}
-                            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>↩ Reset all</button>
+                            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>{t.rocketResetAll}</button>
                         </div>
                         {departments.map(dept => {
                           const deptCfg     = deptDestOverrides[dept] || {}
@@ -1627,14 +1627,14 @@ export default function RocketPage() {
                                 <select value={deptCfg.serviceType || ''}
                                   onChange={e => setDeptOverride(dept, 'serviceType', e.target.value)}
                                   style={{ width: '100%', padding: '4px 6px', border: `1px solid ${deptCfg.serviceType ? '#c4b5fd' : '#e2e8f0'}`, borderRadius: '7px', fontSize: '11px', fontWeight: deptCfg.serviceType ? '700' : '400', background: deptCfg.serviceType ? '#fdf4ff' : 'white', color: deptCfg.serviceType ? '#7c3aed' : '#94a3b8', boxSizing: 'border-box', cursor: 'pointer' }}>
-                                  <option value="">same service type</option>
+                                  <option value="">{t.rocketSameServiceType}</option>
                                   {SERVICE_TYPES.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
                               </div>
                             </div>
                           )
                         })}
-                        <div style={{ padding: '6px 16px', background: '#f8fafc', fontSize: '10px', color: '#94a3b8' }}>Crew without dept always use the default.</div>
+                        <div style={{ padding: '6px 16px', background: '#f8fafc', fontSize: '10px', color: '#94a3b8' }}>{t.rocketDeptHint}</div>
                       </div>
                     )}
 
