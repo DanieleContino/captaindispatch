@@ -260,7 +260,7 @@ ALTER TABLE crew ADD COLUMN IF NOT EXISTS no_transport_needed BOOLEAN NOT NULL D
   - Filtro JS in `runRocket()`: `&& !c.no_transport_needed` nell'array `eligible`
   - Doppia protezione: DB non carica NTN, algoritmo li esclude comunque
 
-### TASK 3 ✅ (29/03/26) — commit in corso
+### TASK 3 ✅ (29/03/26) — commit `e3e5717`
 - `app/dashboard/trips/page.js` — EditTripSidebar:
   - `loadPaxData`: aggiunto `no_transport_needed` al select di `trip_passengers` (crew join) e `crew`
   - Pax assegnati NTN: badge `🚐 SD` grigio (`#f1f5f9 / #6b7280 / #cbd5e1`)
