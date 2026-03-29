@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 29 marzo 2026 | S15 — NTN/Self Drive 🚐 TASK 1-2 ✅**
+**Aggiornato: 29 marzo 2026 | S15 — NTN/Self Drive 🚐 TASK 1-3 ✅**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**
@@ -260,11 +260,14 @@ ALTER TABLE crew ADD COLUMN IF NOT EXISTS no_transport_needed BOOLEAN NOT NULL D
   - Filtro JS in `runRocket()`: `&& !c.no_transport_needed` nell'array `eligible`
   - Doppia protezione: DB non carica NTN, algoritmo li esclude comunque
 
-### TASK 3 ☐ — Trips: sezione SD in EditTripSidebar
-- Select crew: aggiungere `no_transport_needed` al select
-- Lista addPax: NTN crew in sezione separata "🚐 Self Drive / NTN" (sfondo grigio, cliccabili)
-- Pax assegnati NTN: badge `SD` grigio
-- Nessuna colonna extra su `trip_passengers` — flag letto da `crew.no_transport_needed`
+### TASK 3 ✅ (29/03/26) — commit in corso
+- `app/dashboard/trips/page.js` — EditTripSidebar:
+  - `loadPaxData`: aggiunto `no_transport_needed` al select di `trip_passengers` (crew join) e `crew`
+  - Pax assegnati NTN: badge `🚐 SD` grigio (`#f1f5f9 / #6b7280 / #cbd5e1`)
+  - Lista addPax: `regularCrew` + `ntnCrew` separati; sezione "🚐 Self Drive / NTN" (sfondo `#f8fafc`, bordo `#e2e8f0`)
+  - NTN crew cliccabili (addPax) anche nella sezione SD
+  - Se solo NTN disponibili (0 regular), mostra solo sezione SD (no "noEligibleCrew")
+  - i18n: riusa chiavi esistenti `t.selfDrive` + `t.ntnShort`
 
 ### TASK 4 ☐ — Pax Coverage: sezione NTN
 - Query: aggiungere `no_transport_needed` al select

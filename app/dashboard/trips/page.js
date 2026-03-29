@@ -920,11 +920,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     // Run all three queries in parallel
     const [paxRes, crewRes, dayTripsRes] = await Promise.all([
       supabase.from('trip_passengers')
-        .select('crew_id, trip_row_id, crew!inner(id,full_name,department)')
+        .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed)')
         .in('trip_row_id', groupIds),
 
       (() => {
-        let q = supabase.from('crew').select('id,full_name,department')
+        let q = supabase.from('crew').select('id,full_name,department,no_transport_needed')
           .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
         if (tc === 'ARRIVAL')        q = q.eq('hotel_id', trip.dropoff_id).eq('travel_status', 'IN')
         else if (tc === 'DEPARTURE') q = q.eq('hotel_id', trip.pickup_id).eq('travel_status', 'OUT')
@@ -1133,9 +1133,12 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
   const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
 
-  const freeCount  = availableCrew.filter(c => !busyMap[c.id]).length
-  const busyCount  = availableCrew.filter(c =>  busyMap[c.id]).length
-  const filtered   = availableCrew.filter(c => !paxSearch || c.full_name.toLowerCase().includes(paxSearch.toLowerCase()) || (c.department || '').toLowerCase().includes(paxSearch.toLowerCase()))
+  const regularCrew  = availableCrew.filter(c => !c.no_transport_needed)
+  const ntnCrew      = availableCrew.filter(c =>  c.no_transport_needed)
+  const freeCount    = regularCrew.filter(c => !busyMap[c.id]).length
+  const busyCount    = regularCrew.filter(c =>  busyMap[c.id]).length
+  const filtered     = regularCrew.filter(c => !paxSearch || c.full_name.toLowerCase().includes(paxSearch.toLowerCase()) || (c.department || '').toLowerCase().includes(paxSearch.toLowerCase()))
+  const filteredNtn  = ntnCrew.filter(c => !paxSearch || c.full_name.toLowerCase().includes(paxSearch.toLowerCase()) || (c.department || '').toLowerCase().includes(paxSearch.toLowerCase()))
 
   return (
     <>
@@ -1294,9 +1297,12 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         {assignedPax.map(c => (
                           <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
-                            <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                               <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
-                              <span style={{ color: '#94a3b8', marginLeft: '6px', fontSize: '11px' }}>{c.department}</span>
+                              {c.no_transport_needed && (
+                                <span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1' }}>🚐 SD</span>
+                              )}
+                              <span style={{ color: '#94a3b8', fontSize: '11px' }}>{c.department}</span>
                             </div>
                             <button type="button" onClick={() => removePax(c)}
                               style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '1px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
@@ -1309,7 +1315,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                   )}
 
                   {/* AVAILABLE + BUSY */}
-                  {availableCrew.length > 0 ? (
+                  {regularCrew.length > 0 ? (
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
                         <div style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', letterSpacing: '0.05em' }}>
@@ -1317,7 +1323,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                           {busyCount > 0 && <span style={{ color: '#a16207', marginLeft: '6px' }}>· {busyCount} BUSY</span>}
                         </div>
                         {freeCount > 0 && (
-                          <button type="button" onClick={() => availableCrew.filter(c => !busyMap[c.id]).forEach(c => addPax(c))}
+                          <button type="button" onClick={() => regularCrew.filter(c => !busyMap[c.id]).forEach(c => addPax(c))}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', fontSize: '10px', fontWeight: '700' }}>
                             Add all ({freeCount})
                           </button>
@@ -1343,6 +1349,69 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                                 </div>
                               </div>
                               {!isBusy && <span style={{ fontSize: '14px', color: '#2563eb', fontWeight: '700', flexShrink: 0 }}>+</span>}
+                              {isBusy  && <span style={{ fontSize: '10px', color: '#a16207', fontWeight: '700', flexShrink: 0, background: '#fef9c3', padding: '1px 5px', borderRadius: '4px' }}>BUSY</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      {/* ── NTN / Self Drive subsection ── */}
+                      {filteredNtn.length > 0 && (
+                        <div style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
+                          <div style={{ fontSize: '10px', fontWeight: '700', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '5px' }}>
+                            🚐 {t.selfDrive} / {t.ntnShort} ({ntnCrew.filter(c => !busyMap[c.id]).length})
+                          </div>
+                          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
+                            {filteredNtn.map(c => {
+                              const isBusy = !!busyMap[c.id]
+                              return (
+                                <div key={c.id} onClick={() => !isBusy && addPax(c)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: isBusy ? 'default' : 'pointer', borderBottom: '1px solid #f1f5f9', background: isBusy ? '#fffbeb' : '#f8fafc' }}
+                                  onMouseEnter={e => { if (!isBusy) e.currentTarget.style.background = '#f1f5f9' }}
+                                  onMouseLeave={e => { if (!isBusy) e.currentTarget.style.background = '#f8fafc' }}>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <span style={{ fontSize: '12px', fontWeight: '500', color: isBusy ? '#92400e' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</span>
+                                      <span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1', flexShrink: 0 }}>🚐 SD</span>
+                                    </div>
+                                    <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+                                      {c.department}
+                                      {isBusy && <span style={{ color: '#a16207', marginLeft: '4px' }}>· ⚠ BUSY on {busyMap[c.id]}</span>}
+                                    </div>
+                                  </div>
+                                  {!isBusy && <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: '700', flexShrink: 0 }}>+</span>}
+                                  {isBusy  && <span style={{ fontSize: '10px', color: '#a16207', fontWeight: '700', flexShrink: 0, background: '#fef9c3', padding: '1px 5px', borderRadius: '4px' }}>BUSY</span>}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : ntnCrew.length > 0 ? (
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '5px' }}>
+                        🚐 {t.selfDrive} / {t.ntnShort} ({ntnCrew.filter(c => !busyMap[c.id]).length})
+                      </div>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
+                        {filteredNtn.map(c => {
+                          const isBusy = !!busyMap[c.id]
+                          return (
+                            <div key={c.id} onClick={() => !isBusy && addPax(c)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: isBusy ? 'default' : 'pointer', borderBottom: '1px solid #f1f5f9', background: isBusy ? '#fffbeb' : '#f8fafc' }}
+                              onMouseEnter={e => { if (!isBusy) e.currentTarget.style.background = '#f1f5f9' }}
+                              onMouseLeave={e => { if (!isBusy) e.currentTarget.style.background = '#f8fafc' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ fontSize: '12px', fontWeight: '500', color: isBusy ? '#92400e' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</span>
+                                  <span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1', flexShrink: 0 }}>🚐 SD</span>
+                                </div>
+                                <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+                                  {c.department}
+                                  {isBusy && <span style={{ color: '#a16207', marginLeft: '4px' }}>· ⚠ BUSY on {busyMap[c.id]}</span>}
+                                </div>
+                              </div>
+                              {!isBusy && <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: '700', flexShrink: 0 }}>+</span>}
                               {isBusy  && <span style={{ fontSize: '10px', color: '#a16207', fontWeight: '700', flexShrink: 0, background: '#fef9c3', padding: '1px 5px', borderRadius: '4px' }}>BUSY</span>}
                             </div>
                           )
