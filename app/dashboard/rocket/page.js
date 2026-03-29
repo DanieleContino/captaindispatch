@@ -64,6 +64,7 @@ import { supabase }  from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
+import { useT } from '../../../lib/i18n'
 
 const PRODUCTION_ID      = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const LS_DEPT_KEY        = 'rocket_dept_config'
