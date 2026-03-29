@@ -619,7 +619,7 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
                       </div>
                     </div>
                     <button onClick={() => onMoveCrew(c, trip.key)} style={{ flexShrink: 0, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', color: '#64748b' }}>
-                      Move ›
+                      {t.rocketMoveBtn}
                     </button>
                   </div>
                 )
@@ -671,7 +671,7 @@ function LastRunBanner({ lastConfig, locMap, onLoad, onDismiss }) {
     <div style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', border: '1.5px solid #93c5fd', borderRadius: '12px', padding: '12px 16px', marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
       <span style={{ fontSize: '22px', flexShrink: 0 }}>🕐</span>
       <div style={{ flex: 1, minWidth: '180px' }}>
-        <div style={{ fontWeight: '800', fontSize: '13px', color: '#1e40af', marginBottom: '2px' }}>Reload last run?</div>
+        <div style={{ fontWeight: '800', fontSize: '13px', color: '#1e40af', marginBottom: '2px' }}>{t.rocketReloadLast}</div>
         <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {cfgSummary(lastConfig)}
           {lastConfig.savedAt && <span style={{ color: '#93c5fd', marginLeft: '8px' }}>{fmtDate(lastConfig.savedAt)}</span>}
@@ -831,13 +831,13 @@ function TemplatesPanel({ currentConfig, locMap, onLoad, onClose }) {
 
         {/* ── Header ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-          <div style={{ fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>📋 Templates</div>
+          <div style={{ fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>{t.rocketTemplatesBtn}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', color: '#94a3b8', cursor: 'pointer', lineHeight: 1, padding: '0 0 0 8px' }}>×</button>
         </div>
 
         {/* ── Save current config ── */}
         <div style={{ padding: '14px', background: '#f8fafc', borderRadius: '11px', border: '1px solid #e2e8f0', marginBottom: '18px', flexShrink: 0 }}>
-          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>Save current configuration</div>
+          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>{t.rocketSaveCurrentConfig}</div>
           <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfgSummary(currentConfig)}</div>
           <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSaveLocal() }}
@@ -847,12 +847,12 @@ function TemplatesPanel({ currentConfig, locMap, onLoad, onClose }) {
             {/* Save locally */}
             <button onClick={handleSaveLocal} disabled={!canSave}
               style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: `1px solid ${canSave ? '#bfdbfe' : '#e2e8f0'}`, background: canSave ? '#eff6ff' : '#f8fafc', color: canSave ? '#1d4ed8' : '#94a3b8', cursor: canSave ? 'pointer' : 'default', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>
-              💾 Save locally
+              {t.rocketSaveLocally}
             </button>
             {/* Share with team (Supabase) */}
             <button onClick={handleSaveShared} disabled={!canSave || sharedSaving}
               style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: `1px solid ${canSave ? '#a5f3c9' : '#e2e8f0'}`, background: canSave ? '#f0fdf4' : '#f8fafc', color: canSave ? '#15803d' : '#94a3b8', cursor: canSave && !sharedSaving ? 'pointer' : 'default', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>
-              {sharedSaving ? '⏳ Saving…' : '☁️ Share with team'}
+              {sharedSaving ? t.saving : t.rocketShareTeam}
             </button>
           </div>
           {(localSaveMsg || sharedSaveMsg) && (
@@ -868,8 +868,8 @@ function TemplatesPanel({ currentConfig, locMap, onLoad, onClose }) {
           {/* ☁️ Shared with team (Supabase) */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '10px', fontWeight: '900', color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em' }}>☁️ Shared with team</span>
-              <span style={{ fontSize: '10px', color: '#94a3b8' }}>· visible to all Captains</span>
+              <span style={{ fontSize: '10px', fontWeight: '900', color: '#059669', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{t.rocketSharedTemplates}</span>
+              <span style={{ fontSize: '10px', color: '#94a3b8' }}>{t.rocketVisibleAllCaptains}</span>
               {!sharedLoading && (
                 <button onClick={fetchSharedTemplates} title="Reload"
                   style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#94a3b8', padding: 0 }}>↻</button>
@@ -886,8 +886,8 @@ function TemplatesPanel({ currentConfig, locMap, onLoad, onClose }) {
             ) : sharedTemplates.length === 0 ? (
               <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', background: '#f8fafc', borderRadius: '10px', border: '1px dashed #e2e8f0' }}>
                 <div style={{ fontSize: '22px', marginBottom: '4px' }}>☁️</div>
-                <div style={{ fontSize: '12px', fontWeight: '600' }}>No shared templates yet.</div>
-                <div style={{ fontSize: '11px', marginTop: '2px' }}>Save a config above and click &ldquo;Share with team&rdquo;.</div>
+                <div style={{ fontSize: '12px', fontWeight: '600' }}>{t.rocketNoSharedTpl}</div>
+                <div style={{ fontSize: '11px', marginTop: '2px' }}>{t.rocketSaveCurrentConfig} → {t.rocketShareTeam}</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
@@ -935,14 +935,14 @@ function TemplatesPanel({ currentConfig, locMap, onLoad, onClose }) {
           {/* 💾 Local (this device) */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '10px', fontWeight: '900', color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>💾 Local</span>
-              <span style={{ fontSize: '10px', color: '#94a3b8' }}>· stored on this device only</span>
+              <span style={{ fontSize: '10px', fontWeight: '900', color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{t.rocketLocalTemplates}</span>
+              <span style={{ fontSize: '10px', color: '#94a3b8' }}>{t.rocketStoredOnDevice}</span>
             </div>
             {localTemplates.length === 0 ? (
               <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', background: '#f8fafc', borderRadius: '10px', border: '1px dashed #e2e8f0' }}>
                 <div style={{ fontSize: '22px', marginBottom: '4px' }}>💾</div>
-                <div style={{ fontSize: '12px', fontWeight: '600' }}>No local templates yet.</div>
-                <div style={{ fontSize: '11px', marginTop: '2px' }}>Click &ldquo;Save locally&rdquo; to store a config on this browser.</div>
+                <div style={{ fontSize: '12px', fontWeight: '600' }}>{t.rocketNoLocalTpl}</div>
+                <div style={{ fontSize: '11px', marginTop: '2px' }}>{t.rocketSaveLocally}</div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
