@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 29 marzo 2026 | S16 — i18n Sidebar Labels crew/vehicles/locations ✅**
+**Aggiornato: 29 marzo 2026 | S17 — i18n Rocket + Productions (in corso) | commit 2352e4f**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**
@@ -289,6 +289,177 @@ ALTER TABLE crew ADD COLUMN IF NOT EXISTS no_transport_needed BOOLEAN NOT NULL D
 **Chiavi aggiunte (EN+IT):** `dangerZone` · Crew: `crewIdHint`, `fullNameLabel`, `departmentLabel`, `ntnExcludedHint`, `hotelLocationLabel`, `hotelStatusLabel`, `travelStatusLabel`, `arrivalDateLabel`, `departureDateLabel`, `notesLabel`, `notesPlaceholder` · Vehicle: `vehicleTypeLabel`, `vehicleClassLabel`, `licensePlateLabel`, `driverLabel`, `signCodeLabel`, `unitDefaultLabel`, `vehicleIdHint`, `vehicleActive`, `vehicleInactive` · Location: `locationIdLabel`, `locationNameLabel`, `locationIdHint`, `isHubLabel`, `isHotelLabel`, `isHubHint`, `isHotelHint`, `latitudeLabel`, `longitudeLabel`, `coordDecimalHint`, `defaultPickupPointLabel`, `mapPickerHint`
 
 **Sostituzioni:** tutti i label hardcoded nelle 3 sidebar + LocationsPage body (`t.loading`, `t.noLocations`, `t.noResults`, `t.addNew`, `t.addLocationBtn`)
+
+---
+
+## S17 — i18n Rocket + Productions 🌍
+
+**File coinvolti:** `lib/i18n.js`, `app/dashboard/rocket/page.js`, `app/dashboard/productions/page.js`
+
+**Approccio:** `replace_in_file` chirurgico. Aggiungere `import { useT } from '../../../lib/i18n'` + `const t = useT()` in ogni componente principale. I sottocomponenti (`TripCard`, `TemplatesPanel`, `CrewQuickEditModal`, ecc.) usano `useT()` internamente (non props).
+
+> ⚠️ NON tradurre: valori logici (`'PRESENT'`, `'CONFIRMED'`, `'__other__'`), chiavi localStorage, ID, costanti interne.
+
+---
+
+### TASK 1 — Productions i18n (productions/page.js)
+
+**Chiavi da aggiungere in `lib/i18n.js`** (blocco `// ── Productions page ──`):
+
+| Chiave | EN | IT |
+|--------|----|----|
+| `productionsTitle` | `🎬 Productions` | `🎬 Produzioni` |
+| `productionsDesc` | `Manage your productions and set the active one for your account.` | `Gestisci le produzioni e imposta quella attiva per il tuo account.` |
+| `productionsYours` | `Your Productions` | `Le tue Produzioni` |
+| `productionsNewBtn` | `+ New Production` | `+ Nuova Produzione` |
+| `productionsNone` | `No productions yet` | `Nessuna produzione` |
+| `productionsNoneDesc` | `Create your first production to get started` | `Crea la tua prima produzione per iniziare` |
+| `productionsActiveLabel` | `ACTIVE PRODUCTION` | `PRODUZIONE ATTIVA` |
+| `productionsViewTransportList` | `→ View Transport List` | `→ Vedi Transport List` |
+| `productionsActivateBtn` | `↔ Activate` | `↔ Attiva` |
+| `productionsEditBtn` | `✎ Edit` | `✎ Modifica` |
+| `productionsSaveChanges` | `✓ Save Changes` | `✓ Salva Modifiche` |
+| `productionsCreate` | `🎬 Create Production` | `🎬 Crea Produzione` |
+| `productionsCreatingBtn` | `Creating…` | `Creando…` |
+| `productionsChooseLogo` | `📁 Choose Logo` | `📁 Scegli Logo` |
+| `productionsUploadLogo` | `📁 Upload Logo` | `📁 Carica Logo` |
+| `productionsLogoHint` | `PNG, JPG, SVG — max 2 MB` | `PNG, JPG, SVG — max 2 MB` |
+| `productionsNewTitle` | `🎬 New Production` | `🎬 Nuova Produzione` |
+| `productionsInfoTitle` | `ℹ How multi-production works` | `ℹ Come funziona il multi-produzione` |
+| `productionsInfoLine1` | `Each production has its own trips, crew, vehicles and locations — completely separate` | `Ogni produzione ha i propri trip, crew, veicoli e location — completamente separati` |
+| `productionsInfoLine2` | `Click "↔ Activate" to switch to a different production — all pages will use that ID` | `Clicca "↔ Attiva" per cambiare produzione — tutte le pagine useranno quell'ID` |
+| `productionsInfoLine3` | `All header fields (contacts, set, basecamp, call time) appear in the Transport List` | `Tutti i campi header (contatti, set, basecamp, call time) compaiono nel Transport List` |
+| `productionsInfoLine4` | `Logos are stored in Supabase Storage bucket` | `I loghi sono salvati nel bucket Supabase Storage` |
+| `productionsNameLabel` | `Production Name *` | `Nome Produzione *` |
+| `productionsSlugLabel` | `Slug (URL)` | `Slug (URL)` |
+| `productionsScheduleSection` | `Schedule` | `Pianificazione` |
+| `productionsCallTimeLabel` | `General Call Time` | `Call Time Generale` |
+| `productionsShootDayLabel` | `Shoot Day` | `Giorno di Ripresa` |
+| `productionsRevisionLabel` | `Revision` | `Revisione` |
+| `productionsKeyCreativesSection` | `Key Creatives` | `Creativi Chiave` |
+| `productionsDirectorLabel` | `Director` | `Regista` |
+| `productionsProducerLabel` | `Producer` | `Produttore` |
+| `productionsProdTeamSection` | `Production Team` | `Team di Produzione` |
+| `productionsPmNameLabel` | `Production Manager — Name` | `Production Manager — Nome` |
+| `productionsPmPhoneLabel` | `Production Manager — Phone` | `Production Manager — Tel` |
+| `productionsPcNameLabel` | `Production Coordinator — Name` | `Production Coordinator — Nome` |
+| `productionsPcPhoneLabel` | `Production Coordinator — Phone` | `Production Coordinator — Tel` |
+| `productionsTranspTeamSection` | `Transportation Team` | `Team Trasporti` |
+| `productionsTcNameLabel` | `Transportation Coordinator — Name` | `Transportation Coordinator — Nome` |
+| `productionsTcPhoneLabel` | `Transportation Coordinator — Phone` | `Transportation Coordinator — Tel` |
+| `productionsCaptNameLabel` | `Transportation Captain — Name` | `Transportation Captain — Nome` |
+| `productionsCaptPhoneLabel` | `Transportation Captain — Phone` | `Transportation Captain — Tel` |
+| `productionsOfficePhoneLabel` | `Production Office — Phone` | `Ufficio di Produzione — Tel` |
+| `productionsSetBasecampSection` | `Set & Basecamp` | `Set & Basecamp` |
+| `productionsSetNameLabel` | `Set Location — Name` | `Set — Nome` |
+| `productionsSetAddressLabel` | `Set Location — Address` | `Set — Indirizzo` |
+| `productionsBasecampLabel` | `Basecamp` | `Basecamp` |
+
+**Sostituzioni in `productions/page.js`:**
+- Aggiungere `import { useT } from '../../../lib/i18n'`
+- `const t = useT()` in `ProductionsPage()` e in `FormFields()`
+- Sostituire tutti i label/testi visibili con `t.xxx`
+
+---
+
+### TASK 2 — Rocket i18n (rocket/page.js) — 🔄 IN CORSO (commit 2352e4f)
+
+**Stato:**
+- ✅ `lib/i18n.js` — 80+ chiavi Rocket aggiunte EN+IT (blocco `// ── Rocket page ──`)
+- ✅ `app/dashboard/rocket/page.js` — `import { useT } from '../../../lib/i18n'` aggiunto
+- ❌ Wiring `const t = useT()` + `t.xxx` nei sottocomponenti → **prossima sessione**
+
+**Sottocomponenti da aggiornare (in ordine):**
+1. `CrewQuickEditModal` — `const t = useT()` + sostituire: `Include in run`, `✅ Included`, `☐ Excluded`, `Call Time`, `↩ Reset`, `✓ Done`
+2. `MoveCrewModal` — `Move passenger`, `↩ Remove from all trips`, `Cancel`, `Move →`
+3. `TripCard` — `NO VEHICLE — use Move ›`, `No driver`, `auto-split on confirm`, `🏁 all arrive`, `No passengers`, `Move ›`
+4. `LastRunBanner` — `Reload last run?`, `↩ Load`, `Dismiss`
+5. `TemplatesPanel` — `📋 Templates`, `Save current configuration`, `💾 Save locally`, `☁️ Share with team`, `☁️ Shared with team`, `💾 Local`, `No shared templates yet.`, `No local templates yet.`, `· visible to all Captains`, `· stored on this device only`
+6. `SuggestionsHint` — `Historical Suggestions`, `hints based on past`, `runs`, `Apply`, `Include`
+7. `RocketPage` — tutti i label: config, fleet, crew, step buttons, stats bar, Step 3 summary
+
+> ⚠️ Fare max 3 replace_in_file SEARCH/REPLACE per chiamata. Ogni sottocomponente richiede `const t = useT()` come prima riga del body.
+
+**Chiavi già presenti in `lib/i18n.js`** (blocco `// ── Rocket page ──`):
+
+| Chiave | EN | IT |
+|--------|----|----|
+| `rocketSubtitle` | `Trip Generator v2` | `Generatore Trip v2` |
+| `rocketStepSetup` | `Setup` | `Configurazione` |
+| `rocketStepPreview` | `Preview` | `Anteprima` |
+| `rocketStepDone` | `Done` | `Fine` |
+| `rocketEditSetup` | `← Edit Setup` | `← Modifica Config` |
+| `rocketCreating` | `⏳ Creating…` | `⏳ Creando…` |
+| `rocketTripConfig` | `⚙️ Trip Configuration` | `⚙️ Configurazione Trip` |
+| `rocketTemplatesBtn` | `📋 Templates` | `📋 Template` |
+| `rocketDateLabel` | `Date` | `Data` |
+| `rocketDefaultDest` | `Default Destination` | `Destinazione Predefinita` |
+| `rocketDefaultCall` | `Default Call Time` | `Call Time Predefinita` |
+| `rocketPickupHint` | `Pickup = call − route duration` | `Pickup = call − durata rotta` |
+| `rocketServiceTypeLabel` | `Service Type` | `Tipo Servizio` |
+| `rocketDeptDest` | `🎯 Dept Destinations` | `🎯 Destinazioni Reparto` |
+| `rocketResetAll` | `↩ Reset all` | `↩ Reset tutto` |
+| `rocketOverride` | `override` | `override` |
+| `rocketOverrides` | `overrides` | `override` |
+| `rocketCrewLabel` | `👥 Crew` | `👥 Crew` |
+| `rocketCrewSelected` | `selected` | `selezionati` |
+| `rocketCrewEligible` | `eligible` | `idonei` |
+| `rocketResetTimes` | `Reset times` | `Reset orari` |
+| `rocketExpandAll` | `Expand all` | `Espandi tutti` |
+| `rocketCollapse` | `Collapse` | `Comprimi` |
+| `rocketNoDept` | `— No Department —` | `— Nessun Reparto —` |
+| `rocketNoEligibleCrew` | `No eligible crew` | `Nessun crew idoneo` |
+| `rocketNoEligibleHint` | `travel_status = PRESENT + hotel_status = CONFIRMED` | `travel_status = PRESENT + hotel_status = CONFIRMED` |
+| `rocketNoVehicles` | `No active vehicles —` | `Nessun veicolo attivo —` |
+| `rocketAddVehicles` | `add vehicles` | `aggiungi veicoli` |
+| `rocketLoadingData` | `Loading fleet and crew data…` | `Caricamento dati flotta e crew…` |
+| `rocketDraftPlan` | `📋 Draft Plan` | `📋 Piano Bozza` |
+| `rocketNoTrips` | `No trips generated` | `Nessun trip generato` |
+| `rocketTripsCreated` | `Trips Created!` | `Trip Creati!` |
+| `rocketNewRun` | `🔄 New Rocket Run` | `🔄 Nuovo Run Rocket` |
+| `rocketViewTrips` | `📋 View Trips` | `📋 Vedi Trips` |
+| `rocketFleetMonitor` | `🚦 Fleet Monitor` | `🚦 Fleet Monitor` |
+| `rocketWhyExcluded` | `Why excluded?` | `Perché escluso?` |
+| `rocketExcludedLabel` | `excluded from this run` | `escluso/i da questo run` |
+| `rocketNoReasonNoted` | `no reason noted` | `nessun motivo indicato` |
+| `rocketReloadLast` | `Reload last run?` | `Ricarica ultimo run?` |
+| `rocketHistoricalSugg` | `Historical Suggestions` | `Suggerimenti Storici` |
+| `rocketSameServiceType` | `same service type` | `stesso tipo servizio` |
+| `rocketNoDriver` | `No driver` | `Nessun driver` |
+| `rocketIncluded` | `✅ Included` | `✅ Incluso` |
+| `rocketExcluded` | `☐ Excluded` | `☐ Escluso` |
+| `rocketIncludeInRun` | `Include in run` | `Includi nel run` |
+| `rocketCallTimeLabel` | `Call Time` | `Call Time` |
+| `rocketMovePassenger` | `Move passenger` | `Sposta passeggero` |
+| `rocketRemoveFromAll` | `↩ Remove from all trips` | `↩ Rimuovi da tutti i trip` |
+| `rocketAutoSplit` | `auto-split on confirm` | `divisione automatica alla conferma` |
+| `rocketAllArrive` | `🏁 all arrive` | `🏁 tutti arrivano` |
+| `rocketNoPassengers` | `No passengers` | `Nessun passeggero` |
+| `rocketMoveBtn` | `Move ›` | `Sposta ›` |
+| `rocketCancelBtn` | `Cancel` | `Annulla` |
+| `rocketDoneBtn` | `✓ Done` | `✓ Fatto` |
+| `rocketSaveCurrentConfig` | `Save current configuration` | `Salva configurazione corrente` |
+| `rocketSaveLocally` | `💾 Save locally` | `💾 Salva localmente` |
+| `rocketShareTeam` | `☁️ Share with team` | `☁️ Condividi con il team` |
+| `rocketSharedTemplates` | `☁️ Shared with team` | `☁️ Condivisi con il team` |
+| `rocketLocalTemplates` | `💾 Local` | `💾 Locali` |
+| `rocketNoSharedTpl` | `No shared templates yet.` | `Nessun template condiviso ancora.` |
+| `rocketNoLocalTpl` | `No local templates yet.` | `Nessun template locale ancora.` |
+| `rocketVisibleAllCaptains` | `· visible to all Captains` | `· visibile a tutti i Captain` |
+| `rocketStoredOnDevice` | `· stored on this device only` | `· salvato solo su questo dispositivo` |
+| `rocketDeptHint` | `Crew without dept always use the default.` | `Crew senza reparto usa sempre il default.` |
+| `rocketSelectedCount` | `selected` | `selezionati` |
+| `rocketExcludedCount` | `excluded` | `esclusi` |
+| `rocketCallOverrides` | `call override` | `override call` |
+| `rocketHotels` | `hotels` | `hotel` |
+| `rocketDepts` | `depts` | `reparti` |
+| `rocketBasedOnPast` | `hints based on past` | `suggerimenti basati sui` |
+| `rocketRuns` | `runs` | `run` |
+
+**Sostituzioni in `rocket/page.js`:**
+- Aggiungere `import { useT } from '../../../lib/i18n'` (già presente se aggiunto nella sessione)
+- `const t = useT()` in: `RocketPage`, `TripCard`, `CrewQuickEditModal`, `MoveCrewModal`, `TemplatesPanel`, `SuggestionsHint`, `LastRunBanner`
+- Sostituire stringhe visibili mantenendo la logica invariata
 
 ---
 
