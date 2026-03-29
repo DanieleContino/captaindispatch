@@ -1,6 +1,6 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 29 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅ | S13 — Vehicles Delete + Bulk Select ✅ | S14 — UI Components Batch1+2+3+4 ✅ COMPLETO | S15 — NTN / Self Drive 🚐 TODO)**
+**Aggiornato: 29 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅ | S13 — Vehicles Delete + Bulk Select ✅ | S14 — UI Components Batch1+2+3+4 ✅ COMPLETO | S15 — NTN / Self Drive 🚐 TASK 1 ✅)**
 
 ---
 
@@ -488,7 +488,7 @@ productions (id, name, slug, logo_url,
 user_roles,
 locations (is_hub bool),
 routes (duration_min, google_duration_min, traffic_updated_at),
-crew (hotel_id, travel_status, hotel_status, arrival_date, departure_date, department),
+crew (hotel_id, travel_status, hotel_status, arrival_date, departure_date, department, no_transport_needed bool default false),
 vehicles (capacity, pax_suggested, pax_max, driver_name, sign_code, active, available_from, available_to),
 trips (pickup_id, dropoff_id, call_min, pickup_min, start_dt, end_dt, service_type, status, terminal),
 trip_passengers, service_types,
@@ -599,20 +599,21 @@ ALTER TABLE crew ADD COLUMN IF NOT EXISTS no_transport_needed BOOLEAN NOT NULL D
 
 Aggiornare anche il Database Schema: `crew` ora include `no_transport_needed (bool, default false)`.
 
-### TASK 1 — DB + i18n + Crew Page ☐
+### TASK 1 — DB + i18n + Crew Page ✅ (29/03/26) — commit `31645a0`
 
-**`scripts/migrate-ntn.sql`** — ALTER TABLE (vedi sopra)
+**`scripts/migrate-ntn.sql`** — ALTER TABLE ✅ (da eseguire su Supabase SQL Editor)
 
-**`lib/i18n.js`** — 4 nuove chiavi EN+IT:
+**`lib/i18n.js`** — 4 nuove chiavi EN+IT ✅:
 - `noTransportNeeded` — "No Transport Needed" / "Nessun Trasporto Necessario"
 - `ntnShort` — "NTN" / "NTN"
 - `ntnSection` — "No Transport Needed" / "Nessun trasporto necessario"
 - `selfDrive` — "Self Drive" / "Guida Autonoma"
 
-**`app/dashboard/crew/page.js`:**
-- **CrewSidebar**: toggle switch `no_transport_needed` (sopra "Zona Pericolosa"), con nota *"Excluded from Rocket auto-assignment"*; salvato nella row
-- **CrewCard**: badge `🚐 SD` grigio/neutro quando `member.no_transport_needed === true`
-- **Filtro toolbar**: pill `NTN` (accanto a IN/PRESENT/OUT) per filtrare solo self-drive
+**`app/dashboard/crew/page.js`** ✅:
+- **CrewSidebar**: toggle switch `no_transport_needed` (sopra "Zona Pericolosa"), con nota *"Excluded from Rocket auto-assignment"*; salvato in insert e update (`row.no_transport_needed`)
+- **CrewCard**: badge `🚐 SD` grigio/neutro (`#f1f5f9` / `#6b7280` / border `#cbd5e1`) quando `member.no_transport_needed === true`
+- **Filtro toolbar**: pill `🚐 NTN` (accanto a IN/PRESENT/OUT) — logica dedicata `filterTravel === 'NTN'` filtra `c.no_transport_needed === true`
+- **Counter NTN** nel right della toolbar: badge `🚐 N NTN` grigio, appare solo se `counts.ntn > 0`
 - Query `select('*')` carica già il campo dopo la migration
 
 ### TASK 2 — Rocket Exclusion ☐
