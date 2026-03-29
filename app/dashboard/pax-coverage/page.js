@@ -142,6 +142,37 @@ function UnassignedRow({ member, locsMap, onAssign }) {
   )
 }
 
+// ─── Riga crew NTN / Self Drive ───────────────────────────────
+function NTNRow({ member, locsMap }) {
+  const tc = TC[member.travel_status] || TC.PRESENT
+  const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
+
+  return (
+    <div style={{
+      background: '#f8fafc',
+      border: '1px solid #e2e8f0',
+      borderLeft: '4px solid #94a3b8',
+      borderRadius: '9px',
+      padding: '10px 14px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+    }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+          <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{member.full_name}</span>
+          <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{member.department || 'N/A'}</span>
+          <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
+            {member.travel_status}
+          </span>
+          <span style={{ fontSize: '10px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>🚐 SD</span>
+        </div>
+        <div style={{ fontSize: '11px', color: '#64748b' }}>🏨 {hotel}</div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Pagina principale ─────────────────────────────────────────
 export default function PaxCoveragePage() {
   const t = useT()
@@ -179,7 +210,7 @@ export default function PaxCoveragePage() {
     setLoading(true)
 
     const [crewRes, tripsRes] = await Promise.all([
-      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,travel_status,departure_date')
+      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,travel_status,departure_date,no_transport_needed')
         .eq('production_id', PRODUCTION_ID)
         .eq('hotel_status', 'CONFIRMED')
         .order('department', { nullsLast: true })
@@ -234,7 +265,23 @@ export default function PaxCoveragePage() {
   const departments = [...new Set(crew.map(c => c.department || 'N/A'))].sort()
   const hotels      = [...new Set(crew.map(c => c.hotel_id).filter(Boolean))].sort()
 
-  const filtered = crew.filter(c => {
+  // NTN split — regular crew excluded from coverage stats
+  const regularCrew = crew.filter(c => !c.no_transport_needed)
+  const ntnCrew     = crew.filter(c =>  c.no_transport_needed)
+  const ntnCount    = ntnCrew.length
+
+  // NTN filtered (dept/hotel/search — NOT showOnly, shown always in own section)
+  const ntnFiltered = ntnCrew.filter(c => {
+    if (filterDept  !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
+    if (filterHotel !== 'ALL' && c.hotel_id !== filterHotel) return false
+    if (search) {
+      const q = search.toLowerCase()
+      if (!c.full_name.toLowerCase().includes(q) && !(c.department || '').toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  const filtered = regularCrew.filter(c => {
     if (filterTS   !== 'ALL' && c.travel_status !== filterTS) return false
     if (filterDept !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
     if (filterHotel !== 'ALL' && c.hotel_id !== filterHotel) return false
@@ -251,9 +298,9 @@ export default function PaxCoveragePage() {
   const assigned   = filtered.filter(c =>  assignMap[c.id])
   const unassigned = filtered.filter(c => !assignMap[c.id])
 
-  const totalAssigned   = crew.filter(c =>  assignMap[c.id]).length
-  const totalUnassigned = crew.filter(c => !assignMap[c.id]).length
-  const pct = crew.length > 0 ? Math.round(totalAssigned / crew.length * 100) : 0
+  const totalAssigned   = regularCrew.filter(c =>  assignMap[c.id]).length
+  const totalUnassigned = regularCrew.filter(c => !assignMap[c.id]).length
+  const pct = regularCrew.length > 0 ? Math.round(totalAssigned / regularCrew.length * 100) : 0
 
   if (!user) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
@@ -283,7 +330,7 @@ export default function PaxCoveragePage() {
           {['ALL', 'UNASSIGNED', 'ASSIGNED'].map(s => (
             <button key={s} onClick={() => setSO(s)}
               style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(showOnly === s ? (s === 'UNASSIGNED' ? { background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' } : s === 'ASSIGNED' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' } : { background: '#0f2340', color: 'white', borderColor: '#0f2340' }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
-              {s === 'ALL' ? `All (${crew.length})` : s === 'UNASSIGNED' ? `❌ ${t.withoutTransfer} (${totalUnassigned})` : `✅ ${t.withTransfer} (${totalAssigned})`}
+              {s === 'ALL' ? `All (${regularCrew.length})` : s === 'UNASSIGNED' ? `❌ ${t.withoutTransfer} (${totalUnassigned})` : `✅ ${t.withTransfer} (${totalAssigned})`}
             </button>
           ))}
           {/* Travel status filter */}
@@ -346,7 +393,7 @@ export default function PaxCoveragePage() {
             {/* Stats */}
             <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
               {[
-                { n: crew.length, l: t.totalCrewLabel, c: '#374151', bg: '#f8fafc', b: '#e2e8f0' },
+                { n: regularCrew.length, l: t.totalCrewLabel, c: '#374151', bg: '#f8fafc', b: '#e2e8f0' },
                 { n: totalAssigned, l: t.withTransfer, c: '#15803d', bg: '#f0fdf4', b: '#86efac' },
                 { n: totalUnassigned, l: t.withoutTransfer, c: totalUnassigned > 0 ? '#dc2626' : '#94a3b8', bg: totalUnassigned > 0 ? '#fef2f2' : '#f8fafc', b: totalUnassigned > 0 ? '#fecaca' : '#e2e8f0' },
               ].map(s => (
@@ -355,6 +402,12 @@ export default function PaxCoveragePage() {
                   <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', fontWeight: '600' }}>{s.l}</div>
                 </div>
               ))}
+              {ntnCount > 0 && (
+                <div style={{ textAlign: 'center', padding: '8px 14px', borderRadius: '10px', background: '#f1f5f9', border: '1px solid #cbd5e1' }}>
+                  <div style={{ fontSize: '22px', fontWeight: '900', color: '#6b7280', lineHeight: 1 }}>{ntnCount}</div>
+                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', fontWeight: '600' }}>🚐 {t.ntnShort}</div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -367,7 +420,7 @@ export default function PaxCoveragePage() {
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>{t.noCrewConfirmedDb}</div>
             <a href="/dashboard/crew" style={{ marginTop: '12px', display: 'inline-block', color: '#2563eb', fontSize: '13px' }}>{t.goToCrewLink}</a>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : filtered.length === 0 && ntnFiltered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '14px', color: '#64748b' }}>{t.noResultsFiltered}</div>
           </div>
@@ -418,6 +471,25 @@ export default function PaxCoveragePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {assigned.map(c => (
                     <AssignedRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ══ NTN / SELF DRIVE ══ */}
+            {ntnFiltered.length > 0 && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #94a3b8' }}>
+                  <span style={{ fontSize: '16px' }}>🚐</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>{t.ntnSection}</span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', background: '#94a3b8', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
+                    {ntnFiltered.length} crew
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— {t.ntnCoverageNote}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {ntnFiltered.map(c => (
+                    <NTNRow key={c.id} member={c} locsMap={locsMap} />
                   ))}
                 </div>
               </div>
