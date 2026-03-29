@@ -91,6 +91,11 @@ function CrewCard({ member, locations, onStatusChange, onEdit }) {
               {depToday ? '✈ TODAY' : '✈ TOMORROW'}
             </span>
           )}
+          {member.no_transport_needed && (
+            <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+              🚐 SD
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center', fontSize: '12px' }}>
           <span>🏨 <strong>{hotel}</strong></span>
@@ -120,7 +125,7 @@ function CrewCard({ member, locations, onStatusChange, onEdit }) {
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
 function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
   const t = useT()
-  const EMPTY = { id: '', full_name: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '' }
+  const EMPTY = { id: '', full_name: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false }
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -135,12 +140,13 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
         id:             initial.id || '',
         full_name:      initial.full_name || '',
         department:     initial.department || '',
-        hotel_id:       initial.hotel_id || '',
-        hotel_status:   initial.hotel_status || 'PENDING',
-        travel_status:  initial.travel_status || 'PRESENT',
-        arrival_date:   initial.arrival_date || '',
-        departure_date: initial.departure_date || '',
-        notes:          initial.notes || '',
+        hotel_id:             initial.hotel_id || '',
+        hotel_status:         initial.hotel_status || 'PENDING',
+        travel_status:        initial.travel_status || 'PRESENT',
+        arrival_date:         initial.arrival_date || '',
+        departure_date:       initial.departure_date || '',
+        notes:                initial.notes || '',
+        no_transport_needed:  initial.no_transport_needed || false,
       })
     } else {
       // Auto-genera Crew ID: prende il più alto CR#### esistente e incrementa
@@ -177,9 +183,10 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
       hotel_id:       form.hotel_id || null,
       hotel_status:   form.hotel_status,
       travel_status:  form.travel_status,
-      arrival_date:   form.arrival_date || null,
-      departure_date: form.departure_date || null,
-      notes:          form.notes.trim() || null,
+      arrival_date:          form.arrival_date || null,
+      departure_date:        form.departure_date || null,
+      notes:                 form.notes.trim() || null,
+      no_transport_needed:   form.no_transport_needed,
     }
 
     let error
@@ -324,6 +331,18 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
               <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Notes, special requests…" />
             </div>
 
+            {/* NTN / Self Drive toggle */}
+            <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151' }}>🚐 {t.selfDrive} / {t.ntnShort}</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Excluded from Rocket auto-assignment</div>
+              </div>
+              <button type="button" onClick={() => set('no_transport_needed', !form.no_transport_needed)}
+                style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.no_transport_needed ? '#6b7280' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
+                <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.no_transport_needed ? '20px' : '2px', display: 'block' }} />
+              </button>
+            </div>
+
             {/* Elimina (solo edit) */}
             {mode === 'edit' && (
               <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
@@ -430,7 +449,8 @@ export default function CrewPage() {
 
   // Filtri
   const filtered = crew.filter(c => {
-    if (filterTravel !== 'ALL' && c.travel_status !== filterTravel) return false
+    if (filterTravel === 'NTN') { if (!c.no_transport_needed) return false }
+    else if (filterTravel !== 'ALL' && c.travel_status !== filterTravel) return false
     if (filterHotel  !== 'ALL' && c.hotel_status  !== filterHotel)  return false
     if (filterDept   !== 'ALL' && (c.department || 'NO DEPT') !== filterDept) return false
     if (search) {
@@ -447,6 +467,7 @@ export default function CrewPage() {
     in:       crew.filter(c => c.travel_status === 'IN').length,
     present:  crew.filter(c => c.travel_status === 'PRESENT').length,
     out:      crew.filter(c => c.travel_status === 'OUT').length,
+    ntn:      crew.filter(c => c.no_transport_needed).length,
     depTomorrow: crew.filter(c => isTomorrow(c.departure_date)).length,
   }
 
@@ -479,6 +500,11 @@ export default function CrewPage() {
                 </button>
               )
             })}
+            {/* NTN pill */}
+            <button onClick={() => setFT('NTN')}
+              style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterTravel === 'NTN' ? { background: '#f1f5f9', color: '#6b7280', borderColor: '#cbd5e1' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+              🚐 {t.ntnShort}
+            </button>
           </div>
           {/* Hotel filter */}
           <div style={{ display: 'flex', gap: '3px' }}>
@@ -520,6 +546,11 @@ export default function CrewPage() {
               {s.n} {s.l}
             </span>
           ))}
+          {counts.ntn > 0 && (
+            <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', border: '1px solid #cbd5e1' }}>
+              🚐 {counts.ntn} {t.ntnShort}
+            </span>
+          )}
           <button onClick={loadCrew}
             style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
             ↻

@@ -1,8 +1,10 @@
 # CAPTAIN — Contesto Ridotto
 
-**Aggiornato: 28 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅ | S13 — Vehicles Delete + Bulk Select ✅ | S14 — UI Components Batch1+2+3+4 ✅ COMPLETO)**
+**Aggiornato: 29 marzo 2026 (S10 — Rocket Complete + Multi-Production ✅ | S11 — Push PWA 🔔 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ TASK 4 ✅ — Deploy fix ✅ | S12 — Import Intelligente 📂 TASK 1 ✅ TASK 2 ✅ TASK 3 ✅ — Bug fix + Fleet upgrade ✅ | S13 — Vehicles Delete + Bulk Select ✅ | S14 — UI Components Batch1+2+3+4 ✅ COMPLETO | S15 — NTN / Self Drive 🚐 TODO)**
 
 ---
+
+> 🧠 **APPROCCIO:** Prima di iniziare, scegli l'approccio più token-efficiente: **edit chirurgici** per bug isolati, **riscrittura completa con componenti riutilizzabili** per problemi sistemici. Spiega la scelta in una riga prima di procedere.
 
 > 🚀 **AZIONE IMMEDIATA: Quando leggi questo context, avvia subito `npm run dev` per testare in localhost!**
 
@@ -574,6 +576,67 @@ CREATE POLICY "Allow delete own production trips" ON trips
 - `app/dashboard/page.js` — body container normalizzato a `padding: '24px'`; Hero e card grid invariati
 
 **S14 — UI Components: COMPLETO** — tutte le pagine dashboard usano `PageHeader` per la sub-toolbar sticky.
+
+---
+
+## S15 — NTN / Self Drive 🚐 TODO
+
+### Panoramica
+Alcuni crew hanno già un mezzo proprio o vengono assegnati direttamente ad una squadra (gaffer, grip, art dept, ecc.) e **non hanno bisogno di un trasporto organizzato dalla produzione**. Si marcano come **NTN (No Transport Needed) / Self Drive (SD)**.
+
+**Comportamento:**
+- **Rocket**: esclusi automaticamente — non appaiono in Step 1
+- **Trips (assegnazione manuale)**: possono essere aggiunti a un trip come SD se la produzione vuole includerli nelle liste di trasporto; appaiono con badge `🚐 SD`
+- **Pax Coverage**: separati in una terza sezione in fondo, esclusi dal calcolo della percentuale di coverage
+- **Crew list**: badge `🚐 SD` sulla card, toggle switch nella sidebar, filtro pill `NTN` nella toolbar
+
+### DB Migration
+
+**File:** `scripts/migrate-ntn.sql`
+```sql
+ALTER TABLE crew ADD COLUMN IF NOT EXISTS no_transport_needed BOOLEAN NOT NULL DEFAULT FALSE;
+```
+
+Aggiornare anche il Database Schema: `crew` ora include `no_transport_needed (bool, default false)`.
+
+### TASK 1 — DB + i18n + Crew Page ☐
+
+**`scripts/migrate-ntn.sql`** — ALTER TABLE (vedi sopra)
+
+**`lib/i18n.js`** — 4 nuove chiavi EN+IT:
+- `noTransportNeeded` — "No Transport Needed" / "Nessun Trasporto Necessario"
+- `ntnShort` — "NTN" / "NTN"
+- `ntnSection` — "No Transport Needed" / "Nessun trasporto necessario"
+- `selfDrive` — "Self Drive" / "Guida Autonoma"
+
+**`app/dashboard/crew/page.js`:**
+- **CrewSidebar**: toggle switch `no_transport_needed` (sopra "Zona Pericolosa"), con nota *"Excluded from Rocket auto-assignment"*; salvato nella row
+- **CrewCard**: badge `🚐 SD` grigio/neutro quando `member.no_transport_needed === true`
+- **Filtro toolbar**: pill `NTN` (accanto a IN/PRESENT/OUT) per filtrare solo self-drive
+- Query `select('*')` carica già il campo dopo la migration
+
+### TASK 2 — Rocket Exclusion ☐
+
+**`app/dashboard/rocket/page.js`:**
+- Query Supabase: aggiungere `.eq('no_transport_needed', false)` alla query crew
+- Filtro JS: aggiungere `&& !c.no_transport_needed` al filtro (double safety net)
+
+### TASK 3 — Trips: sezione SD in EditTripSidebar ☐
+
+**`app/dashboard/trips/page.js`:**
+- Nella query crew dell'EditTripSidebar: aggiungere `no_transport_needed` al select
+- Lista crew disponibili per `addPax`: NTN crew in sezione separata in fondo "🚐 Self Drive / NTN" con sfondo grigio — cliccabili (si aggiungono a `trip_passengers` normalmente)
+- Pax già assegnati al trip: se `crew.no_transport_needed` → mostra badge `SD` grigio invece del badge normale
+- **Nessuna colonna extra su `trip_passengers`** — il flag SD si legge da `crew.no_transport_needed` al momento del display
+
+### TASK 4 — Pax Coverage: sezione NTN in fondo ☐
+
+**`app/dashboard/pax-coverage/page.js`:**
+- Query: aggiungere `no_transport_needed` al select crew
+- NTN crew **escono** dal pool assigned/unassigned
+- **Percentuale coverage**: denominatore = crew CONFIRMED con `no_transport_needed = false`
+- **Stats bar**: aggiungere box `🚐 NTN (N)` separato
+- **Terza sezione in fondo**: `🚐 No Transport Needed (N crew)` — bordo grigio neutro, nessun pulsante Assign
 
 ---
 
