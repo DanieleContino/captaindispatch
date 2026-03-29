@@ -68,8 +68,27 @@ function TravelSelector({ crewId, current, onChange }) {
   )
 }
 
+// ─── NTN Toggle inline ──────────────────────────────────────
+function NTNToggle({ crewId, current, onChange }) {
+  const [saving, setSaving] = useState(false)
+  async function toggle() {
+    if (saving) return
+    setSaving(true)
+    const next = !current
+    const { error } = await supabase.from('crew').update({ no_transport_needed: next }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    setSaving(false)
+    if (!error) onChange(crewId, next)
+  }
+  return (
+    <button onClick={e => { e.stopPropagation(); toggle() }} disabled={saving} title={current ? 'Rimuovi NTN' : 'Segna come Self Drive / NTN'}
+      style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: saving ? 'default' : 'pointer', border: `1px solid ${current ? '#cbd5e1' : '#e2e8f0'}`, background: current ? '#f1f5f9' : 'white', color: current ? '#6b7280' : '#cbd5e1', opacity: saving ? 0.6 : 1, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+      🚐
+    </button>
+  )
+}
+
 // ─── Crew card compatta ──────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onEdit }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit }) {
   const tc = TC[member.travel_status] || TC.PRESENT
   const hc = HC[member.hotel_status]  || HC.PENDING
   const hotel = locations[member.hotel_id] || member.hotel_id || '–'
@@ -78,7 +97,7 @@ function CrewCard({ member, locations, onStatusChange, onEdit }) {
   const dim = member.hotel_status !== 'CONFIRMED'
 
   return (
-    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderLeft: `4px solid ${tc.border}`, borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '12px', alignItems: 'center' }}>
+    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderLeft: `4px solid ${tc.border}`, borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '12px', alignItems: 'center' }}>
 
       {/* Info */}
       <div>
@@ -112,6 +131,9 @@ function CrewCard({ member, locations, onStatusChange, onEdit }) {
 
       {/* Travel selector */}
       <TravelSelector crewId={member.id} current={member.travel_status} onChange={onStatusChange} />
+
+      {/* NTN toggle */}
+      <NTNToggle crewId={member.id} current={member.no_transport_needed} onChange={onNTNChange} />
 
       {/* Edit button */}
       <button onClick={() => onEdit(member)}
@@ -267,6 +289,18 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
               <input value={form.department} onChange={e => set('department', e.target.value)} style={inp} placeholder="GRIP, CAMERA, PRODUCTION…" />
             </div>
 
+            {/* NTN / Self Drive toggle */}
+            <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151' }}>🚐 {t.selfDrive} / {t.ntnShort}</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Excluded from Rocket auto-assignment</div>
+              </div>
+              <button type="button" onClick={() => set('no_transport_needed', !form.no_transport_needed)}
+                style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.no_transport_needed ? '#6b7280' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
+                <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.no_transport_needed ? '20px' : '2px', display: 'block' }} />
+              </button>
+            </div>
+
             {/* Hotel */}
             <div style={row}>
               <label style={lbl}>Hotel / Location</label>
@@ -329,18 +363,6 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
             <div style={row}>
               <label style={lbl}>Notes</label>
               <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Notes, special requests…" />
-            </div>
-
-            {/* NTN / Self Drive toggle */}
-            <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151' }}>🚐 {t.selfDrive} / {t.ntnShort}</div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Excluded from Rocket auto-assignment</div>
-              </div>
-              <button type="button" onClick={() => set('no_transport_needed', !form.no_transport_needed)}
-                style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.no_transport_needed ? '#6b7280' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
-                <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.no_transport_needed ? '20px' : '2px', display: 'block' }} />
-              </button>
             </div>
 
             {/* Elimina (solo edit) */}
@@ -444,6 +466,7 @@ export default function CrewPage() {
   useEffect(() => { if (user) loadCrew() }, [user, loadCrew])
 
   function handleStatusChange(id, s) { setCrew(p => p.map(c => c.id === id ? { ...c, travel_status: s } : c)) }
+  function handleNTNChange(id, val)  { setCrew(p => p.map(c => c.id === id ? { ...c, no_transport_needed: val } : c)) }
 
   function handleSaved() { setSO(false); loadCrew() }
 
@@ -620,7 +643,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onEdit={openEdit} />
+                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onEdit={openEdit} />
                   ))}
                 </div>
               </div>
