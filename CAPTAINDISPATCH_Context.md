@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 29 marzo 2026 | S15 — NTN/Self Drive 🚐 TASK 1-3 ✅**
+**Aggiornato: 29 marzo 2026 | S16 — i18n Sidebar Labels crew/vehicles/locations ✅**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**
@@ -269,12 +269,26 @@ ALTER TABLE crew ADD COLUMN IF NOT EXISTS no_transport_needed BOOLEAN NOT NULL D
   - Se solo NTN disponibili (0 regular), mostra solo sezione SD (no "noEligibleCrew")
   - i18n: riusa chiavi esistenti `t.selfDrive` + `t.ntnShort`
 
-### TASK 4 ☐ — Pax Coverage: sezione NTN
-- Query: aggiungere `no_transport_needed` al select
-- NTN crew esclusi da pool assigned/unassigned
-- % coverage: denominatore = CONFIRMED con `no_transport_needed = false`
-- Stats bar: box `🚐 NTN (N)` separato
-- Terza sezione: `🚐 No Transport Needed (N crew)` — bordo grigio, nessun pulsante Assign
+### TASK 4 ✅ (29/03/26) — commit `44b1400`
+- `app/dashboard/pax-coverage/page.js`:
+  - Query: aggiunto `no_transport_needed` al select crew
+  - Split: `regularCrew` (no NTN) + `ntnCrew` — `ntnFiltered` applica dept/hotel/search ma NON showOnly
+  - % coverage + totalAssigned/Unassigned: denominatore = `regularCrew.length`
+  - Toolbar pill `All (N)`: conta solo `regularCrew.length`
+  - Stats bar: box `🚐 NTN (N)` grigio (`#f1f5f9 / #6b7280 / #cbd5e1`), visibile se ntnCount > 0
+  - Terza sezione in fondo: `🚐 No Transport Needed` — bordo grigio `#94a3b8`, `NTNRow` senza pulsante Assign
+  - Condizione "no results": `filtered.length === 0 && ntnFiltered.length === 0`
+- `lib/i18n.js`: chiave `ntnCoverageNote` EN + IT
+
+---
+
+## ✅ S16 — i18n Sidebar Labels (crew / vehicles / locations)
+**Commit:** `cb77bd4`  
+**File:** `lib/i18n.js`, `crew/page.js`, `vehicles/page.js`, `locations/page.js`
+
+**Chiavi aggiunte (EN+IT):** `dangerZone` · Crew: `crewIdHint`, `fullNameLabel`, `departmentLabel`, `ntnExcludedHint`, `hotelLocationLabel`, `hotelStatusLabel`, `travelStatusLabel`, `arrivalDateLabel`, `departureDateLabel`, `notesLabel`, `notesPlaceholder` · Vehicle: `vehicleTypeLabel`, `vehicleClassLabel`, `licensePlateLabel`, `driverLabel`, `signCodeLabel`, `unitDefaultLabel`, `vehicleIdHint`, `vehicleActive`, `vehicleInactive` · Location: `locationIdLabel`, `locationNameLabel`, `locationIdHint`, `isHubLabel`, `isHotelLabel`, `isHubHint`, `isHotelHint`, `latitudeLabel`, `longitudeLabel`, `coordDecimalHint`, `defaultPickupPointLabel`, `mapPickerHint`
+
+**Sostituzioni:** tutti i label hardcoded nelle 3 sidebar + LocationsPage body (`t.loading`, `t.noLocations`, `t.noResults`, `t.addNew`, `t.addLocationBtn`)
 
 ---
 
