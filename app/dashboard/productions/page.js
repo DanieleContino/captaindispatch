@@ -14,6 +14,7 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { switchProduction, getProductionId } from '../../../lib/production'
 import { Navbar } from '../../../lib/navbar'
+import { useT } from '../../../lib/i18n'
 
 function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -50,112 +51,113 @@ function sectionTitle(icon, title) {
 
 // ── Shared form fields (used in both create and edit) ──
 function FormFields({ values, onChange, isEdit = false }) {
+  const t = useT()
   const s = (k, v) => onChange(k, v)
   return (
     <>
       {/* Identity */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px', marginBottom: '4px' }}>
         <div>
-          <label style={lbl}>Production Name *</label>
+          <label style={lbl}>{t.productionsNameLabel}</label>
           <input value={values.name}
             onChange={e => { s('name', e.target.value); if (!isEdit) s('slug', slugify(e.target.value)) }}
             style={inp} required placeholder="e.g. Palermo 2026" autoFocus={!isEdit} />
         </div>
         <div>
-          <label style={lbl}>Slug (URL)</label>
+          <label style={lbl}>{t.productionsSlugLabel}</label>
           <input value={values.slug} onChange={e => s('slug', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="auto" />
         </div>
       </div>
 
       {/* Schedule */}
-      {sectionTitle('🗓', 'Schedule')}
+      {sectionTitle('🗓', t.productionsScheduleSection)}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
         <div>
-          <label style={lbl}>General Call Time</label>
+          <label style={lbl}>{t.productionsCallTimeLabel}</label>
           <input type="time" value={values.general_call_time} onChange={e => s('general_call_time', e.target.value)} style={inp} />
         </div>
         <div>
-          <label style={lbl}>Shoot Day</label>
+          <label style={lbl}>{t.productionsShootDayLabel}</label>
           <input type="number" value={values.shoot_day} onChange={e => s('shoot_day', e.target.value)} style={inp} placeholder="42" min="1" />
         </div>
         <div>
-          <label style={lbl}>Revision</label>
+          <label style={lbl}>{t.productionsRevisionLabel}</label>
           <input type="number" value={values.revision} onChange={e => s('revision', e.target.value)} style={inp} placeholder="1" min="1" />
         </div>
       </div>
 
       {/* Key Creatives */}
-      {sectionTitle('🎭', 'Key Creatives')}
+      {sectionTitle('🎭', t.productionsKeyCreativesSection)}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
         <div>
-          <label style={lbl}>Director</label>
+          <label style={lbl}>{t.productionsDirectorLabel}</label>
           <input value={values.director} onChange={e => s('director', e.target.value)} style={inp} placeholder="e.g. John Smith" />
         </div>
         <div>
-          <label style={lbl}>Producer</label>
+          <label style={lbl}>{t.productionsProducerLabel}</label>
           <input value={values.producer} onChange={e => s('producer', e.target.value)} style={inp} placeholder="e.g. Jane Doe" />
         </div>
       </div>
 
       {/* Production Team */}
-      {sectionTitle('👥', 'Production Team')}
+      {sectionTitle('👥', t.productionsProdTeamSection)}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
         <div>
-          <label style={lbl}>Production Manager — Name</label>
+          <label style={lbl}>{t.productionsPmNameLabel}</label>
           <input value={values.production_manager} onChange={e => s('production_manager', e.target.value)} style={inp} placeholder="e.g. Robert Brown" />
         </div>
         <div>
-          <label style={lbl}>Production Manager — Phone</label>
+          <label style={lbl}>{t.productionsPmPhoneLabel}</label>
           <input value={values.production_manager_phone} onChange={e => s('production_manager_phone', e.target.value)} style={inp} placeholder="+39 320 111 0000" />
         </div>
         <div>
-          <label style={lbl}>Production Coordinator — Name</label>
+          <label style={lbl}>{t.productionsPcNameLabel}</label>
           <input value={values.production_coordinator} onChange={e => s('production_coordinator', e.target.value)} style={inp} placeholder="e.g. Maria Rossi" />
         </div>
         <div>
-          <label style={lbl}>Production Coordinator — Phone</label>
+          <label style={lbl}>{t.productionsPcPhoneLabel}</label>
           <input value={values.production_coordinator_phone} onChange={e => s('production_coordinator_phone', e.target.value)} style={inp} placeholder="+39 320 000 0000" />
         </div>
       </div>
 
       {/* Transportation Team */}
-      {sectionTitle('🚌', 'Transportation Team')}
+      {sectionTitle('🚌', t.productionsTranspTeamSection)}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
         <div>
-          <label style={lbl}>Transportation Coordinator — Name</label>
+          <label style={lbl}>{t.productionsTcNameLabel}</label>
           <input value={values.transportation_coordinator} onChange={e => s('transportation_coordinator', e.target.value)} style={inp} placeholder="e.g. Daniele Contino" />
         </div>
         <div>
-          <label style={lbl}>Transportation Coordinator — Phone</label>
+          <label style={lbl}>{t.productionsTcPhoneLabel}</label>
           <input value={values.transportation_coordinator_phone} onChange={e => s('transportation_coordinator_phone', e.target.value)} style={inp} placeholder="+39 333 000 0000" />
         </div>
         <div>
-          <label style={lbl}>Transportation Captain — Name</label>
+          <label style={lbl}>{t.productionsCaptNameLabel}</label>
           <input value={values.transportation_captain} onChange={e => s('transportation_captain', e.target.value)} style={inp} placeholder="e.g. Marco Bianchi" />
         </div>
         <div>
-          <label style={lbl}>Transportation Captain — Phone</label>
+          <label style={lbl}>{t.productionsCaptPhoneLabel}</label>
           <input value={values.transportation_captain_phone} onChange={e => s('transportation_captain_phone', e.target.value)} style={inp} placeholder="+39 347 000 0000" />
         </div>
         <div>
-          <label style={lbl}>Production Office — Phone</label>
+          <label style={lbl}>{t.productionsOfficePhoneLabel}</label>
           <input value={values.production_office_phone} onChange={e => s('production_office_phone', e.target.value)} style={inp} placeholder="+39 091 000 0000" />
         </div>
       </div>
 
       {/* Set & Basecamp */}
-      {sectionTitle('📍', 'Set & Basecamp')}
+      {sectionTitle('📍', t.productionsSetBasecampSection)}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
         <div>
-          <label style={lbl}>Set Location — Name</label>
+          <label style={lbl}>{t.productionsSetNameLabel}</label>
           <input value={values.set_location} onChange={e => s('set_location', e.target.value)} style={inp} placeholder="e.g. Cinecitta Studio 5" />
         </div>
         <div>
-          <label style={lbl}>Set Location — Address</label>
+          <label style={lbl}>{t.productionsSetAddressLabel}</label>
           <input value={values.set_address} onChange={e => s('set_address', e.target.value)} style={inp} placeholder="e.g. Via Tuscolana 1055" />
         </div>
         <div>
-          <label style={lbl}>Basecamp</label>
+          <label style={lbl}>{t.productionsBasecampLabel}</label>
           <input value={values.basecamp} onChange={e => s('basecamp', e.target.value)} style={inp} placeholder="e.g. Parking Area B" />
         </div>
       </div>
@@ -164,6 +166,7 @@ function FormFields({ values, onChange, isEdit = false }) {
 }
 
 export default function ProductionsPage() {
+  const t = useT()
   const router = useRouter()
   const [user,         setUser]         = useState(null)
   const [productions,  setProductions]  = useState([])
@@ -377,8 +380,8 @@ export default function ProductionsPage() {
 
         {/* Title */}
         <div style={{ marginBottom: '28px' }}>
-          <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: 0, letterSpacing: '-0.5px' }}>🎬 Productions</h1>
-          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0' }}>Manage your productions and set the active one for your account.</p>
+          <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: 0, letterSpacing: '-0.5px' }}>{t.productionsTitle}</h1>
+          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0' }}>{t.productionsDesc}</p>
         </div>
 
         {/* Active production banner */}
@@ -392,7 +395,7 @@ export default function ProductionsPage() {
                 <span style={{ fontSize: '28px' }}>✅</span>
               )}
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', letterSpacing: '0.07em' }}>ACTIVE PRODUCTION</div>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', letterSpacing: '0.07em' }}>{t.productionsActiveLabel}</div>
                 <div style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a' }}>{active.name}</div>
                 <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                   {active.director && <span>🎬 <strong>Director:</strong> {active.director}</span>}
@@ -404,7 +407,7 @@ export default function ProductionsPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
                 <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#1d4ed8', color: 'white' }}>{active.role}</span>
-                <a href="/dashboard/lists" style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>→ View Transport List</a>
+                <a href="/dashboard/lists" style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>{t.productionsViewTransportList}</a>
               </div>
             </div>
           ) : null
@@ -413,20 +416,20 @@ export default function ProductionsPage() {
         {/* Productions list */}
         <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: '24px' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a' }}>Your Productions ({productions.length})</div>
+            <div style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a' }}>{t.productionsYours} ({productions.length})</div>
             <button onClick={() => { setCreating(true); setError(null) }}
               style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-              + New Production
+              {t.productionsNewBtn}
             </button>
           </div>
 
           {loading ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Loading…</div>
+            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>{t.loading}</div>
           ) : productions.length === 0 ? (
             <div style={{ padding: '40px', textAlign: 'center' }}>
               <div style={{ fontSize: '36px', marginBottom: '8px' }}>🎬</div>
-              <div style={{ color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>No productions yet</div>
-              <div style={{ color: '#94a3b8', fontSize: '13px' }}>Create your first production to get started</div>
+              <div style={{ color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>{t.productionsNone}</div>
+              <div style={{ color: '#94a3b8', fontSize: '13px' }}>{t.productionsNoneDesc}</div>
             </div>
           ) : (
             <div>
@@ -468,12 +471,12 @@ export default function ProductionsPage() {
                           {!isActive && (
                             <button onClick={() => handleSwitch(prod.id)}
                               style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid #2563eb', background: 'white', color: '#2563eb', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                              ↔ Activate
+                              {t.productionsActivateBtn}
                             </button>
                           )}
                           <button onClick={() => openEdit(prod)}
                             style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer' }}>
-                            ✎ Edit
+                            {t.productionsEditBtn}
                           </button>
                         </div>
                       </div>
@@ -494,9 +497,9 @@ export default function ProductionsPage() {
                             <div>
                               <button type="button" onClick={() => editFileRef.current?.click()}
                                 style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid #2563eb', background: 'white', color: '#2563eb', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                                📁 Choose Logo
+                                {t.productionsChooseLogo}
                               </button>
-                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>PNG, JPG, SVG — max 2 MB</div>
+                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{t.productionsLogoHint}</div>
                               <input ref={editFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleLogoChange(e, true)} />
                             </div>
                           </div>
@@ -507,11 +510,11 @@ export default function ProductionsPage() {
                         <div style={{ display: 'flex', gap: '8px', marginTop: '18px' }}>
                           <button type="button" onClick={() => { setEditId(null); setEditLogoFile(null); setEditLogoPreview(null) }}
                             style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
-                            ✕ Cancel
+                            ✕ {t.cancel}
                           </button>
                           <button type="submit" disabled={editSaving}
                             style={{ flex: 1, padding: '8px 14px', borderRadius: '8px', border: 'none', background: editSaving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '800' }}>
-                            {editSaving ? 'Saving…' : '✓ Save Changes'}
+                            {editSaving ? t.saving : t.productionsSaveChanges}
                           </button>
                         </div>
                       </form>
@@ -526,7 +529,7 @@ export default function ProductionsPage() {
         {/* Create new production */}
         {creating && (
           <div style={{ background: 'white', borderRadius: '12px', border: '2px solid #2563eb', padding: '24px', marginBottom: '24px' }}>
-            <div style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', marginBottom: '18px' }}>🎬 New Production</div>
+            <div style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', marginBottom: '18px' }}>{t.productionsNewTitle}</div>
             <form onSubmit={handleCreate}>
 
               {/* Logo upload */}
@@ -544,10 +547,10 @@ export default function ProductionsPage() {
                   <div>
                     <button type="button" onClick={() => fileInputRef.current?.click()}
                       style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #2563eb', background: 'white', color: '#2563eb', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
-                      📁 Upload Logo
+                      {t.productionsUploadLogo}
                     </button>
                     {logoFile && <div style={{ fontSize: '12px', color: '#22c55e', marginTop: '4px', fontWeight: '600' }}>✓ {logoFile.name}</div>}
-                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>PNG, JPG, SVG — max 2 MB</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{t.productionsLogoHint}</div>
                     <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleLogoChange(e, false)} />
                   </div>
                 </div>
@@ -560,11 +563,11 @@ export default function ProductionsPage() {
               <div style={{ display: 'flex', gap: '8px', marginTop: '18px' }}>
                 <button type="button" onClick={() => { setCreating(false); setError(null); setLogoFile(null); setLogoPreview(null); setForm({ ...EMPTY_FORM }) }}
                   style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
-                  Cancel
+                  {t.cancel}
                 </button>
                 <button type="submit" disabled={saving}
                   style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#2563eb', color: 'white', fontSize: '14px', cursor: 'pointer', fontWeight: '800' }}>
-                  {saving ? 'Creating…' : '🎬 Create Production'}
+                  {saving ? t.productionsCreatingBtn : t.productionsCreate}
                 </button>
               </div>
             </form>
@@ -573,12 +576,12 @@ export default function ProductionsPage() {
 
         {/* Info box */}
         <div style={{ marginTop: '8px', padding: '16px 20px', background: 'white', border: '1px solid #e2e8f0', borderLeft: '4px solid #f59e0b', borderRadius: '10px', fontSize: '12px', color: '#374151', lineHeight: 1.7 }}>
-          <div style={{ fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>ℹ How multi-production works</div>
+          <div style={{ fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>{t.productionsInfoTitle}</div>
           <ul style={{ margin: 0, paddingLeft: '18px' }}>
-            <li>Each production has its own trips, crew, vehicles and locations — completely <strong>separate</strong></li>
-            <li>Click <strong>"↔ Activate"</strong> to switch to a different production — all pages will use that ID</li>
-            <li>All header fields (contacts, set, basecamp, call time) appear in the <a href="/dashboard/lists" style={{ color: '#2563eb' }}>Transport List</a></li>
-            <li>Logos are stored in Supabase Storage bucket <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: '3px' }}>production-logos</code></li>
+            <li>{t.productionsInfoLine1}</li>
+            <li>{t.productionsInfoLine2}</li>
+            <li>{t.productionsInfoLine3}</li>
+            <li>{t.productionsInfoLine4}</li>
           </ul>
         </div>
 
