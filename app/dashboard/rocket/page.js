@@ -1001,10 +1001,10 @@ function SuggestionsHint({ suggestions, weekday, locMap, onApply, onDismiss }) {
         <span style={{ fontSize: '18px', flexShrink: 0 }}>💡</span>
         <div style={{ flex: 1 }}>
           <span style={{ fontWeight: '800', fontSize: '13px', color: '#92400e' }}>
-            Historical Suggestions
+            {t.rocketHistoricalSugg}
           </span>
           <span style={{ fontSize: '11px', color: '#b45309', marginLeft: '8px' }}>
-            {suggestions.length} hint{suggestions.length !== 1 ? 's' : ''} based on past {dayName} runs
+            {suggestions.length} hint{suggestions.length !== 1 ? 's' : ''} {t.rocketBasedOnPast} {dayName} {t.rocketRuns}
           </span>
         </div>
         <span style={{ color: '#b45309', fontSize: '11px', transition: 'transform 0.2s', display: 'inline-block', transform: collapsed ? 'rotate(180deg)' : 'none' }}>▼</span>
@@ -1450,7 +1450,7 @@ export default function RocketPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '22px' }}>🚀</span>
             <span style={{ fontWeight: '900', fontSize: '17px', color: '#0f172a' }}>Rocket</span>
-            <span style={{ fontWeight: '400', fontSize: '13px', color: '#94a3b8' }}>Trip Generator v2</span>
+            <span style={{ fontWeight: '400', fontSize: '13px', color: '#94a3b8' }}>{t.rocketSubtitle}</span>
             <div style={{ display: 'flex', gap: '3px', marginLeft: '8px' }}>
               {[1, 2, 3].map(n => {
                 const active = step === n, done = step > n
