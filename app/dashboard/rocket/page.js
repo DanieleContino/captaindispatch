@@ -1479,12 +1479,12 @@ export default function RocketPage() {
             {step === 2 && (
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', color: '#64748b' }}>{activeTrips} trip{activeTrips !== 1 ? 's' : ''} · {totalPax} pax</span>
-                <button onClick={() => setStep(1)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#374151' }}>← Edit Setup</button>
+                <button onClick={() => setStep(1)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#374151' }}>{t.rocketEditSetup}</button>
                 <button onClick={handleConfirm} disabled={saving || activeTrips === 0}
                   style={{ background: (saving || activeTrips === 0) ? '#94a3b8' : '#16a34a', color: 'white', border: 'none', borderRadius: '9px', padding: '8px 20px',
                     cursor: (saving || activeTrips === 0) ? 'wait' : 'pointer', fontSize: '13px', fontWeight: '800',
                     boxShadow: (saving || activeTrips === 0) ? 'none' : '0 3px 12px rgba(22,163,74,0.35)' }}>
-                  {saving ? '⏳ Creating…' : `✅ Confirm ${activeTrips} trip${activeTrips !== 1 ? 's' : ''}`}
+                  {saving ? t.rocketCreating : `✅ Confirm ${activeTrips} trip${activeTrips !== 1 ? 's' : ''}`}
                 </button>
               </div>
             )}
@@ -1895,7 +1895,7 @@ export default function RocketPage() {
 
                 {/* Stats bar */}
                 <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 16px', marginBottom: '16px', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>📋 Draft Plan</span>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>{t.rocketDraftPlan}</span>
                   <span style={{ fontSize: '12px', color: '#64748b' }}><strong style={{ color: '#0f172a' }}>{activeTrips}</strong> trip{activeTrips !== 1 ? 's' : ''}</span>
                   <span style={{ fontSize: '12px', color: '#64748b' }}><strong style={{ color: '#0f172a' }}>{totalPax}</strong> passengers</span>
                   {uniqueDestIds.length > 1 && <span style={{ fontSize: '12px', color: '#64748b' }}><strong style={{ color: '#7c3aed' }}>{uniqueDestIds.length}</strong> destinations</span>}
@@ -1909,7 +1909,7 @@ export default function RocketPage() {
                 {draftTrips.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>
                     <div style={{ fontSize: '40px', marginBottom: '12px' }}>🤔</div>
-                    <div style={{ fontWeight: '700', marginBottom: '6px' }}>No trips generated</div>
+                    <div style={{ fontWeight: '700', marginBottom: '6px' }}>{t.rocketNoTrips}</div>
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
@@ -1932,7 +1932,7 @@ export default function RocketPage() {
             {step === 3 && (
               <div style={{ maxWidth: '480px', margin: '60px auto', textAlign: 'center' }}>
                 <div style={{ width: '90px', height: '90px', background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', borderRadius: '50%', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '44px', boxShadow: '0 8px 24px rgba(22,163,74,0.2)' }}>🚀</div>
-                <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', marginBottom: '8px' }}>Trips Created!</div>
+                <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', marginBottom: '8px' }}>{t.rocketTripsCreated}</div>
                 <div style={{ fontSize: '15px', color: '#64748b', marginBottom: '4px' }}>
                   <strong style={{ color: '#0f172a', fontSize: '20px' }}>{createdCount}</strong> trips for <strong style={{ color: '#0f172a' }}>{date}</strong>
                 </div>
@@ -1950,7 +1950,7 @@ export default function RocketPage() {
                   return (
                     <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '12px', padding: '14px 16px', marginBottom: '20px', textAlign: 'left' }}>
                       <div style={{ fontWeight: '800', fontSize: '12px', color: '#ea580c', marginBottom: '8px' }}>
-                        🚫 {excludedList.length} vehicle{excludedList.length !== 1 ? 's' : ''} excluded from this run
+                        🚫 {excludedList.length} vehicle{excludedList.length !== 1 ? 's' : ''} {t.rocketExcludedLabel}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         {excludedList.map(v => {
@@ -1966,7 +1966,7 @@ export default function RocketPage() {
                                   {reason}
                                 </span>
                               ) : (
-                                <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', flexShrink: 0 }}>no reason noted</span>
+                                <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', flexShrink: 0 }}>{t.rocketNoReasonNoted}</span>
                               )}
                             </div>
                           )
@@ -1977,11 +1977,11 @@ export default function RocketPage() {
                 })()}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <a href="/dashboard/trips" style={{ display: 'block', background: '#0f2340', color: 'white', padding: '15px', borderRadius: '11px', fontSize: '15px', fontWeight: '800', textDecoration: 'none' }}>📋 View Trips</a>
-                  <a href="/dashboard/fleet" style={{ display: 'block', background: '#1e3a5f', color: 'white', padding: '15px', borderRadius: '11px', fontSize: '15px', fontWeight: '800', textDecoration: 'none' }}>🚦 Fleet Monitor</a>
+                  <a href="/dashboard/trips" style={{ display: 'block', background: '#0f2340', color: 'white', padding: '15px', borderRadius: '11px', fontSize: '15px', fontWeight: '800', textDecoration: 'none' }}>{t.rocketViewTrips}</a>
+                  <a href="/dashboard/fleet" style={{ display: 'block', background: '#1e3a5f', color: 'white', padding: '15px', borderRadius: '11px', fontSize: '15px', fontWeight: '800', textDecoration: 'none' }}>{t.rocketFleetMonitor}</a>
                   <button onClick={() => { setStep(1); setDraftTrips([]); setSuggestions([]); setCreatedCount(0); setCreateError(null) }}
                     style={{ padding: '14px', borderRadius: '11px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', cursor: 'pointer', fontSize: '14px', fontWeight: '700' }}>
-                    🔄 New Rocket Run
+                    {t.rocketNewRun}
                   </button>
                 </div>
               </div>
