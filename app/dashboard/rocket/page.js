@@ -66,7 +66,8 @@ import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { useT } from '../../../lib/i18n'
 
-const PRODUCTION_ID      = process.env.NEXT_PUBLIC_PRODUCTION_ID
+import { getProductionId } from '../../../lib/production'
+
 const LS_DEPT_KEY        = 'rocket_dept_config'
 const LS_LAST_CONFIG_KEY = 'rocket_last_config'
 const LS_TEMPLATES_KEY   = 'rocket_templates'
@@ -1110,6 +1111,7 @@ function SuggestionsHint({ suggestions, weekday, locMap, onApply, onDismiss }) {
 export default function RocketPage() {
   const router = useRouter()
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const [user,    setUser]    = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)

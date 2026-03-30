@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | S27 ✅ completato — Delete Production**
+**Aggiornato: 30 marzo 2026 | BUG-2 Fix ✅ — RLS trips DELETE policy esplicita**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -9,6 +9,8 @@
 ---
 
 ## ▶ PROSSIMO — S18 i18n Completamento (TASK 4-10)
+
+> **Logo productions** — Upload ora avviene via `/api/productions/upload-logo` (service client lato server, bypassa RLS Storage). Bucket `production-logos` pubblico + policy INSERT/UPDATE aggiunte su `storage.objects`. Commit: `abd737b`
 
 ---
 
@@ -77,7 +79,7 @@ Supabase Project ID: lvxtvgxyancpegvfcnsk (West EU)
 
 **Pagine:** `/login` | `/dashboard` | `/dashboard/fleet` | `/dashboard/trips` | `/dashboard/crew` | `/dashboard/vehicles` | `/dashboard/locations` | `/dashboard/rocket` | `/dashboard/lists` | `/dashboard/pax-coverage` | `/dashboard/hub-coverage` | `/dashboard/productions` | `/dashboard/reports` | `/dashboard/qr-codes` | `/dashboard/settings/production` | `/wrap-trip` | `/pending` | `/scan` | `/dashboard/bridge`
 
-**API:** auth `callback/check-approval` | cron `arrival-status/refresh-routes-traffic/daily-briefing` | places `autocomplete/details/map` | bridge `pending-users/approve-user/invites` | invites `redeem` | productions CRUD | qr `resolve` | routes `refresh-traffic/traffic-check/refresh-location` | rocket `templates/suggestions` | push `subscribe/unsubscribe/send` | import `parse/confirm`
+**API:** auth `callback/check-approval` | cron `arrival-status/refresh-routes-traffic/daily-briefing` | places `autocomplete/details/map` | bridge `pending-users/approve-user/invites` | invites `redeem` | productions `CRUD/upload-logo` | qr `resolve` | routes `refresh-traffic/traffic-check/refresh-location` | rocket `templates/suggestions` | push `subscribe/unsubscribe/send` | import `parse/confirm`
 
 ---
 
@@ -151,6 +153,15 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 - `scripts/migrate-crew-contacts.sql` — aggiunge `email TEXT`, `phone TEXT`
 - `scripts/migrate-ntn.sql` — aggiunge `no_transport_needed BOOLEAN DEFAULT FALSE`
 - `scripts/migrate-dept-uppercase.sql` — bonifica dept storici (opzionale)
+- `scripts/fix-productions-rls-duplicate.sql` — ✅ fix policy RLS productions (drop `productions_own`+`productions_insert` → `productions_select/update/delete`)
+- `scripts/fix-functions-search-path.sql` — ✅ fix `SET search_path = public` su 3 funzioni
+- `scripts/fix-trips-rls-delete.sql` — ✅ fix BUG-2: drop `"own_production"` FOR ALL su `trips`, ricrea policy esplicite trips_select/insert/update/delete
+
+**RLS productions (stato attuale dopo fix):**
+- `productions_select` FOR SELECT USING user_production_ids()
+- `productions_update` FOR UPDATE USING user_production_ids()
+- `productions_delete` FOR DELETE USING user_production_ids()
+- ⚠️ Nessuna policy INSERT per `authenticated` — tutti gli INSERT passano da service client (API server)
 
 ---
 
@@ -158,7 +169,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 
 | Bug | Stato | Note |
 |-----|-------|------|
-| BUG-2: Sibling non eliminato a rimozione ultimo pax | 🔍 Debug | Ipotesi RLS blocca DELETE. Fix: aggiungere policy `FOR DELETE` su `trips`. |
+| BUG-2: Sibling non eliminato a rimozione ultimo pax | ✅ Fix | RLS `FOR ALL` su `trips` non propagava DELETE lato client (0 rows, no error). **Fix codice**: `removePax()` ora chiama `POST /api/trips/delete-sibling` (service client, bypassa RLS). **Fix DB opzionale**: `fix-trips-rls-delete.sql` (policy esplicite). |
 
 ---
 
@@ -192,6 +203,11 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S25** | **Fix multi-production: `getProductionId()` dentro ogni componente (11 pagine)** | `63b1601` |
 | **S26** | **Export/Archive Produzione — `GET /api/productions/export` + pulsante 📥 in productions/page** | — |
 | **S27** | **Delete Production — `DELETE /api/productions` (CAPTAIN/ADMIN, CASCADE) + modal confirm con archive check + input nome** | — |
+| **Logo fix** | **Upload logo via `/api/productions/upload-logo` (service client, bypassa RLS Storage). `productions/page.js` aggiornato + feedback visivo errori upload** | `abd737b` |
+| **Logo lists fix** | **Fix: logo non compariva in `TransportListHeader` (lists/page). Aggiunto `<img>` con flex layout affianco al nome produzione** | `0b70d5e` |
+| **Security fix** | **Fix Supabase security warnings: RLS productions (drop `productions_own`+`productions_insert` → policy granulari select/update/delete) + `SET search_path = public` su 3 funzioni. Scripts: `fix-productions-rls-duplicate.sql`, `fix-functions-search-path.sql`** | — |
+| **BUG-2 fix** | **Fix sibling trip non eliminato: `removePax()` ora usa `POST /api/trips/delete-sibling` (service client, bypassa RLS). Creata `app/api/trips/delete-sibling/route.js`. DB fix opzionale: `fix-trips-rls-delete.sql`** | — |
+| **BUG-3 fix** | **Fix dropdown "Add to existing trip" mostrava sibling (T001B/T001C) come voci separate. Ora dedup per `baseTripId`: una sola entry per gruppo. `isCompatibleGroup` controlla tutti i leg. `handleAddToExisting` trova il leg compatibile esistente prima di creare nuovi sibling.** | — |
 
 ---
 

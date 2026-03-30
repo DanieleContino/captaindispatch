@@ -24,7 +24,7 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
+import { getProductionId } from '../../../lib/production'
 
 function qrImgUrl(data, size = 160, ecc = 'M') {
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}&margin=10&format=png&ecc=${ecc}`
@@ -38,6 +38,7 @@ function baseUrl() {
 
 export default function QrCodesPage() {
   const router  = useRouter()
+  const PRODUCTION_ID = getProductionId()
   const [user,     setUser]     = useState(null)
   const [vehicles, setVehicles] = useState([])
   const [crew,     setCrew]     = useState([])

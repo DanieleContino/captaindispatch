@@ -14,8 +14,9 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
+import { useT } from '../../../lib/i18n'
 
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
+import { getProductionId } from '../../../lib/production'
 
 // ─── Utility ──────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
@@ -61,6 +62,8 @@ const CLS = {
 // ─── Pagina principale ─────────────────────────────────────────
 export default function ReportsPage() {
   const router = useRouter()
+  const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const [user,       setUser]       = useState(null)
   const [mode,       setMode]       = useState('daily')   // 'daily' | 'weekly'
   const [date,       setDate]       = useState(isoToday())
@@ -105,7 +108,7 @@ export default function ReportsPage() {
     return trips.filter(t => (t.vehicle_id || '__no_vehicle__') === vId)
   }
   function vehicleName(vId) {
-    return vId === '__no_vehicle__' ? 'No vehicle' : vId
+    return vId === '__no_vehicle__' ? t.reportsNoVehicle : vId
   }
   function totalDurMin(tList) { return tList.reduce((s, t) => s + (t.duration_min || 0), 0) }
   function totalPax(tList) { return tList.reduce((s, t) => s + (t.pax_count || 0), 0) }
@@ -150,12 +153,12 @@ export default function ReportsPage() {
         className="no-print"
         left={
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>📊 Fleet Reports</span>
+            <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>{t.reportsTitle}</span>
             <span style={{ color: '#cbd5e1' }}>·</span>
             {['daily', 'weekly'].map(m => (
               <button key={m} onClick={() => setMode(m)}
                 style={{ padding: '4px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(mode === m ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#64748b', borderColor: '#e2e8f0' }) }}>
-                {m === 'daily' ? 'Daily' : 'Weekly'}
+                {m === 'daily' ? t.reportsDaily : t.reportsWeekly}
               </button>
             ))}
             <span style={{ color: '#cbd5e1' }}>·</span>
@@ -163,13 +166,13 @@ export default function ReportsPage() {
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
             <button onClick={() => setDate(isoAdd(date, mode === 'weekly' ? 7 : 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>▶</button>
-            <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
+            <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
           </div>
         }
         right={
           <button onClick={() => window.print()}
             style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
-            🖨 Print / PDF
+            {t.reportsPrintBtn}
           </button>
         }
       />
@@ -182,7 +185,7 @@ export default function ReportsPage() {
           <div>
             <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f2340' }}>CAPTAIN <span style={{ color: '#2563eb' }}>Dispatch</span></div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-              Fleet Report {mode === 'daily' ? 'Daily' : 'Weekly'} —{' '}
+              Fleet Report {mode === 'daily' ? t.reportsDaily : t.reportsWeekly} —{' '}
               <strong style={{ color: '#0f172a' }}>
                 {mode === 'daily' ? fmtDateLong(date) : `${fmtDate(weekStart)} → ${fmtDate(weekDays[6])}`}
               </strong>
@@ -190,7 +193,7 @@ export default function ReportsPage() {
           </div>
           <div style={{ textAlign: 'right', fontSize: '11px', color: '#94a3b8' }}>
             <div>{trips.length} trips · {totalPax(trips)} pax · {durToH(totalDurMin(trips))} total</div>
-            <div>Printed: {fmtNow()}</div>
+            <div>{t.reportsPrinted} {fmtNow()}</div>
           </div>
         </div>
 
@@ -205,7 +208,7 @@ export default function ReportsPage() {
         ) : trips.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px' }}>
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>📊</div>
-            <div style={{ color: '#64748b', fontWeight: '600' }}>No trips for this period</div>
+            <div style={{ color: '#64748b', fontWeight: '600' }}>{t.reportsNoTrips}</div>
           </div>
         ) : mode === 'daily' ? (
 
@@ -243,7 +246,7 @@ export default function ReportsPage() {
                   <div>
                     {/* Column headers */}
                     <div style={{ display: 'grid', gridTemplateColumns: '42px 68px 80px 1fr 1fr 55px 55px 60px', gap: '8px', padding: '5px 16px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontSize: '9px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em' }}>
-                      <div>CALL</div><div>TRIP</div><div>CLASSE</div><div>FROM</div><div>TO</div><div style={{ textAlign: 'center' }}>DUR</div><div style={{ textAlign: 'center' }}>PAX</div><div>STATUS</div>
+                      <div>{t.reportsColCall}</div><div>{t.reportsColTrip}</div><div>{t.reportsColClass}</div><div>{t.reportsColFrom}</div><div>{t.reportsColTo}</div><div style={{ textAlign: 'center' }}>{t.reportsColDur}</div><div style={{ textAlign: 'center' }}>{t.reportsColPax}</div><div>{t.reportsColStatus}</div>
                     </div>
                     {vTrips.map((t, i) => {
                       const cls = CLS[t.transfer_class] || CLS.STANDARD
@@ -262,7 +265,7 @@ export default function ReportsPage() {
                     })}
                     {/* Vehicle total row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '42px 68px 80px 1fr 1fr 55px 55px 60px', gap: '8px', padding: '7px 16px', background: '#f0fdf4', fontSize: '11px', borderTop: '2px solid #bbf7d0', fontWeight: '800', color: '#15803d' }}>
-                      <div colSpan={5} style={{ gridColumn: '1 / 6' }}>DAILY TOTAL</div>
+                      <div colSpan={5} style={{ gridColumn: '1 / 6' }}>{t.reportsDailyTotal}</div>
                       <div style={{ textAlign: 'center' }}>{durToH(durMin)}</div>
                       <div style={{ textAlign: 'center' }}>{pax}</div>
                       <div style={{ color: '#94a3b8', fontWeight: '500', fontSize: '9px' }}>{vTrips.length} trip</div>
@@ -275,7 +278,7 @@ export default function ReportsPage() {
             {/* Grand total */}
             {vehicles.length > 1 && (
               <div style={{ background: '#0f2340', color: 'white', borderRadius: '10px', padding: '14px 20px', display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <span style={{ fontWeight: '900', fontSize: '13px' }}>DAILY TOTAL</span>
+                <span style={{ fontWeight: '900', fontSize: '13px' }}>{t.reportsDailyTotal}</span>
                 <span style={{ padding: '3px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.15)', fontSize: '12px', fontWeight: '700' }}>{trips.length} trips</span>
                 <span style={{ padding: '3px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.15)', fontSize: '12px', fontWeight: '700' }}>{durToH(totalDurMin(trips))}</span>
                 <span style={{ padding: '3px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.15)', fontSize: '12px', fontWeight: '700' }}>{totalPax(trips)} pax</span>
@@ -289,7 +292,7 @@ export default function ReportsPage() {
           <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
             {/* Grid header */}
             <div style={{ display: 'grid', gridTemplateColumns: `180px repeat(7, 1fr) 90px`, borderBottom: '2px solid #e2e8f0' }}>
-              <div style={{ padding: '10px 14px', background: '#f8fafc', fontSize: '10px', fontWeight: '800', color: '#94a3b8' }}>VEHICLE</div>
+              <div style={{ padding: '10px 14px', background: '#f8fafc', fontSize: '10px', fontWeight: '800', color: '#94a3b8' }}>{t.reportsWeeklyVehicle}</div>
               {weekDays.map(d => (
                 <div key={d} style={{ padding: '8px 6px', background: d === isoToday() ? '#eff6ff' : '#f8fafc', textAlign: 'center', borderLeft: '1px solid #f1f5f9' }}>
                   <div style={{ fontSize: '9px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.05em' }}>
@@ -300,12 +303,12 @@ export default function ReportsPage() {
                   </div>
                 </div>
               ))}
-              <div style={{ padding: '10px 8px', background: '#f8fafc', textAlign: 'center', borderLeft: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8' }}>TOTALE</div>
+              <div style={{ padding: '10px 8px', background: '#f8fafc', textAlign: 'center', borderLeft: '1px solid #e2e8f0', fontSize: '10px', fontWeight: '800', color: '#94a3b8' }}>{t.reportsWeeklyTotal}</div>
             </div>
 
             {/* Vehicle rows */}
             {weekVehicles.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No vehicles with trips this week</div>
+              <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>{t.reportsWeeklyNoVehicles}</div>
             ) : weekVehicles.map((vId, vi) => {
               const total = vehicleWeekTotal(vId)
               return (
@@ -342,7 +345,7 @@ export default function ReportsPage() {
 
             {/* Day totals row */}
             <div style={{ display: 'grid', gridTemplateColumns: `180px repeat(7, 1fr) 90px`, background: '#f8fafc' }}>
-              <div style={{ padding: '10px 14px', fontSize: '10px', fontWeight: '800', color: '#64748b' }}>TOTAL / DAY</div>
+              <div style={{ padding: '10px 14px', fontSize: '10px', fontWeight: '800', color: '#64748b' }}>{t.reportsTotalPerDay}</div>
               {weekDays.map(d => {
                 const cell = dayTotal(d)
                 return (

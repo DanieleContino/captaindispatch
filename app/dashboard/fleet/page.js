@@ -5,8 +5,10 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
+import { useT } from '../../../lib/i18n'
 
-const PRODUCTION_ID    = process.env.NEXT_PUBLIC_PRODUCTION_ID
+import { getProductionId } from '../../../lib/production'
+
 const REFRESH_INTERVAL = 30_000  // auto-reload dati ogni 30s
 const NOW_TICK_MS      = 15_000  // aggiorna "adesso" ogni 15s per le progress bar
 
@@ -160,6 +162,7 @@ function vehicleStatus(groups, now) {
 
 // ─── Card singolo veicolo ─────────────────────────────────────
 function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAlerts, now }) {
+  const t = useT()
   const [expanded, setExpanded] = useState(false)
   const { status, current, next, last } = vehicleStatus(groups, now)
   const s    = SS[status] || SS.IDLE
@@ -266,7 +269,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
           {/* Rotta corrente */}
           <div>
             <div style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', letterSpacing: '0.05em', marginBottom: '3px' }}>
-              IN PROGRESS{current.service_type ? ` · ${current.service_type}` : ''}
+              {t.fleetInProgress}{current.service_type ? ` · ${current.service_type}` : ''}
             </div>
             <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', lineHeight: 1.4 }}>
               {routeLabel(current)}
@@ -300,11 +303,11 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
           {/* Progress bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#92400e', marginBottom: '4px', fontWeight: '600' }}>
-              <span>Start {dtToHHMM(current.minStart)}</span>
+              <span>{t.fleetStartLabel} {dtToHHMM(current.minStart)}</span>
               <span style={{ fontWeight: '800', fontSize: '12px' }}>{Math.round(progress)}%</span>
               {['Wrap', 'Charter', 'Other'].includes(current.service_type) && Math.round(progress) >= 50 && (
                 <span style={{ color: '#15803d', fontWeight: '800', fontSize: '11px' }}>
-                  ✅ Dropoff done — returning
+                  {t.fleetReturning}
                 </span>
               )}
               <span style={{ color: currentAlert ? SEV_COLOR[currentAlert.severity]?.text || '#b91c1c' : '#b91c1c', fontWeight: '900' }}>
@@ -356,7 +359,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
       {status === 'FREE' && next && (
         <div>
           <div style={{ fontSize: '11px', fontWeight: '700', color: '#14532d', letterSpacing: '0.05em', marginBottom: '3px' }}>
-            NEXT TRIP
+            {t.fleetNextTrip}
           </div>
           <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', lineHeight: 1.4 }}>
             {routeLabel(next)}
@@ -384,7 +387,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
       {/* ── IDLE ── */}
       {status === 'IDLE' && (
         <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', padding: '2px 0' }}>
-          No trips scheduled today
+          {t.fleetNoTripsToday}
         </div>
       )}
 
@@ -392,7 +395,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
       {status === 'DONE' && last && (
         <div>
           <div style={{ fontSize: '11px', fontWeight: '700', color: '#1e40af', letterSpacing: '0.05em', marginBottom: '3px' }}>
-            LAST TRIP{last.service_type ? ` · ${last.service_type}` : ''}
+            {t.fleetLastTrip}{last.service_type ? ` · ${last.service_type}` : ''}
           </div>
           <div style={{ fontSize: '12px', color: '#475569' }}>
             {routeLabel(last)} · ended at {dtToHHMM(last.maxEnd)}
@@ -414,12 +417,12 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
             style={{ display: 'flex', gap: '16px', fontSize: '10px', color: '#64748b', cursor: 'pointer', userSelect: 'none', alignItems: 'center' }}
           >
             <span style={{ fontWeight: expanded ? '800' : '600', color: expanded ? '#1d4ed8' : '#64748b' }}>
-              {groups.length} trip{groups.length > 1 ? 's' : ''} today {expanded ? '▲' : '▼'}
+              {groups.length} {t.fleetTripsToday} {expanded ? '▲' : '▼'}
             </span>
-            <span>Start {dtToHHMM(groups[0]?.minStart)}</span>
-            <span>End {dtToHHMM(groups[groups.length - 1]?.maxEnd)}</span>
+            <span>{t.fleetStartLabel} {dtToHHMM(groups[0]?.minStart)}</span>
+            <span>{t.fleetEndLabel} {dtToHHMM(groups[groups.length - 1]?.maxEnd)}</span>
             {groups.some(g => g.pax_count > 0) && (
-              <span>{groups.reduce((sum, g) => sum + (g.pax_count || 0), 0)} total pax</span>
+              <span>{groups.reduce((sum, g) => sum + (g.pax_count || 0), 0)} {t.fleetTotalPax}</span>
             )}
           </div>
           {/* Expanded list of all trips */}
@@ -458,7 +461,9 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
 
 // ─── Pagina principale ─────────────────────────────────────────
 export default function FleetPage() {
+  const t       = useT()
   const router  = useRouter()
+  const PRODUCTION_ID = getProductionId()
   const [user,        setUser]        = useState(null)
   const [date,        setDate]        = useState(isoToday())
   const [vehicles,    setVehicles]    = useState([])
@@ -609,8 +614,7 @@ export default function FleetPage() {
       <PageHeader
         left={
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '18px' }}>🚦</span>
-            <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Fleet Monitor</span>
+            <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>{t.fleetMonitorTitle}</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '8px' }}>
               <button onClick={() => setDate(isoAdd(date, -1))}
                 style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>◀</button>
@@ -619,7 +623,7 @@ export default function FleetPage() {
               <button onClick={() => setDate(isoAdd(date, 1))}
                 style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>▶</button>
               <button onClick={() => setDate(isoToday())}
-                style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>Today</button>
+                style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
             </div>
             <div style={{ display: 'flex', gap: '5px', marginLeft: '4px' }}>
               {Object.entries(counts).map(([s, n]) => n > 0 && (
@@ -640,7 +644,7 @@ export default function FleetPage() {
             <span>Refresh in {countdown}s</span>
             <button onClick={() => loadData(date)}
               style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {loading ? '…' : '↻'} Refresh
+              {loading ? '…' : '↻'} {t.fleetRefreshBtn}
             </button>
             <button
               onClick={async () => {
@@ -679,7 +683,7 @@ export default function FleetPage() {
                 display: 'flex', alignItems: 'center', gap: '4px',
                 opacity: refreshingTraffic ? 0.7 : 1,
               }}>
-              {refreshingTraffic ? '⏳' : '🚦'} Traffico
+              {refreshingTraffic ? '⏳' : '🚦'} {t.fleetTrafficBtn}
             </button>
             {trafficMsg && (
               <span style={{ fontSize: '11px', color: trafficMsg.startsWith('✅') ? '#15803d' : '#b91c1c', fontWeight: '600' }}>
@@ -702,16 +706,16 @@ export default function FleetPage() {
         {loading && vehicles.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🚦</div>
-            <div>Loading Fleet Monitor…</div>
+            <div>{t.fleetLoadingLabel}</div>
           </div>
         ) : vehicles.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px' }}>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🚐</div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>
-              No active vehicles
+              {t.fleetNoActiveVehicles}
             </div>
             <a href="/dashboard/vehicles" style={{ color: '#2563eb', fontSize: '13px' }}>
-              → Add vehicles on the Vehicles page
+              {t.fleetAddVehiclesHint}
             </a>
           </div>
         ) : (
@@ -719,7 +723,7 @@ export default function FleetPage() {
             {/* Data label quando non è oggi */}
             {date !== isoToday() && (
               <div style={{ marginBottom: '16px', padding: '8px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '12px', color: '#92400e', fontWeight: '600' }}>
-                📅 Viewing: {fmtDate(date)} — BUSY/FREE status based on current time ({pad2(now.getHours())}:{pad2(now.getMinutes())})
+                📅 {t.fleetViewingDate} {fmtDate(date)} — {t.fleetStatusBasedOn} ({pad2(now.getHours())}:{pad2(now.getMinutes())})
               </div>
             )}
 
@@ -743,7 +747,7 @@ export default function FleetPage() {
               <div style={{ marginTop: '32px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                   <div style={{ fontSize: '11px', fontWeight: '800', color: '#dc2626', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    ⚠ Trips without vehicle ({unassigned.length})
+                    ⚠ {t.fleetTripsWithoutVehicle} ({unassigned.length})
                   </div>
                   <div style={{ flex: 1, height: '1px', background: '#fecaca' }} />
                 </div>
@@ -761,7 +765,7 @@ export default function FleetPage() {
                           {minToHHMM(g.pickup_min ?? g.call_min)} · {clsInfo.label}
                         </span>
                         <a href="/dashboard/trips" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'none', marginLeft: '4px', fontSize: '11px' }}>
-                          Assign →
+                          {t.fleetAssignLink}
                         </a>
                       </div>
                     )
@@ -772,7 +776,7 @@ export default function FleetPage() {
 
             {/* Legenda */}
             <div style={{ marginTop: '32px', padding: '14px 18px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em' }}>LEGEND</span>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em' }}>{t.fleetLegendTitle}</span>
               {Object.entries(SS).map(([s, st]) => (
                 <span key={s} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: st.badge }}>
                   <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '2px', background: st.badgeBg, border: `1px solid ${st.border}` }} />

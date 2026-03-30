@@ -3,9 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
-
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
-
+import { getProductionId } from '../../lib/production'
 import { Navbar } from '../../lib/navbar'
 import { useT } from '../../lib/i18n'
 
@@ -21,6 +19,7 @@ function fmtDate(d) {
 
 export default function Dashboard() {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const [user,       setUser]       = useState(null)
   const [departures, setDepartures] = useState([])   // crew in partenza domani
   const [arrivals,   setArrivals]   = useState([])   // crew in arrivo domani

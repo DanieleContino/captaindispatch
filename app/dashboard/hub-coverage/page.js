@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
+import { getProductionId } from '../../../lib/production'
 
 function isoToday() { return new Date().toISOString().split('T')[0] }
 function isoAdd(d, n) {
@@ -158,6 +158,7 @@ function MissingRow({ member, locsMap, onAssign }) {
 // ─── Pagina principale ─────────────────────────────────────────
 export default function HubCoveragePage() {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const router = useRouter()
   const [user,    setUser]    = useState(null)
   const [date,    setDate]    = useState(isoToday())
