@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | BUG-2 Fix ✅ — RLS trips DELETE policy esplicita**
+**Aggiornato: 30 marzo 2026 | Fix MULTI trip sidebar: PICKUP⚡ mostra valore chain da DB, non calcolo naïve**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -208,6 +208,8 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **Security fix** | **Fix Supabase security warnings: RLS productions (drop `productions_own`+`productions_insert` → policy granulari select/update/delete) + `SET search_path = public` su 3 funzioni. Scripts: `fix-productions-rls-duplicate.sql`, `fix-functions-search-path.sql`** | — |
 | **BUG-2 fix** | **Fix sibling trip non eliminato: `removePax()` ora usa `POST /api/trips/delete-sibling` (service client, bypassa RLS). Creata `app/api/trips/delete-sibling/route.js`. DB fix opzionale: `fix-trips-rls-delete.sql`** | — |
 | **BUG-3 fix** | **Fix dropdown "Add to existing trip" mostrava sibling (T001B/T001C) come voci separate. Ora dedup per `baseTripId`: una sola entry per gruppo. `isCompatibleGroup` controlla tutti i leg. `handleAddToExisting` trova il leg compatibile esistente prima di creare nuovi sibling.** | — |
+| **UX trips** | **Edit Trip sidebar: (1) hotel badge `🏨` su ogni passeggero ASSIGNED (single trip); (2) MULTI trip: sezione ASSIGNED raggruppa pax per leg con sub-header `[TripID] · 🏨 Hotel · 🕐 pickup`. Query `loadPaxData` ora include `hotel_id` dal crew.** | `ce03a13` |
+| **MULTI chain fix** | **Fix discrepanza PICKUP sidebar vs lista nei trip MULTI (es. 06:20 vs 06:10). Root cause: sidebar mostrava `call - duration_questo_leg` (naïve), ma DB aveva valore chain-computed da `compute-chain` (hotel più lontano parte prima). Fix: (1) box `PICKUP ⚡` e `START ⚡` in `EditTripSidebar` ora leggono `initial.pickup_min`/`initial.start_dt` dal DB per trip MULTI (sfondo giallo = chain-managed); (2) `handleSubmit` non scrive più `pickup_min`/`start_dt`/`end_dt` per i trip MULTI sul leg principale né sui sibling — `compute-chain` li ricalcola sempre come passaggio finale.** | `c09f617` |
 
 ---
 
