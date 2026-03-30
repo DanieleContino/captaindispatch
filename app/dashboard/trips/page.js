@@ -661,7 +661,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     <optgroup label={t.compatible}>
                       {compatibleTrips.map(t => (
                         <option key={t.id} value={t.id}>
-                          {t.trip_id} · {minToHHMM(t.pickup_min ?? t.call_min)} · {locShort(t.pickup_id)} → {locShort(t.dropoff_id)}{t.vehicle_id ? ` · 🚐${t.vehicle_id}` : ''}
+                          {baseTripId(t.trip_id)} · {minToHHMM(t.pickup_min ?? t.call_min)} · {locShort(t.pickup_id)} → {locShort(t.dropoff_id)}{t.vehicle_id ? ` · 🚐${t.vehicle_id}` : ''}
                         </option>
                       ))}
                     </optgroup>
@@ -670,7 +670,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     <optgroup label={t.otherMultiStop}>
                       {otherTrips.map(t => (
                         <option key={t.id} value={t.id}>
-                          {t.trip_id} · {minToHHMM(t.pickup_min ?? t.call_min)} · {locShort(t.pickup_id)} → {locShort(t.dropoff_id)}{t.vehicle_id ? ` · 🚐${t.vehicle_id}` : ''}
+                          {baseTripId(t.trip_id)} · {minToHHMM(t.pickup_min ?? t.call_min)} · {locShort(t.pickup_id)} → {locShort(t.dropoff_id)}{t.vehicle_id ? ` · 🚐${t.vehicle_id}` : ''}
                         </option>
                       ))}
                     </optgroup>
@@ -945,6 +945,13 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     loadPaxData(initial)
   }, [open, initial?.id])
 
+  // Reload pax when group grows (sibling added externally from TripSidebar → onSaved → loadTrips → editTripGroup aggiornato)
+  useEffect(() => {
+    if (!open || !initial) return
+    loadPaxData(initial)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group?.length])
+
   // Auto route duration when pickup/dropoff change FROM initial values
   useEffect(() => {
     if (!open || !form.pickup_id || !form.dropoff_id || !PRODUCTION_ID) return
@@ -975,6 +982,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     const tc = getClass(trip.pickup_id, trip.dropoff_id)
     // Per multi-stop: carica pax da tutti i leg del gruppo
     const groupIds = (group && group.length > 1) ? group.map(g => g.id) : [trip.id]
+    // Per multi-stop Hub: raccogli tutti gli hotel di tutti i leg (ARRIVAL→dropoff, DEP→pickup)
+    const allGroupLegs  = (group && group.length > 1) ? group : [trip]
+    const allDropoffIds = [...new Set(allGroupLegs.map(g => g.dropoff_id).filter(Boolean))]
+    const allPickupIds  = [...new Set(allGroupLegs.map(g => g.pickup_id).filter(Boolean))]
 
     // Run all three queries in parallel
     const [paxRes, crewRes, dayTripsRes] = await Promise.all([
@@ -985,16 +996,18 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       (() => {
         let q = supabase.from('crew').select('id,full_name,department,no_transport_needed')
           .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
-        if (tc === 'ARRIVAL')        q = q.eq('hotel_id', trip.dropoff_id).eq('travel_status', 'IN')
-        else if (tc === 'DEPARTURE') q = q.eq('hotel_id', trip.pickup_id).eq('travel_status', 'OUT')
-        else                         q = q.eq('hotel_id', trip.pickup_id).eq('travel_status', 'PRESENT')
+        // Per MULTI-stop: usa .in() per coprire tutti gli hotel del gruppo
+        if (tc === 'ARRIVAL')        q = q.in('hotel_id', allDropoffIds).eq('travel_status', 'IN')
+        else if (tc === 'DEPARTURE') q = q.in('hotel_id', allPickupIds).eq('travel_status', 'OUT')
+        else                         q = q.in('hotel_id', allPickupIds).eq('travel_status', 'PRESENT')
         return q.order('department').order('full_name')
       })(),
 
       supabase.from('trips')
         .select('id,trip_id,start_dt,end_dt')
         .eq('production_id', PRODUCTION_ID).eq('date', trip.date)
-        .neq('id', trip.id).not('start_dt', 'is', null),
+        .not('id', 'in', `(${groupIds.join(',')})`)
+        .not('start_dt', 'is', null),
     ])
 
     const assigned    = (paxRes.data || []).map(p => ({ ...p.crew, trip_row_id: p.trip_row_id }))
@@ -1795,7 +1808,7 @@ function TripsPageInner() {
                 key={group[0].trip_id + i}
                 group={group}
                 locations={locsMap}
-                selected={editTripRow?.trip_id === group[0].trip_id}
+                selected={!!editTripRow && baseTripId(editTripRow.trip_id) === baseTripId(group[0].trip_id)}
                 isSuggested={!!assignCtx && suggestedBaseIds.has(baseTripId(group[0].trip_id))}
                 onClick={() => {
                   setEditTripRow(group[0])
