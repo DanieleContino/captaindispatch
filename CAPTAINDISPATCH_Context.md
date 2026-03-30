@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | S21 TASK1 — Import base (HAL + crew/fleet revamp) ✅**
+**Aggiornato: 30 marzo 2026 | S21 TASK2 — Smart Categorization pre-preview ✅**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**
@@ -620,7 +620,49 @@ ALTER TABLE crew ADD COLUMN IF NOT EXISTS phone TEXT;
 
 ---
 
-## S21 — Import base (HAL + revamp) 📂 ✅ (30/03/26) — commit `46d94ce`
+## S21 TASK 2 — Smart Categorization 🗂️ ✅ (30/03/26) — commit `1b0915b`
+
+**File modificati:** `app/api/import/parse/route.js`, `lib/ImportModal.js`
+
+### Obiettivo
+Aggiungere una fase intermedia `categorizing` tra `parsing` e `preview` che mostra 4 sezioni smart PRIMA della tabella editable, permettendo all'utente di prendere decisioni rapide senza dover scorrere centinaia di righe.
+
+### Modifiche parse/route.js
+- **`processFleetRows`**: select espansa a tutti i campi rilevanti (`vehicle_type, capacity, pax_suggested, pax_max, sign_code, available_from, available_to`); ogni riga matched include:
+  - `existingData: { driver_name, vehicle_type, license_plate, … }` — valori attuali nel DB
+  - `newFields: ['capacity', 'sign_code', …]` — campi presenti nel file ma null nel DB
+- **`processCrewRows`**: select espansa (`role, department, phone, email, hotel_id, arrival_date, departure_date`); stessa logica `existingData` + `newFields` calcolati dopo hotel matching
+
+### Modifiche ImportModal.js
+**State machine:** `idle → parsing → categorizing → preview → confirming → done`
+
+**Nuovo stato:** `reviewMode: { active: bool, idx: number }` — gestisce review one by one
+
+**Fase `categorizing`** (4 sezioni):
+
+| Sezione | Trigger | Azioni |
+|---------|---------|--------|
+| 🟡 New info for existing | `existingId && newFields.length > 0` | Accept all / Review one by one / Skip per riga |
+| 🔴 Unknown records | `!existingId` | Add / Skip per riga |
+| 🔵 New locations | `newHotels.length > 0` | Add / Skip per hotel |
+| 🚗 Non-standard vehicle types | tipo non in VAN/CAR/BUS | Skip all / Include all per tipo |
+
+**Review one by one:** side-by-side "Current in database" (grigio) vs "From file" (verde), pulsanti Accept / Skip / Back to summary. Progress counter `1/N`.
+
+**Footer categorizing:** "Back" (→ idle) + "Preview & Confirm" (→ preview)
+**Footer preview aggiornato:** "Back" ora torna a `categorizing` invece di `idle`
+
+**Helper functions aggiunte:**
+- `getCatRowName(row)` — nome display per crew/fleet/mixed
+- `getCatRowSub(row)` — info secondaria (dept·role oppure type·plate)
+- `getCatFieldValue(row, field)` — normalizza accesso a `plate`→`license_plate` e `hotel`→`hotel_id`
+- `advanceReview(skipCurrent)` — avanza review, gestisce skip/accept, chiude modal review al termine
+
+**If nessuna sezione:** mostra "✅ All records ready — No conflicts to review" e footer con solo "Preview & Confirm".
+
+---
+
+## S21 TASK 1 — Import base (HAL + revamp) 📂 ✅ (30/03/26) — commit `46d94ce`
 
 **File modificati:** `app/api/import/parse/route.js`, `app/api/import/confirm/route.js`, `lib/ImportModal.js`
 
