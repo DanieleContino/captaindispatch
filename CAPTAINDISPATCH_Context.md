@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | S23 — Crew Select+Delete+SelectAll ✅ | commit `603ad61`**
+**Aggiornato: 30 marzo 2026 | S24 — normalizeDept shared lib + DEPT_MAP EN+IT completo ✅ | commit `9de1527`**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**
@@ -1079,26 +1079,58 @@ Aggiungere una fase intermedia `categorizing` tra `parsing` e `preview` che most
 
 **Problema 2:** I Director venivano inseriti nel gruppo `PRODUCERS` (mapping errato `PRODUCERS/WRITERS/DIRECTORS→PRODUCERS`).
 
-**Fix:**
+**Fix base S22:** aggiunta `normalizeDept()` + `DEPT_MAP` inline in `parse/route.js`. Vedi S24 per la versione definitiva.
 
-| Modifica | Dettaglio |
-|---------|-----------|
-| `normalizeDept()` + `DEPT_MAP` | Safety net server-side: `.trim().toUpperCase()` + mapping forme plurali/alternate → valore canonico |
-| `normalizeCrew()` | Ora usa `normalizeDept(r.department)` invece di `r.department \|\| null` |
-| `SYSTEM_PROMPT_HAL` | `WRITERS→PRODUCERS`, `DIRECTORS→DIRECTING`; aggiunta nota: *"Director of Photography always maps to CAMERA"* |
-| `SYSTEM_PROMPT_CREW` | Stesso aggiornamento + hint inferenza: `Director→DIRECTING`, `DOP→CAMERA` |
+---
 
-**DEPT_MAP (forme normalizzate):**
-```js
-GRIPS → GRIP | ELECTRICS → ELECTRIC | HAIR & MAKE UP → HMU | HAIR AND MAKE UP → HMU
-HAIR & MAKEUP → HMU | MAKE UP → MAKEUP | MAKE-UP → MAKEUP
-ASSISTANT DIRECTORS → AD | ART DEPARTMENT → ART | TRANSPORTATION → TRANSPORT
-PROPERTY → PROPS | SET DEC & SET DRESSING → SET DEC
-WRITERS → PRODUCERS | DIRECTORS → DIRECTING
-WRITERS / DIRECTORS → PRODUCERS | PRODUCERS / WRITERS / DIRECTORS → PRODUCERS
+## S24 — normalizeDept Shared Lib + DEPT_MAP EN+IT Completo ✅ (30/03/26) — commit `4f971c8` + `9de1527`
+
+**Problema:** il DEPT_MAP di S22 era solo inline nel server-side route e non copriva tutte le varianti. `Camera` vs `Cameras` o `Wardrobe` vs `COSTUME` rimanevano gruppi separati nel client. Inoltre `Director` in una sezione `PRODUCERS/WRITERS/DIRECTORS` veniva ancora mappato a `PRODUCERS`.
+
+**File modificati:**
+
+| File | Modifica |
+|------|---------|
+| `lib/normalizeDept.js` | **Nuovo file condiviso** — `DEPT_MAP` con 150+ alias EN+IT + `normalizeDept()` esportata |
+| `app/api/import/parse/route.js` | Rimuove DEPT_MAP inline → importa da `lib/normalizeDept`; system prompt HAL+CREW espansi; EXCEPTION rule Director |
+| `app/dashboard/crew/page.js` | Importa `normalizeDept` da lib; usa in `filterDept`, `departments`, `groups` (groupByDept) |
+| `scripts/migrate-dept-uppercase.sql` | Aggiornato con 22 UPDATE per bonificare dati storici nel DB |
+
+**`lib/normalizeDept.js` — copertura DEPT_MAP:**
+
+```
+CAMERA: CAMERAS, CAMERA DEPARTMENT, DIT, VIDEO, FOTOGRAFIA, MACCHINA…
+GRIP: GRIPS, GRIP DEPARTMENT, MACCHINISTI…
+ELECTRIC: ELECTRICS, ELECTRICAL, LIGHTING, GAFFERS, ELETTRICISTI…
+SOUND: AUDIO, SOUNDS, SUONO, FONICO…
+ART: ART DEPARTMENT, PRODUCTION DESIGN, SCENOGRAFIA…
+COSTUME: COSTUMES, WARDROBE, WARDROBE DEPARTMENT, COSTUMI, SARTORIA…
+MAKEUP: MAKE UP, MAKE-UP, TRUCCO…
+HMU: HAIR & MAKE UP, HAIR AND MAKEUP, H&MU, PARRUCCHIERI, TRUCCO E PARRUCCHIERI…
+PRODUCTION: PRODUCTION DEPARTMENT, PROD, PRODUZIONE…
+TRANSPORT: TRANSPORTATION, DRIVERS, TRASPORTI, AUTISTI…
+AD: ASSISTANT DIRECTORS, ASSISTANT DIRECTOR, ADS, 1ST AD, AIUTO REGIA…
+PROPS: PROPERTY, PROPERTIES, ACCESSORISTICA, ATTREZZERIA…
+SET DEC: SET DEC & SET DRESSING, SET DECORATION, SET DRESSING, ARREDAMENTO…
+ACCOUNTING: ACCOUNTS, FINANCE, PAYROLL, AMMINISTRAZIONE…
+PRODUCERS: WRITERS, WRITER, EXECUTIVE PRODUCERS, PRODUTTORI…
+CATERING: CRAFT SERVICE, CRAFT SERVICES, CRAFTY, MENSA…
+SECURITY: SECURITY DEPARTMENT, GUARDS, SICUREZZA…
+MEDICAL: MEDIC, SET MEDIC, H&S, FIRST AID, NURSE…
+VFX: VISUAL EFFECTS, VFX DEPARTMENT, SPECIAL EFFECTS, SFX, EFFETTI VISIVI…
+DIRECTING: DIRECTORS, DIRECTOR, REGIA…
+CAST: ACTORS, TALENT, EXTRAS, ATTORI, COMPARSE…
+LOCATIONS: LOCATION, SCOUTS, SOPRALLUOGHI…
+OTHER: MISC, STUNT, VARI, ALTRO…
 ```
 
-> ⚠️ `normalizeDept()` è chiamata solo in `normalizeCrew()` — i valori inseriti manualmente nel DB non vengono toccati. Se esiste crew con dept lowercase nel DB, il grouping visivo rimane separato (problema solo per dati storici inconsistenti).
+**EXCEPTION rule (commit `9de1527`):**
+> Person with role `"Director"` (standalone), `"2nd Unit Director"`, `"Insert Director"` → sempre `DIRECTING` anche se il section heading del documento è `PRODUCERS/WRITERS/DIRECTORS`.
+> Non si applica a: `Art Director→ART`, `1st AD/2nd AD/Assistant Director→AD`, `Casting Director→CAST`, `Creative Director→PRODUCERS`.
+
+**Comportamento client-side:** anche i dati storici nel DB con valori "sbagliati" (es. `Wardrobe`, `CAMERAS`, `Aiuto Regia`) vengono raggruppati correttamente nella pagina Crew senza toccare il DB.
+
+**Migration opzionale:** eseguire `scripts/migrate-dept-uppercase.sql` in Supabase SQL Editor per bonificare i dati esistenti (utile per query esterne o report).
 
 ---
 
