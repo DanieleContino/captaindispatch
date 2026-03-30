@@ -12,7 +12,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { switchProduction, getProductionId } from '../../../lib/production'
+import { switchProduction, getProductionId, clearProductionOverride } from '../../../lib/production'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 
@@ -183,6 +183,11 @@ export default function ProductionsPage() {
   const [editLogoFile, setEditLogoFile] = useState(null)
   const [editLogoPreview, setEditLogoPreview] = useState(null)
   const [editSaving,   setEditSaving]   = useState(false)
+  const [exportingId,  setExportingId]  = useState(null)
+  const [deleteTarget,         setDeleteTarget]         = useState(null)
+  const [deleteConfirmName,    setDeleteConfirmName]    = useState('')
+  const [deleteArchiveChecked, setDeleteArchiveChecked] = useState(false)
+  const [deleting,             setDeleting]             = useState(false)
   const fileInputRef   = useRef(null)
   const editFileRef    = useRef(null)
 
@@ -341,6 +346,52 @@ export default function ProductionsPage() {
     switchProduction(id)
   }
 
+  async function handleExport(prod) {
+    setExportingId(prod.id)
+    try {
+      const res = await fetch(`/api/productions/export?id=${prod.id}`)
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        alert(`Export failed: ${json.error || res.statusText}`)
+        return
+      }
+      const blob = await res.blob()
+      const slug     = prod.slug || prod.id
+      const date     = new Date().toISOString().slice(0, 10)
+      const filename = `captaindispatch-${slug}-${date}.json`
+      const url  = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href     = url
+      link.download = filename
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert(`Export error: ${e.message}`)
+    } finally {
+      setExportingId(null)
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res  = await fetch(`/api/productions?id=${deleteTarget.id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) { alert(`Delete failed: ${json.error}`); return }
+      if (deleteTarget.id === activeId) {
+        clearProductionOverride()
+        setActiveId('')
+      }
+      setDeleteTarget(null)
+      setDeleteConfirmName('')
+      setDeleteArchiveChecked(false)
+      loadProductions()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   function openEdit(prod) {
     setEditId(prod.id)
     setEditForm({
@@ -474,10 +525,27 @@ export default function ProductionsPage() {
                               {t.productionsActivateBtn}
                             </button>
                           )}
+                          {['CAPTAIN', 'ADMIN'].includes(prod.role) && (
+                            <button
+                              onClick={() => handleExport(prod)}
+                              disabled={exportingId === prod.id}
+                              title="Download archive JSON"
+                              style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: exportingId === prod.id ? '#94a3b8' : '#059669', fontSize: '12px', cursor: exportingId === prod.id ? 'default' : 'pointer', fontWeight: '700' }}>
+                              {exportingId === prod.id ? '⏳' : '📥'}
+                            </button>
+                          )}
                           <button onClick={() => openEdit(prod)}
                             style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer' }}>
                             {t.productionsEditBtn}
                           </button>
+                          {['CAPTAIN', 'ADMIN'].includes(prod.role) && (
+                            <button
+                              onClick={() => { setDeleteTarget(prod); setDeleteConfirmName(''); setDeleteArchiveChecked(false) }}
+                              title={t.productionsDeleteBtn}
+                              style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fff5f5', color: '#dc2626', fontSize: '12px', cursor: 'pointer', fontWeight: '700' }}>
+                              🗑
+                            </button>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -586,6 +654,90 @@ export default function ProductionsPage() {
         </div>
 
       </div>
+
+      {/* ── S27: Delete Production Modal ── */}
+      {deleteTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,64,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ background: 'white', borderRadius: '16px', maxWidth: '520px', width: '100%', boxShadow: '0 25px 60px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+
+            {/* Header */}
+            <div style={{ background: '#fef2f2', borderBottom: '1px solid #fecaca', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '28px' }}>⚠️</span>
+              <div>
+                <div style={{ fontWeight: '900', fontSize: '17px', color: '#991b1b' }}>{t.productionsDeleteModalTitle}</div>
+                <div style={{ fontSize: '14px', color: '#dc2626', fontWeight: '700', marginTop: '3px' }}>{deleteTarget.name}</div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '20px 24px' }}>
+              <p style={{ fontSize: '13px', color: '#374151', margin: '0 0 12px', lineHeight: 1.6 }}>
+                {t.productionsDeleteWarning}
+              </p>
+
+              {/* Data list */}
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', fontSize: '12px', color: '#991b1b', lineHeight: 1.9 }}>
+                {t.productionsDeleteDataItems.split(' · ').map((item, i) => (
+                  <div key={i}>🗑 {item}</div>
+                ))}
+              </div>
+
+              {/* Download archive CTA */}
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '22px' }}>📥</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '12px', color: '#166534', fontWeight: '700', marginBottom: '3px' }}>{t.productionsDeleteDownloadFirst}</div>
+                  <div style={{ fontSize: '11px', color: '#15803d' }}>JSON backup — trips, crew, vehicles, locations</div>
+                </div>
+                <button
+                  onClick={() => handleExport(deleteTarget)}
+                  disabled={exportingId === deleteTarget.id}
+                  style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #22c55e', background: 'white', color: '#16a34a', fontSize: '12px', fontWeight: '700', cursor: exportingId === deleteTarget.id ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+                  {exportingId === deleteTarget.id ? '⏳' : '📥'}
+                </button>
+              </div>
+
+              {/* Checkbox archivio scaricato */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '14px', padding: '10px 14px', background: deleteArchiveChecked ? '#f0fdf4' : '#f8fafc', border: `1px solid ${deleteArchiveChecked ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={deleteArchiveChecked}
+                  onChange={e => setDeleteArchiveChecked(e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', flexShrink: 0 }} />
+                <span style={{ fontSize: '13px', color: '#374151', fontWeight: '600' }}>{t.productionsDeleteArchiveCheck}</span>
+              </label>
+
+              {/* Conferma nome */}
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '6px' }}>{t.productionsDeleteNameLabel}</label>
+                <input
+                  value={deleteConfirmName}
+                  onChange={e => setDeleteConfirmName(e.target.value)}
+                  placeholder={deleteTarget.name}
+                  autoComplete="off"
+                  style={{ width: '100%', padding: '9px 12px', border: `1px solid ${deleteConfirmName === deleteTarget.name && deleteConfirmName ? '#dc2626' : '#e2e8f0'}`, borderRadius: '8px', fontSize: '13px', fontFamily: 'monospace', color: '#0f172a', boxSizing: 'border-box', outline: 'none' }} />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => { setDeleteTarget(null); setDeleteConfirmName(''); setDeleteArchiveChecked(false) }}
+                style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
+                {t.cancel}
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting || deleteConfirmName !== deleteTarget.name || !deleteArchiveChecked}
+                style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: (deleting || deleteConfirmName !== deleteTarget.name || !deleteArchiveChecked) ? '#cbd5e1' : '#dc2626', color: 'white', fontSize: '13px', cursor: (deleting || deleteConfirmName !== deleteTarget.name || !deleteArchiveChecked) ? 'default' : 'pointer', fontWeight: '800' }}>
+                {deleting ? t.productionsDeleteDeletingBtn : t.productionsDeleteConfirmBtn}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

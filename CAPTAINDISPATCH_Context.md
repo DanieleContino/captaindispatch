@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | S25 ✅ completato — tutte 11 pagine migrate a getProductionId()**
+**Aggiornato: 30 marzo 2026 | S27 ✅ completato — Delete Production**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -8,26 +8,7 @@
 
 ---
 
-## ▶ PROSSIMO — S26: Export/Archive Produzione
-
-### S26 — Export/Archive Produzione
-- API `GET /api/productions/export?id=...`
-- Scarica JSON completo: production + crew + vehicles + locations + routes + trips + trip_passengers + service_types + rocket_templates
-- Nome file: `captaindispatch-{slug}-{YYYY-MM-DD}.json`
-- Solo CAPTAIN/ADMIN
-- Pulsante `📥 Export` su ogni production card in `productions/page.js`
-
----
-
-### S27 — Delete Production (dopo S26)
-- API `DELETE /api/productions` — verifica ruolo CAPTAIN/ADMIN, service client, CASCADE elimina tutto
-- Modal confirm in `productions/page.js`:
-  - Warning dettagliato dati che verranno eliminati
-  - Link/pulsante download archive (S26)
-  - Checkbox "ho scaricato l'archivio"
-  - Input: digita il nome per confermare
-  - Bottone rosso Delete abilitato solo se nome corretto
-- Dopo delete: se era produzione attiva → `clearProductionOverride()` → redirect `/dashboard/productions`
+## ▶ PROSSIMO — S18 i18n Completamento (TASK 4-10)
 
 ---
 
@@ -209,6 +190,8 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | S24 | normalizeDept shared lib (lib/normalizeDept.js) + DEPT_MAP 150+ alias EN+IT | `9de1527` |
 | **S24b** | **Fix RLS productions INSERT (chicken-and-egg) — POST usa service client** | `3cf2935` |
 | **S25** | **Fix multi-production: `getProductionId()` dentro ogni componente (11 pagine)** | `63b1601` |
+| **S26** | **Export/Archive Produzione — `GET /api/productions/export` + pulsante 📥 in productions/page** | — |
+| **S27** | **Delete Production — `DELETE /api/productions` (CAPTAIN/ADMIN, CASCADE) + modal confirm con archive check + input nome** | — |
 
 ---
 

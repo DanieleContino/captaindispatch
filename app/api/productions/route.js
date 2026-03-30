@@ -100,6 +100,44 @@ export async function POST(req) {
   }
 }
 
+export async function DELETE(req) {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+
+    // Verifica che l'utente abbia ruolo CAPTAIN o ADMIN su questa produzione
+    const { data: roleRow, error: roleErr } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('production_id', id)
+      .single()
+
+    if (roleErr || !roleRow)
+      return NextResponse.json({ error: 'Production not found or access denied' }, { status: 403 })
+    if (!['CAPTAIN', 'ADMIN'].includes(roleRow.role))
+      return NextResponse.json({ error: 'Only CAPTAIN or ADMIN can delete a production' }, { status: 403 })
+
+    // Usa service client per CASCADE delete (bypassa RLS)
+    const serviceClient = await createSupabaseServiceClient()
+    const { error: delErr } = await serviceClient
+      .from('productions')
+      .delete()
+      .eq('id', id)
+
+    if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
+
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
+
 export async function PATCH(req) {
   try {
     const supabase = await createSupabaseServerClient()
