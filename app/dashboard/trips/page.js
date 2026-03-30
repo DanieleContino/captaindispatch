@@ -538,6 +538,14 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     // Cerca se esiste già un leg compatibile con l'hotel della nuova persona
     const compatibleLeg = allGroupLegs.find(leg => isCompatibleTrip(leg)) || null
 
+    // ── Debug BUG-4 ──────────────────────────────────────────────────────────
+    console.log('[handleAddToExisting]', {
+      assignCtx: { id: assignCtx?.id, hotel: assignCtx?.hotel, ts: assignCtx?.ts },
+      allGroupLegs: allGroupLegs.map(l => ({ id: l.id, trip_id: l.trip_id, pickup_id: l.pickup_id, dropoff_id: l.dropoff_id })),
+      compatibleLeg: compatibleLeg ? { id: compatibleLeg.id, trip_id: compatibleLeg.trip_id, pickup_id: compatibleLeg.pickup_id, dropoff_id: compatibleLeg.dropoff_id } : null,
+      sibDropoff,
+    })
+
     if (compatibleLeg) {
       // ── Leg compatibile trovato → aggiunge al leg corretto (T001 o sibling esistente T001B…) ──
       const { error } = await supabase.from('trip_passengers').insert({
@@ -566,7 +574,15 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         setAddedToTrip(compatibleLeg.trip_id); onSaved()
       }
     } else {
-      // ── Hotel diverso → crea sibling trip (MULTI-DRP o MULTI-PKP) ──
+      // ── Hotel diverso → crea sibling trip (MULTI-DRP, MULTI-PKP o MIXED) ──
+
+      // Guard: hotel necessario per determinare pickup/dropoff del sibling
+      if (!assignCtx.hotel) {
+        setAddingToTrip(false)
+        setError('Hotel mancante nel contesto assegnazione — impossibile creare leg sibling. Ricarica la pagina e riprova.')
+        return
+      }
+
       const base = baseTripId(selExistingTrip.trip_id)
 
       // Trova la prossima lettera disponibile (B, C, D…)
@@ -814,16 +830,45 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                         return null
                       })()}
                     </div>
-                    {addedToTrip ? (
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 10px', textAlign: 'center' }}>
-                        ✅ {assignCtx.name.split(' ')[0]} aggiunto a {addedToTrip}
-                      </div>
-                    ) : (
-                      <button type="button" disabled={addingToTrip} onClick={handleAddToExisting}
-                        style={{ width: '100%', padding: '8px', borderRadius: '8px', border: 'none', background: addingToTrip ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '13px', fontWeight: '800', cursor: addingToTrip ? 'default' : 'pointer' }}>
-                        {addingToTrip ? 'Adding…' : `✓ Add ${assignCtx.name.split(' ')[0]} to ${selExistingTrip.trip_id}`}
-                      </button>
-                    )}
+                        {/* ── MIXED: selettore destinazione sibling per STANDARD con hotel diverso ── */}
+                        {selExistingTrip.transfer_class === 'STANDARD' && !isCompatibleGroup(selExistingTrip) && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <label style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.06em', display: 'block', marginBottom: '3px' }}>
+                              🎯 Destination for {assignCtx.name.split(' ')[0]}
+                            </label>
+                            <select
+                              value={sibDropoff}
+                              onChange={e => setSibDropoff(e.target.value)}
+                              style={{ width: '100%', padding: '7px 10px', border: `1px solid ${sibDropoff ? '#fde68a' : '#fca5a5'}`, borderRadius: '8px', fontSize: '12px', background: 'white', boxSizing: 'border-box' }}
+                            >
+                              <option value="">Select destination…</option>
+                              <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                              <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                            </select>
+                            {sibDropoff && sibDropoff !== selExistingTrip.dropoff_id && (
+                              <div style={{ fontSize: '10px', color: '#6d28d9', fontWeight: '700', marginTop: '3px', background: '#f3e8ff', border: '1px solid #d8b4fe', borderRadius: '5px', padding: '3px 7px' }}>
+                                🔀 MIXED: {locShort(assignCtx.hotel)} → {locShort(sibDropoff)}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {addedToTrip ? (
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 10px', textAlign: 'center' }}>
+                            ✅ {assignCtx.name.split(' ')[0]} aggiunto a {addedToTrip}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={addingToTrip || (selExistingTrip.transfer_class === 'STANDARD' && !isCompatibleGroup(selExistingTrip) && !sibDropoff)}
+                            onClick={handleAddToExisting}
+                            style={{ width: '100%', padding: '8px', borderRadius: '8px', border: 'none', background: (addingToTrip || (selExistingTrip.transfer_class === 'STANDARD' && !isCompatibleGroup(selExistingTrip) && !sibDropoff)) ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '13px', fontWeight: '800', cursor: (addingToTrip || (selExistingTrip.transfer_class === 'STANDARD' && !isCompatibleGroup(selExistingTrip) && !sibDropoff)) ? 'default' : 'pointer' }}>
+                            {addingToTrip
+                              ? 'Adding…'
+                              : (selExistingTrip.transfer_class === 'STANDARD' && !isCompatibleGroup(selExistingTrip) && !sibDropoff)
+                                ? 'Select destination first ↑'
+                                : `✓ Add ${assignCtx.name.split(' ')[0]} to ${selExistingTrip.trip_id}`}
+                          </button>
+                        )}
                   </>
                 )}
 
