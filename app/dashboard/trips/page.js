@@ -71,8 +71,8 @@ const TRIP_COLS = [
   { key: 'trip',      label: 'TRIP',       width: '130px' },
   { key: 'vehicle',   label: 'VEHICLE',    width: '180px' },
   { key: 'route',     label: 'ROUTE',      width: '210px' },
-  { key: 'pax_count', label: 'PAX',        width: '70px'  },
   { key: 'pax',       label: 'PASSENGERS', width: '160px' },
+  { key: 'pax_count', label: 'PAX',        width: '70px'  },
 ]
 
 // ─── Vehicle date-range check (available_from / available_to) ─
@@ -279,15 +279,6 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
         )}
       </div>
 
-      {/* ── Pax count ── */}
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: '11px', fontWeight: '800', color: paxColor, lineHeight: 1.3 }}>
-          👥 {isMixed ? group.reduce((s, r) => s + (r.pax_count || 0), 0) : (t.pax_count || 0)}{t.capacity ? `/${t.capacity}` : ''}
-        </div>
-        <div style={{ fontSize: '9px', color: paxColor, fontWeight: '700' }}>pax</div>
-        {t.pax_conflict_flag && <div style={{ fontSize: '9px', color: '#dc2626', fontWeight: '800', marginTop: '2px' }}>⚠ conflict</div>}
-      </div>
-
       {/* ── Passenger names ── */}
       <div style={{ minWidth: 0 }}>
         {paxNames.length > 0 ? (
@@ -304,6 +295,15 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
         ) : (
           <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic' }}>{i18n.noPaxAssigned}</div>
         )}
+      </div>
+
+      {/* ── Pax count ── */}
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: '11px', fontWeight: '800', color: paxColor, lineHeight: 1.3 }}>
+          👥 {isMixed ? group.reduce((s, r) => s + (r.pax_count || 0), 0) : (t.pax_count || 0)}{t.capacity ? `/${t.capacity}` : ''}
+        </div>
+        <div style={{ fontSize: '9px', color: paxColor, fontWeight: '700' }}>pax</div>
+        {t.pax_conflict_flag && <div style={{ fontSize: '9px', color: '#dc2626', fontWeight: '800', marginTop: '2px' }}>⚠ conflict</div>}
       </div>
 
     </div>
