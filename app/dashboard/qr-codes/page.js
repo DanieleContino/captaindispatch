@@ -80,9 +80,7 @@ export default function QrCodesPage() {
       `}</style>
 
       {/* Header */}
-      <div className="no-print">
-        <Navbar currentPath="/dashboard/qr-codes" />
-      </div>
+      <Navbar currentPath="/dashboard/qr-codes" className="no-print" />
 
       {/* Toolbar */}
       <div className="no-print" style={{ background:'white', borderBottom:'1px solid #e2e8f0', padding:'0 24px', height:'52px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:'52px', zIndex:20 }}>
