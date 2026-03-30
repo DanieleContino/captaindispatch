@@ -20,8 +20,6 @@ function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
-const BUCKET = 'production-logos'
-
 const EMPTY_FORM = {
   name: '', slug: '',
   // Key creatives
@@ -225,14 +223,13 @@ export default function ProductionsPage() {
   }
 
   async function uploadLogo(file, productionId) {
-    const ext  = file.name.split('.').pop()
-    const path = `${productionId}/logo.${ext}`
-    const { error: upErr } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, file, { upsert: true, contentType: file.type })
-    if (upErr) throw new Error(upErr.message)
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-    return data.publicUrl + '?t=' + Date.now()
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('productionId', productionId)
+    const res  = await fetch('/api/productions/upload-logo', { method: 'POST', body: fd })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Upload failed')
+    return json.logo_url
   }
 
   async function handleCreate(e) {
@@ -277,7 +274,7 @@ export default function ProductionsPage() {
             body: JSON.stringify({ id: json.production.id, logo_url: logoUrl }),
           })
         } catch (logoErr) {
-          console.warn('Logo upload failed:', logoErr.message)
+          setError('⚠️ Logo upload failed: ' + logoErr.message)
         }
       }
 
@@ -299,7 +296,7 @@ export default function ProductionsPage() {
         try {
           logo_url = await uploadLogo(editLogoFile, editId)
         } catch (logoErr) {
-          console.warn('Logo upload failed:', logoErr.message)
+          alert('⚠️ Logo upload failed: ' + logoErr.message)
         }
       }
       const body = {
