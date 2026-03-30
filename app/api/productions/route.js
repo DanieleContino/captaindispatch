@@ -4,7 +4,7 @@
  * POST → create new production + assign CAPTAIN role to current user
  * PATCH → update production details (all fields)
  */
-import { createSupabaseServerClient } from '../../../lib/supabaseServer'
+import { createSupabaseServerClient, createSupabaseServiceClient } from '../../../lib/supabaseServer'
 import { NextResponse } from 'next/server'
 
 const PROD_FIELDS = `
@@ -74,7 +74,13 @@ export async function POST(req) {
     if (body.shoot_day !== undefined) insert.shoot_day = body.shoot_day || null
     if (body.revision  !== undefined) insert.revision  = body.revision  || 1
 
-    const { data: prod, error: prodErr } = await supabase
+    // Usa service client per bypassare RLS sull'INSERT:
+    // la policy "productions_own" blocca INSERT perché il ruolo
+    // non esiste ancora al momento della creazione (chicken-and-egg).
+    // L'autenticazione è già verificata sopra con supabase.auth.getUser().
+    const serviceClient = await createSupabaseServiceClient()
+
+    const { data: prod, error: prodErr } = await serviceClient
       .from('productions')
       .insert(insert)
       .select()
@@ -83,7 +89,7 @@ export async function POST(req) {
     if (prodErr) return NextResponse.json({ error: prodErr.message }, { status: 500 })
 
     // Assign CAPTAIN role to creator
-    await supabase.from('user_roles').upsert(
+    await serviceClient.from('user_roles').upsert(
       { user_id: user.id, production_id: prod.id, role: 'CAPTAIN' },
       { onConflict: 'user_id,production_id', ignoreDuplicates: true }
     )
