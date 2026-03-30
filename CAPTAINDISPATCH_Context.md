@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 29 marzo 2026 | S17 — i18n Rocket + Productions (in corso) | commit 2352e4f**
+**Aggiornato: 30 marzo 2026 | S17 — i18n Rocket + Productions ✅ COMPLETATO (R1–R12 + 3 fix residui) | commit a0c3c67**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**
@@ -296,6 +296,8 @@ ALTER TABLE crew ADD COLUMN IF NOT EXISTS no_transport_needed BOOLEAN NOT NULL D
 
 **File coinvolti:** `lib/i18n.js`, `app/dashboard/rocket/page.js`, `app/dashboard/productions/page.js`
 
+> ⚠️ **Deploy S17:** NON è necessario fare deploy dopo ogni singolo task R. Fare un unico deploy finale quando tutti i task R sono completati.
+
 **Approccio:** `replace_in_file` chirurgico. Aggiungere `import { useT } from '../../../lib/i18n'` + `const t = useT()` in ogni componente principale. I sottocomponenti (`TripCard`, `TemplatesPanel`, `CrewQuickEditModal`, ecc.) usano `useT()` internamente (non props).
 
 > ⚠️ NON tradurre: valori logici (`'PRESENT'`, `'CONFIRMED'`, `'__other__'`), chiavi localStorage, ID, costanti interne.
@@ -362,25 +364,93 @@ ALTER TABLE crew ADD COLUMN IF NOT EXISTS no_transport_needed BOOLEAN NOT NULL D
 
 ---
 
-### TASK 2 — Rocket i18n (rocket/page.js) — 🔄 IN CORSO (commit 2352e4f)
+### TASK 2 — Rocket i18n (rocket/page.js) — 🔄 IN CORSO
 
-**Stato:**
+**Prerequisiti completati:**
 - ✅ `lib/i18n.js` — 80+ chiavi Rocket aggiunte EN+IT (blocco `// ── Rocket page ──`)
-- ✅ `app/dashboard/rocket/page.js` — `import { useT } from '../../../lib/i18n'` aggiunto
-- ❌ Wiring `const t = useT()` + `t.xxx` nei sottocomponenti → **prossima sessione**
+- ✅ `import { useT }` + `const t = useT()` in tutti i 7 sottocomponenti
 
-**Sottocomponenti da aggiornare (in ordine):**
-1. `CrewQuickEditModal` — `const t = useT()` + sostituire: `Include in run`, `✅ Included`, `☐ Excluded`, `Call Time`, `↩ Reset`, `✓ Done`
-2. `MoveCrewModal` — `Move passenger`, `↩ Remove from all trips`, `Cancel`, `Move →`
-3. `TripCard` — `NO VEHICLE — use Move ›`, `No driver`, `auto-split on confirm`, `🏁 all arrive`, `No passengers`, `Move ›`
-4. `LastRunBanner` — `Reload last run?`, `↩ Load`, `Dismiss`
-5. `TemplatesPanel` — `📋 Templates`, `Save current configuration`, `💾 Save locally`, `☁️ Share with team`, `☁️ Shared with team`, `💾 Local`, `No shared templates yet.`, `No local templates yet.`, `· visible to all Captains`, `· stored on this device only`
-6. `SuggestionsHint` — `Historical Suggestions`, `hints based on past`, `runs`, `Apply`, `Include`
-7. `RocketPage` — tutti i label: config, fleet, crew, step buttons, stats bar, Step 3 summary
+> ⚠️ MAX 3 `replace_in_file` SEARCH/REPLACE per task. Ogni task = un batch atomico.
+> ⚠️ NON tradurre: valori logici (`'PRESENT'`, `'CONFIRMED'`), chiavi LS, ID interni, badge tecnici (es. `MULTI-PKP`).
 
-> ⚠️ Fare max 3 replace_in_file SEARCH/REPLACE per chiamata. Ogni sottocomponente richiede `const t = useT()` come prima riga del body.
+---
 
-**Chiavi già presenti in `lib/i18n.js`** (blocco `// ── Rocket page ──`):
+#### TASK R1 ✅ — TripCard + LastRunBanner + TemplatesPanel header
+- `TripCard`: `Move ›` → `t.rocketMoveBtn`
+- `LastRunBanner`: `Reload last run?` → `t.rocketReloadLast`
+- `TemplatesPanel`: titolo panel → `t.rocketTemplatesBtn`
+
+#### TASK R2 ✅ — TemplatesPanel save section
+- `Save current configuration` → `t.rocketSaveCurrentConfig`
+- `💾 Save locally` → `t.rocketSaveLocally`
+- `☁️ Share with team` → `t.rocketShareTeam`
+
+#### TASK R3 ✅ — TemplatesPanel sezioni shared/local
+- `☁️ Shared with team` section header → `t.rocketSharedTemplates` ✅
+- `· visible to all Captains` → `t.rocketVisibleAllCaptains` ✅
+- `No shared templates yet.` / `Save a config above…` → `t.rocketNoSharedTpl` ✅
+- `💾 Local` section header → `t.rocketLocalTemplates` ✅
+- `· stored on this device only` → `t.rocketStoredOnDevice` ✅
+- `No local templates yet.` / `Click "Save locally"…` → `t.rocketNoLocalTpl` ✅
+
+#### TASK R4 ✅ — SuggestionsHint + PageHeader subtitle
+- `Historical Suggestions` → `t.rocketHistoricalSugg`
+- `hints based on past` / `runs` → `t.rocketBasedOnPast` / `t.rocketRuns`
+- `Trip Generator v2` subtitle in PageHeader → `t.rocketSubtitle`
+
+#### TASK R5 ✅ — Config box title + Templates btn + labels (Date, Dest)
+- `⚙️ Trip Configuration` → `t.rocketTripConfig`
+- `📋 Templates` button → `t.rocketTemplatesBtn`
+- `Date` label → `t.rocketDateLabel`
+- `Default Destination` label → `t.rocketDefaultDest`
+
+#### TASK R6 ✅ — Labels (Call Time, Pickup hint, Service Type)
+- `Default Call Time` label → `t.rocketDefaultCall`
+- `Pickup = call − route duration` → `t.rocketPickupHint`
+- `Service Type` label → `t.rocketServiceTypeLabel`
+
+#### TASK R7 ✅ — Dept section
+- `🎯 Dept Destinations` → `t.rocketDeptDest` ✅
+- `↩ Reset all` → `t.rocketResetAll` ✅
+- `same service type` (option) → `t.rocketSameServiceType` ✅
+- `Crew without dept always use the default.` → `t.rocketDeptHint` ✅
+
+#### TASK R8 ✅ — Fleet section
+- `Why excluded?` → `t.rocketWhyExcluded` ✅
+- `No active vehicles —` / `add vehicles` link → `t.rocketNoVehicles` / `t.rocketAddVehicles` ✅
+- `No driver` (fleet row span) → `t.rocketNoDriver` ✅
+
+#### TASK R9 ✅ — Crew header + buttons
+- `👥 Crew` → `t.rocketCrewLabel` ✅
+- `selected` / `eligible` counters → `t.rocketCrewSelected` / `t.rocketCrewEligible` ✅
+- `Reset times` → `t.rocketResetTimes` ✅
+- `Expand all` → `t.rocketExpandAll` ✅
+- `Collapse` → `t.rocketCollapse` ✅
+
+#### TASK R10 ✅ — No eligible crew + NoDept var + crew footer + loading
+- `'— No Department —'` var `deptLabel` → `t.rocketNoDept` ✅
+- `No eligible crew` / hint `travel_status…` → `t.rocketNoEligibleCrew` / `t.rocketNoEligibleHint` ✅
+- Crew footer: `selected` / `excluded` / `call override` / `hotels` / `depts` → chiavi `rocketSelectedCount`… ✅
+- Loading screen `Loading fleet and crew data…` → `t.rocketLoadingData` ✅
+
+#### TASK R11 ✅ — Step 2 labels (toolbar + stats + empty)
+- `← Edit Setup` → `t.rocketEditSetup` ✅
+- `⏳ Creating…` → `t.rocketCreating` ✅
+- `📋 Draft Plan` stats bar → `t.rocketDraftPlan` ✅
+- `No trips generated` → `t.rocketNoTrips` ✅
+
+#### TASK R12 ✅ — Step 3 labels
+- `Trips Created!` → `t.rocketTripsCreated` ✅
+- `📋 View Trips` → `t.rocketViewTrips` ✅
+- `🚦 Fleet Monitor` → `t.rocketFleetMonitor` ✅
+- `🔄 New Rocket Run` → `t.rocketNewRun` ✅
+- `excluded from this run` → `t.rocketExcludedLabel` ✅
+- `no reason noted` → `t.rocketNoReasonNoted` ✅
+- `No driver` (Step 3 excluded list) → `t.rocketNoDriver` ✅
+
+---
+
+**Chiavi di riferimento in `lib/i18n.js`** (blocco `// ── Rocket page ──`):
 
 | Chiave | EN | IT |
 |--------|----|----|

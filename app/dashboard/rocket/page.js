@@ -501,7 +501,7 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               {isUnassigned
-                ? <span style={{ fontWeight: '900', fontSize: '13px', color: '#b91c1c' }}>NO VEHICLE — use Move ›</span>
+                ? <span style={{ fontWeight: '900', fontSize: '13px', color: '#b91c1c' }}>{t.rocketNoVehicleRow}</span>
                 : <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '15px', color: '#0f172a' }}>{trip.vehicleId}</span>
               }
               {isMultiPickup && <span style={{ fontSize: '9px', fontWeight: '800', color: '#d97706', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fde68a' }}>🔀 MULTI-PKP</span>}
@@ -1083,7 +1083,7 @@ function SuggestionsHint({ suggestions, weekday, locMap, onApply, onDismiss }) {
                     <button onClick={() => onApply(s)}
                       style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', background: '#f59e0b', color: 'white', cursor: 'pointer', fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }}
                       title="Ensure this vehicle is included">
-                      Include
+                      {t.rocketIncludeBtn}
                     </button>
                     <button onClick={() => onDismiss(key)}
                       style={{ padding: '5px 8px', borderRadius: '6px', border: '1px solid #fde68a', background: 'white', color: '#94a3b8', cursor: 'pointer', fontSize: '11px' }}
@@ -1762,7 +1762,7 @@ export default function RocketPage() {
                       </div>
                       {crewSearch && (
                         <div style={{ marginTop: '6px', fontSize: '11px', color: filteredEligible.length === 0 ? '#dc2626' : '#2563eb', fontWeight: '600' }}>
-                          {filteredEligible.length === 0 ? 'No crew found' : `${filteredEligible.length} match${filteredEligible.length !== 1 ? 'es' : ''}`}
+                          {filteredEligible.length === 0 ? t.rocketNoCrewFound : `${filteredEligible.length} match${filteredEligible.length !== 1 ? 'es' : ''}`}
                         </div>
                       )}
                     </div>

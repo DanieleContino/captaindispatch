@@ -487,7 +487,7 @@ export default function ProductionsPage() {
 
                         {/* Logo upload */}
                         <div style={{ marginBottom: '14px' }}>
-                          <label style={lbl}>Production Logo</label>
+                          <label style={lbl}>{t.productionsLogoLabel}</label>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                             {editLogoPreview ? (
                               <img src={editLogoPreview} alt="logo preview" style={{ width: '64px', height: '64px', objectFit: 'contain', borderRadius: '10px', background: 'white', border: '1px solid #e2e8f0', padding: '6px' }} />
@@ -534,7 +534,7 @@ export default function ProductionsPage() {
 
               {/* Logo upload */}
               <div style={{ marginBottom: '18px' }}>
-                <label style={lbl}>Production Logo</label>
+                <label style={lbl}>{t.productionsLogoLabel}</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   {logoPreview ? (
                     <img src={logoPreview} alt="logo preview" style={{ width: '72px', height: '72px', objectFit: 'contain', borderRadius: '12px', background: 'white', border: '1px solid #e2e8f0', padding: '6px' }} />
