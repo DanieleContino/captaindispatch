@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | Fix MULTI trip sidebar: PICKUP⚡ mostra valore chain da DB, non calcolo naïve**
+**Aggiornato: 31 marzo 2026 | BUG-4 APERTO: trip non diventa MULTI-PKP/MULTI-DRP dopo "Add to existing"**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -170,6 +170,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | Bug | Stato | Note |
 |-----|-------|------|
 | BUG-2: Sibling non eliminato a rimozione ultimo pax | ✅ Fix | RLS `FOR ALL` su `trips` non propagava DELETE lato client (0 rows, no error). **Fix codice**: `removePax()` ora chiama `POST /api/trips/delete-sibling` (service client, bypassa RLS). **Fix DB opzionale**: `fix-trips-rls-delete.sql` (policy esplicite). |
+| BUG-4: Trip non diventa MULTI-PKP/MULTI-DRP | 🔴 APERTO | Quando si aggiunge crew da hotel **diverso** via "Add to existing trip" → ci si aspetta la creazione di un leg sibling (T001B) e il trip diventa MULTI. Ma non succede — il trip rimane singolo. Ipotesi: `isCompatibleGroup()` restituisce `true` per errore (trova l'hotel del crew nei leg esistenti quando non dovrebbe), oppure `assignCtx.hotel` è vuoto al momento del check. Da investigare: log `assignCtx`, `allGroupLegs`, `compatibleLeg` in `handleAddToExisting`. |
 
 ---
 
@@ -210,6 +211,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **BUG-3 fix** | **Fix dropdown "Add to existing trip" mostrava sibling (T001B/T001C) come voci separate. Ora dedup per `baseTripId`: una sola entry per gruppo. `isCompatibleGroup` controlla tutti i leg. `handleAddToExisting` trova il leg compatibile esistente prima di creare nuovi sibling.** | — |
 | **UX trips** | **Edit Trip sidebar: (1) hotel badge `🏨` su ogni passeggero ASSIGNED (single trip); (2) MULTI trip: sezione ASSIGNED raggruppa pax per leg con sub-header `[TripID] · 🏨 Hotel · 🕐 pickup`. Query `loadPaxData` ora include `hotel_id` dal crew.** | `ce03a13` |
 | **MULTI chain fix** | **Fix discrepanza PICKUP sidebar vs lista nei trip MULTI (es. 06:20 vs 06:10). Root cause: sidebar mostrava `call - duration_questo_leg` (naïve), ma DB aveva valore chain-computed da `compute-chain` (hotel più lontano parte prima). Fix: (1) box `PICKUP ⚡` e `START ⚡` in `EditTripSidebar` ora leggono `initial.pickup_min`/`initial.start_dt` dal DB per trip MULTI (sfondo giallo = chain-managed); (2) `handleSubmit` non scrive più `pickup_min`/`start_dt`/`end_dt` per i trip MULTI sul leg principale né sui sibling — `compute-chain` li ricalcola sempre come passaggio finale.** | `c09f617` |
+| **sibDropoff fix** | **Fix internal state in `TripSidebar`: aggiunto `sibDropoff`/`setSibDropoff` useState. `sibDropoffId` e `siblingRow.dropoff_id` ora usano `(sibDropoff \|\| selExistingTrip.dropoff_id)` per DEPARTURE multi-PKP. `onChange` del select inizializza `sibDropoff` al `dropoff_id` del trip selezionato. Fix solo logica interna, nessun cambio UI visibile. BUG-4 ancora aperto (il sibling non viene creato).** | `6ad0bb8` |
 
 ---
 
