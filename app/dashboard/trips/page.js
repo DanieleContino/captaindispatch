@@ -305,7 +305,22 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
 
       {/* ── Passenger names ── */}
       <div style={{ minWidth: 0 }}>
-        {paxNames.length > 0 ? (
+        {isMixed ? (
+          // MULTI: una riga per leg, allineata alla rispettiva riga hotel nella colonna ROUTE
+          group.map((r, ri) => {
+            const legPax = r.passenger_list
+              ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean)
+              : []
+            return (
+              <div key={r.id || ri} style={{ fontSize: '10px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '16.5px', marginBottom: ri < group.length - 1 ? '4px' : 0 }}>
+                {legPax.length > 0
+                  ? legPax.join(', ')
+                  : <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
+                }
+              </div>
+            )
+          })
+        ) : paxNames.length > 0 ? (
           <>
             {paxNames.slice(0, 4).map((name, i) => (
               <div key={i} style={{ fontSize: '10px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
