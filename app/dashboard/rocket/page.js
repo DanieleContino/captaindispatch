@@ -1503,7 +1503,7 @@ export default function RocketPage() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>🚀</div>
-            <div style={{ fontWeight: '600' }}>Loading fleet and crew data…</div>
+            <div style={{ fontWeight: '600' }}>{t.rocketLoadingData}</div>
           </div>
         ) : (
           <>
@@ -1650,7 +1650,7 @@ export default function RocketPage() {
                         </div>
                       </div>
                       {activeVehicles.length === 0 ? (
-                        <div style={{ padding: '14px 16px', fontSize: '12px', color: '#dc2626' }}>No active vehicles — <a href="/dashboard/vehicles" style={{ color: '#2563eb' }}>add vehicles</a></div>
+                        <div style={{ padding: '14px 16px', fontSize: '12px', color: '#dc2626' }}>{t.rocketNoVehicles} <a href="/dashboard/vehicles" style={{ color: '#2563eb' }}>{t.rocketAddVehicles}</a></div>
                       ) : activeVehicles.map(v => {
                         const excluded = excludedVehicleIds.has(v.id)
                         const reason   = excludedVehicleReasons[v.id] || ''
@@ -1679,7 +1679,7 @@ export default function RocketPage() {
                               <input type="checkbox" checked={!excluded} readOnly style={{ width: '14px', height: '14px', accentColor: '#2563eb', flexShrink: 0, cursor: 'pointer' }} />
                               <span style={{ fontSize: '14px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
                               <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '12px', color: '#0f172a', minWidth: '60px' }}>{v.id}</span>
-                              <span style={{ fontSize: '11px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.driver_name || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No driver</span>}</span>
+                              <span style={{ fontSize: '11px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.driver_name || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>{t.rocketNoDriver}</span>}</span>
                               <span style={{ background: '#eff6ff', color: '#1d4ed8', padding: '1px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '700', flexShrink: 0 }}>{sug}/{max}</span>
                               {excluded && (
                                 <span style={{ fontSize: '9px', fontWeight: '800', color: reason ? '#dc2626' : '#94a3b8', textTransform: 'uppercase', flexShrink: 0 }}>
@@ -1691,7 +1691,7 @@ export default function RocketPage() {
                             {excluded && (
                               <div onClick={e => e.stopPropagation()}
                                 style={{ padding: '6px 16px 10px 44px', background: '#fff7ed', borderTop: '1px solid #fed7aa', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '10px', color: '#ea580c', fontWeight: '800', flexShrink: 0 }}>Why excluded?</span>
+                                <span style={{ fontSize: '10px', color: '#ea580c', fontWeight: '800', flexShrink: 0 }}>{t.rocketWhyExcluded}</span>
                                 <select
                                   value={selectVal}
                                   onChange={e => {
@@ -1742,15 +1742,15 @@ export default function RocketPage() {
                     <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#fafafa' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                         <div>
-                          <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>👥 Crew</span>
-                          <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>{selectedCrew.length} selected / {eligibleCrew.length} eligible</span>
+                          <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{t.rocketCrewLabel}</span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>{selectedCrew.length} {t.rocketCrewSelected} / {eligibleCrew.length} {t.rocketCrewEligible}</span>
                         </div>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button onClick={() => setExcludedCrewIds(new Set())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '700', color: '#1d4ed8' }}>✓ All</button>
                           <button onClick={() => setExcludedCrewIds(new Set(eligibleCrew.map(c => c.id)))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>✗ None</button>
-                          <button onClick={() => setCrewCallOverrides({})} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>Reset times</button>
-                          <button onClick={() => setExpandedDepts(new Set(accordionKeys))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>Expand all</button>
-                          <button onClick={() => setExpandedDepts(new Set())} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>Collapse</button>
+                          <button onClick={() => setCrewCallOverrides({})} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>{t.rocketResetTimes}</button>
+                          <button onClick={() => setExpandedDepts(new Set(accordionKeys))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>{t.rocketExpandAll}</button>
+                          <button onClick={() => setExpandedDepts(new Set())} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>{t.rocketCollapse}</button>
                         </div>
                       </div>
                       <div style={{ position: 'relative' }}>
@@ -1771,8 +1771,8 @@ export default function RocketPage() {
                       {eligibleCrew.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
                           <div style={{ fontSize: '32px', marginBottom: '8px' }}>👤</div>
-                          <div style={{ fontWeight: '600', marginBottom: '4px' }}>No eligible crew</div>
-                          <div style={{ fontSize: '12px' }}>travel_status = PRESENT + hotel_status = CONFIRMED</div>
+                          <div style={{ fontWeight: '600', marginBottom: '4px' }}>{t.rocketNoEligibleCrew}</div>
+                          <div style={{ fontSize: '12px' }}>{t.rocketNoEligibleHint}</div>
                         </div>
                       ) : accordionKeys.length === 0 && crewSearch ? (
                         <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
@@ -1781,7 +1781,7 @@ export default function RocketPage() {
                         </div>
                       ) : accordionKeys.map(deptKey => {
                         const deptCrew  = crewByDept[deptKey] || []
-                        const deptLabel = deptKey === '__nodept__' ? '— No Department —' : deptKey
+                        const deptLabel = deptKey === '__nodept__' ? t.rocketNoDept : deptKey
                         const expanded  = isDeptExpanded(deptKey)
                         const [bgC, txC] = deptColor(deptKey === '__nodept__' ? null : deptKey)
                         const deptCfg   = deptKey !== '__nodept__' ? (deptDestOverrides[deptKey] || {}) : {}
@@ -1838,10 +1838,10 @@ export default function RocketPage() {
 
                     {eligibleCrew.length > 0 && (
                       <div style={{ padding: '8px 16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '12px', fontSize: '11px', color: '#64748b', flexWrap: 'wrap' }}>
-                        <span><strong style={{ color: '#0f172a' }}>{selectedCrew.length}</strong> selected</span>
-                        {excludedCrewIds.size > 0 && <span><strong style={{ color: '#94a3b8' }}>{excludedCrewIds.size}</strong> excluded</span>}
-                        {Object.keys(crewCallOverrides).length > 0 && <span style={{ color: '#d97706', fontWeight: '600' }}>{Object.keys(crewCallOverrides).length} call override{Object.keys(crewCallOverrides).length !== 1 ? 's' : ''}</span>}
-                        <span style={{ marginLeft: 'auto' }}>{[...new Set(selectedCrew.map(c => c.hotel_id).filter(Boolean))].length} hotels · {departments.length} depts</span>
+                        <span><strong style={{ color: '#0f172a' }}>{selectedCrew.length}</strong> {t.rocketSelectedCount}</span>
+                        {excludedCrewIds.size > 0 && <span><strong style={{ color: '#94a3b8' }}>{excludedCrewIds.size}</strong> {t.rocketExcludedCount}</span>}
+                        {Object.keys(crewCallOverrides).length > 0 && <span style={{ color: '#d97706', fontWeight: '600' }}>{Object.keys(crewCallOverrides).length} {t.rocketCallOverrides}</span>}
+                        <span style={{ marginLeft: 'auto' }}>{[...new Set(selectedCrew.map(c => c.hotel_id).filter(Boolean))].length} {t.rocketHotels} · {departments.length} {t.rocketDepts}</span>
                       </div>
                     )}
                   </div>{/* END RIGHT COLUMN */}
@@ -1960,7 +1960,7 @@ export default function RocketPage() {
                             <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
                               <span style={{ fontSize: '13px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
                               <span style={{ fontFamily: 'monospace', fontWeight: '800', color: '#0f172a', flexShrink: 0, minWidth: '55px' }}>{v.id}</span>
-                              <span style={{ color: '#64748b', flex: 1, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.driver_name || 'No driver'}</span>
+                              <span style={{ color: '#64748b', flex: 1, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.driver_name || t.rocketNoDriver}</span>
                               {reason ? (
                                 <span style={{ fontSize: '11px', background: '#ffedd5', color: '#c2410c', border: '1px solid #fed7aa', padding: '1px 8px', borderRadius: '999px', fontWeight: '700', flexShrink: 0 }}>
                                   {reason}
