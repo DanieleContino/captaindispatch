@@ -180,6 +180,11 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
             {t.transfer_class === 'ARRIVAL' ? '✈ arr' : '✈ dep'} {arrTime}
           </div>
         )}
+        {!isMixed && t.pickup_min != null && t.duration_min && (
+          <div style={{ fontSize: '10px', fontWeight: '700', color: cls.color, marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
+            {t.transfer_class === 'ARRIVAL' ? '🏨' : '→'} {minToHHMM((t.pickup_min + t.duration_min) % 1440)}
+          </div>
+        )}
       </div>
 
       {/* ── Trip ID + Classe + Status ── */}
