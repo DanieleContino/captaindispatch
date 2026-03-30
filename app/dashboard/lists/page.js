@@ -33,6 +33,16 @@ function fmtNowDate() {
   return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`
 }
 
+// ─── formatCrewName: "John Smith" → "Smith J." | "Mary Jane Watson" → "Watson M." ──
+function formatCrewName(name) {
+  if (!name) return ''
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0]
+  const last = parts[parts.length - 1]
+  const initial = parts[0][0].toUpperCase()
+  return `${last} ${initial}.`
+}
+
 // ─── baseTripId: strip lettera finale (es. R_0326_01A → R_0326_01) ──
 function baseTripId(id) { return id ? id.replace(/[A-Z]$/, '') : id }
 
@@ -196,7 +206,7 @@ function TripTableRow({ group, locsMap, sectionColor }) {
                       📍 {pgLocName.split(' ').slice(0, 3).join(' ')}:
                     </span>
                     <span style={{ color: '#475569', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {pg.names.join(' · ')}
+                      {pg.names.map(n => formatCrewName(n)).join(' · ')}
                     </span>
                   </div>
                 )
@@ -247,7 +257,7 @@ function TripTableRow({ group, locsMap, sectionColor }) {
               <>
                 <span style={{ color: '#cbd5e1', fontSize: '10px' }}>·</span>
                 <span style={{ fontSize: '10px', color: '#475569', fontWeight: '500' }}>
-                  {group.rows[0].passenger_list.split(',').map(s => s.trim()).filter(Boolean).join(', ')}
+                  {group.rows[0].passenger_list.split(',').map(s => formatCrewName(s.trim())).filter(Boolean).join(', ')}
                 </span>
               </>
             )}
@@ -306,33 +316,42 @@ function TransportListHeader({ production, date }) {
         marginBottom: '10px' 
       }}>
         {/* COLONNA SINISTRA (70%) */}
-        <div>
-          <div style={{ fontWeight: '700', color: textPrimary, marginBottom: '3px' }}>
-            {prod.name || 'Production'}
-            <span style={{
-              display: 'inline-block',
-              fontSize: '7px',
-              background: '#fef2f2',
-              color: '#dc2626',
-              padding: '1px 5px',
-              borderRadius: '3px',
-              marginLeft: '6px',
-              fontWeight: '800',
-              letterSpacing: '0.05em',
-            }}>
-              CONFIDENTIAL
-            </span>
-          </div>
-          <div style={{ color: textSecondary, fontSize: '9px' }}>
-            Transport List · {dateDisplay} · Call: <strong style={{ color: textPrimary }}>{callTime}</strong>
-          </div>
-          {(setLabel !== '–' || basecampLabel !== '–') && (
-            <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: `1px solid ${borderColor}`, fontSize: '9px', color: textSecondary }}>
-              {setLabel !== '–' && <span>🎬 Set: <strong style={{ color: textPrimary }}>{setLabel}</strong></span>}
-              {setLabel !== '–' && basecampLabel !== '–' && <span style={{ margin: '0 6px', color: '#cbd5e1' }}>·</span>}
-              {basecampLabel !== '–' && <span>🏕 Basecamp: <strong style={{ color: textPrimary }}>{basecampLabel}</strong></span>}
-            </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+          {prod.logo_url && (
+            <img
+              src={prod.logo_url}
+              alt="logo"
+              style={{ width: '44px', height: '44px', objectFit: 'contain', borderRadius: '6px', background: 'white', border: '1px solid #e2e8f0', padding: '3px', flexShrink: 0 }}
+            />
           )}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: '700', color: textPrimary, marginBottom: '3px' }}>
+              {prod.name || 'Production'}
+              <span style={{
+                display: 'inline-block',
+                fontSize: '7px',
+                background: '#fef2f2',
+                color: '#dc2626',
+                padding: '1px 5px',
+                borderRadius: '3px',
+                marginLeft: '6px',
+                fontWeight: '800',
+                letterSpacing: '0.05em',
+              }}>
+                CONFIDENTIAL
+              </span>
+            </div>
+            <div style={{ color: textSecondary, fontSize: '9px' }}>
+              Transport List · {dateDisplay} · Call: <strong style={{ color: textPrimary }}>{callTime}</strong>
+            </div>
+            {(setLabel !== '–' || basecampLabel !== '–') && (
+              <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: `1px solid ${borderColor}`, fontSize: '9px', color: textSecondary }}>
+                {setLabel !== '–' && <span>🎬 Set: <strong style={{ color: textPrimary }}>{setLabel}</strong></span>}
+                {setLabel !== '–' && basecampLabel !== '–' && <span style={{ margin: '0 6px', color: '#cbd5e1' }}>·</span>}
+                {basecampLabel !== '–' && <span>🏕 Basecamp: <strong style={{ color: textPrimary }}>{basecampLabel}</strong></span>}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* COLONNA DESTRA (30%) - Solo se ci sono contatti */}
