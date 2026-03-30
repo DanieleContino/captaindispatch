@@ -27,6 +27,7 @@
  */
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { normalizeDept } from '@/lib/normalizeDept'
 
 // ── System prompts Claude ────────────────────────────────────
 
@@ -41,8 +42,20 @@ Rules:
 - For fleet: extract driver_name, vehicle_type, plate, sign_code, pax_suggested, pax_max
 - For accommodation: extract first_name, last_name, hotel, arrival_date, departure_date
 - If "not started" appears next to a role, set active: false, otherwise active: true
-- Department mapping: GRIPS→GRIP, ELECTRICS→ELECTRIC, HAIR & MAKE UP→HMU, ASSISTANT DIRECTORS→AD, CAMERA→CAMERA, COSTUME→COSTUME, ART DEPARTMENT→ART, PRODUCTION→PRODUCTION, TRANSPORTATION→TRANSPORT, SOUND→SOUND, LOCATIONS→LOCATIONS, PROPERTY→PROPS, SET DEC & SET DRESSING→SET DEC, ACCOUNTING→ACCOUNTING, WRITERS→PRODUCERS, DIRECTORS→DIRECTING
-- Director of Photography always maps to CAMERA (not DIRECTING)
+- Department canonical mapping (section headings):
+  CAMERAS/CAMERA DEPARTMENT → CAMERA | GRIPS/GRIP DEPARTMENT → GRIP
+  ELECTRICS/ELECTRICAL/LIGHTING/GAFFERS/ELETTRICISTI → ELECTRIC | AUDIO/SOUNDS/SUONO → SOUND
+  ART DEPARTMENT/PRODUCTION DESIGN/SCENOGRAFIA → ART | COSTUMES/WARDROBE/COSTUMI → COSTUME
+  MAKE UP/MAKE-UP/TRUCCO → MAKEUP | HAIR & MAKE UP/HAIR AND MAKEUP/H&MU/PARRUCCHIERI/TRUCCO E PARRUCCHIERI → HMU
+  PRODUCTION DEPARTMENT/PROD/PRODUZIONE → PRODUCTION | TRANSPORTATION/DRIVERS/TRASPORTI → TRANSPORT
+  ASSISTANT DIRECTORS/ASSISTANT DIRECTOR/ADS/1ST AD/AIUTO REGIA → AD | PROPERTY/PROPERTIES → PROPS
+  SET DEC & SET DRESSING/SET DECORATION/SET DRESSING/ARREDAMENTO → SET DEC
+  ACCOUNTS/FINANCE/PAYROLL/AMMINISTRAZIONE → ACCOUNTING | WRITERS/WRITER/EXECUTIVE PRODUCERS → PRODUCERS
+  CRAFT SERVICE/CRAFTY/MENSA → CATERING | SECURITY DEPARTMENT/GUARDS/SICUREZZA → SECURITY
+  MEDIC/HEALTH AND SAFETY/H&S/FIRST AID → MEDICAL | VISUAL EFFECTS/VFX DEPARTMENT/SPECIAL EFFECTS/SFX → VFX
+  DIRECTORS/DIRECTOR/REGIA → DIRECTING | ACTORS/TALENT/EXTRAS/ATTORI/COMPARSE → CAST
+  LOCATION/LOCATION DEPARTMENT/SCOUTS/SOPRALLUOGHI → LOCATIONS
+- Director of Photography always → CAMERA (never DIRECTING)
 - Vehicle type inference: Transit/Sprinter/Vito→VAN, Panda/Giulia/Model3→CAR, Tourismo/Irizar→BUS
 - If a field is not found, return null
 - Return ONLY a valid JSON object, no markdown, no explanation, no backticks
@@ -92,12 +105,53 @@ Fields per person:
   department   (one of: CAMERA, GRIP, ELECTRIC, SOUND, ART, COSTUME, MAKEUP, PRODUCTION, TRANSPORT,
                HMU, AD, PROPS, SET DEC, ACCOUNTING, PRODUCERS, CATERING, SECURITY, MEDICAL, VFX,
                DIRECTING, CAST, LOCATIONS, OTHER —
-               determined by the section heading the person appears under;
-               map: GRIPS→GRIP, ELECTRICS→ELECTRIC, HAIR & MAKE UP→HMU, ASSISTANT DIRECTORS→AD,
-               ART DEPARTMENT→ART, TRANSPORTATION→TRANSPORT, PROPERTY→PROPS,
-               SET DEC & SET DRESSING→SET DEC, WRITERS→PRODUCERS, DIRECTORS→DIRECTING;
-               if no section, infer from role: Gaffer→ELECTRIC, Focus Puller→CAMERA, Key Grip→GRIP,
-               Director→DIRECTING, Director of Photography→CAMERA, DOP→CAMERA etc.)
+               Use the section heading to determine department; apply these mappings:
+               CAMERAS/CAMERA DEPARTMENT → CAMERA | GRIPS/GRIP DEPARTMENT → GRIP
+               ELECTRICS/ELECTRICAL/LIGHTING/GAFFERS/ELETTRICISTI → ELECTRIC
+               AUDIO/SOUNDS/SUONO → SOUND
+               ART DEPARTMENT/ART DEPT/PRODUCTION DESIGN/SCENOGRAFIA → ART
+               COSTUMES/WARDROBE/COSTUME DEPARTMENT/COSTUMI → COSTUME
+               MAKE UP/MAKE-UP/MAKEUP DEPARTMENT/TRUCCO → MAKEUP
+               HAIR & MAKE UP/HAIR AND MAKEUP/HAIR & MAKEUP/H&MU/PARRUCCHIERI/TRUCCO E PARRUCCHIERI → HMU
+               PRODUCTION DEPARTMENT/PROD/PRODUCTION OFFICE/PRODUZIONE → PRODUCTION
+               TRANSPORTATION/TRANSPORTS/DRIVERS/TRASPORTI → TRANSPORT
+               ASSISTANT DIRECTORS/ASSISTANT DIRECTOR/ADS/1ST AD/2ND AD/AIUTO REGIA → AD
+               PROPERTY/PROPERTIES/PROP → PROPS
+               SET DEC & SET DRESSING/SET DECORATION/SET DRESSING/ARREDAMENTO → SET DEC
+               ACCOUNTS/FINANCE/PAYROLL/AMMINISTRAZIONE → ACCOUNTING
+               WRITERS/WRITER/EXECUTIVE PRODUCERS/PRODUTTORI → PRODUCERS
+               CRAFT SERVICE/CRAFT SERVICES/CRAFTY/MENSA → CATERING
+               SECURITY DEPARTMENT/GUARDS/SICUREZZA → SECURITY
+               HEALTH AND SAFETY/H&S/FIRST AID/MEDIC/SET MEDIC → MEDICAL
+               VISUAL EFFECTS/VFX DEPARTMENT/SPECIAL EFFECTS/SFX/EFFETTI VISIVI → VFX
+               DIRECTORS/DIRECTOR/DIRECTION/REGIA → DIRECTING
+               ACTORS/ACTOR/TALENT/EXTRAS/SUPPORTING ARTISTS/ATTORI/COMPARSE → CAST
+               LOCATION/LOCATION DEPARTMENT/SCOUTS/SOPRALLUOGHI → LOCATIONS
+               If no section heading, infer from role:
+               DOP/DP/Director of Photography/Focus Puller/1st AC/2nd AC/Camera Operator/Clapper/DIT → CAMERA
+               Gaffer/Best Boy Electric/Spark/Electrician/Lighting Technician → ELECTRIC
+               Key Grip/Dolly Grip/Best Boy Grip → GRIP
+               Sound Recordist/Boom Operator/Sound Mixer → SOUND
+               Production Designer/Art Director/Set Designer/Draughtsman → ART
+               Props Master/Standby Props → PROPS
+               Set Decorator/Set Dresser/Buyer (set) → SET DEC
+               Costume Designer/Wardrobe Supervisor/Dresser/Costume Standby → COSTUME
+               Makeup Artist/Makeup Supervisor → MAKEUP
+               Hair Stylist/Hair Supervisor → HMU
+               1st AD/2nd AD/3rd AD → AD
+               Location Manager/Location Scout → LOCATIONS
+               Transport Coordinator/Transport Captain/Driver/Chauffeur → TRANSPORT
+               Producer/Line Producer/Executive Producer/Co-Producer → PRODUCERS
+               Director/2nd Unit Director → DIRECTING
+               Actor/Actress/Performer → CAST
+               VFX Supervisor/VFX Artist/Compositor → VFX
+               SFX Supervisor/SFX Technician → VFX
+               Set Medic/Nurse/Paramedic → MEDICAL
+               Security Guard → SECURITY
+               Caterer/Craft Service → CATERING
+               Production Accountant/Payroll → ACCOUNTING
+               Runner/PA/Production Assistant → PRODUCTION
+               IMPORTANT: Director of Photography → CAMERA, never DIRECTING)
   phone        (string|null — prefer mobile number if multiple; take the one marked C or mobile)
   email        (string|null)
   active       (boolean — true by default; set false if "not started" appears next to the person)
@@ -249,33 +303,7 @@ async function callClaude(systemPrompt, userContent, returnType = 'array') {
 
 // ── Helpers: normalizzazione righe ───────────────────────────
 
-/** Mappa forme alternate/plurali → valore canonico uppercase */
-const DEPT_MAP = {
-  'GRIPS':                           'GRIP',
-  'ELECTRICS':                       'ELECTRIC',
-  'HAIR & MAKE UP':                  'HMU',
-  'HAIR AND MAKE UP':                'HMU',
-  'HAIR & MAKEUP':                   'HMU',
-  'MAKE UP':                         'MAKEUP',
-  'MAKE-UP':                         'MAKEUP',
-  'ASSISTANT DIRECTORS':             'AD',
-  'ART DEPARTMENT':                  'ART',
-  'TRANSPORTATION':                  'TRANSPORT',
-  'PROPERTY':                        'PROPS',
-  'SET DEC & SET DRESSING':          'SET DEC',
-  'WRITERS':                         'PRODUCERS',
-  'DIRECTORS':                       'DIRECTING',
-  'WRITERS / DIRECTORS':             'PRODUCERS',
-  'PRODUCERS / WRITERS / DIRECTORS': 'PRODUCERS',
-  'PRODUCERS/WRITERS/DIRECTORS':     'PRODUCERS',
-}
-
-/** Normalizza il campo department: uppercase + DEPT_MAP */
-function normalizeDept(raw) {
-  if (!raw) return null
-  const upper = raw.trim().toUpperCase()
-  return DEPT_MAP[upper] || upper
-}
+// normalizeDept importata da lib/normalizeDept.js
 
 /** Normalizza una riga crew proveniente da Claude */
 function normalizeCrew(r) {

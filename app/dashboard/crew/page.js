@@ -7,6 +7,7 @@ import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
 import { PageHeader } from '../../../components/ui/PageHeader'
+import { normalizeDept } from '../../../lib/normalizeDept'
 
 const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
@@ -722,7 +723,7 @@ export default function CrewPage() {
     if (filterTravel === 'NTN') { if (!c.no_transport_needed) return false }
     else if (filterTravel !== 'ALL' && c.travel_status !== filterTravel) return false
     if (filterHotel  !== 'ALL' && c.hotel_status  !== filterHotel)  return false
-    if (filterDept   !== 'ALL' && (c.department || 'NO DEPT').trim().toUpperCase() !== filterDept) return false
+    if (filterDept   !== 'ALL' && (normalizeDept(c.department) || 'NO DEPT') !== filterDept) return false
     if (search) {
       const q = search.toLowerCase()
       if (!c.full_name.toLowerCase().includes(q) && !(c.department || '').toLowerCase().includes(q) && !(c.id || '').toLowerCase().includes(q)) return false
@@ -730,7 +731,7 @@ export default function CrewPage() {
     return true
   })
 
-  const departments = [...new Set(crew.map(c => (c.department || 'NO DEPT').trim().toUpperCase()))].sort()
+  const departments = [...new Set(crew.map(c => normalizeDept(c.department) || 'NO DEPT'))].sort()
   const counts = {
     total:    crew.length,
     conf:     crew.filter(c => c.hotel_status  === 'CONFIRMED').length,
@@ -742,7 +743,7 @@ export default function CrewPage() {
   }
 
   const groups = groupByDept
-    ? Object.entries(filtered.reduce((a, c) => { const d = (c.department || 'NO DEPT').trim().toUpperCase(); if (!a[d]) a[d] = []; a[d].push(c); return a }, {})).sort(([a], [b]) => a.localeCompare(b))
+    ? Object.entries(filtered.reduce((a, c) => { const d = normalizeDept(c.department) || 'NO DEPT'; if (!a[d]) a[d] = []; a[d].push(c); return a }, {})).sort(([a], [b]) => a.localeCompare(b))
     : [['', filtered]]
 
   if (!user) return <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
