@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
@@ -87,17 +87,165 @@ function NTNToggle({ crewId, current, onChange }) {
   )
 }
 
+// ─── Contact Popover ────────────────────────────────────────
+function ContactPopover({ crewId, email, phone, onSaved }) {
+  const t = useT()
+  const [open, setOpen]       = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [eVal, setEVal]       = useState(email || '')
+  const [pVal, setPVal]       = useState(phone || '')
+  const [saving, setSaving]   = useState(false)
+  const ref = useRef(null)
+
+  // Click outside → chiudi
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false); setEditing(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  // Sync props quando cambiano dal genitore
+  useEffect(() => {
+    if (!editing) { setEVal(email || ''); setPVal(phone || '') }
+  }, [email, phone, editing])
+
+  const hasContact = !!(email || phone)
+
+  async function handleSave() {
+    setSaving(true)
+    const { error } = await supabase.from('crew')
+      .update({ email: eVal.trim() || null, phone: pVal.trim() || null })
+      .eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    setSaving(false)
+    if (!error) {
+      onSaved(crewId, { email: eVal.trim() || null, phone: pVal.trim() || null })
+      setEditing(false)
+    }
+  }
+
+  function handleCancel() {
+    setEVal(email || ''); setPVal(phone || ''); setEditing(false)
+  }
+
+  const inpStyle = { width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+      {/* Pulsante trigger */}
+      <button
+        onClick={() => { setOpen(p => !p); setEditing(false) }}
+        title={t.crewContactInfo}
+        style={{
+          padding: '3px 9px', borderRadius: '7px', fontSize: '12px', fontWeight: '600',
+          cursor: 'pointer', border: '1px solid', whiteSpace: 'nowrap',
+          ...(hasContact
+            ? { background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }
+            : { background: 'white', color: '#cbd5e1', borderColor: '#e2e8f0' }),
+        }}
+      >
+        {hasContact ? '📞' : '📞+'}
+      </button>
+
+      {/* Popover */}
+      {open && (
+        <div style={{
+          position: 'absolute', right: 0, top: 'calc(100% + 6px)',
+          background: 'white', border: '1px solid #e2e8f0',
+          borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+          width: '240px', zIndex: 100, padding: '12px',
+        }}>
+          {/* Header popover */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a' }}>📞 {t.crewContactInfo}</span>
+            <button onClick={() => { setOpen(false); setEditing(false) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '14px', lineHeight: 1, padding: '2px' }}>
+              ✕
+            </button>
+          </div>
+
+          {!editing ? (
+            <>
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '2px', textTransform: 'uppercase' }}>📧 {t.crewEmailLabel}</div>
+                <div style={{ fontSize: '12px', color: email ? '#0f172a' : '#cbd5e1', wordBreak: 'break-all' }}>
+                  {email ? <a href={`mailto:${email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{email}</a> : '—'}
+                </div>
+              </div>
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', marginBottom: '2px', textTransform: 'uppercase' }}>📱 {t.crewPhoneLabel}</div>
+                <div style={{ fontSize: '12px', color: phone ? '#0f172a' : '#cbd5e1' }}>
+                  {phone ? <a href={`tel:${phone}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{phone}</a> : '—'}
+                </div>
+              </div>
+              <button onClick={() => setEditing(true)}
+                style={{ width: '100%', padding: '5px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#374151', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                ✎ {t.edit}
+              </button>
+            </>
+          ) : (
+            <>
+              <div style={{ marginBottom: '8px' }}>
+                <label style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '3px', textTransform: 'uppercase' }}>📧 {t.crewEmailLabel}</label>
+                <input value={eVal} onChange={e => setEVal(e.target.value)} style={inpStyle} type="email" placeholder="email@example.com" />
+              </div>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', display: 'block', marginBottom: '3px', textTransform: 'uppercase' }}>📱 {t.crewPhoneLabel}</label>
+                <input value={pVal} onChange={e => setPVal(e.target.value)} style={inpStyle} type="tel" placeholder="+39 333 1234567" />
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={handleCancel} disabled={saving}
+                  style={{ flex: 1, padding: '5px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
+                  {t.cancel}
+                </button>
+                <button onClick={handleSave} disabled={saving}
+                  style={{ flex: 1, padding: '5px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '11px', cursor: saving ? 'default' : 'pointer', fontWeight: '700' }}>
+                  {saving ? t.saving : t.save}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Crew card compatta ──────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete }) {
+  const t = useT()
   const tc = TC[member.travel_status] || TC.PRESENT
   const hc = HC[member.hotel_status]  || HC.PENDING
   const hotel = locations[member.hotel_id] || member.hotel_id || '–'
   const depTomorrow = isTomorrow(member.departure_date)
   const depToday    = isToday(member.departure_date)
   const dim = member.hotel_status !== 'CONFIRMED'
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [deleting, setDeleting]     = useState(false)
+
+  async function handleDeleteClick() {
+    if (!confirmDel) { setConfirmDel(true); return }
+    setDeleting(true)
+    await onDelete(member.id)
+    setDeleting(false)
+    setConfirmDel(false)
+  }
 
   return (
-    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderLeft: `4px solid ${tc.border}`, borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '12px', alignItems: 'center' }}>
+    <div style={{ background: selected ? '#eff6ff' : 'white', border: `1px solid ${selected ? '#bfdbfe' : '#e2e8f0'}`, borderLeft: `4px solid ${selected ? '#3b82f6' : tc.border}`, borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: '20px 1fr auto auto auto auto auto', gap: '12px', alignItems: 'center' }}>
+
+      {/* Checkbox */}
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={() => onToggleSelect(member.id)}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '16px', height: '16px', accentColor: '#2563eb', cursor: 'pointer', flexShrink: 0 }}
+      />
 
       {/* Info */}
       <div>
@@ -138,11 +286,30 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit }) {
       {/* NTN toggle */}
       <NTNToggle crewId={member.id} current={member.no_transport_needed} onChange={onNTNChange} />
 
+      {/* Contact button */}
+      <ContactPopover crewId={member.id} email={member.email} phone={member.phone} onSaved={onContactSaved} />
+
       {/* Edit button */}
       <button onClick={() => onEdit(member)}
         style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>
         ✎ Edit
       </button>
+
+      {/* Delete inline */}
+      {!confirmDel ? (
+        <button onClick={e => { e.stopPropagation(); handleDeleteClick() }}
+          style={{ background: '#fff1f2', border: '1px solid #fecaca', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#dc2626', lineHeight: 1 }}
+          title={t.deleteCrew}>🗑</button>
+      ) : (
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+          <button onClick={() => setConfirmDel(false)}
+            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 8px', cursor: 'pointer', fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>✕</button>
+          <button onClick={handleDeleteClick} disabled={deleting}
+            style={{ background: '#dc2626', border: 'none', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '800', color: 'white', whiteSpace: 'nowrap' }}>
+            {deleting ? '…' : '⚠ ' + t.confirm}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -150,12 +317,13 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit }) {
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
 function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
   const t = useT()
-  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false }
+  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, email: '', phone: '' }
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError]   = useState(null)
   const [confirmDel, setConfirmDel] = useState(false)
+  const [contactOpen, setContactOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -173,6 +341,8 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
         departure_date:       initial.departure_date || '',
         notes:                initial.notes || '',
         no_transport_needed:  initial.no_transport_needed || false,
+        email:                initial.email || '',
+        phone:                initial.phone || '',
       })
     } else {
       // Auto-genera Crew ID: prende il più alto CR#### esistente e incrementa
@@ -214,6 +384,8 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
       departure_date:        form.departure_date || null,
       notes:                 form.notes.trim() || null,
       no_transport_needed:   form.no_transport_needed,
+      email:                 form.email.trim() || null,
+      phone:                 form.phone.trim() || null,
     }
 
     let error
@@ -376,6 +548,32 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
               <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder={t.notesPlaceholder} />
             </div>
 
+            {/* Contact Info accordion */}
+            <div style={{ marginBottom: '12px' }}>
+              <button type="button" onClick={() => setContactOpen(p => !p)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: contactOpen ? '#f0f9ff' : '#f8fafc', cursor: 'pointer', transition: 'background 0.15s' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: contactOpen ? '#0369a1' : '#374151' }}>
+                  📞 {t.crewContactInfo}
+                  {(form.email || form.phone) && (
+                    <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: '700', color: '#2563eb', background: '#eff6ff', padding: '1px 6px', borderRadius: '999px', border: '1px solid #bfdbfe' }}>✓</span>
+                  )}
+                </span>
+                <span style={{ fontSize: '12px', color: '#94a3b8', transition: 'transform 0.15s', display: 'inline-block', transform: contactOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+              </button>
+              {contactOpen && (
+                <div style={{ padding: '10px 12px 4px', border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', background: '#f0f9ff' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ ...lbl, color: '#0369a1' }}>📧 {t.crewEmailLabel}</label>
+                    <input value={form.email} onChange={e => set('email', e.target.value)} style={inp} type="email" placeholder="email@example.com" />
+                  </div>
+                  <div style={{ marginBottom: '6px' }}>
+                    <label style={{ ...lbl, color: '#0369a1' }}>📱 {t.crewPhoneLabel}</label>
+                    <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} type="tel" placeholder="+39 333 1234567" />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Elimina (solo edit) */}
             {mode === 'edit' && (
               <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
@@ -447,6 +645,11 @@ export default function CrewPage() {
   const [editTarget, setET]     = useState(null)
   const [importOpen, setImportOpen] = useState(false)
 
+  // Selezione bulk
+  const [selectedIds, setSelectedIds]   = useState([])
+  const [bulkDeleting, setBulkDel]      = useState(false)
+  const [bulkConfirm, setBulkConfirm]   = useState(false)
+
   function openNew()          { setSM('new');  setET(null); setSO(true) }
   function openEdit(member)   { setSM('edit'); setET(member); setSO(true) }
 
@@ -476,10 +679,43 @@ export default function CrewPage() {
 
   useEffect(() => { if (user) loadCrew() }, [user, loadCrew])
 
-  function handleStatusChange(id, s) { setCrew(p => p.map(c => c.id === id ? { ...c, travel_status: s } : c)) }
-  function handleNTNChange(id, val)  { setCrew(p => p.map(c => c.id === id ? { ...c, no_transport_needed: val } : c)) }
+  function handleStatusChange(id, s)            { setCrew(p => p.map(c => c.id === id ? { ...c, travel_status: s } : c)) }
+  function handleNTNChange(id, val)             { setCrew(p => p.map(c => c.id === id ? { ...c, no_transport_needed: val } : c)) }
+  function handleContactSaved(id, { email, phone }) { setCrew(p => p.map(c => c.id === id ? { ...c, email, phone } : c)) }
 
   function handleSaved() { setSO(false); loadCrew() }
+
+  // ─── Selezione ─────────────────────────────────────────
+  function toggleSelect(id) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+  function selectAll() {
+    const allIds = filtered.map(m => m.id)
+    const allSelected = allIds.every(id => selectedIds.includes(id))
+    setSelectedIds(allSelected ? [] : allIds)
+  }
+  function clearSelection() { setSelectedIds([]); setBulkConfirm(false) }
+
+  // ─── Delete singolo dalla card ──────────────────────────
+  async function handleDeleteSingle(id) {
+    await supabase.from('trip_passengers').delete().eq('crew_id', id)
+    const { error } = await supabase.from('crew').delete().eq('id', id).eq('production_id', PRODUCTION_ID)
+    if (!error) {
+      setSelectedIds(prev => prev.filter(x => x !== id))
+      setCrew(prev => prev.filter(c => c.id !== id))
+    }
+  }
+
+  // ─── Bulk delete ────────────────────────────────────────
+  async function handleBulkDelete() {
+    if (!bulkConfirm) { setBulkConfirm(true); return }
+    setBulkDel(true)
+    // Prima rimuovi trip_passengers per tutti gli id selezionati
+    await supabase.from('trip_passengers').delete().in('crew_id', selectedIds)
+    const { error } = await supabase.from('crew').delete().in('id', selectedIds)
+    setBulkDel(false)
+    if (!error) { setSelectedIds([]); setBulkConfirm(false); loadCrew() }
+  }
 
   // Filtri
   const filtered = crew.filter(c => {
@@ -636,6 +872,54 @@ export default function CrewPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+            {/* Barra bulk actions */}
+            {selectedIds.length > 0 && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '9px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#dc2626' }}>
+                  ☑ {selectedIds.length} {t.selectedCount}
+                </span>
+                <div style={{ flex: 1 }} />
+                {!bulkConfirm ? (
+                  <button onClick={handleBulkDelete}
+                    style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '7px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
+                    {t.deleteSelected}
+                  </button>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>
+                      {t.deleteSelectedConfirm.replace('{n}', selectedIds.length)}
+                    </span>
+                    <button onClick={() => setBulkConfirm(false)}
+                      style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
+                      {t.cancel}
+                    </button>
+                    <button onClick={handleBulkDelete} disabled={bulkDeleting}
+                      style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '7px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
+                      {bulkDeleting ? t.deleting : t.confirm}
+                    </button>
+                  </>
+                )}
+                <button onClick={clearSelection}
+                  style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
+                  {t.cancelSelection}
+                </button>
+              </div>
+            )}
+
+            {/* Select All header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 16px' }}>
+              <input
+                type="checkbox"
+                checked={filtered.length > 0 && filtered.every(m => selectedIds.includes(m.id))}
+                ref={el => { if (el) el.indeterminate = selectedIds.length > 0 && !filtered.every(m => selectedIds.includes(m.id)) }}
+                onChange={selectAll}
+                style={{ width: '16px', height: '16px', accentColor: '#2563eb', cursor: 'pointer' }}
+                title={t.selectAll}
+              />
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.selectAll}</span>
+            </div>
+
             {groups.map(([dept, members]) => (
               <div key={dept || 'all'}>
                 {groupByDept && dept && (
@@ -654,7 +938,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onEdit={openEdit} />
+                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} />
                   ))}
                 </div>
               </div>
