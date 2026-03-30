@@ -365,6 +365,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const [selExistingTrip, setSelExistingTrip] = useState(null)
   const [addingToTrip,    setAddingToTrip]    = useState(false)
   const [addedToTrip,     setAddedToTrip]     = useState(null)
+  const [sibDropoff,      setSibDropoff]      = useState('')
 
   const transferClass = getClass(form.pickup_id, form.dropoff_id)
   const arrMin  = timeStrToMin(form.arr_time)
@@ -592,7 +593,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       // NOTA: sibRoute e sibDurationMin devono restare nello stesso scope di siblingRow
       //       per poter usare la duration corretta del sibling (non quella del trip principale)
       const sibPickupId  = selExistingTrip.transfer_class === 'ARRIVAL'  ? selExistingTrip.pickup_id : assignCtx.hotel
-      const sibDropoffId = selExistingTrip.transfer_class === 'ARRIVAL'  ? assignCtx.hotel           : selExistingTrip.dropoff_id
+      const sibDropoffId = selExistingTrip.transfer_class === 'ARRIVAL'  ? assignCtx.hotel           : (sibDropoff || selExistingTrip.dropoff_id)
       const { data: sibRoute } = await supabase.from('routes')
         .select('duration_min')
         .eq('production_id', PRODUCTION_ID)
@@ -678,7 +679,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
           : assignCtx.hotel,
         dropoff_id: selExistingTrip.transfer_class === 'ARRIVAL'
           ? assignCtx.hotel
-          : selExistingTrip.dropoff_id,
+          : (sibDropoff || selExistingTrip.dropoff_id),
         vehicle_id:      selExistingTrip.vehicle_id      || null,
         driver_name:     selExistingTrip.driver_name     || null,
         sign_code:       selExistingTrip.sign_code       || null,
@@ -765,7 +766,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                   value={selExistingTrip?.id || ''}
                   onChange={e => {
                     const t = arrDepTrips.find(x => x.id === e.target.value) || null
-                    setSelExistingTrip(t); setAddedToTrip(null)
+                    setSelExistingTrip(t); setAddedToTrip(null); setSibDropoff(t?.dropoff_id || '')
                     // Pre-popola l'hub nel form per il trip sibling (campo che rimane vuoto)
                     if (t && !isCompatibleTrip(t)) {
                       if (t.transfer_class === 'ARRIVAL')   set('pickup_id',  t.pickup_id)
