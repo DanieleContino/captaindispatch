@@ -185,6 +185,25 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
             {t.transfer_class === 'ARRIVAL' ? '🏨' : '→'} {minToHHMM((t.pickup_min + t.duration_min) % 1440)}
           </div>
         )}
+        {isMixed && earliestPickupMin < 9999 && (() => {
+          // Orario arrivo al dropoff comune (hub per DEP, set/location per STD)
+          // 1. call_min (priorità) — già calcolato e salvato nel DB
+          // 2. Fallback chain: max(leg.pickup_min + leg.duration_min) — ultimo leg della catena
+          const chainArr = group.reduce((max, leg) => {
+            if (leg.pickup_min != null && leg.duration_min) {
+              const v = (leg.pickup_min + leg.duration_min) % 1440
+              return max === null || v > max ? v : max
+            }
+            return max
+          }, null)
+          const arrMin = (t.call_min != null ? t.call_min : chainArr)
+          if (arrMin == null || arrMin === earliestPickupMin) return null
+          return (
+            <div style={{ fontSize: '10px', fontWeight: '700', color: cls.color, marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
+              → {minToHHMM(arrMin)}
+            </div>
+          )
+        })()}
       </div>
 
       {/* ── Trip ID + Classe + Status ── */}
