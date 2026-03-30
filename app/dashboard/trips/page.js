@@ -1069,7 +1069,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     // Run all three queries in parallel
     const [paxRes, crewRes, dayTripsRes] = await Promise.all([
       supabase.from('trip_passengers')
-        .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed)')
+        .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed,hotel_id)')
         .in('trip_row_id', groupIds),
 
       (() => {
@@ -1331,6 +1331,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
   const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
 
+  // Location lookup per hotel badge e leg sub-header
+  const locsById = Object.fromEntries((locations || []).map(l => [l.id, l.name]))
+  const locShortEdit = id => (locsById[id] || id || '–').split(' ').slice(0, 3).join(' ')
+
   const regularCrew  = availableCrew.filter(c => !c.no_transport_needed)
   const ntnCrew      = availableCrew.filter(c =>  c.no_transport_needed)
   const freeCount    = regularCrew.filter(c => !busyMap[c.id]).length
@@ -1492,23 +1496,75 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       <div style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', letterSpacing: '0.05em', marginBottom: '5px' }}>
                         {t.assignedSection} ({assignedPax.length})
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        {assignedPax.map(c => (
-                          <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                              <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
-                              {c.no_transport_needed && (
-                                <span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1' }}>🚐 SD</span>
-                              )}
-                              <span style={{ color: '#94a3b8', fontSize: '11px' }}>{c.department}</span>
+
+                      {/* ── MULTI: raggruppa pax per leg con sub-header ── */}
+                      {group && group.length > 1 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {group.map(leg => {
+                            const legPax = assignedPax.filter(p => p.trip_row_id === leg.id)
+                            // Leggi la location "chiave" del leg: per DEPARTURE/STANDARD = pickup (hotel), per ARRIVAL = dropoff (hotel)
+                            const legHotelId = leg.transfer_class === 'ARRIVAL' ? leg.dropoff_id : leg.pickup_id
+                            const legHotelName = locShortEdit(legHotelId)
+                            const legPickupTime = leg.pickup_min != null ? minToHHMM(leg.pickup_min) : null
+                            return (
+                              <div key={leg.id}>
+                                {/* Sub-header leg */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '5px', padding: '3px 8px', marginBottom: '3px' }}>
+                                  <span style={{ fontFamily: 'monospace', fontSize: '10px', fontWeight: '800', color: '#374151' }}>{leg.trip_id}</span>
+                                  <span style={{ color: '#cbd5e1', fontSize: '10px' }}>·</span>
+                                  <span style={{ fontSize: '10px', fontWeight: '600', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>🏨 {legHotelName}</span>
+                                  {legPickupTime && (
+                                    <span style={{ fontSize: '10px', color: '#94a3b8', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>🕐 {legPickupTime}</span>
+                                  )}
+                                  <span style={{ fontSize: '9px', color: '#94a3b8', flexShrink: 0 }}>{legPax.length}p</span>
+                                </div>
+                                {/* Pax di questo leg */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '4px' }}>
+                                  {legPax.length > 0 ? legPax.map(c => (
+                                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', minWidth: 0 }}>
+                                        <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
+                                        {c.no_transport_needed && (
+                                          <span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1', flexShrink: 0 }}>🚐 SD</span>
+                                        )}
+                                        <span style={{ color: '#94a3b8', fontSize: '10px' }}>{c.department}</span>
+                                      </div>
+                                      <button type="button" onClick={() => removePax(c)}
+                                        style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '1px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', flexShrink: 0, marginLeft: '4px' }}>
+                                        ×
+                                      </button>
+                                    </div>
+                                  )) : (
+                                    <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic', padding: '2px 8px' }}>—</div>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        /* ── SINGLE trip: lista flat con hotel badge ── */
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          {assignedPax.map(c => (
+                            <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', minWidth: 0 }}>
+                                <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
+                                {c.no_transport_needed && (
+                                  <span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1' }}>🚐 SD</span>
+                                )}
+                                <span style={{ color: '#94a3b8', fontSize: '11px' }}>{c.department}</span>
+                                {c.hotel_id && locsById[c.hotel_id] && (
+                                  <span style={{ color: '#64748b', fontSize: '10px', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>🏨 {locShortEdit(c.hotel_id)}</span>
+                                )}
+                              </div>
+                              <button type="button" onClick={() => removePax(c)}
+                                style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '1px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
+                                ×
+                              </button>
                             </div>
-                            <button type="button" onClick={() => removePax(c)}
-                              style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '1px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
