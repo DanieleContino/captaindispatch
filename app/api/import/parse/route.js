@@ -56,6 +56,7 @@ Rules:
   DIRECTORS/DIRECTOR/REGIA → DIRECTING | ACTORS/TALENT/EXTRAS/ATTORI/COMPARSE → CAST
   LOCATION/LOCATION DEPARTMENT/SCOUTS/SOPRALLUOGHI → LOCATIONS
 - Director of Photography always → CAMERA (never DIRECTING)
+- EXCEPTION — role overrides section: person with role "Director" (standalone), "2nd Unit Director", "Insert Director" → always DIRECTING, even if listed under a PRODUCERS/WRITERS/DIRECTORS section heading
 - Vehicle type inference: Transit/Sprinter/Vito→VAN, Panda/Giulia/Model3→CAR, Tourismo/Irizar→BUS
 - If a field is not found, return null
 - Return ONLY a valid JSON object, no markdown, no explanation, no backticks
@@ -151,7 +152,9 @@ Fields per person:
                Caterer/Craft Service → CATERING
                Production Accountant/Payroll → ACCOUNTING
                Runner/PA/Production Assistant → PRODUCTION
-               IMPORTANT: Director of Photography → CAMERA, never DIRECTING)
+               IMPORTANT: Director of Photography → CAMERA, never DIRECTING.
+               EXCEPTION — role overrides section: person with role "Director" (standalone), "2nd Unit Director", "Insert Director" → DIRECTING even if section heading is PRODUCERS/WRITERS/DIRECTORS.
+               This exception does NOT apply to: "Art Director"→ART, "1st AD/2nd AD/Assistant Director"→AD, "Casting Director"→CAST, "Creative Director"→PRODUCERS)
   phone        (string|null — prefer mobile number if multiple; take the one marked C or mobile)
   email        (string|null)
   active       (boolean — true by default; set false if "not started" appears next to the person)
