@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | S17 — i18n Rocket + Productions ✅ COMPLETATO (R1–R12 + 3 fix residui) | commit a0c3c67**
+**Aggiornato: 30 marzo 2026 | S19 — Crew Role Field ✅**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**
@@ -549,7 +549,7 @@ user_roles
 locations (is_hub bool)
 routes (duration_min, google_duration_min, traffic_updated_at)
 crew (hotel_id, travel_status, hotel_status, arrival_date, departure_date,
-      department, no_transport_needed bool DEFAULT false)
+      department, role TEXT, no_transport_needed bool DEFAULT false)
 vehicles (capacity, pax_suggested, pax_max, driver_name, sign_code,
           active, available_from, available_to)
 trips (pickup_id, dropoff_id, call_min, pickup_min, start_dt, end_dt,
@@ -566,6 +566,385 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth)
 
 RLS abilitato su tutte le tabelle
 ```
+
+---
+
+## S19 — Crew Role Field 🎬 ✅ (30/03/26) — commit `719ed19`
+
+**Problema:** nella pagina Crew mancava il campo "ruolo/posizione" (es. "Director of Photography", "Gaffer", "1st AC"), distinto dal dipartimento.
+
+**File modificati:**
+| File | Modifica |
+|------|---------|
+| `scripts/migrate-crew-role.sql` | `ALTER TABLE crew ADD COLUMN IF NOT EXISTS role TEXT` |
+| `lib/i18n.js` | chiave `roleLabel` EN (`Role / Job Title`) + IT (`Ruolo / Posizione`) nel blocco crew sidebar |
+| `app/dashboard/crew/page.js` | EMPTY state + form state + handleSubmit row + CrewSidebar form field + CrewCard badge |
+| `app/api/import/parse/route.js` | SYSTEM_PROMPT_CREW: aggiunto campo `role` (titolo specifico dal documento) |
+
+**Dettagli implementazione:**
+- **CrewCard:** badge `member.role` tra nome e dipartimento — grigio scuro `#374151/f1f5f9`, fontWeight 600; dipartimento ora su sfondo `#e2e8f0`
+- **CrewSidebar form:** campo "Ruolo / Posizione" tra Nome e Dipartimento, placeholder: `Director of Photography, Gaffer, 1st AC…`
+- **import/parse:** Claude ora estrae `role` come titolo esatto dal documento; `department` inferito dal ruolo se non esplicito
+
+**Migration:** eseguire `scripts/migrate-crew-role.sql` nel Supabase SQL Editor
+
+---
+
+## S18 — i18n Completamento 🌍
+
+**File coinvolti:** `lib/i18n.js`, `fleet/page.js`, `reports/page.js`, `bridge/page.js`, `qr-codes/page.js`, `lists/page.js`, `settings/production/page.js`, `lib/ImportModal.js`, `pending/page.js` (fix residui), `scan/page.js` (fix residui)
+
+> ⚠️ **Deploy S18:** UN SOLO deploy finale quando tutti i task sono completati. NON deployare tra un task e l'altro.
+> ⚠️ Pattern identico a S17: `replace_in_file` chirurgico, `import { useT }` + `const t = useT()` in ogni componente.
+> ⚠️ NON tradurre: valori logici (`'BUSY'`, `'FREE'`, `'ARRIVAL'`, `'STANDARD'`), status badge tecnici, ID interni.
+
+**Stato audit (30/03/26):**
+
+| File | Navbar | useT | Note |
+|------|--------|------|------|
+| `fleet/page.js` | ✅ | ✅ | TASK 2 ✅ completato 30/03/26 |
+| `reports/page.js` | ✅ | ❌ | ~15 stringhe EN hardcoded |
+| `bridge/page.js` | ✅ | ❌ | ~40 stringhe EN hardcoded |
+| `qr-codes/page.js` | ✅ | ❌ | mix IT/EN hardcoded |
+| `lists/page.js` | ✅ | ❌ | mix IT/EN hardcoded (print page) |
+| `settings/production/page.js` | ✅ | ❌ | riusa chiavi S17 `productions*` |
+| `lib/ImportModal.js` | n/a | ❌ | helper condiviso, EN hardcoded |
+| `pending/page.js` | n/a | ⚠️ | invite section ancora hardcoded |
+| `scan/page.js` | n/a | ⚠️ | "Hotel", "Hotel Status", "Driver" hardcoded |
+
+---
+
+### TASK 1 ✅ (30/03/26) — Chiavi i18n (lib/i18n.js) — blocco `// ── S18 pages ──`
+
+**File:** `lib/i18n.js`
+
+| Chiave | EN | IT |
+|--------|----|----|
+| **Fleet Monitor** | | |
+| `fleetMonitorTitle` | `🚦 Fleet Monitor` | `🚦 Fleet Monitor` |
+| `fleetInProgress` | `IN PROGRESS` | `IN CORSO` |
+| `fleetNextTrip` | `NEXT TRIP` | `PROSSIMO TRIP` |
+| `fleetLastTrip` | `LAST TRIP` | `ULTIMO TRIP` |
+| `fleetNoTripsToday` | `No trips scheduled today` | `Nessun trip programmato oggi` |
+| `fleetNoActiveVehicles` | `No active vehicles` | `Nessun veicolo attivo` |
+| `fleetAddVehiclesHint` | `→ Add vehicles on the Vehicles page` | `→ Aggiungi veicoli nella pagina Vehicles` |
+| `fleetRefreshBtn` | `Refresh` | `Aggiorna` |
+| `fleetRefreshing` | `Refreshing…` | `Aggiornamento…` |
+| `fleetTrafficBtn` | `Traffico` | `Traffico` |
+| `fleetLegendTitle` | `LEGEND` | `LEGENDA` |
+| `fleetTripsWithoutVehicle` | `Trips without vehicle` | `Trip senza veicolo` |
+| `fleetAssignLink` | `Assign →` | `Assegna →` |
+| `fleetLoadingLabel` | `Loading Fleet Monitor…` | `Caricamento Fleet Monitor…` |
+| `fleetReturning` | `Dropoff done — returning` | `Dropoff completato — rientro` |
+| `fleetTripsToday` | `trips today` | `trip oggi` |
+| `fleetStartLabel` | `Start` | `Inizio` |
+| `fleetEndLabel` | `End` | `Fine` |
+| `fleetTotalPax` | `total pax` | `pax totali` |
+| `fleetViewingDate` | `Viewing:` | `Visualizzazione:` |
+| `fleetStatusBasedOn` | `BUSY/FREE status based on current time` | `Stato BUSY/FREE basato sull'orario attuale` |
+| **Reports** | | |
+| `reportsTitle` | `📊 Fleet Reports` | `📊 Report Flotta` |
+| `reportsDaily` | `Daily` | `Giornaliero` |
+| `reportsWeekly` | `Weekly` | `Settimanale` |
+| `reportsPrintBtn` | `🖨 Print / PDF` | `🖨 Stampa / PDF` |
+| `reportsNoTrips` | `No trips for this period` | `Nessun trip per questo periodo` |
+| `reportsDailyTotal` | `DAILY TOTAL` | `TOTALE GIORNALIERO` |
+| `reportsWeeklyVehicle` | `VEHICLE` | `VEICOLO` |
+| `reportsWeeklyTotal` | `TOTALE` | `TOTALE` |
+| `reportsWeeklyNoVehicles` | `No vehicles with trips this week` | `Nessun veicolo con trip questa settimana` |
+| `reportsTotalPerDay` | `TOTAL / DAY` | `TOTALE / GIORNO` |
+| `reportsPrinted` | `Printed:` | `Stampato:` |
+| `reportsColCall` | `CALL` | `CALL` |
+| `reportsColTrip` | `TRIP` | `TRIP` |
+| `reportsColClass` | `CLASSE` | `CLASSE` |
+| `reportsColFrom` | `FROM` | `DA` |
+| `reportsColTo` | `TO` | `A` |
+| `reportsColDur` | `DUR` | `DUR` |
+| `reportsColPax` | `PAX` | `PAX` |
+| `reportsColStatus` | `STATUS` | `STATO` |
+| `reportsNoVehicle` | `No vehicle` | `Nessun veicolo` |
+| **Bridge** | | |
+| `bridgeTitle` | `⚓ Captain Bridge` | `⚓ Captain Bridge` |
+| `bridgeDesc` | `Manage who accesses CaptainDispatch — approve pending users and control invite codes.` | `Gestisci chi accede a CaptainDispatch — approva gli utenti in attesa e controlla i codici invito.` |
+| `bridgePendingTab` | `👥 Pending Users` | `👥 Utenti in Attesa` |
+| `bridgeInvitesTab` | `🔑 Invite Codes` | `🔑 Codici Invito` |
+| `bridgePendingUsers` | `Pending Users` | `Utenti in Attesa` |
+| `bridgePendingDesc` | `Users who signed up and are waiting for access` | `Utenti che si sono registrati e aspettano l'accesso` |
+| `bridgeInviteCodesTitle` | `Invite Codes` | `Codici Invito` |
+| `bridgeAccessDenied` | `Access Denied` | `Accesso Negato` |
+| `bridgeAccessDeniedDesc` | `Captain Bridge is only available to CAPTAIN and ADMIN users.` | `Captain Bridge è disponibile solo per utenti CAPTAIN e ADMIN.` |
+| `bridgeBackDashboard` | `← Back to Dashboard` | `← Torna alla Dashboard` |
+| `bridgeNoPending` | `No pending users` | `Nessun utente in attesa` |
+| `bridgeNoPendingDesc` | `Everyone who signed up has been handled.` | `Tutti gli utenti registrati sono stati gestiti.` |
+| `bridgeRefreshBtn` | `↺ Refresh` | `↺ Aggiorna` |
+| `bridgeUsersWaiting` | `users waiting` | `utenti in attesa` |
+| `bridgeSignedUp` | `Signed up` | `Registrato` |
+| `bridgeSandboxBtn` | `✓ Sandbox` | `✓ Sandbox` |
+| `bridgeAddToProdBtn` | `⊕ Add to prod` | `⊕ Aggiungi a produzione` |
+| `bridgeIgnoreBtn` | `✕ Ignore` | `✕ Ignora` |
+| `bridgeAddToProdTitle` | `⊕ Add to Production` | `⊕ Aggiungi a Produzione` |
+| `bridgeAddToProdDesc` | `will be added with the selected role.` | `verrà aggiunto con il ruolo selezionato.` |
+| `bridgeProductionLabel` | `Production` | `Produzione` |
+| `bridgeRoleLabel` | `Role` | `Ruolo` |
+| `bridgeAddUserBtn` | `✓ Add User` | `✓ Aggiungi Utente` |
+| `bridgeAddingBtn` | `Adding…` | `Aggiungendo…` |
+| `bridgeNewCodeBtn` | `+ New Code` | `+ Nuovo Codice` |
+| `bridgeNewCodeTitle` | `🔑 New Invite Code` | `🔑 Nuovo Codice Invito` |
+| `bridgeNoInvites` | `No invite codes yet` | `Nessun codice invito ancora` |
+| `bridgeNoInvitesDesc` | `Create a code to let people join a specific production instantly.` | `Crea un codice per permettere alle persone di unirsi subito a una produzione.` |
+| `bridgeCreateFirstCode` | `+ Create First Code` | `+ Crea Primo Codice` |
+| `bridgeProdLabel` | `Production *` | `Produzione *` |
+| `bridgeRoleAssignedLabel` | `Role assigned` | `Ruolo assegnato` |
+| `bridgeCodeLabel` | `Code (blank = auto-generate)` | `Codice (vuoto = auto-genera)` |
+| `bridgeLabelOptLabel` | `Label (optional)` | `Etichetta (opzionale)` |
+| `bridgeMaxUsesLabel` | `Max uses (blank = unlimited)` | `Usi massimi (vuoto = illimitati)` |
+| `bridgeExpiresLabel` | `Expires (blank = never)` | `Scadenza (vuoto = mai)` |
+| `bridgeCreatingBtn` | `Creating…` | `Creando…` |
+| `bridgeCreateCodeBtn` | `🔑 Create Code` | `🔑 Crea Codice` |
+| `bridgePauseBtn` | `⏸ Pause` | `⏸ Pausa` |
+| `bridgeEnableBtn` | `▶ Enable` | `▶ Abilita` |
+| `bridgeUsesLabel` | `Uses:` | `Usi:` |
+| `bridgeNoExpiry` | `No expiry` | `Nessuna scadenza` |
+| `bridgeCreatedLabel` | `Created` | `Creato` |
+| `bridgeHowWorksTitle` | `⚓ How Captain Bridge works` | `⚓ Come funziona Captain Bridge` |
+| `bridgeDeleteConfirm` | `Delete this invite code?` | `Eliminare questo codice invito?` |
+| **QR Codes** | | |
+| `qrCodesTitle` | `📱 QR Codes` | `📱 QR Codes` |
+| `qrVehicles` | `🚐 Veicoli` | `🚐 Veicoli` |
+| `qrCrew` | `🎬 Crew` | `🎬 Crew` |
+| `qrPrintBtn` | `🖨 Stampa / PDF` | `🖨 Stampa / PDF` |
+| `qrHowToTitle` | `📱 Come usare Wrap Trip sul mobile` | `📱 Come usare Wrap Trip sul mobile` |
+| `qrNoVehicles` | `Nessun veicolo trovato. Aggiungili in` | `Nessun veicolo trovato. Aggiungili in` |
+| `qrNoCrewConfirmed` | `Nessun crew CONFIRMED trovato.` | `Nessun crew CONFIRMED trovato.` |
+| `qrLoading` | `Caricamento…` | `Caricamento…` |
+| **Lists** | | |
+| `listsTitle` | `📋 Transport Lists` | `📋 Transport Lists` |
+| `listsPrintBtn` | `🖨 Print / PDF` | `🖨 Stampa / PDF` |
+| `listsEditHeader` | `⚙️ Edit Header` | `⚙️ Modifica Header` |
+| `listsTodayBtn` | `Today` | `Oggi` |
+| `listsNoTrips` | `No trips for` | `Nessun trip per` |
+| `listsTripsCount` | `trips` | `trip` |
+| `listsPaxCount` | `pax` | `pax` |
+| `listsColTime` | `TIME` | `ORA` |
+| `listsColCall` | `CALL` | `CALL` |
+| `listsColVeh` | `VEH.` | `VEH.` |
+| `listsColDriver` | `DRIVER` | `AUTISTA` |
+| `listsColRoute` | `ROUTE & CREW` | `ROTTA & CREW` |
+| `listsColPax` | `PAX` | `PAX` |
+| `listsColCap` | `CAP` | `CAP` |
+| `listsSectionTransport` | `🚌 TRANSPORT LIST` | `🚌 TRANSPORT LIST` |
+| `listsSectionArrivals` | `✈ 🛬 TRAVEL LIST — ARRIVALS` | `✈ 🛬 TRAVEL LIST — ARRIVI` |
+| `listsSectionDepartures` | `✈ 🛫 TRAVEL LIST — DEPARTURES` | `✈ 🛫 TRAVEL LIST — PARTENZE` |
+| `listsConfidential` | `Confidential — Not for Distribution` | `Riservato — Non per distribuzione` |
+| `listsGeneratedBy` | `Generated by CaptainDispatch` | `Generato da CaptainDispatch` |
+| `listsNoActiveProd` | `No active production.` | `Nessuna produzione attiva.` |
+| **Settings/Production** | | |
+| `settingsTitle` | `⚙️ Production Settings` | `⚙️ Impostazioni Produzione` |
+| `settingsDesc` | `These details appear in the Transport List header. All fields are optional except Production Name.` | `Questi dettagli appaiono nell'header del Transport List. Tutti i campi sono opzionali tranne il Nome Produzione.` |
+| `settingsSaveBtn` | `💾 Save Production Settings` | `💾 Salva Impostazioni Produzione` |
+| `settingsSavingBtn` | `Saving…` | `Salvataggio…` |
+| `settingsSavedMsg` | `✅ Production settings saved successfully!` | `✅ Impostazioni produzione salvate!` |
+| `settingsBackBtn` | `← Back to Productions` | `← Torna alle Produzioni` |
+| `settingsTip` | `After saving, go to Transport Lists to see the header with all your production details.` | `Dopo il salvataggio, vai alle Transport Lists per vedere l'header con tutti i dettagli della produzione.` |
+| `settingsNoProduction` | `No active production selected. Go to Productions and activate one first.` | `Nessuna produzione attiva selezionata. Vai alle Produzioni e attivane una prima.` |
+| **ImportModal** | | |
+| `importTitle` | `📂 Import from file` | `📂 Importa da file` |
+| `importModeLabel` | `Import mode` | `Modalità importazione` |
+| `importFleetMode` | `🚗 Fleet list` | `🚗 Lista flotta` |
+| `importCrewMode` | `👥 Crew list` | `👥 Lista crew` |
+| `importCustomMode` | `✏️ Custom instructions…` | `✏️ Istruzioni personalizzate…` |
+| `importDragDrop` | `Drag & drop or click to browse` | `Trascina o clicca per sfogliare` |
+| `importAccepted` | `Accepted: .xlsx, .xls, .csv, .pdf, .docx` | `Accettati: .xlsx, .xls, .csv, .pdf, .docx` |
+| `importExtracting` | `Extracting data…` | `Estrazione dati…` |
+| `importClaudeAnalyzing` | `Claude is analyzing your file` | `Claude sta analizzando il file` |
+| `importSaving` | `Saving…` | `Salvataggio…` |
+| `importDone` | `Import complete!` | `Importazione completata!` |
+| `importCloseBtn` | `Close` | `Chiudi` |
+| `importBackBtn` | `← Back` | `← Indietro` |
+| `importCancelBtn` | `Cancel` | `Annulla` |
+| `importConfirmBtn` | `✓ Confirm import` | `✓ Conferma importazione` |
+| `importRowsFound` | `rows found` | `righe trovate` |
+| `importNewLabel` | `new` | `nuovi` |
+| `importUpdateLabel` | `update` | `aggiornamenti` |
+| `importSkipLabel` | `skip` | `saltati` |
+| `importNeedReview` | `need review` | `da rivedere` |
+| `importNotRecognized` | `not recognized` | `non riconosciute` |
+| `importRowsNotRecognized` | `rows not recognized` | `righe non riconosciute` |
+| `importNewHotelsTitle` | `🏨 New hotels detected — not found in Locations` | `🏨 Nuovi hotel rilevati — non trovati nelle Location` |
+| `importAddToLocations` | `+ Add to Locations` | `+ Aggiungi alle Location` |
+| `importSkipHotel` | `Skip` | `Salta` |
+| `importInserted` | `inserted` | `inseriti` |
+| `importUpdated` | `updated` | `aggiornati` |
+| `importSkipped` | `skipped` | `saltati` |
+| `importLegendNew` | `✅ New` | `✅ Nuovo` |
+| `importLegendDup` | `🔁 Duplicate` | `🔁 Duplicato` |
+| `importLegendMissing` | `⚠️ Missing fields` | `⚠️ Campi mancanti` |
+| `importLegendUnrecognized` | `❌ Not recognized` | `❌ Non riconosciuto` |
+| **pending (fix residui)** | | |
+| `pendingInviteLabel` | `🔑 Have an invite code?` | `🔑 Hai un codice invito?` |
+| `pendingEnterBtn` | `→ Enter` | `→ Entra` |
+| `pendingInvitePlaceholder` | `e.g. CREW-X7K2` | `es. CREW-X7K2` |
+| `pendingJoinedMsg` | `Joined` | `Accesso a` |
+| `pendingRedirectingMsg` | `Redirecting…` | `Reindirizzamento…` |
+| **scan (fix residui)** | | |
+| `scanHotelLabel` | `Hotel` | `Hotel` |
+| `scanHotelStatus` | `Hotel Status` | `Stato Hotel` |
+| `scanDriverLabel` | `👤 Driver` | `👤 Autista` |
+| `scanSearchPlaceholder` | `Search…` | `Cerca…` |
+
+---
+
+### TASK 2 ✅ (30/03/26) — fleet/page.js
+
+**Sostituzioni principali:**
+- `import { useT } from '../../../lib/i18n'` + `const t = useT()` in `FleetPage` e `VehicleCard`
+- `"Fleet Monitor"` → `t.fleetMonitorTitle`
+- `"IN PROGRESS"` → `t.fleetInProgress`, `"NEXT TRIP"` → `t.fleetNextTrip`, `"LAST TRIP"` → `t.fleetLastTrip`
+- `"No trips scheduled today"` → `t.fleetNoTripsToday`
+- `"No active vehicles"` → `t.fleetNoActiveVehicles`
+- `"→ Add vehicles on the Vehicles page"` → `t.fleetAddVehiclesHint`
+- `"Loading Fleet Monitor…"` → `t.fleetLoadingLabel`
+- `"Refresh"` → `t.fleetRefreshBtn`, `"Traffico"` → `t.fleetTrafficBtn`
+- `"Today"` → `t.todayBtn` (chiave comune già esistente)
+- `"LEGEND"` → `t.fleetLegendTitle`
+- `"Trips without vehicle"` → `t.fleetTripsWithoutVehicle`
+- `"Assign →"` → `t.fleetAssignLink`
+- `"Dropoff done — returning"` → `t.fleetReturning`
+- `"trips today"` → `t.fleetTripsToday`
+- `"Start"`, `"End"` → `t.fleetStartLabel`, `t.fleetEndLabel`
+- `"total pax"` → `t.fleetTotalPax`
+- `"Viewing:"` → `t.fleetViewingDate`
+
+> ⚠️ NON tradurre: `'BUSY'`, `'FREE'`, `'IDLE'`, `'DONE'`, `'ARRIVAL'`, `'DEPARTURE'`, `'STANDARD'`, `'Wrap'`, `'Charter'`, valori numerici, ID veicoli.
+
+---
+
+### TASK 3 — reports/page.js  🔄 PROSSIMO
+
+**Sostituzioni principali:**
+- `import { useT } from '../../../lib/i18n'` + `const t = useT()` in `ReportsPage`
+- `"Fleet Reports"` → `t.reportsTitle`
+- `"Daily"` / `"Weekly"` → `t.reportsDaily` / `t.reportsWeekly`
+- `"Print / PDF"` → `t.reportsPrintBtn`
+- `"No trips for this period"` → `t.reportsNoTrips`
+- `"DAILY TOTAL"` → `t.reportsDailyTotal`
+- `"VEHICLE"` → `t.reportsWeeklyVehicle`
+- `"No vehicles with trips this week"` → `t.reportsWeeklyNoVehicles`
+- `"TOTAL / DAY"` → `t.reportsTotalPerDay`
+- `"Printed:"` → `t.reportsPrinted`
+- Colonne `"CALL"`, `"TRIP"`, `"CLASSE"`, `"FROM"`, `"TO"`, `"DUR"`, `"PAX"`, `"STATUS"` → rispettive chiavi
+- `"Today"` → `t.todayBtn`
+- `"No vehicle"` → `t.reportsNoVehicle`
+- `"trip count"` → `t.reportsColTrip`
+
+---
+
+### TASK 4 — bridge/page.js
+
+**Sostituzioni principali:**
+- `import { useT } from '../../../lib/i18n'` + `const t = useT()` in `BridgePage`, `PendingUsersTab`, `InviteCodesTabControlled`, `AddToProductionModal`
+- `"⚓ Captain Bridge"` → `t.bridgeTitle`
+- `"Manage who accesses…"` → `t.bridgeDesc`
+- Tab labels, section headers, stati, bottoni → rispettive chiavi `bridge*`
+- `"No pending users"` → `t.bridgeNoPending`
+- `"No invite codes yet"` → `t.bridgeNoInvites`
+- `"Delete this invite code?"` → `t.bridgeDeleteConfirm` (nella `confirm()`)
+
+---
+
+### TASK 5 — qr-codes/page.js
+
+**Sostituzioni principali:**
+- `import { useT } from '../../../lib/i18n'` + `const t = useT()` in `QrCodesPage`
+- `"📱 QR Codes"` → `t.qrCodesTitle`
+- Tab labels veicoli/crew → `t.qrVehicles` / `t.qrCrew`
+- `"🖨 Stampa / PDF"` → `t.qrPrintBtn`
+- `"📱 Come usare Wrap Trip…"` → `t.qrHowToTitle`
+- `"Caricamento…"` → `t.loading` (chiave comune)
+- `"Nessun veicolo trovato…"` → `t.qrNoVehicles`
+- `"Nessun crew CONFIRMED trovato."` → `t.qrNoCrewConfirmed`
+
+---
+
+### TASK 6 — lists/page.js
+
+**Sostituzioni principali:**
+- `import { useT } from '../../../lib/i18n'` + `const t = useT()` in `ListsPage`
+- `"📋 Transport Lists"` → `t.listsTitle`
+- `"🖨 Print / PDF"` → `t.listsPrintBtn`
+- `"⚙️ Edit Header"` → `t.listsEditHeader`
+- `"Today"` → `t.todayBtn`
+- `"No trips for"` → `t.listsNoTrips`
+- Colonne TIME, CALL, VEH., DRIVER, ROUTE & CREW, PAX, CAP → chiavi `listsCols*`
+- Section headers TRANSPORT LIST, ARRIVALS, DEPARTURES → `t.listsSectionTransport` ecc.
+- Footer: `"Confidential"`, `"Generated by CaptainDispatch"` → chiavi `listsConfidential`, `listsGeneratedBy`
+- `"No active production."` → `t.listsNoActiveProd`
+- `"Loading…"` → `t.loading`
+
+> ⚠️ Il contenuto della `TransportListHeader` (Director, Producer, ecc.) usa dati dal DB, non stringhe UI — non tradurre. Tradurre solo label interfaccia toolbar e footer.
+
+---
+
+### TASK 7 — settings/production/page.js
+
+**Sostituzioni principali:**
+- `import { useT } from '../../../../lib/i18n'` + `const t = useT()` in `ProductionSettingsPage`
+- `"⚙️ Production Settings"` → `t.settingsTitle`
+- `"These details appear in…"` → `t.settingsDesc`
+- `"💾 Save Production Settings"` → `t.settingsSaveBtn`
+- `"Saving…"` → `t.settingsSavingBtn`
+- `"✅ Production settings saved successfully!"` → `t.settingsSavedMsg`
+- `"← Back to Productions"` → `t.settingsBackBtn`
+- `"💡 Tip: After saving…"` → `t.settingsTip`
+- `"⚠️ No active production selected…"` → `t.settingsNoProduction`
+- Label sezioni e campi form → riusa chiavi già presenti in S17 (`productionsNameLabel`, `productionsDirectorLabel`, ecc.)
+- `"📁 Upload Logo"` → `t.productionsUploadLogo`
+- `"PNG, JPG, SVG — max 2 MB"` → `t.productionsLogoHint`
+
+---
+
+### TASK 8 — lib/ImportModal.js
+
+**Sostituzioni principali:**
+- `import { useT } from '../lib/i18n'` (path relativo da lib/) + `const t = useT()` in `ImportModal`
+- Header `"📂 Import from file"` → `t.importTitle`
+- `"Import mode"` → `t.importModeLabel`
+- Mode buttons `"🚗 Fleet list"`, `"👥 Crew list"`, `"✏️ Custom instructions…"` → chiavi `importFleetMode`, ecc.
+- `"Drag & drop or click to browse"` → `t.importDragDrop`
+- `"Accepted: .xlsx…"` → `t.importAccepted`
+- `"Extracting data…"` → `t.importExtracting`
+- `"Claude is analyzing your file"` → `t.importClaudeAnalyzing`
+- `"Saving…"` → `t.importSaving`
+- `"Import complete!"` → `t.importDone`
+- Bottoni Close, ← Back, Cancel, Confirm → chiavi `import*Btn`
+- Banner stats e legenda → chiavi `import*`
+- `"New hotels detected"` → `t.importNewHotelsTitle`
+
+> ⚠️ `useT()` è un hook React — `ImportModal` è già `'use client'` quindi ok.
+
+---
+
+### TASK 9 — pending/page.js (fix residui invite section)
+
+**Sostituzioni:**
+- `"🔑 Have an invite code?"` → `t.pendingInviteLabel`
+- `placeholder="e.g. CREW-X7K2"` → `placeholder={t.pendingInvitePlaceholder}`
+- `"→ Enter"` (button) → `t.pendingEnterBtn`
+- `` `✅ Joined **${inviteSuccess}**! Redirecting…` `` → `` `✅ ${t.pendingJoinedMsg} **${inviteSuccess}**! ${t.pendingRedirectingMsg}` ``
+
+---
+
+### TASK 10 — scan/page.js (fix residui label hardcoded)
+
+**Sostituzioni in `CrewCard` e `VehicleCard`:**
+- `"Hotel"` label → `t.scanHotelLabel`
+- `"Hotel Status"` label → `t.scanHotelStatus`
+- `"👤 Driver"` label → `t.scanDriverLabel`
+- `"Search…"` placeholder in `PickerModal` → `t.scanSearchPlaceholder`
+
+---
+
+> ⚠️ **wrap-trip/page.js** — mobile app, BASSA PRIORITÀ. Non incluso in S18. Da fare come S19 separato se necessario.
 
 ---
 
