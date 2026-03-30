@@ -528,7 +528,25 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         .eq('to_id', sibDropoffId)
         .maybeSingle()
       // duration_min specifica del sibling (Hotel B → Hub), diversa da quella del leg principale
-      const sibDurationMin = sibRoute?.duration_min || null
+      // Se non trovata in DB, chiama /api/routes/compute per ottenere la durata da Google Maps
+      // Questo garantisce che ogni sibling abbia una durata accurata (evita orari duplicati
+      // causati da route mancanti nella tabella che fanno cadere nel fallback call_min)
+      let sibDurationMin = sibRoute?.duration_min || null
+      if (!sibDurationMin && sibPickupId && sibDropoffId && PRODUCTION_ID) {
+        try {
+          const computeRes = await fetch('/api/routes/compute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from_id: sibPickupId, to_id: sibDropoffId, production_id: PRODUCTION_ID }),
+          })
+          if (computeRes.ok) {
+            const computeData = await computeRes.json()
+            if (computeData.duration_min) sibDurationMin = computeData.duration_min
+          }
+        } catch (e) {
+          console.warn('[handleAddToExisting] route compute fallback failed:', e)
+        }
+      }
       let sibCalc = null
       if (sibDurationMin) {
         sibCalc = calcTimes({
@@ -1077,8 +1095,12 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       passenger_list: tripPaxForTarget.length > 0 ? tripPaxForTarget.map(c => c.full_name).join(', ') : null,
     }).eq('id', targetTripId)
 
-    // Cleanup: if targetTripId is a sibling (not the main leg) and now has 0 pax → delete the sibling row
-    if (targetTripId !== initial.id) {
+    // Cleanup: if targetTripId is a sibling leg (trip_id ends with letter) and now has 0 pax → delete the sibling row
+    // NOTE: non usare `targetTripId !== initial.id` perché fallisce quando il sibling ha pickup_min
+    // inferiore al leg principale e diventa group[0] (initial.id === sibling.id in quel caso).
+    const targetTripObj     = (group || []).find(g => g.id === targetTripId)
+    const isTargetSiblingLeg = targetTripObj ? /[A-Z]$/.test(targetTripObj.trip_id || '') : false
+    if (isTargetSiblingLeg) {
       const siblingStillHasPax = newPax.some(c => c.trip_row_id === targetTripId)
       console.log('[removePax] sibling check | siblingStillHasPax:', siblingStillHasPax, '| targetTripId:', targetTripId)
       if (!siblingStillHasPax) {
