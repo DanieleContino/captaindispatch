@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | S21 TASK2 — Smart Categorization pre-preview ✅**
+**Aggiornato: 30 marzo 2026 | S21 TASK2 — Smart Categorization pre-preview ✅ | Fix pdf-parse DOMMatrix ✅**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**

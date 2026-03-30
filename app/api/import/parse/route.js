@@ -110,7 +110,7 @@ async function extractTextFromFile(buffer, filename, instructions = '') {
   const ext = (filename.split('.').pop() || '').toLowerCase()
 
   if (ext === 'pdf') {
-    const pdfParse = require('pdf-parse')
+    const pdfParse = require('pdf-parse/lib/pdf-parse.js')
     const data = await pdfParse(buffer)
     return data.text || ''
   }
