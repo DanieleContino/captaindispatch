@@ -41,7 +41,8 @@ Rules:
 - For fleet: extract driver_name, vehicle_type, plate, sign_code, pax_suggested, pax_max
 - For accommodation: extract first_name, last_name, hotel, arrival_date, departure_date
 - If "not started" appears next to a role, set active: false, otherwise active: true
-- Department mapping: GRIPS→GRIP, ELECTRICS→ELECTRIC, HAIR & MAKE UP→HMU, ASSISTANT DIRECTORS→AD, CAMERA→CAMERA, COSTUME→COSTUME, ART DEPARTMENT→ART, PRODUCTION→PRODUCTION, TRANSPORTATION→TRANSPORT, SOUND→SOUND, LOCATIONS→LOCATIONS, PROPERTY→PROPS, SET DEC & SET DRESSING→SET DEC, ACCOUNTING→ACCOUNTING, PRODUCERS / WRITERS / DIRECTORS→PRODUCERS
+- Department mapping: GRIPS→GRIP, ELECTRICS→ELECTRIC, HAIR & MAKE UP→HMU, ASSISTANT DIRECTORS→AD, CAMERA→CAMERA, COSTUME→COSTUME, ART DEPARTMENT→ART, PRODUCTION→PRODUCTION, TRANSPORTATION→TRANSPORT, SOUND→SOUND, LOCATIONS→LOCATIONS, PROPERTY→PROPS, SET DEC & SET DRESSING→SET DEC, ACCOUNTING→ACCOUNTING, WRITERS→PRODUCERS, DIRECTORS→DIRECTING
+- Director of Photography always maps to CAMERA (not DIRECTING)
 - Vehicle type inference: Transit/Sprinter/Vito→VAN, Panda/Giulia/Model3→CAR, Tourismo/Irizar→BUS
 - If a field is not found, return null
 - Return ONLY a valid JSON object, no markdown, no explanation, no backticks
@@ -94,8 +95,9 @@ Fields per person:
                determined by the section heading the person appears under;
                map: GRIPS→GRIP, ELECTRICS→ELECTRIC, HAIR & MAKE UP→HMU, ASSISTANT DIRECTORS→AD,
                ART DEPARTMENT→ART, TRANSPORTATION→TRANSPORT, PROPERTY→PROPS,
-               SET DEC & SET DRESSING→SET DEC, PRODUCERS/WRITERS/DIRECTORS→PRODUCERS;
-               if no section, infer from role: Gaffer→ELECTRIC, Focus Puller→CAMERA, Key Grip→GRIP etc.)
+               SET DEC & SET DRESSING→SET DEC, WRITERS→PRODUCERS, DIRECTORS→DIRECTING;
+               if no section, infer from role: Gaffer→ELECTRIC, Focus Puller→CAMERA, Key Grip→GRIP,
+               Director→DIRECTING, Director of Photography→CAMERA, DOP→CAMERA etc.)
   phone        (string|null — prefer mobile number if multiple; take the one marked C or mobile)
   email        (string|null)
   active       (boolean — true by default; set false if "not started" appears next to the person)
@@ -247,13 +249,41 @@ async function callClaude(systemPrompt, userContent, returnType = 'array') {
 
 // ── Helpers: normalizzazione righe ───────────────────────────
 
+/** Mappa forme alternate/plurali → valore canonico uppercase */
+const DEPT_MAP = {
+  'GRIPS':                           'GRIP',
+  'ELECTRICS':                       'ELECTRIC',
+  'HAIR & MAKE UP':                  'HMU',
+  'HAIR AND MAKE UP':                'HMU',
+  'HAIR & MAKEUP':                   'HMU',
+  'MAKE UP':                         'MAKEUP',
+  'MAKE-UP':                         'MAKEUP',
+  'ASSISTANT DIRECTORS':             'AD',
+  'ART DEPARTMENT':                  'ART',
+  'TRANSPORTATION':                  'TRANSPORT',
+  'PROPERTY':                        'PROPS',
+  'SET DEC & SET DRESSING':          'SET DEC',
+  'WRITERS':                         'PRODUCERS',
+  'DIRECTORS':                       'DIRECTING',
+  'WRITERS / DIRECTORS':             'PRODUCERS',
+  'PRODUCERS / WRITERS / DIRECTORS': 'PRODUCERS',
+  'PRODUCERS/WRITERS/DIRECTORS':     'PRODUCERS',
+}
+
+/** Normalizza il campo department: uppercase + DEPT_MAP */
+function normalizeDept(raw) {
+  if (!raw) return null
+  const upper = raw.trim().toUpperCase()
+  return DEPT_MAP[upper] || upper
+}
+
 /** Normalizza una riga crew proveniente da Claude */
 function normalizeCrew(r) {
   return {
     first_name:     r.first_name    || null,
     last_name:      r.last_name     || null,
     role:           r.role          || null,
-    department:     r.department    || null,
+    department:     normalizeDept(r.department),
     phone:          r.phone         || null,
     email:          r.email         || null,
     active:         r.active !== false,   // default true
