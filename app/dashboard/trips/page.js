@@ -419,37 +419,79 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const locsById = Object.fromEntries(locations.map(l => [l.id, l.name]))
   const locShort = id => (locsById[id] || id || '–').split(' ').slice(0, 3).join(' ')
   const correctClass = assignCtx?.ts === 'IN' ? 'ARRIVAL' : assignCtx?.ts === 'OUT' ? 'DEPARTURE' : 'STANDARD'
-  const arrDepTrips = (trips || [])
+  // Tutti i trip con la transfer class corretta, ordinati per orario (include sibling per lookup interno)
+  const allArrDepTrips = (trips || [])
     .filter(t => t.transfer_class === correctClass)
     .sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999))
+  // Dedup: mostra solo UN'entry per gruppo multi-stop (leg principale, no sibling T001B/T001C)
+  // L'utente vede solo "T001" nel dropdown — i sibling sono gestiti internamente
+  // IMPORTANTE: dare priorità al trip il cui ID === base (senza suffisso lettera).
+  // I sibling (T001B) potrebbero avere lo stesso pickup_min di T001 e arrivare prima
+  // nell'array ordinato per tempo → senza questa regola T001B diventerebbe il rappresentante.
+  // Dedup per dropdown: ordina prima i trip base (non-sibling, trip_id NON termina con lettera maiuscola)
+  // così il trip base (T001) viene impostato per primo nel gruppo e i sibling (T001B, T001C) non
+  // sovrascrivono mai il rappresentante. Solo se non esiste un trip base, usa il sibling come fallback.
+  const arrDepTrips = (() => {
+    const groups = {}
+    // Prima i trip base (trip_id non termina con lettera), poi i sibling
+    const sorted = [...allArrDepTrips].sort((a, b) => {
+      const aIsSib = /[A-Z]$/.test(a.trip_id || '')
+      const bIsSib = /[A-Z]$/.test(b.trip_id || '')
+      if (aIsSib !== bIsSib) return aIsSib ? 1 : -1  // base trip prima del sibling
+      return (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999)
+    })
+    for (const t of sorted) {
+      const base = baseTripId(t.trip_id)
+      if (!groups[base]) groups[base] = t  // il primo (base trip) vince sempre
+    }
+    return Object.values(groups).sort((a, b) =>
+      (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999)
+    )
+  })()
+  // Controlla se un singolo leg è compatibile con l'hotel della nuova persona
   function isCompatibleTrip(t) {
     if (!assignCtx?.hotel) return false
-    if (assignCtx.ts === 'IN')  return t.transfer_class === 'ARRIVAL'   && t.dropoff_id === assignCtx.hotel
-    if (assignCtx.ts === 'OUT') return t.transfer_class === 'DEPARTURE' && t.pickup_id  === assignCtx.hotel
+    if (assignCtx.ts === 'IN')      return t.transfer_class === 'ARRIVAL'   && t.dropoff_id === assignCtx.hotel
+    if (assignCtx.ts === 'OUT')     return t.transfer_class === 'DEPARTURE' && t.pickup_id  === assignCtx.hotel
+    if (assignCtx.ts === 'PRESENT') return t.transfer_class === 'STANDARD'  && t.pickup_id  === assignCtx.hotel
     return false
   }
-  const compatibleTrips = arrDepTrips.filter(isCompatibleTrip)
-  const otherTrips      = arrDepTrips.filter(t => !isCompatibleTrip(t))
+  // Controlla se QUALSIASI leg del gruppo (principale + sibling) è già compatibile
+  function isCompatibleGroup(mainTrip) {
+    const base = baseTripId(mainTrip.trip_id)
+    return allArrDepTrips.filter(t => baseTripId(t.trip_id) === base).some(leg => isCompatibleTrip(leg))
+  }
+  const compatibleTrips = arrDepTrips.filter(isCompatibleGroup)
+  const otherTrips      = arrDepTrips.filter(t => !isCompatibleGroup(t))
 
   async function handleAddToExisting() {
     if (!selExistingTrip || !assignCtx?.id || !PRODUCTION_ID) return
     setAddingToTrip(true)
 
-    if (isCompatibleTrip(selExistingTrip)) {
-      // ── Stesso hotel → INSERT trip_passengers + aggiorna passenger_list ──
+    // Trova tutti i leg del gruppo selezionato (T001 + eventuali T001B, T001C…)
+    const groupBase = baseTripId(selExistingTrip.trip_id)
+    const allGroupLegs = (trips || []).filter(t =>
+      baseTripId(t.trip_id) === groupBase &&
+      (t.vehicle_id || null) === (selExistingTrip.vehicle_id || null)
+    )
+    // Cerca se esiste già un leg compatibile con l'hotel della nuova persona
+    const compatibleLeg = allGroupLegs.find(leg => isCompatibleTrip(leg)) || null
+
+    if (compatibleLeg) {
+      // ── Leg compatibile trovato → aggiunge al leg corretto (T001 o sibling esistente T001B…) ──
       const { error } = await supabase.from('trip_passengers').insert({
-        production_id: PRODUCTION_ID, trip_row_id: selExistingTrip.id, crew_id: assignCtx.id,
+        production_id: PRODUCTION_ID, trip_row_id: compatibleLeg.id, crew_id: assignCtx.id,
       })
       if (!error) {
-        const prevList = selExistingTrip.passenger_list ? selExistingTrip.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
+        const prevList = compatibleLeg.passenger_list ? compatibleLeg.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
         const newList  = [...prevList, assignCtx.name]
         await supabase.from('trips').update({
           pax_count:      newList.length,
           passenger_list: newList.join(', '),
-        }).eq('id', selExistingTrip.id)
+        }).eq('id', compatibleLeg.id)
       }
       setAddingToTrip(false)
-      if (!error) { setAddedToTrip(selExistingTrip.trip_id); onSaved() }
+      if (!error) { setAddedToTrip(compatibleLeg.trip_id); onSaved() }
     } else {
       // ── Hotel diverso → crea sibling trip (MULTI-DRP o MULTI-PKP) ──
       const base = baseTripId(selExistingTrip.trip_id)
@@ -498,15 +540,21 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         })
       }
 
-      // ── ARRIVAL fix: pickup_min = call_min (driver già all'hub al momento dell'arrivo volo)
-      // Per ARRIVAL, pickup NON dipende dalla duration Hub→Hotel — serve solo per end_dt.
-      // Se sibCalc è null (rotta non trovata), pickup_min può comunque essere = call_min.
-      const sibPickupMin = sibCalc?.pickupMin
-        ?? (selExistingTrip.transfer_class === 'ARRIVAL'
-          ? (selExistingTrip.call_min ?? null)
-          : null)
+      // ── Fallback pickup_min quando sibCalc = null (rotta mancante o arr_time assente)
+      // ARRIVAL:              driver già all'hub → pickup = call_min (indipendente dalla duration)
+      // DEPARTURE / STANDARD: pickup = call - duration (il più lontano parte prima!)
+      //                       se no duration → usa call_min come fallback conservativo
+      const sibPickupMin = sibCalc?.pickupMin ?? (() => {
+        const c = selExistingTrip.call_min ?? null
+        if (selExistingTrip.transfer_class === 'ARRIVAL') return c
+        // DEPARTURE / STANDARD: pickup = call - sibDuration
+        if (c === null) return null
+        return sibDurationMin
+          ? ((c - sibDurationMin) % 1440 + 1440) % 1440
+          : c  // no duration → usa call_min (stima conservativa: driver parte al call)
+      })()
 
-      // start_dt calcolabile da sibPickupMin anche senza duration (per ARRIVAL)
+      // start_dt calcolabile da sibPickupMin per tutti i transfer class
       const sibStartDt = sibCalc?.startDt ?? (() => {
         if (sibPickupMin === null) return null
         const [sy, smo, sdd] = selExistingTrip.date.split('-').map(Number)
@@ -635,9 +683,17 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                       <div style={{ fontWeight: '800' }}>{selExistingTrip.trip_id} · {minToHHMM(selExistingTrip.pickup_min ?? selExistingTrip.call_min)}</div>
                       <div>{locShort(selExistingTrip.pickup_id)} → {locShort(selExistingTrip.dropoff_id)}</div>
                       {selExistingTrip.vehicle_id && <div>🚐 {selExistingTrip.vehicle_id}</div>}
-                      {!isCompatibleTrip(selExistingTrip) && (
+                      {!isCompatibleGroup(selExistingTrip) && (
                         <div style={{ color: '#a16207', fontWeight: '700', marginTop: '3px' }}>{t.differentRoute}</div>
                       )}
+                      {isCompatibleGroup(selExistingTrip) && (() => {
+                        const base = baseTripId(selExistingTrip.trip_id)
+                        const targetLeg = allArrDepTrips.filter(t => baseTripId(t.trip_id) === base).find(leg => isCompatibleTrip(leg))
+                        if (targetLeg && targetLeg.id !== selExistingTrip.id) {
+                          return <div style={{ color: '#15803d', fontWeight: '700', marginTop: '3px' }}>→ leg {targetLeg.trip_id} · {locShort(assignCtx.ts === 'IN' ? targetLeg.dropoff_id : targetLeg.pickup_id)}</div>
+                        }
+                        return null
+                      })()}
                     </div>
                     {addedToTrip ? (
                       <div style={{ fontSize: '11px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 10px', textAlign: 'center' }}>
@@ -1013,12 +1069,17 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       const siblingStillHasPax = newPax.some(c => c.trip_row_id === targetTripId)
       console.log('[removePax] sibling check | siblingStillHasPax:', siblingStillHasPax, '| targetTripId:', targetTripId)
       if (!siblingStillHasPax) {
-        const { error: delPaxErr } = await supabase.from('trip_passengers').delete().eq('trip_row_id', targetTripId)
-        if (delPaxErr) console.error('[removePax] ERROR deleting sibling pax:', delPaxErr)
-        const { error: delTripErr } = await supabase.from('trips').delete().eq('id', targetTripId)
-        if (delTripErr) {
-          console.error('[removePax] ERROR deleting sibling trip:', delTripErr)
-          setError(`Failed to delete sibling trip: ${delTripErr.message}`)
+        // Usa API route con service client per bypassare il problema RLS
+        // dove trips DELETE lato client ritorna silent 0 rows senza errore
+        const res = await fetch('/api/trips/delete-sibling', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tripId: targetTripId, productionId: PRODUCTION_ID }),
+        })
+        const result = await res.json()
+        if (!res.ok || result.error) {
+          console.error('[removePax] ERROR deleting sibling trip:', result.error)
+          setError(`Failed to delete sibling trip: ${result.error}`)
           onPaxChanged?.()
           return
         }
