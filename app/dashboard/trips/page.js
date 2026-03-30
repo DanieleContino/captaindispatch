@@ -1073,7 +1073,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         .in('trip_row_id', groupIds),
 
       (() => {
-        let q = supabase.from('crew').select('id,full_name,department,no_transport_needed')
+        let q = supabase.from('crew').select('id,full_name,department,no_transport_needed,hotel_id')
           .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
         // Per MULTI-stop: usa .in() per coprire tutti gli hotel del gruppo
         if (tc === 'ARRIVAL')        q = q.in('hotel_id', allDropoffIds).eq('travel_status', 'IN')
@@ -1183,6 +1183,22 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       }
     }
 
+    onPaxChanged?.()
+  }
+
+  // ── Delete single leg (MULTI) ─────────────────────────────
+  async function deleteLeg(leg) {
+    if (!PRODUCTION_ID) return
+    const res = await fetch('/api/trips/delete-sibling', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tripId: leg.id, productionId: PRODUCTION_ID }),
+    })
+    const result = await res.json()
+    if (!res.ok || result.error) {
+      setError(`Failed to delete leg: ${result.error}`)
+      return
+    }
     onPaxChanged?.()
   }
 
@@ -1320,10 +1336,21 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   async function handleDelete() {
     if (!confirmDel) { setConfirmDel(true); return }
     setDeleting(true)
-    await supabase.from('trip_passengers').delete().eq('trip_row_id', initial.id)
-    const { error } = await supabase.from('trips').delete().eq('id', initial.id)
+    const legsToDelete = (group && group.length > 1) ? group : [initial]
+    for (const leg of legsToDelete) {
+      const res = await fetch('/api/trips/delete-sibling', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId: leg.id, productionId: PRODUCTION_ID }),
+      })
+      const result = await res.json()
+      if (!res.ok || result.error) {
+        setDeleting(false)
+        setError(`Failed to delete trip: ${result.error}`)
+        return
+      }
+    }
     setDeleting(false)
-    if (error) { setError(error.message); return }
     onSaved()
   }
 
@@ -1352,7 +1379,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           <div>
             <div style={{ fontSize: '10px', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t.editTrip}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ fontSize: '18px', fontWeight: '900', color: 'white', fontFamily: 'monospace', letterSpacing: '-0.5px' }}>{initial?.trip_id}</div>
+              <div style={{ fontSize: '18px', fontWeight: '900', color: 'white', fontFamily: 'monospace', letterSpacing: '-0.5px' }}>{baseTripId(initial?.trip_id)}</div>
               {group && group.length > 1 && (
                 <span style={{ fontSize: '10px', fontWeight: '800', background: '#f59e0b', color: 'white', padding: '2px 8px', borderRadius: '999px', letterSpacing: '0.04em' }}>
                   🔀 MULTI · {group.length} legs
@@ -1517,6 +1544,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                                     <span style={{ fontSize: '10px', color: '#94a3b8', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>🕐 {legPickupTime}</span>
                                   )}
                                   <span style={{ fontSize: '9px', color: '#94a3b8', flexShrink: 0 }}>{legPax.length}p</span>
+                                  <button type="button" onClick={() => deleteLeg(leg)} title="Delete this leg"
+                                    style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '3px', padding: '1px 4px', cursor: 'pointer', fontSize: '9px', fontWeight: '800', flexShrink: 0, lineHeight: 1 }}>🗑</button>
                                 </div>
                                 {/* Pax di questo leg */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '4px' }}>
@@ -1597,9 +1626,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                               onMouseLeave={e => { if (!isBusy) e.currentTarget.style.background = 'white' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: '12px', fontWeight: '500', color: isBusy ? '#92400e' : '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
-                                <div style={{ fontSize: '10px', color: '#94a3b8' }}>
-                                  {c.department}
-                                  {isBusy && <span style={{ color: '#a16207', marginLeft: '4px' }}>· ⚠ BUSY on {busyMap[c.id]}</span>}
+                                <div style={{ fontSize: '10px', color: '#94a3b8', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '3px' }}>
+                                  <span>{c.department}</span>
+                                  {c.hotel_id && locsById[c.hotel_id] && <span style={{ background: '#f1f5f9', padding: '1px 4px', borderRadius: '3px', border: '1px solid #e2e8f0', color: '#475569' }}>🏨 {locShortEdit(c.hotel_id)}</span>}
+                                  {isBusy && <span style={{ color: '#a16207' }}>⚠ BUSY on {busyMap[c.id]}</span>}
                                 </div>
                               </div>
                               {!isBusy && <span style={{ fontSize: '14px', color: '#2563eb', fontWeight: '700', flexShrink: 0 }}>+</span>}
@@ -1688,7 +1718,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               {!confirmDel ? (
                 <button type="button" onClick={handleDelete}
                   style={{ width: '100%', padding: '7px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>
-                  🗑 Delete Trip {initial?.trip_id}
+                  🗑 Delete Trip {baseTripId(initial?.trip_id)}{group && group.length > 1 ? ` (${group.length} legs)` : ''}
                 </button>
               ) : (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
