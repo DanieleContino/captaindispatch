@@ -283,29 +283,56 @@ function normalizeFleet(r) {
 async function processFleetRows(rawRows, supabase, productionId) {
   const { data: existingVehicles } = await supabase
     .from('vehicles')
-    .select('id, license_plate, driver_name')
+    .select('id, license_plate, driver_name, vehicle_type, capacity, pax_suggested, pax_max, sign_code, available_from, available_to')
     .eq('production_id', productionId)
 
   return rawRows.map(raw => {
     const row = normalizeFleet(raw)
     let action = 'insert'
     let existingId = null
+    let existingData = null
+    let newFields = []
 
     // Match per targa (priorità) poi per nome autista
+    let matchedVehicle = null
     if (row.plate) {
-      const match = (existingVehicles || []).find(v =>
+      matchedVehicle = (existingVehicles || []).find(v =>
         v.license_plate && v.license_plate.toUpperCase() === row.plate.toUpperCase()
       )
-      if (match) { action = 'update'; existingId = match.id }
     }
-    if (action === 'insert' && row.driver_name) {
-      const match = (existingVehicles || []).find(v =>
+    if (!matchedVehicle && row.driver_name) {
+      matchedVehicle = (existingVehicles || []).find(v =>
         v.driver_name && v.driver_name.toLowerCase() === row.driver_name.toLowerCase()
       )
-      if (match) { action = 'update'; existingId = match.id }
     }
 
-    return { ...row, action, existingId }
+    if (matchedVehicle) {
+      action = 'update'
+      existingId = matchedVehicle.id
+      existingData = {
+        driver_name:    matchedVehicle.driver_name    ?? null,
+        vehicle_type:   matchedVehicle.vehicle_type   ?? null,
+        license_plate:  matchedVehicle.license_plate  ?? null,
+        capacity:       matchedVehicle.capacity       ?? null,
+        pax_suggested:  matchedVehicle.pax_suggested  ?? null,
+        pax_max:        matchedVehicle.pax_max        ?? null,
+        sign_code:      matchedVehicle.sign_code      ?? null,
+        available_from: matchedVehicle.available_from ?? null,
+        available_to:   matchedVehicle.available_to   ?? null,
+      }
+      // Campi nuovi: presenti nel file ma null/vuoti nel DB
+      if (!matchedVehicle.driver_name    && row.driver_name)    newFields.push('driver_name')
+      if (!matchedVehicle.vehicle_type   && row.vehicle_type)   newFields.push('vehicle_type')
+      if (!matchedVehicle.license_plate  && row.plate)          newFields.push('license_plate')
+      if (matchedVehicle.capacity     == null && row.capacity     != null) newFields.push('capacity')
+      if (matchedVehicle.pax_suggested == null && row.pax_suggested != null) newFields.push('pax_suggested')
+      if (matchedVehicle.pax_max       == null && row.pax_max       != null) newFields.push('pax_max')
+      if (!matchedVehicle.sign_code      && row.sign_code)      newFields.push('sign_code')
+      if (!matchedVehicle.available_from && row.available_from) newFields.push('available_from')
+      if (!matchedVehicle.available_to   && row.available_to)   newFields.push('available_to')
+    }
+
+    return { ...row, action, existingId, existingData, newFields }
   })
 }
 
@@ -313,7 +340,7 @@ async function processCrewRows(rawRows, supabase, productionId) {
   const [{ data: existingCrew }, { data: locations }] = await Promise.all([
     supabase
       .from('crew')
-      .select('id, full_name')
+      .select('id, full_name, role, department, phone, email, hotel_id, arrival_date, departure_date')
       .eq('production_id', productionId),
     supabase
       .from('locations')
@@ -329,12 +356,27 @@ async function processCrewRows(rawRows, supabase, productionId) {
     // Duplicate detection: first_name + last_name → full_name
     let action = 'insert'
     let existingId = null
+    let existingData = null
+    let newFields = []
     const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ')
     if (fullName) {
       const match = (existingCrew || []).find(c =>
         c.full_name?.toLowerCase() === fullName.toLowerCase()
       )
-      if (match) { action = 'update'; existingId = match.id }
+      if (match) {
+        action = 'update'
+        existingId = match.id
+        existingData = {
+          full_name:      match.full_name      ?? null,
+          role:           match.role           ?? null,
+          department:     match.department     ?? null,
+          phone:          match.phone          ?? null,
+          email:          match.email          ?? null,
+          hotel_id:       match.hotel_id       ?? null,
+          arrival_date:   match.arrival_date   ?? null,
+          departure_date: match.departure_date ?? null,
+        }
+      }
     }
 
     // Hotel matching
@@ -356,7 +398,18 @@ async function processCrewRows(rawRows, supabase, productionId) {
       }
     }
 
-    return { ...row, action, existingId, hotel_id, hotelNotFound }
+    // Calcola newFields per update rows (dopo hotel matching, così hotel_id è disponibile)
+    if (existingData) {
+      if (!existingData.role           && row.role)           newFields.push('role')
+      if (!existingData.department     && row.department)     newFields.push('department')
+      if (!existingData.phone          && row.phone)          newFields.push('phone')
+      if (!existingData.email          && row.email)          newFields.push('email')
+      if (!existingData.hotel_id       && hotel_id)           newFields.push('hotel_id')
+      if (!existingData.arrival_date   && row.arrival_date)   newFields.push('arrival_date')
+      if (!existingData.departure_date && row.departure_date) newFields.push('departure_date')
+    }
+
+    return { ...row, action, existingId, existingData, newFields, hotel_id, hotelNotFound }
   })
 
   return { rows, newHotels }
