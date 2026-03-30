@@ -177,10 +177,10 @@ function TripTableRow({ group, locsMap, sectionColor }) {
                 return (
                   <span key={row.id || i} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '10px', whiteSpace: 'nowrap' }}>
                     {i > 0 && <span style={{ color: '#cbd5e1', margin: '0 2px' }}>|</span>}
+                    {legTime !== '–' && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums', fontWeight: '700' }}>{legTime}</span>}
                     <span style={{ color: '#64748b' }}>{fromName}</span>
                     <span style={{ color: '#94a3b8' }}>→</span>
                     <span style={{ fontWeight: '800', color: '#0f172a' }}>{toName}</span>
-                    {legTime !== '–' && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>@{legTime}</span>}
                     <span style={{ color: '#64748b' }}>({row.pax_count || 0})</span>
                   </span>
                 )

@@ -247,6 +247,25 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
           <>
             {group.map((r, ri) => (
               <div key={r.id || ri} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', marginBottom: ri < group.length - 1 ? '4px' : 0, minWidth: 0 }}>
+              {(() => {
+                // TIME FIRST — ARRIVAL multi-DRP: mostra orario DROPOFF stimato (pickup + duration)
+                // IMPORTANTE: il pickup_min è lo STESSO per tutti i leg ARRIVAL (= arr_time)
+                // → mostrare pickup sarebbe fuorviante (stessa ora per 3 hotel diversi)
+                // → se duration_min è null, mostrare ⚠ no route (NON il pickup uguale per tutti)
+                if (r.transfer_class === 'ARRIVAL') {
+                  if (r.pickup_min != null && r.duration_min) {
+                    const dropoffMin = (r.pickup_min + r.duration_min) % 1440
+                    return <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums', fontWeight: '800' }}>🏨{minToHHMM(dropoffMin)}</span>
+                  }
+                  // ARRIVAL senza duration_min → pickup uguale per tutti i leg → ⚠ no route
+                  return <span style={{ color: '#ea580c', flexShrink: 0, fontSize: '9px', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '3px', padding: '1px 4px' }}>⚠ no route</span>
+                }
+                // DEPARTURE multi-PKP e STANDARD: mostra orario PICKUP al hotel (diverso per ogni hotel)
+                if (r.pickup_min != null) {
+                  return <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums', fontWeight: '800' }}>🕐{minToHHMM(r.pickup_min)}</span>
+                }
+                return <span style={{ color: '#ea580c', flexShrink: 0, fontSize: '9px', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '3px', padding: '1px 4px' }}>⚠ no route</span>
+              })()}
                 <span style={{ color: '#94a3b8', fontWeight: '500', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75px' }}>
                   {(locations[r.pickup_id] || r.pickup_id || '–').split(' ').slice(0, 2).join(' ')}
                 </span>
@@ -254,25 +273,6 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
                 <span style={{ fontWeight: '700', color: '#0f172a', flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {(locations[r.dropoff_id] || r.dropoff_id || '–').split(' ').slice(0, 2).join(' ')}
                 </span>
-              {(() => {
-                // ARRIVAL multi-DRP: mostra orario DROPOFF stimato (pickup + duration)
-                // IMPORTANTE: il pickup_min è lo STESSO per tutti i leg ARRIVAL (= arr_time)
-                // → mostrare pickup sarebbe fuorviante (stessa ora per 3 hotel diversi)
-                // → se duration_min è null, mostrare ⚠ no route (NON il pickup uguale per tutti)
-                if (r.transfer_class === 'ARRIVAL') {
-                  if (r.pickup_min != null && r.duration_min) {
-                    const dropoffMin = (r.pickup_min + r.duration_min) % 1440
-                    return <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>· 🏨{minToHHMM(dropoffMin)}</span>
-                  }
-                  // ARRIVAL senza duration_min → pickup uguale per tutti i leg → ⚠ no route
-                  return <span style={{ color: '#ea580c', flexShrink: 0, fontSize: '9px', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '3px', padding: '1px 4px' }}>⚠ no route</span>
-                }
-                // DEPARTURE multi-PKP e STANDARD: mostra orario PICKUP al hotel (diverso per ogni hotel)
-                if (r.pickup_min != null) {
-                  return <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>· 🕐{minToHHMM(r.pickup_min)}</span>
-                }
-                return <span style={{ color: '#ea580c', flexShrink: 0, fontSize: '9px', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '3px', padding: '1px 4px' }}>⚠ no route</span>
-              })()}
                 {r.pax_count  > 0   && <span style={{ color: '#64748b', flexShrink: 0 }}>· {r.pax_count}pax</span>}
               </div>
             ))}
