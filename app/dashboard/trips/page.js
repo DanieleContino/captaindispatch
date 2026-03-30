@@ -1229,6 +1229,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   // ── Save trip ─────────────────────────────────────────────
   async function handleSubmit(e) {
     e.preventDefault(); setError(null); setSaving(true)
+    const isMulti    = group && group.length > 1
     const selVehicle = vehicles.find(v => v.id === form.vehicle_id)
     const row = {
       date: form.date, pickup_id: form.pickup_id, dropoff_id: form.dropoff_id,
@@ -1240,9 +1241,12 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       duration_min: durMin,
       arr_time:   form.arr_time ? form.arr_time + ':00' : null,
       call_min:   computed?.callMin   ?? null,
-      pickup_min: computed?.pickupMin ?? null,
-      start_dt:   computed?.startDt   ?? null,
-      end_dt:     computed?.endDt     ?? null,
+      // MULTI: pickup_min/start_dt/end_dt sono gestiti da compute-chain — non sovrascrivere con valori naïve
+      ...(!isMulti && {
+        pickup_min: computed?.pickupMin ?? null,
+        start_dt:   computed?.startDt   ?? null,
+        end_dt:     computed?.endDt     ?? null,
+      }),
       flight_no: form.flight_no || null, terminal: form.terminal || null, notes: form.notes || null,
       status: form.status,
     }
@@ -1330,13 +1334,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           return new Date(sy, smo - 1, sdd, Math.floor(pm / 60), pm % 60, 0, 0).toISOString()
         })()
 
+        // pickup_min/start_dt/end_dt sono ricalcolati da compute-chain — non sovrascrivere con valori naïve
         await supabase.from('trips').update({
           ...sharedFields,
           duration_min: sibDurMin ?? sib.duration_min ?? null,
           call_min:     sibCallMin,
-          pickup_min:   sibPickupMin,   // preserved if no duration available
-          start_dt:     sibStartDt,     // preserved if can't compute
-          end_dt:       sibCalc?.endDt ?? sib.end_dt ?? null,
         }).eq('id', sib.id)
       }
     }
@@ -1491,20 +1493,31 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               </div>
             </div>
 
-            {/* Times preview */}
+            {/* Times preview — per MULTI trips, PICKUP e START vengono dal DB (compute-chain) */}
             {computed && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px' }}>
-                {[
-                  { l: 'CALL',   v: minToHHMM(computed.callMin) },
-                  { l: 'PICKUP', v: minToHHMM(computed.pickupMin) },
-                  { l: 'START',  v: new Date(computed.startDt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) },
-                  { l: 'END',    v: new Date(computed.endDt).toLocaleTimeString('it-IT',  { hour: '2-digit', minute: '2-digit' }) },
-                ].map(({ l, v }) => (
-                  <div key={l} style={{ textAlign: 'center', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '6px 4px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', letterSpacing: '0.07em' }}>{l}</div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{v}</div>
-                  </div>
-                ))}
+                {(() => {
+                  // MULTI: PICKUP e START riflettono il valore calcolato dalla catena sequenziale
+                  // (hotel più lontano parte prima → pickup anticipato rispetto a call-duration naïve)
+                  const isChain = group && group.length > 1
+                  const pickupV = isChain && initial?.pickup_min != null
+                    ? minToHHMM(initial.pickup_min)
+                    : minToHHMM(computed.pickupMin)
+                  const startV  = isChain && initial?.start_dt
+                    ? new Date(initial.start_dt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+                    : new Date(computed.startDt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+                  return [
+                    { l: 'CALL',   v: minToHHMM(computed.callMin), chain: false },
+                    { l: 'PICKUP', v: pickupV,                      chain: isChain },
+                    { l: 'START',  v: startV,                       chain: isChain },
+                    { l: 'END',    v: new Date(computed.endDt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), chain: false },
+                  ].map(({ l, v, chain }) => (
+                    <div key={l} style={{ textAlign: 'center', background: chain ? '#fef9c3' : '#f0fdf4', border: `1px solid ${chain ? '#fde68a' : '#bbf7d0'}`, borderRadius: '8px', padding: '6px 4px' }}>
+                      <div style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', letterSpacing: '0.07em' }}>{l}{chain ? ' ⚡' : ''}</div>
+                      <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{v}</div>
+                    </div>
+                  ))
+                })()}
               </div>
             )}
 
