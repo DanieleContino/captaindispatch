@@ -506,7 +506,19 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         }).eq('id', compatibleLeg.id)
       }
       setAddingToTrip(false)
-      if (!error) { setAddedToTrip(compatibleLeg.trip_id); onSaved() }
+      if (!error) {
+        // Ricalcola catena sequenziale se il gruppo è già MULTI (es. T001+T001B+nuova persona)
+        if (allGroupLegs.length > 1) {
+          try {
+            await fetch('/api/routes/compute-chain', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body:    JSON.stringify({ leg_ids: allGroupLegs.map(g => g.id), production_id: PRODUCTION_ID }),
+            })
+          } catch (e) { console.warn('[handleAddToExisting] chain recalc (compat):', e) }
+        }
+        setAddedToTrip(compatibleLeg.trip_id); onSaved()
+      }
     } else {
       // ── Hotel diverso → crea sibling trip (MULTI-DRP o MULTI-PKP) ──
       const base = baseTripId(selExistingTrip.trip_id)
@@ -655,7 +667,21 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       }
       setAddingToTrip(false)
       if (paxErr) { setError(paxErr.message) }
-      else { setAddedToTrip(newTripId); onSaved() }
+      else {
+        // Ricalcola catena sequenziale per il gruppo appena diventato MULTI
+        // (include il nuovo sibling appena creato)
+        try {
+          await fetch('/api/routes/compute-chain', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+              leg_ids:       [...allGroupLegs.map(g => g.id), newRow.id],
+              production_id: PRODUCTION_ID,
+            }),
+          })
+        } catch (e) { console.warn('[handleAddToExisting] chain recalc (sibling):', e) }
+        setAddedToTrip(newTripId); onSaved()
+      }
     }
   }
 
@@ -1267,6 +1293,17 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           end_dt:       sibCalc?.endDt ?? sib.end_dt ?? null,
         }).eq('id', sib.id)
       }
+    }
+
+    // Ricalcola catena sequenziale MULTI-PKP / MULTI-DRP dopo aver salvato i sibling
+    if (group && group.length > 1) {
+      try {
+        await fetch('/api/routes/compute-chain', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ leg_ids: group.map(g => g.id), production_id: PRODUCTION_ID }),
+        })
+      } catch (e) { console.warn('[handleSubmit] compute-chain:', e) }
     }
 
     setSaving(false)
