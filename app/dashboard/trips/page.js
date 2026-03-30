@@ -229,10 +229,19 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
                 <span style={{ fontWeight: '700', color: '#0f172a', flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {(locations[r.dropoff_id] || r.dropoff_id || '–').split(' ').slice(0, 2).join(' ')}
                 </span>
-              {r.pickup_min != null
-                ? <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>· 🕐{minToHHMM(r.pickup_min)}</span>
-                : <span style={{ color: '#ea580c', flexShrink: 0, fontSize: '9px', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '3px', padding: '1px 4px' }}>⚠ no route</span>
-              }
+              {(() => {
+                // ARRIVAL multi-DRP: mostra orario di dropoff stimato al hotel (pickup + duration)
+                // così ogni hotel ha un orario diverso e visibile
+                if (r.transfer_class === 'ARRIVAL' && r.pickup_min != null && r.duration_min) {
+                  const dropoffMin = (r.pickup_min + r.duration_min) % 1440
+                  return <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>· 🏨{minToHHMM(dropoffMin)}</span>
+                }
+                // DEPARTURE multi-PKP e STANDARD: mostra orario pickup al hotel
+                if (r.pickup_min != null) {
+                  return <span style={{ color: '#94a3b8', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>· 🕐{minToHHMM(r.pickup_min)}</span>
+                }
+                return <span style={{ color: '#ea580c', flexShrink: 0, fontSize: '9px', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '3px', padding: '1px 4px' }}>⚠ no route</span>
+              })()}
                 {r.pax_count  > 0   && <span style={{ color: '#64748b', flexShrink: 0 }}>· {r.pax_count}pax</span>}
               </div>
             ))}
@@ -569,7 +578,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         if (c === null) return null
         return sibDurationMin
           ? ((c - sibDurationMin) % 1440 + 1440) % 1440
-          : c  // no duration → usa call_min (stima conservativa: driver parte al call)
+          : null  // no duration → null: mostra ⚠ no route invece di orario sbagliato
       })()
 
       // start_dt calcolabile da sibPickupMin per tutti i transfer class
@@ -1167,7 +1176,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       }
       for (const sib of siblings) {
         const sibTC = getClass(sib.pickup_id, sib.dropoff_id)
-        // Priority: use the sibling's stored duration_min first (set at creation time).
+          // Priority: use the sibling's stored duration_min first (set at creation time).
         // Only query routes as fallback if duration_min is null in the DB.
         let sibDurMin = sib.duration_min || null
         if (!sibDurMin && PRODUCTION_ID) {
@@ -1178,6 +1187,22 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             .eq('to_id', sib.dropoff_id)
             .maybeSingle()
           sibDurMin = sibRoute?.duration_min || null
+        }
+        // Se ancora null, chiama /api/routes/compute (Google Maps) come ultimo fallback
+        if (!sibDurMin && sib.pickup_id && sib.dropoff_id) {
+          try {
+            const computeRes = await fetch('/api/routes/compute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ from_id: sib.pickup_id, to_id: sib.dropoff_id, production_id: PRODUCTION_ID }),
+            })
+            if (computeRes.ok) {
+              const computeData = await computeRes.json()
+              if (computeData.duration_min) sibDurMin = computeData.duration_min
+            }
+          } catch (e) {
+            console.warn('[handleSubmit] sibling route compute fallback:', e)
+          }
         }
         // Ricalcola timing con la duration specifica del sibling
         const sibCalc = sibDurMin ? calcTimes({
