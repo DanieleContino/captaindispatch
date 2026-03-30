@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | S21 TASK2 — Smart Categorization pre-preview ✅ | Fix pdf-parse DOMMatrix ✅**
+**Aggiornato: 30 marzo 2026 | S23 — Crew Select+Delete+SelectAll ✅ | commit `603ad61`**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**
@@ -1068,6 +1068,68 @@ Aggiungere una fase intermedia `categorizing` tra `parsing` e `preview` che most
 ---
 
 > ⚠️ **wrap-trip/page.js** — mobile app, BASSA PRIORITÀ. Non incluso in S18. Da fare come S19 separato se necessario.
+
+---
+
+## S22 — Fix Import: Dept Duplicato + DIRECTORS→DIRECTING ✅ (30/03/26) — commit `5bfa0a0`
+
+**File modificato:** `app/api/import/parse/route.js`
+
+**Problema 1:** Dopo un import, i nuovi crew apparivano in un gruppo dipartimento separato rispetto a quelli già presenti nel DB — es. `"camera"` invece di `"CAMERA"` — perché `normalizeCrew()` passava il valore di Claude as-is senza normalizzazione.
+
+**Problema 2:** I Director venivano inseriti nel gruppo `PRODUCERS` (mapping errato `PRODUCERS/WRITERS/DIRECTORS→PRODUCERS`).
+
+**Fix:**
+
+| Modifica | Dettaglio |
+|---------|-----------|
+| `normalizeDept()` + `DEPT_MAP` | Safety net server-side: `.trim().toUpperCase()` + mapping forme plurali/alternate → valore canonico |
+| `normalizeCrew()` | Ora usa `normalizeDept(r.department)` invece di `r.department \|\| null` |
+| `SYSTEM_PROMPT_HAL` | `WRITERS→PRODUCERS`, `DIRECTORS→DIRECTING`; aggiunta nota: *"Director of Photography always maps to CAMERA"* |
+| `SYSTEM_PROMPT_CREW` | Stesso aggiornamento + hint inferenza: `Director→DIRECTING`, `DOP→CAMERA` |
+
+**DEPT_MAP (forme normalizzate):**
+```js
+GRIPS → GRIP | ELECTRICS → ELECTRIC | HAIR & MAKE UP → HMU | HAIR AND MAKE UP → HMU
+HAIR & MAKEUP → HMU | MAKE UP → MAKEUP | MAKE-UP → MAKEUP
+ASSISTANT DIRECTORS → AD | ART DEPARTMENT → ART | TRANSPORTATION → TRANSPORT
+PROPERTY → PROPS | SET DEC & SET DRESSING → SET DEC
+WRITERS → PRODUCERS | DIRECTORS → DIRECTING
+WRITERS / DIRECTORS → PRODUCERS | PRODUCERS / WRITERS / DIRECTORS → PRODUCERS
+```
+
+> ⚠️ `normalizeDept()` è chiamata solo in `normalizeCrew()` — i valori inseriti manualmente nel DB non vengono toccati. Se esiste crew con dept lowercase nel DB, il grouping visivo rimane separato (problema solo per dati storici inconsistenti).
+
+---
+
+## S23 — Crew Select + Delete + Select All ✅ (30/03/26) — commit `603ad61`
+
+**File modificato:** `app/dashboard/crew/page.js`
+
+**Pattern identico a S13 (Vehicles).** Aggiunta selezione multipla, delete inline e bulk delete alle CrewCard.
+
+**Modifiche:**
+
+| Elemento | Dettaglio |
+|---------|-----------|
+| `CrewCard` props | `selected`, `onToggleSelect`, `onDelete` aggiunti |
+| `CrewCard` layout | `gridTemplateColumns: '20px 1fr auto auto auto auto auto'` (aggiunta colonna checkbox) |
+| Checkbox per riga | highlight blu (`#eff6ff`, border `#bfdbfe`, `borderLeft: 3b82f6`) quando selezionata |
+| 🗑 Delete inline | 2-step confirm inline (stesso pattern VehicleRow) — prima rimuove `trip_passengers` poi `crew` |
+| `selectedIds` state | `useState([])` in `CrewPage` |
+| `bulkDeleting` / `bulkConfirm` | stati per bulk action |
+| `toggleSelect(id)` | add/remove da `selectedIds` |
+| `selectAll()` | seleziona/deseleziona tutti i `filtered` (rispetta filtri attivi) |
+| `clearSelection()` | svuota selezione + reset confirm |
+| `handleDeleteSingle(id)` | delete singolo: rimuove `trip_passengers` → delete `crew` → aggiorna state locale (no reload) |
+| `handleBulkDelete()` | 2-step: prima rimuove tutti i `trip_passengers` in batch, poi delete crew in batch |
+| Bulk bar | `☑ N selezionati | 🗑 Elimina | ✕ Annulla` — appare sopra i gruppi quando `selectedIds.length > 0` |
+| Select All header | riga con checkbox + label sopra i gruppi (con stato `indeterminate`) |
+
+**Riutilizzo chiavi i18n esistenti (da S13):** `t.selectedCount`, `t.deleteSelected`, `t.deleteSelectedConfirm`, `t.cancelSelection`, `t.selectAll`, `t.deleteCrew`, `t.confirm`, `t.cancel`, `t.deleting`
+
+> ⚠️ Il `handleDeleteSingle` aggiorna `crew` state locale direttamente (senza reload) per velocità. Il `handleBulkDelete` invece fa reload completo dopo il batch.
+> ⚠️ Il groupBy dept funziona regolarmente — il Select All agisce sempre su `filtered` (tutti i crew visibili nei filtri correnti, non per singolo gruppo).
 
 ---
 
