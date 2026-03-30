@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | S19 — Crew Role Field ✅**
+**Aggiornato: 30 marzo 2026 | S21 TASK1 — Import base (HAL + crew/fleet revamp) ✅**
 
 > 🧠 **Approccio:** Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici. Spiega scelta in una riga.
 > 🚀 **All'avvio: `npm run dev`**
@@ -549,7 +549,8 @@ user_roles
 locations (is_hub bool)
 routes (duration_min, google_duration_min, traffic_updated_at)
 crew (hotel_id, travel_status, hotel_status, arrival_date, departure_date,
-      department, role TEXT, no_transport_needed bool DEFAULT false)
+      department, role TEXT, no_transport_needed bool DEFAULT false,
+      email TEXT, phone TEXT)
 vehicles (capacity, pax_suggested, pax_max, driver_name, sign_code,
           active, available_from, available_to)
 trips (pickup_id, dropoff_id, call_min, pickup_min, start_dt, end_dt,
@@ -587,6 +588,86 @@ RLS abilitato su tutte le tabelle
 - **import/parse:** Claude ora estrae `role` come titolo esatto dal documento; `department` inferito dal ruolo se non esplicito
 
 **Migration:** eseguire `scripts/migrate-crew-role.sql` nel Supabase SQL Editor
+
+---
+
+## S20 — Crew Contact Info 📞 ✅ (30/03/26)
+
+**Migration:** eseguire `scripts/migrate-crew-contacts.sql` nel Supabase SQL Editor
+```sql
+ALTER TABLE crew ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE crew ADD COLUMN IF NOT EXISTS phone TEXT;
+```
+
+**File modificati:**
+| File | Modifica |
+|------|---------|
+| `scripts/migrate-crew-contacts.sql` | `ALTER TABLE crew ADD COLUMN email TEXT; ADD COLUMN phone TEXT` |
+| `lib/i18n.js` | 4 chiavi EN+IT: `crewContactInfo`, `crewEmailLabel`, `crewPhoneLabel`, `crewNoContact` |
+| `app/dashboard/crew/page.js` | `ContactPopover` + accordion sidebar + `useRef` import + state + `handleContactSaved` |
+
+**`ContactPopover` (su ogni CrewCard):**
+- Pulsante `📞+` grigio (nessun contatto) o `📞` blu `#eff6ff` (contatto presente)
+- Click → popover absolute (width 240px, z-index 100), click-outside via `useRef` + `mousedown`
+- **View mode:** email come `<a href="mailto:">`, phone come `<a href="tel:">` o `—`
+- **Edit mode** (pulsante `✎ Edit`): input email + phone → `supabase.update` → `onSaved(id, {email,phone})`
+- Nessun reload necessario: `handleContactSaved` aggiorna state locale
+
+**Accordion `📞 Contact Info` nella `CrewSidebar`:**
+- Collapsible tra Notes e Danger Zone, badge `✓` blu se già compilato
+- Sfondo `#f0f9ff` quando aperto; valori salvati insieme al resto del form in `handleSubmit`
+- Funziona in `mode='new'` e `mode='edit'`
+
+---
+
+## S21 — Import base (HAL + revamp) 📂 ✅ (30/03/26) — commit `46d94ce`
+
+**File modificati:** `app/api/import/parse/route.js`, `app/api/import/confirm/route.js`, `lib/ImportModal.js`
+
+### Modifiche parse/route.js
+- **`SYSTEM_PROMPT_HAL`** (nuovo): Claude auto-rileva tipo documento → ritorna `{ type: "crew"|"fleet"|"accommodation"|"mixed", crew: [...], vehicles: [...], accommodation: [...] }`
+- **`SYSTEM_PROMPT_CREW`** (aggiornato): estrae `first_name`, `last_name`, `role`, `department`, `phone`, `email`, `active` (false se "not started")
+- **`SYSTEM_PROMPT_FLEET`** (aggiornato): campo `plate` invece di `license_plate`; mapping vehicle_type da modello auto
+- **`callClaude`**: aggiunto parametro `returnType: 'array'|'object'`; strategia 3-step per entrambi i tipi
+- **Handler `hal`**: chiama Claude con HAL prompt → dispatch su crew/fleet/mixed → `detectedMode` in risposta
+  - `mixed`: rows taggiate con `_subMode: 'crew'|'fleet'`
+- **Normalizzatori**: `normalizeCrew()` + `normalizeFleet()` + helper `processCrewRows()` + `processFleetRows()`
+- **Crew dup detection**: confronto su `first_name + last_name` → `full_name` (case insensitive)
+- **Fleet dup detection**: confronto su `plate` (case insensitive) poi `driver_name`
+- **Risposta API**: aggiunto campo `detectedMode` in tutti i mode
+
+### Modifiche confirm/route.js
+- **Crew insert**: `full_name = first_name + ' ' + last_name`; aggiunge `role`, `phone`, `email` all'insert
+- **Fleet insert**: `row.plate → license_plate` (mapping esplicito)
+- **Update "null-only"**: fetch existing da Supabase prima di ogni update; sovrascrive SOLO campi null nel DB
+- **Supporto `mode='hal'`**: routing su `detectedMode` (`crew`/`fleet`/`mixed`)
+- **Mixed**: split crew/fleet su `_subMode`, processa separatamente
+- Helper estratti: `insertNewLocations()`, `getMaxVehicleNums()`, `getMaxCrewNum()`, `processFleet()`, `processCrew()`
+
+### Modifiche ImportModal.js
+- **Selector**: 4 opzioni — `🔴 HAL` (Let me figure it out) | `👥 Crew list` | `🚗 Fleet list` | `✏️ Custom instructions…`
+- **State**: aggiunto `detectedMode` (null → popolato dopo HAL parse)
+- **`effectiveDisplayMode`**: `(selMode === 'hal' && detectedMode) ? detectedMode : selMode`
+- **Header badge**: `🔴 HAL detected: crew/fleet/mixed` in preview se mode=HAL
+- **`CrewTable`** (aggiornata): colonne First Name | Last Name | Role | Dept | Phone | Email | Hotel | Arrival | Departure | Status; badge `🕐 Not yet active` grigio per `active === false`
+- **`FleetTable`** (aggiornata): campo `plate` (era `license_plate`); `available_from`/`available_to` mantenuti
+- **`rowBg`**: aggiunto grigio `#f1f5f9` per `active === false`
+- **`isUnrecognized` crew**: `!row.first_name && !row.last_name`
+- **`hasNullFields` crew**: `!row.department || !row.role`
+- **`renderPreviewTable()`**: gestisce `mixed` → due sezioni separate 👥 Crew + 🚗 Fleet
+- **Banner stats**: aggiunto `🕐 X not yet active`
+- **Confirm body**: invia `detectedMode` a `/api/import/confirm`
+
+### Row shape aggiornato
+
+| Mode | Campi row |
+|------|----------|
+| crew | `first_name, last_name, role, department, phone, email, active, hotel, hotel_id, hotelNotFound, arrival_date, departure_date, action, existingId` |
+| fleet | `driver_name, vehicle_type, plate, sign_code, capacity, pax_suggested, pax_max, available_from, available_to, action, existingId` |
+| mixed | come sopra + `_subMode: 'crew'|'fleet'` |
+
+> ⚠️ Il campo `active` (crew) NON è persistito nel DB (tabella crew non ha colonna `active`) — è solo un flag visivo nella preview.
+> ⚠️ Fleet: `plate` è il campo nelle rows; il DB usa `license_plate` → mapping nel confirm route.
 
 ---
 
