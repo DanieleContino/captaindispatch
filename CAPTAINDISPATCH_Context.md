@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 30 marzo 2026 | S24 fix RLS productions INSERT + S25 prossimo**
+**Aggiornato: 30 marzo 2026 | S25 ✅ completato — tutte 11 pagine migrate a getProductionId()**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -8,40 +8,9 @@
 
 ---
 
-## ▶ PROSSIMO — S25: Fix Multi-Production
+## ▶ PROSSIMO — S26: Export/Archive Produzione
 
-### S25 — Fix `process.env` → `getProductionId()` (11 pagine)
-**Problema:** Le pagine dashboard usano `const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID` a livello di modulo — valore fisso dal build time, ignora il localStorage switcher. Risultato: qualunque produzione sia attiva, mostrano sempre i dati della produzione hardcodata nell'env.
-
-**Fix identico per ogni pagina:**
-1. Aggiungere `import { getProductionId } from '../../../lib/production'`
-2. Rimuovere `const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID` (module-level)
-3. Aggiungere `const PRODUCTION_ID = getProductionId()` **dentro la funzione componente** (prima degli hook)
-
-**Pagine da fixare (11):**
-| Pagina | Import path |
-|--------|-------------|
-| `app/dashboard/page.js` | `'../../lib/production'` |
-| `app/dashboard/crew/page.js` | `'../../../lib/production'` |
-| `app/dashboard/locations/page.js` | `'../../../lib/production'` |
-| `app/dashboard/pax-coverage/page.js` | `'../../../lib/production'` |
-| `app/dashboard/hub-coverage/page.js` | `'../../../lib/production'` |
-| `app/dashboard/fleet/page.js` | `'../../../lib/production'` |
-| `app/dashboard/vehicles/page.js` | `'../../../lib/production'` |
-| `app/dashboard/trips/page.js` | `'../../../lib/production'` |
-| `app/dashboard/reports/page.js` | `'../../../lib/production'` |
-| `app/dashboard/qr-codes/page.js` | `'../../../lib/production'` |
-| `app/dashboard/rocket/page.js` | `'../../../lib/production'` |
-
-**Pagine già corrette (usano già getProductionId):** `lists/page.js`, `productions/page.js`, `settings/production/page.js`
-
-> ⚠️ `dashboard/page.js` ha path diverso: `'../../lib/production'` (solo 2 livelli)
-
-Un unico deploy alla fine di S25.
-
----
-
-### S26 — Export/Archive Produzione (dopo S25)
+### S26 — Export/Archive Produzione
 - API `GET /api/productions/export?id=...`
 - Scarica JSON completo: production + crew + vehicles + locations + routes + trips + trip_passengers + service_types + rocket_templates
 - Nome file: `captaindispatch-{slug}-{YYYY-MM-DD}.json`
@@ -239,6 +208,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | S23 | Crew select multipla + delete inline + bulk delete | `603ad61` |
 | S24 | normalizeDept shared lib (lib/normalizeDept.js) + DEPT_MAP 150+ alias EN+IT | `9de1527` |
 | **S24b** | **Fix RLS productions INSERT (chicken-and-egg) — POST usa service client** | `3cf2935` |
+| **S25** | **Fix multi-production: `getProductionId()` dentro ogni componente (11 pagine)** | `63b1601` |
 
 ---
 
