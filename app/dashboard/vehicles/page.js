@@ -7,8 +7,8 @@ import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
 import { PageHeader } from '../../../components/ui/PageHeader'
+import { getProductionId } from '../../../lib/production'
 
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
 
 const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌' }
@@ -29,6 +29,7 @@ const CLASS_COLOR = {
 // ─── Sidebar ──────────────────────────────────────────────────
 function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: '', license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', sign_code: '', unit_default: '', active: true, available_from: '', available_to: '' }
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -361,6 +362,7 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect }) {
 // ─── Pagina ───────────────────────────────────────────────────
 export default function VehiclesPage() {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const router = useRouter()
   const [user,    setUser]   = useState(null)
   const [vhcs,    setVhcs]   = useState([])

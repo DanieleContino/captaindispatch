@@ -7,8 +7,8 @@ import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { TableHeader } from '../../../components/ui/TableHeader'
+import { getProductionId } from '../../../lib/production'
 
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 440
 
 // ─── Utility ────────────────────────────────────────────────
@@ -88,6 +88,7 @@ function isVehicleAvailableForDate(v, date) {
 
 // ─── Vehicle availability check ───────────────────────────────
 async function checkVehicleAvail(vehicleId, date, startDt, endDt, excludeRowIds) {
+  const PRODUCTION_ID = getProductionId()
   if (!vehicleId || !startDt || !endDt || !PRODUCTION_ID) return null
   const excl = Array.isArray(excludeRowIds) ? excludeRowIds.filter(Boolean) : (excludeRowIds ? [excludeRowIds] : [])
   let q = supabase.from('trips')
@@ -291,6 +292,7 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
 // ─── TripSidebar (CREATE new trip) ────────────────────────────
 function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips }) {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const EMPTY = { trip_id: '', date: defaultDate, pickup_id: '', dropoff_id: '', vehicle_id: '', service_type_id: '', arr_time: '', call_time: '', flight_no: '', terminal: '', notes: '', duration_min: '' }
   const [form,           setForm]           = useState(EMPTY)
   const [saving,         setSaving]         = useState(false)
@@ -832,6 +834,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 // ─── EditTripSidebar (EDIT + PAX management) ──────────────────
 function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTypes, onClose, onSaved, onPaxChanged }) {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const EDIT_EMPTY = {
     date: '', pickup_id: '', dropoff_id: '', vehicle_id: '',
     service_type_id: '', arr_time: '', call_time: '',
@@ -1468,6 +1471,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 // ─── Pagina principale ─────────────────────────────────────────
 function TripsPageInner() {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [user,          setUser]          = useState(null)

@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { PageHeader } from '../../../components/ui/PageHeader'
+import { getProductionId } from '../../../lib/production'
 
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
 
 // ─── Sidebar ─────────────────────────────────────────────────
 function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const EMPTY = { id: '', name: '', is_hub: false, lat: '', lng: '', default_pickup_point: '' }
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving]       = useState(false)
@@ -390,6 +391,7 @@ function LocationRow({ loc, onEdit }) {
 // ─── Pagina ───────────────────────────────────────────────────
 export default function LocationsPage() {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const router = useRouter()
   const [user,      setUser]  = useState(null)
   const [locs,      setLocs]  = useState([])

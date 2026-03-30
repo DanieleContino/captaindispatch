@@ -8,8 +8,8 @@ import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { normalizeDept } from '../../../lib/normalizeDept'
+import { getProductionId } from '../../../lib/production'
 
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SIDEBAR_W = 400
 
 // ─── Colori ─────────────────────────────────────────────────
@@ -46,6 +46,7 @@ function Badge({ label, style }) {
 
 // ─── Travel Status inline selector ──────────────────────────
 function TravelSelector({ crewId, current, onChange }) {
+  const PRODUCTION_ID = getProductionId()
   const [saving, setSaving] = useState(false)
   async function pick(s) {
     if (s === current || saving) return
@@ -71,6 +72,7 @@ function TravelSelector({ crewId, current, onChange }) {
 
 // ─── NTN Toggle inline ──────────────────────────────────────
 function NTNToggle({ crewId, current, onChange }) {
+  const PRODUCTION_ID = getProductionId()
   const [saving, setSaving] = useState(false)
   async function toggle() {
     if (saving) return
@@ -91,6 +93,7 @@ function NTNToggle({ crewId, current, onChange }) {
 // ─── Contact Popover ────────────────────────────────────────
 function ContactPopover({ crewId, email, phone, onSaved }) {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const [open, setOpen]       = useState(false)
   const [editing, setEditing] = useState(false)
   const [eVal, setEVal]       = useState(email || '')
@@ -319,6 +322,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit, onCo
 function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
   const t = useT()
   const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, email: '', phone: '' }
+  const PRODUCTION_ID = getProductionId()
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -628,6 +632,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
 // ─── Pagina principale ─────────────────────────────────────────
 export default function CrewPage() {
   const t = useT()
+  const PRODUCTION_ID = getProductionId()
   const router = useRouter()
   const [user, setUser]         = useState(null)
   const [crew, setCrew]         = useState([])
