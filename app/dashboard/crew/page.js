@@ -103,7 +103,10 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit }) {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: '700', color: dim ? '#94a3b8' : '#0f172a', fontSize: '14px' }}>{member.full_name}</span>
-          <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 7px', borderRadius: '5px' }}>{member.department || 'NO DEPT'}</span>
+          {member.role && (
+            <span style={{ fontSize: '11px', color: '#374151', background: '#f1f5f9', padding: '1px 7px', borderRadius: '5px', fontWeight: '600' }}>{member.role}</span>
+          )}
+          <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '1px 7px', borderRadius: '5px' }}>{member.department || 'NO DEPT'}</span>
           <Badge label={member.hotel_status} style={hc} />
           {(depToday || depTomorrow) && (
             <span style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '2px 8px', borderRadius: '6px', border: '1px solid #fecaca' }}>
@@ -147,7 +150,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit }) {
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
 function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
   const t = useT()
-  const EMPTY = { id: '', full_name: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false }
+  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false }
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -161,6 +164,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
       setForm({
         id:             initial.id || '',
         full_name:      initial.full_name || '',
+        role:           initial.role || '',
         department:     initial.department || '',
         hotel_id:             initial.hotel_id || '',
         hotel_status:         initial.hotel_status || 'PENDING',
@@ -201,6 +205,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
     const row = {
       production_id:  PRODUCTION_ID,
       full_name:      form.full_name.trim(),
+      role:           form.role.trim() || null,
       department:     form.department.trim() || null,
       hotel_id:       form.hotel_id || null,
       hotel_status:   form.hotel_status,
@@ -281,6 +286,12 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
             <div style={row}>
               <label style={lbl}>{t.fullNameLabel} *</label>
               <input value={form.full_name} onChange={e => set('full_name', e.target.value)} style={inp} placeholder="Mario Rossi" required />
+            </div>
+
+            {/* Ruolo */}
+            <div style={row}>
+              <label style={lbl}>{t.roleLabel}</label>
+              <input value={form.role} onChange={e => set('role', e.target.value)} style={inp} placeholder="Director of Photography, Gaffer, 1st AC…" />
             </div>
 
             {/* Dipartimento */}

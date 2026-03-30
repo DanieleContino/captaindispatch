@@ -57,10 +57,15 @@ Default column interpretation for budget/cost sheet format (apply only when no u
 
 const SYSTEM_PROMPT_CREW = `You extract crew member data from film/TV production documents.
 Return ONLY a raw JSON array, no backticks, no markdown, no explanation.
-Fields per person: full_name (string), department (one of: CAMERA, GRIP, ELECTRIC, SOUND, ART,
-COSTUME, MAKEUP, PRODUCTION, TRANSPORT, CATERING, SECURITY, MEDICAL, VFX, DIRECTING, CAST, OTHER —
-map role titles: Gaffer→ELECTRIC, Focus Puller→CAMERA, Key Grip→GRIP, etc.),
-hotel (hotel name as in document|null), arrival_date ("YYYY-MM-DD"|null), departure_date ("YYYY-MM-DD"|null).
+Fields per person:
+  full_name    (string)
+  role         (string|null — specific job title, e.g. "Director of Photography", "Gaffer", "1st AC", "Key Grip", "Production Coordinator"; preserve the original title from the document)
+  department   (one of: CAMERA, GRIP, ELECTRIC, SOUND, ART, COSTUME, MAKEUP, PRODUCTION, TRANSPORT,
+                CATERING, SECURITY, MEDICAL, VFX, DIRECTING, CAST, OTHER —
+                infer from role if not explicit: Gaffer→ELECTRIC, Focus Puller→CAMERA, Key Grip→GRIP, etc.)
+  hotel        (hotel name as in document|null)
+  arrival_date  ("YYYY-MM-DD"|null)
+  departure_date ("YYYY-MM-DD"|null)
 Never invent values. If absent, use null.`
 
 // ── Helpers ──────────────────────────────────────────────────
