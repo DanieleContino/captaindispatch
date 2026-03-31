@@ -241,14 +241,18 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
       }
     })
 
+    console.log(`[confirm/crew] INSERT ${toInsert.length} rows:`, toInsert.map(r => ({ id: r.id, full_name: r.full_name, dept: r.department })))
+
     const { data: insertedData, error: insertErr } = await supabase
       .from('crew')
       .insert(toInsert)
       .select('id')
 
     if (insertErr) {
+      console.error(`[confirm/crew] INSERT ERROR:`, insertErr.message, insertErr.details)
       errors.push(`Errore insert crew: ${insertErr.message}`)
     } else {
+      console.log(`[confirm/crew] INSERT OK: ${insertedData?.length || 0} rows`, insertedData?.map(r => r.id))
       inserted += insertedData?.length || 0
     }
   }
@@ -338,7 +342,12 @@ async function processAccommodation(supabase, productionId, updateRows, newLocat
     if (!existing.arrival_date   && r.arrival_date)    updateFields.arrival_date   = r.arrival_date
     if (!existing.departure_date && r.departure_date)  updateFields.departure_date = r.departure_date
 
-    if (Object.keys(updateFields).length === 0) { skipped++; continue }
+    if (Object.keys(updateFields).length === 0) {
+      console.log(`[confirm/accommodation] SKIP ${r.existingId}: fields already in DB — hotel_id=${existing.hotel_id} arrival=${existing.arrival_date} departure=${existing.departure_date}`)
+      skipped++; continue
+    }
+
+    console.log(`[confirm/accommodation] UPDATE ${r.existingId}:`, updateFields)
 
     const { error: updateErr } = await supabase
       .from('crew')
@@ -347,6 +356,7 @@ async function processAccommodation(supabase, productionId, updateRows, newLocat
       .eq('production_id', productionId)
 
     if (updateErr) {
+      console.error(`[confirm/accommodation] UPDATE ERROR ${r.existingId}:`, updateErr.message)
       errors.push(`Errore update accommodation ${r.existingId}: ${updateErr.message}`)
     } else {
       updated++
@@ -368,6 +378,8 @@ export async function POST(req) {
 
     const body = await req.json()
     const { rows, mode, productionId, newLocations = [], detectedMode } = body
+
+    console.log(`[confirm] mode=${mode} detectedMode=${detectedMode} rows=${rows?.length} insert=${rows?.filter(r=>r.action==='insert').length} update=${rows?.filter(r=>r.action==='update').length} skip=${rows?.filter(r=>r.action==='skip').length}`)
 
     if (!rows || !Array.isArray(rows)) {
       return NextResponse.json({ error: 'rows è obbligatorio e deve essere un array' }, { status: 400 })

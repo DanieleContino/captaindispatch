@@ -37,6 +37,7 @@ Then extract all available information accordingly.
 If the document contains multiple types of data, extract all of them.
 
 When the input is structured JSON (from an Excel sheet), interpret it as follows:
+The metadata field contains the hotel name and address. Field mapping: NAME=first_name, SURNAME=last_name, POSITION/ROLE=role, DEPARTMENT=department, IN=arrival_date, OUT=departure_date. If DEPARTMENT is empty, infer it from POSITION/ROLE using standard film production knowledge.
 - NAME = first_name, SURNAME = last_name, POSITION/ROLE = role, DEPARTMENT = department, IN = arrival_date, OUT = departure_date
 - sheet_name and metadata contain the hotel name and address — use them to populate hotel_name/hotel_address for accommodation data
 - Apply department mapping rules to the DEPARTMENT field values as-is (they may already be in English or Italian)
@@ -170,6 +171,11 @@ const SYSTEM_PROMPT_ACCOMMODATION = `You are extracting accommodation data from 
 
 Extract ALL rows that represent crew member accommodation assignments.
 Each row represents one person's hotel booking.
+
+When the input is structured JSON (from an Excel sheet with keys: sheet_name, metadata, headers, rows):
+- Use the metadata field to extract the hotel name and address and apply it to ALL rows in this sheet
+- Column name mapping: NAME→first_name, SURNAME/LAST NAME/COGNOME→last_name, POSITION/ROLE/RUOLO→role, DEPT/DEPARTMENT/DIPARTIMENTO→department, IN/ARR/ARRIVAL/CHECK-IN/DATA ARRIVO→arrival_date, OUT/DEP/DEPARTURE/CHECK-OUT/DATA PARTENZA→departure_date
+- If department is empty, infer it from role using standard film production knowledge
 
 Rules:
 - Extract every person with accommodation data, even if multiple people share the same hotel
@@ -431,9 +437,23 @@ function extractStructuredExcel(buffer, selectedSheet = null) {
     dataRows.push(rowObj)
   }
 
-  console.log(`[import/parse] Excel structured: sheet="${sheetName}", headerIdx=${headerIdx}, headers=${headers.filter(Boolean).length}, rows=${dataRows.length}`)
+  // Filtra colonne che sono null per TUTTE le righe: riduce drasticamente la dimensione JSON
+  const usedKeys = new Set()
+  for (const row of dataRows) {
+    for (const [k, v] of Object.entries(row)) {
+      if (v !== null) usedKeys.add(k)
+    }
+  }
+  const filteredRows = dataRows.map(row => {
+    const obj = {}
+    for (const k of usedKeys) obj[k] = row[k] ?? null
+    return obj
+  })
+  const filteredHeaders = headers.filter(Boolean).filter(h => usedKeys.has(h))
 
-  return { sheet_name: sheetName, metadata, headers: headers.filter(Boolean), rows: dataRows }
+  console.log(`[import/parse] Excel structured: sheet="${sheetName}", headerIdx=${headerIdx}, headers=${headers.filter(Boolean).length}→${filteredHeaders.length}, rows=${filteredRows.length}`)
+
+  return { sheet_name: sheetName, metadata, headers: filteredHeaders, rows: filteredRows }
 }
 
 /**
