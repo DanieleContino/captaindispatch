@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 31 marzo 2026 | Fix VehicleSidebar crew list query + sort dept preferito ✅**
+**Aggiornato: 31 marzo 2026 | S31 completata ✅ — avviare S18-T4**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -8,10 +8,87 @@
 
 ---
 
-## ▶ PROSSIMO — S30 Location Routes Enhancement
+## ▶ PROSSIMO — S31 Import Upgrade
 
-> **S30 COMPLETATA ✅** — Avviare **S18 da T4 (`bridge/page.js`)** (i18n completamento in sospeso).
+> **S31 COMPLETATA ✅** — Avviare **S18-T4** (i18n bridge/page.js).
 > Un task per sessione.
+
+---
+
+### S31 — Import Upgrade (un task per sessione)
+Un unico deploy finale dopo T5. NON deployare tra un task e l'altro.
+
+| Task | File/Scope | Stato |
+|------|-----------|-------|
+| T1 — Backend foundation | `app/api/import/sheets/route.js` (nuovo) + `app/api/import/save-location/route.js` (nuovo) + `parse/route.js` (accommodation mode + selectedSheet) + `confirm/route.js` (accommodation processing) | ✅ |
+| T2 — Selector + AccommodationTable | `lib/ImportModal.js`: opzione `🏨 Accommodation list`, check 10MB, `AccommodationTable` component, `effectiveDisplayMode` per accommodation | ✅ |
+| T3 — Multi-sheet flow | `lib/ImportModal.js`: fase `sheet-select`, loop per foglio in `parseFile()`, loading "Analyzing sheet X of N: NomeFoglio…" | ✅ |
+| T4 — HotelPlacesModal | `lib/ImportModal.js`: `HotelPlacesModal` (Google Places auto-fill, Save to Locations), upgrade sezione 3 categorizing | ✅ |
+| T5 — Context + Deploy | `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
+
+#### S31-T1 — Backend foundation
+
+**`app/api/import/sheets/route.js`** (nuovo):
+- `POST` multipart: riceve file Excel → estrae nomi fogli con `xlsx` → ritorna `{ sheetNames: [] }`
+
+**`app/api/import/save-location/route.js`** (nuovo):
+- `POST` JSON: `{ name, lat, lng, locationType, productionId }` → service client → auto-genera ID `H###` in sequenza → insert in `locations` con `is_hub: false` (o `true` se HUB), `is_hotel: true` → ritorna `{ id, name }`
+
+**`app/api/import/parse/route.js`**:
+- Aggiunge parametro `selectedSheet` (string) a `extractTextFromFile()`: se presente usa quel foglio specifico
+- Aggiunge `SYSTEM_PROMPT_ACCOMMODATION` (prompt per singolo foglio Excel rooming list)
+- Aggiunge `processAccommodationRows()`: duplicate detection per `first_name + last_name`, hotel matching su `hotel_name`, raccolta nuovi hotel
+- Aggiunge `case 'accommodation'` nel POST handler
+- HAL: gestisce `detectedType === 'accommodation'` → `detectedMode = 'accommodation'`
+- Aggiorna `SYSTEM_PROMPT_HAL` con campi `hotel_name`, `hotel_address`
+
+**`app/api/import/confirm/route.js`**:
+- `processAccommodation()`: aggiorna crew esistente con `hotel_id`, `arrival_date`, `departure_date` (null-only rule). NON inserisce nuovi crew.
+- `insertNewLocations()`: accetta campi opzionali `lat`, `lng` per quando vengono da Google Places
+- Aggiunge `case 'accommodation'` nel POST handler
+
+#### S31-T2 — Selector + AccommodationTable
+**`lib/ImportModal.js`**:
+- Aggiunge `{ id: 'accommodation', label: '🏨 Accommodation list', desc: 'Estrae nome, hotel, date arrivo/partenza' }` al selector (tra fleet e custom)
+- Check 10MB in `parseFile()` prima di tutto
+- Componente `AccommodationTable`: colonne First Name | Last Name | Role | Dept | Hotel | Arrival | Departure | Status. `rowBg()` adattato: giallo se date mancanti, grigio se skip
+- `effectiveDisplayMode` e `renderPreviewTable()` estesi per `'accommodation'`
+
+#### S31-T3 — Multi-sheet flow
+**`lib/ImportModal.js`** (solo per modalità `accommodation` e `hal` con file `.xlsx/.xls`):
+- Nuova fase `sheet-select` tra `idle` e `parsing`
+- `parseFile()` prima chiama `POST /api/import/sheets` → ottiene `sheetNames`
+- UI: lista checkbox fogli, pre-selezionati tutti eccetto "COST REPORT" e nomi con "OLD"
+- Button "Analyze selected sheets" → loop: per ogni foglio chiama `POST /api/import/parse` con `selectedSheet`, mostra "Analyzing sheet X of N: NomeFoglio…"
+- Aggrega tutti i risultati, poi → fase `categorizing`
+- Crew/fleet/custom: comportamento invariato
+
+#### S31-T4 — HotelPlacesModal
+**`lib/ImportModal.js`**:
+- Componente `HotelPlacesModal`: props `hotelName, productionId, onSave(locationId, locationName), onSkip`
+- Al mount: chiama `GET /api/places/autocomplete?q=NAME` → mostra suggestions
+- Click suggestion → `GET /api/places/details?place_id=XXX` → pre-riempie `lat, lng, address`
+- Form: `name` (editabile), `address` (display only), `lat/lng` (auto), selector `type: HOTEL/HUB`
+- "Save to Locations" → `POST /api/import/save-location` → aggiorna `newHotels[i]` con `locationId` + aggiorna righe accommodation con `hotel_id`
+- "Skip" → chiude senza salvare
+- Upgrade sezione 3 in fase `categorizing`: pulsante "Add" apre `HotelPlacesModal` invece di toggle semplice; mostra ✅ con nome location se già salvata
+
+#### Prompts S31
+
+**SYSTEM_PROMPT_ACCOMMODATION** (per singolo foglio):
+```
+Analyze this sheet: [NOME FOGLIO]
+
+You are extracting accommodation data from one sheet of a film/TV production rooming list Excel file.
+...
+Return format: JSON array [{ first_name, last_name, role, department, hotel_name, hotel_address, arrival_date, departure_date }]
+```
+(prompt completo dal documento originale del task)
+
+#### Note S31
+- `GOOGLE_MAPS_API_KEY` in `.env.local` (server-side, non NEXT_PUBLIC)
+- `locations` table NON ha colonna `address` → `hotel_address` è solo usato per pre-riempire Google Places modal
+- Check schema DB manuale prima di T1: crew, vehicles, locations colonne esistenti
 
 ---
 
@@ -398,6 +475,11 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S29 deploy ✅** | **Deploy S29 in ritardo: `crew/page.js`, `dashboard/page.js`, `pax-coverage/page.js`, `rocket/page.js`, `scripts/migrate-on-location.sql` — commit `c6e9a76`.** | `c6e9a76` |
 | **VehicleSidebar fix ✅** | **Fix crew search in `vehicles/page.js`: `VehicleSidebar` usava query Supabase separata per crew (closure stale su `PRODUCTION_ID` → lista vuota → ricerca senza risultati). Fix: rimossa query interna, `crewList` passata come prop dalla pagina padre.** | `28b76a2` |
 | **VehicleSidebar crew list fix ✅** | **Fix `vehicles/page.js`: (1) Rimosso `.eq('active', true)` dalla query crew in `load()` — la tabella `crew` non ha colonna `active`, causava lista sempre vuota nel multi-select "Crew Preferiti". (2) Sort migliorato nella lista crew: quando `preferred_dept` è selezionato, crew del dept appaiono in cima con header colorato (⭐ DEPT) + separatore "Altri" per il resto. SD (no_transport_needed) sempre prioritari nel gruppo.** | `0831722` |
+| **S31-T1 ✅** | **Import Upgrade T1 — Backend foundation: nuovo `app/api/import/sheets/route.js` (POST multipart → sheetNames[]). Nuovo `app/api/import/save-location/route.js` (POST JSON → insert H### con is_hotel:true, lat/lng opzionali, service client). `parse/route.js`: selectedSheet param in extractTextFromFile(), SYSTEM_PROMPT_ACCOMMODATION, processAccommodationRows() (action=skip/update, hotel matching su hotel_name, newHotels con address), case 'accommodation', HAL detectedType='accommodation'→detectedMode='accommodation'. `confirm/route.js`: insertNewLocations() con is_hotel:true+lat/lng, processAccommodation() null-only update su hotel_id/arrival_date/departure_date, case 'accommodation'.** | — |
+| **S31-T2 ✅** | **Import Upgrade T2 — Selector + AccommodationTable: `lib/ImportModal.js` — `🏨 Accommodation list` nel mode selector (tra fleet e custom). Check 10MB in `parseFile()`. Componente `AccommodationTable` (First Name/Last Name/Role/Dept/Hotel/Arrival/Departure/Status). `rowBg()` adattato: grigio=skip, rosso=not found in DB, giallo=date mancanti. `isUnrecognized()`/`hasNullFields()` estesi per accommodation. `getCatRowSub()`, `effectiveDisplayMode`, `renderPreviewTable()` estesi per accommodation. `newHotels` section in preview visibile anche per accommodation.** | — |
+| **S31-T3 ✅** | **Import Upgrade T3 — Multi-sheet flow: `lib/ImportModal.js` — nuova fase `sheet-select` tra `idle` e `parsing` per modalità `accommodation`/`hal` con file `.xlsx/.xls`. `parseFile()` chiama prima `POST /api/import/sheets` → ottiene `sheetNames`, pre-seleziona tutti tranne "COST REPORT" e nomi con "OLD" (badge `auto-excluded`). UI checklist fogli con Select all/Deselect all + contatore. Footer: Back + 🔍 Analyze N sheets. Funzione `analyzeSheets()`: loop sequenziale, chiama `POST /api/import/parse` con `selectedSheet` per ogni foglio, mostra "Analyzing sheet X of N: NomeFoglio…", aggrega righe + deduplica hotel, assegna `_idx` sequenziali → fase `categorizing`. Crew/fleet/custom: comportamento invariato.** | — |
+| **S31-T4 ✅** | **Import Upgrade T4 — HotelPlacesModal: `lib/ImportModal.js` — nuovo componente `HotelPlacesModal` (props: `hotelName, productionId, onSave, onSkip`). Al mount chiama `GET /api/places/autocomplete?q=NAME` → suggestions list. Click suggestion → `GET /api/places/details?place_id=XXX` → pre-riempie `address, lat, lng, name`. Form: name editabile, address display-only, lat/lng auto, type selector HOTEL/HUB. "Save to Locations" → `POST /api/import/save-location` → `onSave(locationId, locationName)`. Stato `hotelModalIdx` (int|null) + `handleHotelSave(idx, locationId, locationName)` in `ImportModal`. Upgrade sezione 3 categorizing: pulsante "Add" apre `HotelPlacesModal` (zIndex 200) + "Skip/↩ Restore" toggle; badge ✅ locationName se già salvata. `handleHotelSave`: aggiorna `newHotels[idx]` + aggiorna righe accommodation con `hotel_id`+`hotelNotFound:false`. `reset()` include `setHotelModalIdx(null)`. Build: compilato OK 0 errori.** | — |
+| **S31-T5 ✅** | **Import Upgrade T5 — Context + Deploy: `CAPTAINDISPATCH_Context.md` aggiornato (S31 completata, prossimo S18-T4) + `git push origin master` deploy.** | — |
 
 ---
 
