@@ -36,6 +36,12 @@ First, identify what type of document this is.
 Then extract all available information accordingly.
 If the document contains multiple types of data, extract all of them.
 
+When the input is structured JSON (from an Excel sheet), interpret it as follows:
+- NAME = first_name, SURNAME = last_name, POSITION/ROLE = role, DEPARTMENT = department, IN = arrival_date, OUT = departure_date
+- sheet_name and metadata contain the hotel name and address — use them to populate hotel_name/hotel_address for accommodation data
+- Apply department mapping rules to the DEPARTMENT field values as-is (they may already be in English or Italian)
+- If DEPARTMENT is empty, infer it from POSITION/ROLE using standard film production roles
+
 Rules:
 - Detect document type automatically
 - For crew: extract first_name, last_name, role, department, phone, email, active
