@@ -46,7 +46,7 @@ const DEPT_COLOR = {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────
-function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
+function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [] }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [] }
@@ -55,8 +55,6 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
   const [deleting, setDel]        = useState(false)
   const [confirmDel, setCd]       = useState(false)
   const [error, setError]         = useState(null)
-  const [crewList, setCrewList]         = useState([])
-  const [crewLoading, setCrewLoading]   = useState(false)
   const [crewSearch, setCrewSearch]     = useState('')
 
   useEffect(() => {
@@ -66,12 +64,6 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
       setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []), license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, in_transport: initial.in_transport !== false, available_from: initial.available_from || '', available_to: initial.available_to || '', preferred_dept: initial.preferred_dept || '', preferred_crew_ids: Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [] })
     } else {
       setForm({ ...EMPTY })
-    }
-    // Carica crew produzione corrente per multi-select
-    if (PRODUCTION_ID) {
-      setCrewLoading(true)
-      supabase.from('crew').select('id, full_name, department, no_transport_needed').eq('production_id', PRODUCTION_ID).eq('active', true).order('full_name')
-        .then(({ data }) => { setCrewList(data || []); setCrewLoading(false) })
     }
   }, [open, mode, initial])
 
@@ -322,10 +314,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
                 <input placeholder="🔍 Cerca crew…" value={crewSearch} onChange={e => setCrewSearch(e.target.value)}
                   style={{ ...inp, marginBottom: '4px' }} />
                 {/* Lista crew */}
-                {crewLoading ? (
-                  <div style={{ fontSize: '11px', color: '#94a3b8', padding: '6px' }}>Caricamento crew…</div>
-                ) : (
-                  <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
+                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
                     {crewList
                       .filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase()))
                       .sort((a, b) => (b.no_transport_needed ? 1 : 0) - (a.no_transport_needed ? 1 : 0))
@@ -345,11 +334,10 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
                           </div>
                         )
                       })}
-                    {crewList.filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase())).length === 0 && (
-                      <div style={{ fontSize: '11px', color: '#94a3b8', padding: '8px' }}>Nessun risultato</div>
-                    )}
-                  </div>
-                )}
+                  {crewList.filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase())).length === 0 && (
+                    <div style={{ fontSize: '11px', color: '#94a3b8', padding: '8px' }}>Nessun risultato</div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -718,7 +706,7 @@ export default function VehiclesPage() {
         )}
       </div>
 
-      <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} />
+      <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} />
 
       <ImportModal
         open={importOpen}
