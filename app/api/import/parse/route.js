@@ -262,6 +262,174 @@ async function extractTextFromFile(buffer, filename, instructions = '', selected
   throw new Error(`Formato non supportato: .${ext}. Usa .xlsx, .xls, .csv, .pdf o .docx`)
 }
 
+// ── Excel structured extraction ───────────────────────────────
+
+/** Parole chiave che identificano una riga header in un Excel */
+const HEADER_KEYWORDS = new Set([
+  'name', 'surname', 'first', 'last', 'first name', 'last name',
+  'nome', 'cognome', 'full name', 'fullname',
+  'in', 'out', 'arrival', 'departure',
+  'check-in', 'check-out', 'checkin', 'checkout', 'arr', 'dep',
+  'arrivo', 'partenza', 'data arrivo', 'data partenza',
+  'department', 'dept', 'dipartimento',
+  'driver', 'vehicle', 'plate', 'targa', 'autista', 'veicolo',
+  'role', 'position', 'ruolo', 'posizione', 'funzione', 'job title',
+  'hotel', 'room', 'camera', 'stanza', 'accommodation',
+  'phone', 'email', 'telefono', 'mobile', 'cellulare',
+  'type', 'capacity', 'sign code',
+])
+
+/** Trova l'indice della riga header tra le prime maxScan righe */
+function detectHeaderRowIndex(rows, maxScan = 10) {
+  let bestIdx = 0
+  let bestScore = 0
+  const limit = Math.min(maxScan, rows.length)
+  for (let i = 0; i < limit; i++) {
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
+    let score = 0
+    for (const cell of row) {
+      if (cell == null) continue
+      const s = String(cell).toLowerCase().trim()
+      if (HEADER_KEYWORDS.has(s)) {
+        score += 1
+      } else if (
+        s.includes('name') || s.includes('nome') || s.includes('surnam') ||
+        s.includes('cognome') || s.includes('arriv') || s.includes('depart') ||
+        s.includes('check') || s.includes('hotel') || s.includes('role') ||
+        s.includes('dept') || s.includes('driver') || s.includes('plate') ||
+        s.includes('targa') || s.includes('posit') || s.includes('ruolo')
+      ) {
+        score += 0.5
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score
+      bestIdx = i
+    }
+  }
+  return (bestScore >= 1.5) ? bestIdx : 0
+}
+
+/** Converte un valore cella (inclusi Date da cellDates:true) in stringa o null */
+function cellValueToString(val) {
+  if (val === null || val === undefined) return null
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return null
+    return val.toISOString().split('T')[0]
+  }
+  const s = String(val).trim()
+  return s === '' ? null : s
+}
+
+/** Verifica se una riga è una riga totale/subtotale da saltare */
+function isTotalRow(row) {
+  for (const cell of row) {
+    if (!cell) continue
+    const s = String(cell).toLowerCase().trim()
+    if (s === 'total' || s === 'totale' || s === 'subtotal' ||
+        s === 'grand total' || s === 'totali' || s === 'sub total') {
+      return true
+    }
+  }
+  return false
+}
+
+/** Verifica se una riga è completamente vuota */
+function isEmptyRow(row) {
+  return !Array.isArray(row) ||
+    row.every(cell => cell === null || cell === undefined || String(cell).trim() === '')
+}
+
+/** Verifica se il valore nome è un placeholder da ignorare */
+function isNamePlaceholder(val) {
+  if (!val) return true
+  const s = String(val).toLowerCase().trim()
+  return s === 'name tbd' || s === 'name tba' || s === 'tbd' || s === 'tba' ||
+         s === 'n/a' || s === '-' || s === 'nome' || s === 'name'
+}
+
+/**
+ * Estrae dati strutturati da un singolo foglio Excel.
+ * Rileva automaticamente la riga header (scansiona prime 10 righe),
+ * raccoglie metadata pre-header (nome hotel, indirizzo, note),
+ * converte date seriali in YYYY-MM-DD, rimuove righe vuote/totali/placeholder.
+ *
+ * @param {Buffer} buffer
+ * @param {string|null} selectedSheet — foglio da usare; null = primo foglio
+ * @returns {{ sheet_name: string, metadata: string, headers: string[], rows: object[] }}
+ */
+function extractStructuredExcel(buffer, selectedSheet = null) {
+  const XLSX = require('xlsx')
+  // cellDates: true → le celle data vengono lette come oggetti Date
+  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true })
+
+  const sheetName = (selectedSheet && workbook.SheetNames.includes(selectedSheet))
+    ? selectedSheet
+    : workbook.SheetNames[0]
+
+  const sheet = workbook.Sheets[sheetName]
+  // header: 1 → righe come array; defval: null → celle vuote = null
+  const allRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null })
+
+  // Trova la riga header
+  const headerIdx = detectHeaderRowIndex(allRows)
+
+  // Metadata: righe prima della header (nome hotel, indirizzo, note introduttive)
+  const metaLines = []
+  for (let i = 0; i < headerIdx; i++) {
+    const row = allRows[i]
+    if (!isEmptyRow(row)) {
+      const line = row
+        .filter(c => c != null && String(c).trim() !== '')
+        .map(c => cellValueToString(c))
+        .join(' | ')
+      if (line.trim()) metaLines.push(line)
+    }
+  }
+  const metadata = metaLines.join('\n')
+
+  // Headers: valori della riga header
+  const headerRow = allRows[headerIdx] || []
+  const headers = headerRow.map(h =>
+    (h === null || h === undefined) ? '' : String(h).trim()
+  )
+
+  // Data rows: righe successive alla header
+  const dataRows = []
+  for (let i = headerIdx + 1; i < allRows.length; i++) {
+    const rawRow = allRows[i]
+    if (!Array.isArray(rawRow)) continue
+    if (isEmptyRow(rawRow)) continue
+    if (isTotalRow(rawRow)) continue
+
+    // Mappa array → oggetto { header: valore }
+    const rowObj = {}
+    for (let j = 0; j < headerRow.length; j++) {
+      const key = headerRow[j]
+      if (!key || String(key).trim() === '') continue
+      rowObj[String(key).trim()] = cellValueToString(rawRow[j])
+    }
+
+    // Salta riga se tutti i valori sono null
+    if (Object.values(rowObj).every(v => v === null)) continue
+
+    // Salta riga se il campo nome principale è un placeholder
+    const nameKey = Object.keys(rowObj).find(k => {
+      const kl = k.toLowerCase()
+      return kl === 'name' || kl === 'nome' || kl === 'full name' ||
+             kl === 'first name' || kl === 'first' || kl === 'surname' || kl === 'cognome'
+    })
+    if (nameKey && isNamePlaceholder(rowObj[nameKey])) continue
+
+    dataRows.push(rowObj)
+  }
+
+  console.log(`[import/parse] Excel structured: sheet="${sheetName}", headerIdx=${headerIdx}, headers=${headers.filter(Boolean).length}, rows=${dataRows.length}`)
+
+  return { sheet_name: sheetName, metadata, headers: headers.filter(Boolean), rows: dataRows }
+}
+
 /**
  * Chiama Claude API.
  * @param {string} systemPrompt
@@ -635,8 +803,21 @@ export async function POST(req) {
     const buffer = Buffer.from(arrayBuffer)
     const filename = file.name || 'file'
 
-    // ── STEP 1: Estrazione testo ────────────────────────────
-    let text = await extractTextFromFile(buffer, filename, instructions, selectedSheet)
+    // ── STEP 1: Estrazione contenuto ────────────────────────────
+    const ext = (filename.split('.').pop() || '').toLowerCase()
+    const isExcel = ext === 'xlsx' || ext === 'xls'
+
+    let text = ''
+    if (isExcel) {
+      // Excel (.xlsx/.xls): estrazione strutturata con rilevamento automatico header
+      const structured = extractStructuredExcel(buffer, selectedSheet)
+      text = JSON.stringify(structured, null, 2)
+      console.log(`[import/parse] Excel → JSON strutturato: ${text.length} chars, ${structured.rows.length} righe dati`)
+    } else {
+      // PDF / Word / CSV: estrazione testo normale (logica invariata)
+      text = await extractTextFromFile(buffer, filename, instructions, selectedSheet)
+    }
+
     if (!text || text.trim().length < 10) {
       return NextResponse.json({ error: 'Impossibile estrarre testo dal file. Verifica che non sia vuoto o protetto.' }, { status: 400 })
     }
@@ -644,8 +825,19 @@ export async function POST(req) {
     // ── STEP 1b: Truncate ───────────────────────────────────
     const MAX_CHARS = 100_000
     if (text.length > MAX_CHARS) {
-      console.warn(`[import/parse] Testo troncato: ${text.length} → ${MAX_CHARS} chars`)
-      text = text.slice(0, MAX_CHARS)
+      if (isExcel) {
+        // Excel: tronca le righe senza spezzare il JSON
+        console.warn(`[import/parse] Excel JSON troncato: ${text.length} chars`)
+        const obj = JSON.parse(text)
+        const approxPerRow = text.length / Math.max(obj.rows.length, 1)
+        const maxRows = Math.max(Math.floor(MAX_CHARS / approxPerRow) - 10, 50)
+        obj.rows = obj.rows.slice(0, maxRows)
+        text = JSON.stringify(obj, null, 2)
+        console.warn(`[import/parse] Excel JSON post-truncation: ${text.length} chars, ${obj.rows.length} righe`)
+      } else {
+        console.warn(`[import/parse] Testo troncato: ${text.length} → ${MAX_CHARS} chars`)
+        text = text.slice(0, MAX_CHARS)
+      }
     }
 
     // ── STEP 2: System prompt + Claude ─────────────────────
@@ -727,7 +919,8 @@ export async function POST(req) {
 
     // ── MODE: accommodation ──────────────────────────────────
     if (mode === 'accommodation') {
-      const userContent = selectedSheet ? `Sheet: ${selectedSheet}\n\n${text}` : text
+      // Per Excel: sheet_name già presente nel JSON strutturato — non serve prepend
+      const userContent = (!isExcel && selectedSheet) ? `Sheet: ${selectedSheet}\n\n${text}` : text
       const extracted = await callClaude(SYSTEM_PROMPT_ACCOMMODATION, userContent, 'array')
       const { rows, newHotels } = await processAccommodationRows(extracted, supabase, productionId)
       return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode: 'accommodation' })
