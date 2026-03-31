@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 31 marzo 2026 | Fix VehicleSidebar crew search + S29 deploy ✅**
+**Aggiornato: 31 marzo 2026 | Fix VehicleSidebar crew list query + sort dept preferito ✅**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -397,6 +397,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S30-T3 ✅** | **Location Routes T3: Aggiornamento `CAPTAINDISPATCH_Context.md` (S30 completata, prossimo S18 T4) + `git push origin master` deploy.** | — |
 | **S29 deploy ✅** | **Deploy S29 in ritardo: `crew/page.js`, `dashboard/page.js`, `pax-coverage/page.js`, `rocket/page.js`, `scripts/migrate-on-location.sql` — commit `c6e9a76`.** | `c6e9a76` |
 | **VehicleSidebar fix ✅** | **Fix crew search in `vehicles/page.js`: `VehicleSidebar` usava query Supabase separata per crew (closure stale su `PRODUCTION_ID` → lista vuota → ricerca senza risultati). Fix: rimossa query interna, `crewList` passata come prop dalla pagina padre.** | `28b76a2` |
+| **VehicleSidebar crew list fix ✅** | **Fix `vehicles/page.js`: (1) Rimosso `.eq('active', true)` dalla query crew in `load()` — la tabella `crew` non ha colonna `active`, causava lista sempre vuota nel multi-select "Crew Preferiti". (2) Sort migliorato nella lista crew: quando `preferred_dept` è selezionato, crew del dept appaiono in cima con header colorato (⭐ DEPT) + separatore "Altri" per il resto. SD (no_transport_needed) sempre prioritari nel gruppo.** | `0831722` |
 
 ---
 
