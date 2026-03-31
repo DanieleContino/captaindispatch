@@ -431,7 +431,13 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     })
   }, [form.pickup_id, form.dropoff_id, transferClass])
 
-  const selVehicle = vehicles.find(v => v.id === form.vehicle_id)
+  const selVehicle    = vehicles.find(v => v.id === form.vehicle_id)
+  const suggestedCrew = (selVehicle && (selVehicle.preferred_dept || selVehicle.preferred_crew_ids?.length > 0))
+    ? crewList.filter(c =>
+        (selVehicle.preferred_crew_ids?.includes(c.id)) ||
+        (selVehicle.preferred_dept && c.department === selVehicle.preferred_dept)
+      )
+    : []
 
   async function handleSubmit(e) {
     e.preventDefault(); setError(null)
@@ -912,10 +918,11 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={inp}>
                 <option value="">No vehicle</option>
                 {vehicles.map(v => {
-                  const avail = isVehicleAvailableForDate(v, form.date)
+                  const avail   = isVehicleAvailableForDate(v, form.date)
+                  const hasPref = v.preferred_dept || v.preferred_crew_ids?.length > 0
                   return (
                     <option key={v.id} value={v.id}>
-                      {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
+                      {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
                     </option>
                   )
                 })}
@@ -1002,6 +1009,33 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               )}
               {form.pickup_id && form.dropoff_id ? (
                 <>
+                  {suggestedCrew.length > 0 && (
+                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 10px', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                        📌 Suggeriti per {selVehicle.id}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {suggestedCrew.map(c => {
+                          const alreadySel = selCrew.some(x => x.id === c.id)
+                          return (
+                            <div key={c.id}
+                              onClick={() => !alreadySel && setSelCrew(p => [...p, c])}
+                              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: alreadySel ? '#eff6ff' : 'white', border: `1px solid ${alreadySel ? '#bfdbfe' : '#fde68a'}`, borderRadius: '6px', cursor: alreadySel ? 'default' : 'pointer' }}
+                              onMouseEnter={e => { if (!alreadySel) e.currentTarget.style.background = '#fef9c3' }}
+                              onMouseLeave={e => { if (!alreadySel) e.currentTarget.style.background = alreadySel ? '#eff6ff' : 'white' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '11px', fontWeight: alreadySel ? '700' : '500', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
+                                <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
+                              </div>
+                              {alreadySel
+                                ? <span style={{ fontSize: '10px', color: '#2563eb', fontWeight: '800', flexShrink: 0 }}>✓</span>
+                                : <span style={{ fontSize: '14px', color: '#f59e0b', fontWeight: '700', flexShrink: 0 }}>+</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <input type="text" placeholder="Search…" value={crewSearch} onChange={e => setCrewSearch(e.target.value)} style={{ ...inp, marginBottom: '6px', padding: '6px 10px', fontSize: '12px' }} />
                   <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                     {crewList.length === 0 ? (
@@ -1449,6 +1483,14 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const locsById = Object.fromEntries((locations || []).map(l => [l.id, l.name]))
   const locShortEdit = id => (locsById[id] || id || '–').split(' ').slice(0, 3).join(' ')
 
+  const selVehicleEdit    = vehicles.find(v => v.id === form.vehicle_id)
+  const suggestedCrewEdit = (selVehicleEdit && (selVehicleEdit.preferred_dept || selVehicleEdit.preferred_crew_ids?.length > 0))
+    ? availableCrew.filter(c =>
+        (selVehicleEdit.preferred_crew_ids?.includes(c.id)) ||
+        (selVehicleEdit.preferred_dept && c.department === selVehicleEdit.preferred_dept)
+      )
+    : []
+
   const regularCrew  = availableCrew.filter(c => !c.no_transport_needed)
   const ntnCrew      = availableCrew.filter(c =>  c.no_transport_needed)
   const freeCount    = regularCrew.filter(c => !busyMap[c.id]).length
@@ -1524,10 +1566,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={inp}>
                 <option value="">No vehicle</option>
                 {vehicles.map(v => {
-                  const avail = isVehicleAvailableForDate(v, form.date)
+                  const avail   = isVehicleAvailableForDate(v, form.date)
+                  const hasPref = v.preferred_dept || v.preferred_crew_ids?.length > 0
                   return (
                     <option key={v.id} value={v.id}>
-                      {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
+                      {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
                     </option>
                   )
                 })}
@@ -1692,6 +1735,30 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                           ))}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* 📌 SUGGERITI */}
+                  {suggestedCrewEdit.length > 0 && (
+                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '8px 10px', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                        📌 Suggeriti per {selVehicleEdit.id}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {suggestedCrewEdit.map(c => (
+                          <div key={c.id}
+                            onClick={() => addPax(c)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: 'white', border: '1px solid #fde68a', borderRadius: '6px', cursor: 'pointer' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#fef9c3'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '11px', fontWeight: '500', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
+                              <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
+                            </div>
+                            <span style={{ fontSize: '14px', color: '#f59e0b', fontWeight: '700', flexShrink: 0 }}>+</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -1894,7 +1961,7 @@ function TripsPageInner() {
         )
         const [locsR, vhcR, stR] = await Promise.all([
           supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name'),
-          supabase.from('vehicles').select('id,driver_name,sign_code,capacity,vehicle_type,available_from,available_to').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
+          supabase.from('vehicles').select('id,driver_name,sign_code,capacity,vehicle_type,available_from,available_to,preferred_dept,preferred_crew_ids').eq('production_id', PRODUCTION_ID).eq('active', true).eq('in_transport', true).order('id'),
           supabase.from('service_types').select('id,name').eq('production_id', PRODUCTION_ID).order('sort_order'),
         ])
         if (locsR.data) { const m = {}; locsR.data.forEach(l => { m[l.id] = l.name }); setLocsMap(m); setLocsList(locsR.data) }

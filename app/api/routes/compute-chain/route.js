@@ -1,15 +1,25 @@
 /**
  * POST /api/routes/compute-chain
  *
- * Ricalcola i pickup_min di un gruppo MULTI-PKP in modo sequenziale ("farthest first"):
- * - Ordina i leg per duration_min DESC (hotel più lontano dall'hub = primo pickup)
- * - Calcola il tempo di guida hotel→hotel con Google Maps (o DB se già disponibile)
- * - Aggiorna tutti i leg in DB con i nuovi pickup_min, start_dt, end_dt
+ * Ricalcola pickup_min / start_dt / end_dt per gruppi MULTI-stop:
  *
- * Usato da trips/page.js dopo handleAddToExisting e dopo EditTripSidebar.handleSubmit
+ * MULTI-PKP  (pickup diversi, dropoff uguale):
+ *   Hotel A → Hub, Hotel B → Hub → catena backward: farthest hotel picked up first.
+ *
+ * MULTI-DRP  (pickup uguale, dropoff diversi):
+ *   Hub → Hotel A, Hub → Hotel B → catena forward: closest hotel dropped first.
+ *
+ * MIXED (pickup E dropoff diversi — es. Hotel A→Basecamp, Hotel B→Set):
+ *   Catena sequenziale completa: tutti i pickup prima, poi tutti i dropoff.
+ *   Ordine pickup: duration_min DESC (leg più lungo = hotel più lontano = primo pickup).
+ *   Ordine dropoff: distanza dal LAST pickup ASC (più vicino al last pickup = primo dropoff).
+ *   call_min = arrivo al PRIMO dropoff (primo momento in cui il van scarica qualcuno).
+ *   Backward per pickup, forward per dropoff. duration_min aggiornato = tempo sequenziale.
+ *
+ * Usato da trips/page.js dopo handleAddToExisting / handleAddAsNewLeg / EditTripSidebar.handleSubmit
  *
  * Body:   { leg_ids: [uuid, ...], production_id: uuid }
- * Returns: { results: [{id, pickup_min, start_dt, end_dt}] }
+ * Returns: { results: [{id, pickup_min, start_dt, end_dt}], type: 'MULTI-PKP'|'MULTI-DRP'|'MIXED' }
  */
 
 import { NextResponse } from 'next/server'
@@ -137,6 +147,124 @@ export async function POST (request) {
     const uniqueDropoffs = new Set(legs.map(l => l.dropoff_id))
     const isMultiPkp     = uniquePickups.size  > 1  // diverse hotels come pickup
     const isMultiDrp     = uniqueDropoffs.size > 1  // diverse hotels come dropoff
+
+    // ── MIXED: pickup E dropoff diversi (es. Hotel A→Basecamp, Hotel B→Set) ────────
+    // Catena completa: tutti i pickup prima (farthest first), poi tutti i dropoff (nearest first).
+    // call_min = arrivo al primo dropoff. Backward per pickup, forward per dropoff.
+    if (isMultiPkp && isMultiDrp) {
+      // Step 1: ensure all legs have direct duration_min (pickup→dropoff)
+      const enriched = []
+      for (const leg of legs) {
+        let dur = leg.duration_min
+        if (!dur) {
+          dur = await getOrComputeDuration(leg.pickup_id, leg.dropoff_id, production_id, supabase)
+          if (dur) await supabase.from('trips').update({ duration_min: dur }).eq('id', leg.id)
+        }
+        enriched.push({ ...leg, duration_min: dur })
+      }
+
+      // Step 2: sort pickups by direct duration DESC (longest route = farthest hotel = first pickup)
+      const sortedByDur = [...enriched].sort((a, b) => (b.duration_min ?? 0) - (a.duration_min ?? 0))
+      const lastPickupId = sortedByDur[sortedByDur.length - 1].pickup_id
+
+      // Step 3: sort dropoffs by distance from LAST pickup (ASC = closest first)
+      const uniqueDropoffIds = [...new Set(sortedByDur.map(l => l.dropoff_id))]
+      const dropoffDistances = await Promise.all(
+        uniqueDropoffIds.map(async dpId => ({
+          id:  dpId,
+          dur: (await getOrComputeDuration(lastPickupId, dpId, production_id, supabase)) ?? 999,
+        }))
+      )
+      const sortedDropoffs = dropoffDistances.sort((a, b) => a.dur - b.dur)
+      // firstDropoffId = the dropoff closest to last pickup = first place van delivers
+      const firstDropoffId = sortedDropoffs[0].id
+
+      // Step 4: reference call_min (= arrival at first dropoff)
+      const callMin = sortedByDur[0].call_min  // all sibling legs share call_min
+      const date    = sortedByDur[0].date
+
+      // Step 5: backward chain — pickup times (starting from first dropoff arrival = callMin)
+      // last pickup → first dropoff: drive = distance computed above
+      const lastPickup2FirstDropoff = sortedDropoffs[0].dur  // lastPickup → firstDropoff
+      const n = sortedByDur.length
+
+      // pickupTimes[i] = pickup_min for sortedByDur[i]
+      const pickupTimes = new Array(n).fill(null)
+
+      // Last pickup: pickup = callMin - drive(lastPickup → firstDropoff)
+      pickupTimes[n - 1] = callMin !== null
+        ? ((callMin - lastPickup2FirstDropoff) % 1440 + 1440) % 1440
+        : (sortedByDur[n - 1].pickup_min ?? null)
+
+      // Walk backwards through pickups
+      for (let i = n - 2; i >= 0; i--) {
+        const nextPickupTime = pickupTimes[i + 1]
+        if (nextPickupTime === null) { pickupTimes[i] = null; continue }
+        const drive = (await getOrComputeDuration(
+          sortedByDur[i].pickup_id,
+          sortedByDur[i + 1].pickup_id,
+          production_id,
+          supabase
+        )) ?? 10
+        pickupTimes[i] = ((nextPickupTime - drive) % 1440 + 1440) % 1440
+      }
+
+      // Step 6: forward chain — dropoff arrival times (starting from callMin = first dropoff)
+      // dropoffArrival[j] = arrival time at sortedDropoffs[j].id
+      const dropoffArrival = new Array(sortedDropoffs.length).fill(null)
+      dropoffArrival[0] = callMin  // first dropoff = callMin
+      for (let j = 1; j < sortedDropoffs.length; j++) {
+        if (dropoffArrival[j - 1] === null) continue
+        const drive = (await getOrComputeDuration(
+          sortedDropoffs[j - 1].id,
+          sortedDropoffs[j].id,
+          production_id,
+          supabase
+        )) ?? 10
+        dropoffArrival[j] = (dropoffArrival[j - 1] + drive) % 1440
+      }
+
+      // Step 7: for each leg, find pickup_min and dropoff arrival, compute sequential duration
+      const results = sortedByDur.map((leg, i) => {
+        const pm  = pickupTimes[i]
+        const dpj = sortedDropoffs.findIndex(d => d.id === leg.dropoff_id)
+        const da  = dpj >= 0 ? dropoffArrival[dpj] : null
+
+        // Sequential duration_min = time from this hotel's pickup to its dropoff in the chain
+        const seqDuration = (pm !== null && da !== null)
+          ? ((da - pm + 1440) % 1440)
+          : (leg.duration_min ?? null)
+
+        let startDt = null, endDt = null
+        if (pm !== null) {
+          const [y, mo, dd] = date.split('-').map(Number)
+          const startMs = new Date(y, mo - 1, dd, Math.floor(pm / 60), pm % 60, 0, 0).getTime()
+          startDt = new Date(startMs).toISOString()
+          endDt   = da !== null
+            ? new Date(y, mo - 1, dd, Math.floor(da / 60), da % 60, 0, 0).toISOString()
+            : (seqDuration ? new Date(startMs + seqDuration * 60000).toISOString() : null)
+        }
+
+        return { id: leg.id, pickup_min: pm, start_dt: startDt, end_dt: endDt, duration_min: seqDuration }
+      })
+
+      // Step 8: update DB
+      await Promise.all(
+        results.map(r =>
+          supabase.from('trips').update({
+            pickup_min:   r.pickup_min,
+            start_dt:     r.start_dt,
+            end_dt:       r.end_dt,
+            duration_min: r.duration_min,
+          }).eq('id', r.id)
+        )
+      )
+
+      return NextResponse.json({
+        results: results.map(r => ({ id: r.id, pickup_min: r.pickup_min, start_dt: r.start_dt, end_dt: r.end_dt, duration_min: r.duration_min })),
+        type: 'MIXED',
+      })
+    }
 
     // ── MULTI-PKP: calcola catena sequenziale ───────────────────────────────
     if (isMultiPkp) {

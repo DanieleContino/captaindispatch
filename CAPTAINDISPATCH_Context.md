@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 31 marzo 2026 | BUG-4: sibling guard + MIXED UI implementati — testare in locale**
+**Aggiornato: 31 marzo 2026 | S28 Vehicle Enhancement ✅ COMPLETATO — T1 ✅ · T2 ✅ · T3 ✅ · T4 ✅ · T5 ✅ Deploy**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -8,13 +8,75 @@
 
 ---
 
-## ▶ PROSSIMO — S18 i18n Completamento (TASK 4-10)
+## ▶ PROSSIMO — S18 i18n Completamento
 
-> **Logo productions** — Upload ora avviene via `/api/productions/upload-logo` (service client lato server, bypassa RLS Storage). Bucket `production-logos` pubblico + policy INSERT/UPDATE aggiunte su `storage.objects`. Commit: `abd737b`
+> **S28 completato ✅** — Riprendere S18 i18n da **TASK 4 (bridge/page.js)**.
+> ⚠️ Verificare che `scripts/migrate-vehicles-v2.sql` sia già stato eseguito in Supabase (S28-T1 prerequisito).
 
 ---
 
-### S18 — i18n Completamento (IN SOSPESO — riprendere dopo S25-S27)
+### S28 — Vehicle Enhancement (DA FARE — un task per sessione)
+Un unico deploy finale dopo T5. NON deployare tra un task e l'altro.
+
+| Task | File/Scope | Stato |
+|------|-----------|-------|
+| T1 — DB Migration + Tipi/Classi/Switch | `scripts/migrate-vehicles-v2.sql` + `vehicles/page.js` (tipi, classi, in_transport) | ✅ |
+| T2 — Preferred Dept + Crew Multi-Select | `vehicles/page.js` (sezione preferred con search) | ✅ |
+| T3 — Fleet + Lists Filter | `fleet/page.js` + `lists/page.js` | ✅ |
+| T4 — Trips: Badge + Auto-Suggest Crew | `trips/page.js` | ✅ |
+| T5 — Context Update + Deploy | `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
+
+#### S28-T1 — DB Migration + Tipi/Classi/Switch
+**Migration SQL** (`scripts/migrate-vehicles-v2.sql`):
+```sql
+ALTER TABLE vehicles ALTER COLUMN vehicle_class TYPE TEXT[]
+  USING CASE WHEN vehicle_class IS NULL THEN NULL ELSE ARRAY[vehicle_class] END;
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS preferred_dept TEXT;
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS preferred_crew_ids TEXT[];
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS in_transport BOOLEAN DEFAULT TRUE;
+```
+**vehicles/page.js:**
+- Tipi: VAN 🚐 · CAR 🚗 · BUS 🚌 · **TRUCK 🚛** (Pasino) · **PICKUP 🛻** (nuovi)
+- Classi multi-chip (TEXT[]): CLASSIC · LUX · ECONOMY · PREMIUM · MINIBUS · **NCC** — selezione multipla, toggle chip
+- Switch `in_transport` (sotto Active): ON=verde "✅ In Transport" / OFF=grigio "🚐 SD — escluso da trips/liste/fleet"
+- VehicleRow: badge 🚐 SD se `in_transport=false`
+
+#### S28-T2 — Preferred Dept + Crew Multi-Select
+**vehicles/page.js (sidebar):**
+- `preferred_dept` select: GRIP · CAMERA · ELECTRIC · ART · COSTUME · MAKEUP · SOUND · DIRECTING · PRODUCTION · TRANSPORT · CATERING · SECURITY
+- `preferred_crew_ids TEXT[]`: multi-select con ricerca testuale, SD crew in cima (no_transport_needed=true) evidenziati 🚐, chip selezionati rimovibili
+- Sidebar carica crew da Supabase all'apertura (solo production corrente)
+- VehicleRow: badge dept colorato + nomi crew preferiti compatti
+
+#### S28-T3 — Fleet + Lists Filter
+- `fleet/page.js`: query vehicles aggiunge `.eq('in_transport', true)`
+- `lists/page.js`: query vehicles aggiunge `.eq('in_transport', true)`
+
+#### S28-T4 — Trips: Badge + Auto-Suggest Crew (🟡 parziale)
+**Fatto:**
+- `trips/page.js` query vehicles: `.eq('in_transport', true)` + `preferred_dept`,`preferred_crew_ids` nel select
+- Dropdown veicolo TripSidebar + EditTripSidebar: badge `⭐ DEPT · Xp` via `hasPref`
+- `suggestedCrew` in TripSidebar + `suggestedCrewEdit` in EditTripSidebar: filtra `crewList`/`availableCrew` per `preferred_crew_ids` (crew_id match) o `preferred_dept` (department match)
+
+**Da fare (prossima sessione):**
+- Aggiungere sezione "📌 Suggeriti" UI nel picker pax di entrambe le sidebar
+- TripSidebar: inserire PRIMA dell'`<input type="text" placeholder="Search…">` (near `form.pickup_id && form.dropoff_id ? (`)
+- EditTripSidebar: inserire PRIMA del commento `{/* AVAILABLE + BUSY */}` (`{regularCrew.length > 0 ? ...`)
+- Sezione stile: `background: '#fffbeb'`, `border: '1px solid #fde68a'`, `borderRadius: '8px'`, titolo "📌 Suggeriti per {selVehicle.id}", lista compatta con quick-add `+` button, nascondere se `suggestedCrew.length === 0`
+
+#### UI Laptop Guidelines (applicare ovunque in S28)
+```
+font-size body:      11px
+font-size titoli:    13px max
+badge padding:       2px 6px
+emoji sidebar:       16-18px
+gap tra elementi:    6px
+chip classi:         padding 3px 8px, font 11px
+```
+
+---
+
+### S18 — i18n Completamento (IN SOSPESO — riprendere dopo S28)
 Un unico deploy finale dopo tutti i task. NON deployare tra un task e l'altro.
 
 | Task | File | Stato |
@@ -138,7 +200,11 @@ routes (duration_min, google_duration_min, traffic_updated_at)
 crew (id TEXT PK, full_name, role TEXT, department, hotel_id, travel_status, hotel_status,
       arrival_date, departure_date, email TEXT, phone TEXT, no_transport_needed bool DEFAULT false)
 vehicles (id TEXT PK, capacity, pax_suggested, pax_max, driver_name, sign_code,
-          active, available_from, available_to, vehicle_type, license_plate)
+          active, available_from, available_to, vehicle_type TEXT, license_plate,
+          vehicle_class TEXT[],         -- S28: multi-class (CLASSIC/LUX/ECONOMY/PREMIUM/MINIBUS/NCC)
+          preferred_dept TEXT,          -- S28: dept preferito (GRIP/CAMERA/ecc.)
+          preferred_crew_ids TEXT[],    -- S28: array di crew.id preferiti
+          in_transport BOOLEAN DEFAULT TRUE) -- S28: false = veicolo SD, escluso da trips/liste/fleet
 trips (pickup_id, dropoff_id, call_min, pickup_min, start_dt, end_dt, service_type, status, terminal)
 trip_passengers
 service_types
@@ -156,6 +222,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 - `scripts/fix-productions-rls-duplicate.sql` — ✅ fix policy RLS productions (drop `productions_own`+`productions_insert` → `productions_select/update/delete`)
 - `scripts/fix-functions-search-path.sql` — ✅ fix `SET search_path = public` su 3 funzioni
 - `scripts/fix-trips-rls-delete.sql` — ✅ fix BUG-2: drop `"own_production"` FOR ALL su `trips`, ricrea policy esplicite trips_select/insert/update/delete
+- `scripts/migrate-vehicles-v2.sql` — ✅ **S28**: vehicle_class TEXT[], preferred_dept, preferred_crew_ids TEXT[], in_transport BOOLEAN
 
 **RLS productions (stato attuale dopo fix):**
 - `productions_select` FOR SELECT USING user_production_ids()
@@ -213,6 +280,11 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **MULTI chain fix** | **Fix discrepanza PICKUP sidebar vs lista nei trip MULTI (es. 06:20 vs 06:10). Root cause: sidebar mostrava `call - duration_questo_leg` (naïve), ma DB aveva valore chain-computed da `compute-chain` (hotel più lontano parte prima). Fix: (1) box `PICKUP ⚡` e `START ⚡` in `EditTripSidebar` ora leggono `initial.pickup_min`/`initial.start_dt` dal DB per trip MULTI (sfondo giallo = chain-managed); (2) `handleSubmit` non scrive più `pickup_min`/`start_dt`/`end_dt` per i trip MULTI sul leg principale né sui sibling — `compute-chain` li ricalcola sempre come passaggio finale.** | `c09f617` |
 | **sibDropoff fix** | **Fix internal state in `TripSidebar`: aggiunto `sibDropoff`/`setSibDropoff` useState. `sibDropoffId` e `siblingRow.dropoff_id` ora usano `(sibDropoff \|\| selExistingTrip.dropoff_id)` per DEPARTURE multi-PKP. `onChange` del select inizializza `sibDropoff` al `dropoff_id` del trip selezionato. Fix solo logica interna, nessun cambio UI visibile. BUG-4 ancora aperto (il sibling non viene creato).** | `6ad0bb8` |
 | **MIXED + BUG-4 fix** | **`trips/page.js`: (1) Guard `!assignCtx.hotel` nell'else-sibling branch → errore esplicito. (2) `console.log('[handleAddToExisting]'` con contesto completo per debug. (3) Selector UI `🎯 Destination for [name]` per STANDARD + hotel diverso → permette di creare sibling con dropoff diverso (MIXED). Bottone disabilitato se destinazione non scelta. Badge `🔀 MIXED` quando dropoff è diverso dal trip principale. `compute-chain` riconosce MIXED quando `uniquePickups.size>1 && uniqueDropoffs.size>1`.** | — |
+| **S28-T1** | **Vehicle Enhancement T1: `scripts/migrate-vehicles-v2.sql` (vehicle_class TEXT[], preferred_dept, preferred_crew_ids, in_transport). `vehicles/page.js`: tipi TRUCK 🚛+PICKUP 🛻, classi multi-chip TEXT[]+NCC 🔑, switch in_transport (blu), badge 🚐 SD in VehicleRow. ⚠️ Migration SQL da eseguire in Supabase.** | — |
+| **S28-T2** | **Vehicle Enhancement T2: `vehicles/page.js` — sezione "⭐ Preferenze Assegnazione" in sidebar: `preferred_dept` select (12 dept, DEPT_COLOR) + `preferred_crew_ids` multi-select con ricerca (SD 🚐 in cima, chips rimovibili). VehicleRow: badge dept colorato + nomi crew compatti (max 3+overflow). `load()` usa `Promise.all` vehicles+crew. Sidebar carica crew all'apertura.** | — |
+| **S28-T3** | **Vehicle Enhancement T3: `fleet/page.js` + `lists/page.js` — `.eq('in_transport', true)` sulla query vehicles.** | — |
+| **S28-T4 ✅** | **Vehicle Enhancement T4 (completo): `trips/page.js` — query vehicles `.eq('in_transport', true)` + campi preferred. Badge `⭐` nel dropdown veicolo (TripSidebar + EditTripSidebar). Variabili `suggestedCrew`/`suggestedCrewEdit` calcolate. Sezione UI "📌 Suggeriti per {veicolo}" aggiunta nel picker pax di entrambe le sidebar (sfondo `#fffbeb`, bordo `#fde68a`, quick-add `+`, nascosta se lista vuota).** | — |
+| **S28-T5 ✅** | **Vehicle Enhancement T5: Aggiornamento `CAPTAINDISPATCH_Context.md` (S28 completato, prossimo S18 T4) + `git push origin master` deploy.** | — |
 
 ---
 

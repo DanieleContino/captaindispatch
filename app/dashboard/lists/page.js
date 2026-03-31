@@ -478,14 +478,18 @@ export default function ListsPage() {
     const id = getProductionId()
     if (!id) { setLoading(false); return }
     setLoading(true)
-    const [tR, lR] = await Promise.all([
+    const [tR, lR, vR] = await Promise.all([
       supabase.from('trips').select('*')
         .eq('production_id', id).eq('date', d)
         .neq('status', 'CANCELLED')
         .order('pickup_min', { ascending: true, nullsLast: true }),
       supabase.from('locations').select('id,name,default_pickup_point').eq('production_id', id),
+      supabase.from('vehicles').select('id').eq('production_id', id).eq('in_transport', true),
     ])
-    setTrips(tR.data || [])
+    // Filtra trip: escludi quelli assegnati a veicoli con in_transport=false (SD)
+    const inTransportIds = new Set((vR.data || []).map(v => v.id))
+    const trips = (tR.data || []).filter(t => !t.vehicle_id || inTransportIds.has(t.vehicle_id))
+    setTrips(trips)
     if (lR.data) {
       const m = {}; lR.data.forEach(l => { m[l.id] = { name: l.name, pickup_point: l.default_pickup_point } }); setLocsMap(m)
     }

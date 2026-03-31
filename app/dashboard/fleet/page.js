@@ -503,6 +503,7 @@ export default function FleetPage() {
         .select('id,vehicle_type,driver_name,sign_code,capacity,unit_default')
         .eq('production_id', PRODUCTION_ID)
         .eq('active', true)
+        .eq('in_transport', true)
         .order('vehicle_type').order('id'),
       supabase.from('trips')
         .select('id,trip_id,vehicle_id,pickup_id,dropoff_id,transfer_class,pickup_min,call_min,start_dt,end_dt,status,pax_count,passenger_list,service_type,duration_min,date')

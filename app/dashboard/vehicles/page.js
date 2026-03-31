@@ -11,39 +11,67 @@ import { getProductionId } from '../../../lib/production'
 
 const SIDEBAR_W = 400
 
-const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌' }
+const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌', TRUCK: '🚛', PICKUP: '🛻' }
 const TYPE_COLOR = {
-  VAN: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-  CAR: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
-  BUS: { bg: '#fef3c7', color: '#b45309', border: '#fde68a' },
+  VAN:    { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+  CAR:    { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+  BUS:    { bg: '#fef3c7', color: '#b45309', border: '#fde68a' },
+  TRUCK:  { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+  PICKUP: { bg: '#fdf4ff', color: '#7e22ce', border: '#e9d5ff' },
 }
-const CLASS_OPTIONS = ['CLASSIC', 'LUX', 'ECONOMY', 'PREMIUM', 'MINIBUS']
+const CLASS_OPTIONS = ['CLASSIC', 'LUX', 'ECONOMY', 'PREMIUM', 'MINIBUS', 'NCC']
 const CLASS_COLOR = {
   LUX:     { bg: '#fdf4ff', color: '#7e22ce', border: '#e9d5ff' },
   PREMIUM: { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
   CLASSIC: { bg: '#f8fafc', color: '#475569', border: '#e2e8f0' },
   ECONOMY: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
   MINIBUS: { bg: '#fefce8', color: '#a16207', border: '#fde68a' },
+  NCC:     { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' },
+}
+
+const DEPT_OPTIONS = ['GRIP','CAMERA','ELECTRIC','ART','COSTUME','MAKEUP','SOUND','DIRECTING','PRODUCTION','TRANSPORT','CATERING','SECURITY']
+const DEPT_COLOR = {
+  GRIP:       { bg: '#fef3c7', color: '#b45309', border: '#fde68a' },
+  CAMERA:     { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+  ELECTRIC:   { bg: '#fefce8', color: '#a16207', border: '#fef08a' },
+  ART:        { bg: '#fdf4ff', color: '#7e22ce', border: '#e9d5ff' },
+  COSTUME:    { bg: '#fce7f3', color: '#be185d', border: '#fbcfe8' },
+  MAKEUP:     { bg: '#fff1f2', color: '#e11d48', border: '#fecdd3' },
+  SOUND:      { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
+  DIRECTING:  { bg: '#0f2340', color: 'white',   border: '#0f2340' },
+  PRODUCTION: { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' },
+  TRANSPORT:  { bg: '#f8fafc', color: '#475569', border: '#e2e8f0' },
+  CATERING:   { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
+  SECURITY:   { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────
 function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
-  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: '', license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', sign_code: '', unit_default: '', active: true, available_from: '', available_to: '' }
-  const [form, setForm]     = useState(EMPTY)
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDel]  = useState(false)
-  const [confirmDel, setCd] = useState(false)
-  const [error, setError]   = useState(null)
+  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [] }
+  const [form, setForm]           = useState(EMPTY)
+  const [saving, setSaving]       = useState(false)
+  const [deleting, setDel]        = useState(false)
+  const [confirmDel, setCd]       = useState(false)
+  const [error, setError]         = useState(null)
+  const [crewList, setCrewList]         = useState([])
+  const [crewLoading, setCrewLoading]   = useState(false)
+  const [crewSearch, setCrewSearch]     = useState('')
 
   useEffect(() => {
     if (!open) return
-    setError(null); setCd(false)
+    setError(null); setCd(false); setCrewSearch('')
     if (mode === 'edit' && initial) {
-      setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: initial.vehicle_class || '', license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, available_from: initial.available_from || '', available_to: initial.available_to || '' })
+      setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []), license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, in_transport: initial.in_transport !== false, available_from: initial.available_from || '', available_to: initial.available_to || '', preferred_dept: initial.preferred_dept || '', preferred_crew_ids: Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [] })
     } else {
       setForm({ ...EMPTY })
+    }
+    // Carica crew produzione corrente per multi-select
+    if (PRODUCTION_ID) {
+      setCrewLoading(true)
+      supabase.from('crew').select('id, full_name, department, no_transport_needed').eq('production_id', PRODUCTION_ID).eq('active', true).order('full_name')
+        .then(({ data }) => { setCrewList(data || []); setCrewLoading(false) })
     }
   }, [open, mode, initial])
 
@@ -54,20 +82,23 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
     if (!form.id.trim()) { setError('Vehicle ID obbligatorio'); return }
     setSaving(true)
     const row = {
-      production_id:  PRODUCTION_ID,
-      id:             form.id.trim().toUpperCase(),
-      vehicle_type:   form.vehicle_type || null,
-      vehicle_class:  form.vehicle_class || null,
-      license_plate:  form.license_plate.trim().toUpperCase() || null,
-      capacity:       form.capacity      !== '' ? parseInt(form.capacity)      : null,
-      pax_suggested:  form.pax_suggested !== '' ? parseInt(form.pax_suggested) : null,
-      pax_max:        form.pax_max       !== '' ? parseInt(form.pax_max)       : null,
-      driver_name:    form.driver_name.trim() || null,
-      sign_code:      form.sign_code.trim() || null,
-      unit_default:   form.unit_default.trim() || null,
-      active:         form.active,
-      available_from: form.available_from || null,
-      available_to:   form.available_to   || null,
+      production_id:      PRODUCTION_ID,
+      id:                 form.id.trim().toUpperCase(),
+      vehicle_type:       form.vehicle_type || null,
+      vehicle_class:      form.vehicle_class.length > 0 ? form.vehicle_class : null,
+      license_plate:      form.license_plate.trim().toUpperCase() || null,
+      capacity:           form.capacity      !== '' ? parseInt(form.capacity)      : null,
+      pax_suggested:      form.pax_suggested !== '' ? parseInt(form.pax_suggested) : null,
+      pax_max:            form.pax_max       !== '' ? parseInt(form.pax_max)       : null,
+      driver_name:        form.driver_name.trim() || null,
+      sign_code:          form.sign_code.trim() || null,
+      unit_default:       form.unit_default.trim() || null,
+      active:             form.active,
+      in_transport:       form.in_transport !== false,
+      available_from:     form.available_from || null,
+      available_to:       form.available_to   || null,
+      preferred_dept:     form.preferred_dept || null,
+      preferred_crew_ids: form.preferred_crew_ids.length > 0 ? form.preferred_crew_ids : null,
     }
     let err
     if (mode === 'new') {
@@ -123,13 +154,13 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
             {/* Tipo veicolo */}
             <div style={fld}>
               <label style={lbl}>{t.vehicleTypeLabel}</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {['VAN', 'CAR', 'BUS'].map(type => {
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP'].map(type => {
                   const c = TYPE_COLOR[type]; const active = form.vehicle_type === type
                   return (
                     <button key={type} type="button" onClick={() => set('vehicle_type', type)}
-                      style={{ flex: 1, padding: '8px 4px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                      <span style={{ fontSize: '20px' }}>{TYPE_ICON[type]}</span>
+                      style={{ flex: 1, minWidth: '60px', padding: '6px 2px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                      <span style={{ fontSize: '18px' }}>{TYPE_ICON[type]}</span>
                       <span>{type}</span>
                     </button>
                   )
@@ -137,20 +168,23 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
               </div>
             </div>
 
-            {/* Vehicle Class */}
+            {/* Vehicle Class — multi-chip, selezione multipla */}
             <div style={fld}>
               <label style={lbl}>{t.vehicleClassLabel}</label>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => set('vehicle_class', '')}
-                  style={{ padding: '4px 10px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${!form.vehicle_class ? '#0f2340' : '#e2e8f0'}`, background: !form.vehicle_class ? '#0f2340' : 'white', color: !form.vehicle_class ? 'white' : '#94a3b8' }}>
+                <button type="button" onClick={() => set('vehicle_class', [])}
+                  style={{ padding: '3px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${form.vehicle_class.length === 0 ? '#0f2340' : '#e2e8f0'}`, background: form.vehicle_class.length === 0 ? '#0f2340' : 'white', color: form.vehicle_class.length === 0 ? 'white' : '#94a3b8' }}>
                   {t.noClassLabel}
                 </button>
                 {CLASS_OPTIONS.map(c => {
-                  const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC; const active = form.vehicle_class === c
+                  const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC
+                  const active = form.vehicle_class.includes(c)
+                  const label = c === 'LUX' ? '💎 LUX' : c === 'PREMIUM' ? '⭐ PREMIUM' : c === 'ECONOMY' ? '💶 ECONOMY' : c === 'MINIBUS' ? '🚌 MINIBUS' : c === 'NCC' ? '🔑 NCC' : c
                   return (
-                    <button key={c} type="button" onClick={() => set('vehicle_class', c)}
-                      style={{ padding: '4px 10px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? cc.border : '#e2e8f0'}`, background: active ? cc.bg : 'white', color: active ? cc.color : '#94a3b8' }}>
-                      {c === 'LUX' ? '💎 LUX' : c === 'PREMIUM' ? '⭐ PREMIUM' : c === 'ECONOMY' ? '💶 ECONOMY' : c === 'MINIBUS' ? '🚌 MINIBUS' : c}
+                    <button key={c} type="button"
+                      onClick={() => setForm(f => ({ ...f, vehicle_class: f.vehicle_class.includes(c) ? f.vehicle_class.filter(x => x !== c) : [...f.vehicle_class, c] }))}
+                      style={{ padding: '3px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? cc.border : '#e2e8f0'}`, background: active ? cc.bg : 'white', color: active ? cc.color : '#94a3b8' }}>
+                      {label}
                     </button>
                   )
                 })}
@@ -237,6 +271,88 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved }) {
               </div>
             </div>
 
+            {/* In Transport toggle */}
+            <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.in_transport ? '#bfdbfe' : '#e2e8f0'}`, background: form.in_transport ? '#eff6ff' : '#f8fafc', cursor: 'pointer' }}
+              onClick={() => set('in_transport', !form.in_transport)}>
+              <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.in_transport ? '#2563eb' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: '2px', left: form.in_transport ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: form.in_transport ? '#1d4ed8' : '#64748b' }}>
+                  {form.in_transport ? '✅ In Transport' : '🚐 SD — escluso da trips/liste/fleet'}
+                </div>
+              </div>
+            </div>
+
+            {/* Preferenze Assegnazione */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '10px' }}>⭐ Preferenze Assegnazione</div>
+
+              {/* Preferred Dept */}
+              <div style={{ marginBottom: '10px' }}>
+                <label style={lbl}>Dept Preferito</label>
+                <select value={form.preferred_dept || ''} onChange={e => set('preferred_dept', e.target.value || '')}
+                  style={{ ...inp, background: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).bg || 'white') : 'white', color: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).color || '#0f172a') : '#94a3b8', fontWeight: form.preferred_dept ? '700' : '400' }}>
+                  <option value="">— Nessun dept preferito —</option>
+                  {DEPT_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+
+              {/* Preferred Crew Multi-Select */}
+              <div>
+                <label style={lbl}>Crew Preferiti</label>
+                {/* Chips selezionati */}
+                {form.preferred_crew_ids.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                    {form.preferred_crew_ids.map(cid => {
+                      const cm = crewList.find(c => c.id === cid)
+                      if (!cm) return null
+                      return (
+                        <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                          {cm.no_transport_needed && <span style={{ fontSize: '10px' }}>🚐</span>}
+                          {cm.full_name}
+                          <button type="button" onClick={() => setForm(f => ({ ...f, preferred_crew_ids: f.preferred_crew_ids.filter(x => x !== cid) }))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '12px', padding: '0', lineHeight: 1, marginLeft: '2px' }}>✕</button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                {/* Ricerca */}
+                <input placeholder="🔍 Cerca crew…" value={crewSearch} onChange={e => setCrewSearch(e.target.value)}
+                  style={{ ...inp, marginBottom: '4px' }} />
+                {/* Lista crew */}
+                {crewLoading ? (
+                  <div style={{ fontSize: '11px', color: '#94a3b8', padding: '6px' }}>Caricamento crew…</div>
+                ) : (
+                  <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
+                    {crewList
+                      .filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase()))
+                      .sort((a, b) => (b.no_transport_needed ? 1 : 0) - (a.no_transport_needed ? 1 : 0))
+                      .map(cm => {
+                        const sel = form.preferred_crew_ids.includes(cm.id)
+                        return (
+                          <div key={cm.id} onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.id) : [...f.preferred_crew_ids, cm.id] }))}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', background: sel ? '#eff6ff' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '13px', flexShrink: 0 }}>{sel ? '✅' : '⬜'}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: '11px', fontWeight: sel ? '700' : '500', color: sel ? '#1d4ed8' : '#0f172a' }}>
+                                {cm.no_transport_needed && <span style={{ fontSize: '10px', color: '#64748b', marginRight: '3px' }}>🚐</span>}
+                                {cm.full_name}
+                              </span>
+                              {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '5px' }}>{cm.department}</span>}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    {crewList.filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase())).length === 0 && (
+                      <div style={{ fontSize: '11px', color: '#94a3b8', padding: '8px' }}>Nessun risultato</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Delete */}
             {mode === 'edit' && (
               <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
@@ -280,7 +396,7 @@ function fmtAvailDate(iso) {
 }
 
 // ─── Row veicolo ──────────────────────────────────────────────
-function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect }) {
+function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = [] }) {
   const t = useT()
   const tc = TYPE_COLOR[v.vehicle_type] || TYPE_COLOR.VAN
   const icon = TYPE_ICON[v.vehicle_type] || '🚐'
@@ -316,7 +432,9 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>{v.vehicle_type}</span>
-          {v.vehicle_class && (() => { const cc = CLASS_COLOR[v.vehicle_class] || CLASS_COLOR.CLASSIC; return <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: cc.bg, color: cc.color, border: `1px solid ${cc.border}` }}>{v.vehicle_class === 'LUX' ? '💎' : v.vehicle_class === 'PREMIUM' ? '⭐' : ''} {v.vehicle_class}</span> })()}
+          {Array.isArray(v.vehicle_class) && v.vehicle_class.length > 0
+            ? v.vehicle_class.map(c => { const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC; return <span key={c} style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: cc.bg, color: cc.color, border: `1px solid ${cc.border}` }}>{c === 'LUX' ? '💎 LUX' : c === 'PREMIUM' ? '⭐ PREMIUM' : c === 'NCC' ? '🔑 NCC' : c === 'MINIBUS' ? '🚌 MINIBUS' : c}</span> })
+            : null}
           {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 8px', borderRadius: '5px', border: '1px solid #d4d4d4', letterSpacing: '0.08em' }}>🚘 {v.license_plate}</span>}
           {v.capacity && <span style={{ fontSize: '12px', color: '#64748b' }}>× {v.capacity} pax</span>}
           {(v.pax_suggested || v.pax_max) && (
@@ -330,11 +448,23 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect }) {
             </span>
           )}
           {!v.active && <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #e2e8f0' }}>INATTIVO</span>}
+          {v.in_transport === false && <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #cbd5e1' }}>🚐 SD</span>}
+          {v.preferred_dept && (
+            <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', background: (DEPT_COLOR[v.preferred_dept] || {}).bg || '#f8fafc', color: (DEPT_COLOR[v.preferred_dept] || {}).color || '#475569', border: `1px solid ${(DEPT_COLOR[v.preferred_dept] || {}).border || '#e2e8f0'}` }}>
+              ⭐ {v.preferred_dept}
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#64748b', flexWrap: 'wrap' }}>
           {v.driver_name && <span>👤 {v.driver_name}</span>}
           {v.sign_code   && <span>🏷 {v.sign_code}</span>}
           {v.unit_default && <span>📋 {v.unit_default}</span>}
+          {Array.isArray(v.preferred_crew_ids) && v.preferred_crew_ids.length > 0 && crewList.length > 0 && (
+            <span style={{ color: '#1d4ed8' }}>
+              👥 {v.preferred_crew_ids.slice(0, 3).map(id => crewList.find(c => c.id === id)?.full_name).filter(Boolean).join(', ')}
+              {v.preferred_crew_ids.length > 3 ? ` +${v.preferred_crew_ids.length - 3}` : ''}
+            </span>
+          )}
         </div>
       </div>
       {/* Azioni */}
@@ -377,6 +507,7 @@ export default function VehiclesPage() {
   const [selectedIds, setSelectedIds] = useState([])   // bulk selection
   const [bulkDeleting, setBulkDel] = useState(false)
   const [bulkConfirm, setBulkConfirm] = useState(false)
+  const [crewList, setCrewList] = useState([])
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -389,8 +520,12 @@ export default function VehiclesPage() {
   const load = useCallback(async () => {
     if (!PRODUCTION_ID) return
     setLoad(true)
-    const { data } = await supabase.from('vehicles').select('*').eq('production_id', PRODUCTION_ID).order('vehicle_type').order('id')
-    setVhcs(data || [])
+    const [{ data: vData }, { data: cData }] = await Promise.all([
+      supabase.from('vehicles').select('*').eq('production_id', PRODUCTION_ID).order('vehicle_type').order('id'),
+      supabase.from('crew').select('id, full_name, department, no_transport_needed').eq('production_id', PRODUCTION_ID).eq('active', true).order('full_name'),
+    ])
+    setVhcs(vData || [])
+    setCrewList(cData || [])
     setLoad(false)
   }, [])
 
@@ -443,9 +578,11 @@ export default function VehiclesPage() {
 
   const counts = {
     active: vhcs.filter(v => v.active).length,
-    van: vhcs.filter(v => v.vehicle_type === 'VAN').length,
-    car: vhcs.filter(v => v.vehicle_type === 'CAR').length,
-    bus: vhcs.filter(v => v.vehicle_type === 'BUS').length,
+    van:    vhcs.filter(v => v.vehicle_type === 'VAN').length,
+    car:    vhcs.filter(v => v.vehicle_type === 'CAR').length,
+    bus:    vhcs.filter(v => v.vehicle_type === 'BUS').length,
+    truck:  vhcs.filter(v => v.vehicle_type === 'TRUCK').length,
+    pickup: vhcs.filter(v => v.vehicle_type === 'PICKUP').length,
   }
 
   if (!user) return <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
@@ -464,7 +601,7 @@ export default function VehiclesPage() {
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>{vhcs.length} totale · {counts.active} attivi</span>
           <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
-            {[['VAN', '🚐'], ['CAR', '🚗'], ['BUS', '🚌']].map(([tp, ic]) => counts[tp.toLowerCase()] > 0 && (
+            {[['VAN', '🚐'], ['CAR', '🚗'], ['BUS', '🚌'], ['TRUCK', '🚛'], ['PICKUP', '🛻']].map(([tp, ic]) => counts[tp.toLowerCase()] > 0 && (
               <span key={tp} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', ...(TYPE_COLOR[tp]), border: `1px solid ${TYPE_COLOR[tp].border}` }}>
                 {ic} {counts[tp.toLowerCase()]} {tp}
               </span>
@@ -484,7 +621,7 @@ export default function VehiclesPage() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '3px' }}>
-            {['ALL', 'VAN', 'CAR', 'BUS'].map(s => {
+            {['ALL', 'VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP'].map(s => {
               const active = filterType === s; const c = s !== 'ALL' ? TYPE_COLOR[s] : null
               return (
                 <button key={s} onClick={() => setFT(s)}
@@ -574,6 +711,7 @@ export default function VehiclesPage() {
                 onDelete={handleDeleteSingle}
                 selected={selectedIds.includes(v.id)}
                 onToggleSelect={toggleSelect}
+                crewList={crewList}
               />
             ))}
           </div>
