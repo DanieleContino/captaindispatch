@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 1 aprile 2026 | Import fix: modal done, field mapping accommodation, filtro colonne vuote, debug logs — avviare S18-T4**
+**Aggiornato: 1 aprile 2026 | Accommodation fix: null-only rimosso, insertRows via processCrew, hotel_name fallback, backdrop lock confirming, delay 800ms — avviare S18-T4**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)

@@ -218,10 +218,10 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
       maxNum++
 
       // Risolvi hotel_id: da match esistente oppure da nuova location appena inserita
+      // Fallback su r.hotel_name (accommodation rows) o r.hotel (crew rows)
       let hotel_id = r.hotel_id || null
-      if (!hotel_id && r.hotel) {
-        hotel_id = newLocationMap[r.hotel.trim().toLowerCase()] || null
-      }
+      if (!hotel_id && r.hotel)       hotel_id = newLocationMap[r.hotel.trim().toLowerCase()] || null
+      if (!hotel_id && r.hotel_name)  hotel_id = newLocationMap[r.hotel_name.trim().toLowerCase()] || null
 
       // Combina first_name + last_name → full_name per il DB
       const full_name = [r.first_name, r.last_name].filter(Boolean).join(' ') || null
@@ -312,8 +312,9 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
 
 /**
  * Aggiorna crew esistenti con hotel_id, arrival_date, departure_date.
- * Regola null-only: sovrascrive SOLO i campi attualmente null nel DB.
- * NON inserisce mai nuovi crew (action='insert' viene trattato come skip).
+ * NESSUNA regola null-only: sovrascrive sempre se il nuovo valore è non-null.
+ * Questo permette di re-importare una rooming list aggiornata senza doverla
+ * prima azzerare nel DB. NON inserisce nuovi crew (gestiti da processCrew).
  */
 async function processAccommodation(supabase, productionId, updateRows, newLocationMap, errors) {
   let updated = 0
@@ -322,28 +323,20 @@ async function processAccommodation(supabase, productionId, updateRows, newLocat
   for (const r of updateRows) {
     if (!r.existingId) { skipped++; continue }
 
-    // Fetch existing per null-check
-    const { data: existing } = await supabase
-      .from('crew')
-      .select('hotel_id, arrival_date, departure_date')
-      .eq('id', r.existingId)
-      .single()
-
-    if (!existing) { skipped++; continue }
-
     // Risolvi hotel_id: da match parse oppure da nuova location appena inserita
     let hotel_id = r.hotel_id || null
     if (!hotel_id && r.hotel_name) {
       hotel_id = newLocationMap[r.hotel_name.trim().toLowerCase()] || null
     }
 
+    // Overwrite sempre se il nuovo valore è non-null (no null-only per accommodation)
     const updateFields = {}
-    if (!existing.hotel_id       && hotel_id)          updateFields.hotel_id       = hotel_id
-    if (!existing.arrival_date   && r.arrival_date)    updateFields.arrival_date   = r.arrival_date
-    if (!existing.departure_date && r.departure_date)  updateFields.departure_date = r.departure_date
+    if (hotel_id)          updateFields.hotel_id       = hotel_id
+    if (r.arrival_date)    updateFields.arrival_date   = r.arrival_date
+    if (r.departure_date)  updateFields.departure_date = r.departure_date
 
     if (Object.keys(updateFields).length === 0) {
-      console.log(`[confirm/accommodation] SKIP ${r.existingId}: fields already in DB — hotel_id=${existing.hotel_id} arrival=${existing.arrival_date} departure=${existing.departure_date}`)
+      console.log(`[confirm/accommodation] SKIP ${r.existingId}: no new values to set (hotel_name=${r.hotel_name}, arrival=${r.arrival_date}, departure=${r.departure_date})`)
       skipped++; continue
     }
 
@@ -438,10 +431,15 @@ export async function POST(req) {
 
     // ── ACCOMMODATION ────────────────────────────────────────
     else if (effectiveMode === 'accommodation') {
-      // Accommodation: solo update crew esistenti (null-only), NON inserisce nuovi crew
-      // insertRows per accommodation saranno sempre vuoti (action='skip' per crew non trovati)
+      // 1. Se l'utente ha approvato nuovi crew dalla rooming list ("+Add all"), inseriscili
+      //    tramite processCrew (che gestisce hotel_name + arrival/departure)
+      if (insertRows.length > 0) {
+        const insertRes = await processCrew(supabase, productionId, insertRows, [], newLocationMap, errors)
+        inserted += insertRes.inserted
+        skipped  += insertRes.skipped
+      }
+      // 2. Aggiorna crew esistenti con hotel/date (no null-only: overwrite sempre)
       const res = await processAccommodation(supabase, productionId, updateRows, newLocationMap, errors)
-      inserted += res.inserted
       updated  += res.updated
       skipped  += res.skipped
     }
