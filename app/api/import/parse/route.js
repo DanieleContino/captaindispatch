@@ -634,9 +634,18 @@ async function processCrewRows(rawRows, supabase, productionId) {
     let newFields = []
     const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ')
     if (fullName) {
-      const match = (existingCrew || []).find(c =>
-        c.full_name?.toLowerCase() === fullName.toLowerCase()
+      const fullNameNorm = fullName.trim().toLowerCase()
+      // Primary: first_name + ' ' + last_name vs full_name (trim + lowercase)
+      let match = (existingCrew || []).find(c =>
+        (c.full_name || '').trim().toLowerCase() === fullNameNorm
       )
+      // Fallback: last_name contains (es. "Mario Rossi" in DB → "Rossi" dal file)
+      if (!match && row.last_name && row.last_name.trim().length > 1) {
+        const lastNorm = row.last_name.trim().toLowerCase()
+        match = (existingCrew || []).find(c =>
+          (c.full_name || '').trim().toLowerCase().includes(lastNorm)
+        )
+      }
       if (match) {
         action = 'update'
         existingId = match.id
@@ -729,9 +738,18 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
 
     const fullName = [first_name, last_name].filter(Boolean).join(' ')
     if (fullName) {
-      const match = (existingCrew || []).find(c =>
-        c.full_name?.toLowerCase() === fullName.toLowerCase()
+      const fullNameNorm = fullName.trim().toLowerCase()
+      // Primary: first_name + ' ' + last_name vs full_name (trim + lowercase)
+      let match = (existingCrew || []).find(c =>
+        (c.full_name || '').trim().toLowerCase() === fullNameNorm
       )
+      // Fallback: last_name contains (es. "Mario Rossi" in DB → "Rossi" dal file)
+      if (!match && last_name && last_name.trim().length > 1) {
+        const lastNorm = last_name.trim().toLowerCase()
+        match = (existingCrew || []).find(c =>
+          (c.full_name || '').trim().toLowerCase().includes(lastNorm)
+        )
+      }
       if (match) {
         action = 'update'
         existingId = match.id
