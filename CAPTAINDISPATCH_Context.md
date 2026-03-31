@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 31 marzo 2026 | S31 completata ✅ — avviare S18-T4**
+**Aggiornato: 31 marzo 2026 | S31 deployata ✅ (commit e287e7f) — avviare S18-T4**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -480,6 +480,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S31-T3 ✅** | **Import Upgrade T3 — Multi-sheet flow: `lib/ImportModal.js` — nuova fase `sheet-select` tra `idle` e `parsing` per modalità `accommodation`/`hal` con file `.xlsx/.xls`. `parseFile()` chiama prima `POST /api/import/sheets` → ottiene `sheetNames`, pre-seleziona tutti tranne "COST REPORT" e nomi con "OLD" (badge `auto-excluded`). UI checklist fogli con Select all/Deselect all + contatore. Footer: Back + 🔍 Analyze N sheets. Funzione `analyzeSheets()`: loop sequenziale, chiama `POST /api/import/parse` con `selectedSheet` per ogni foglio, mostra "Analyzing sheet X of N: NomeFoglio…", aggrega righe + deduplica hotel, assegna `_idx` sequenziali → fase `categorizing`. Crew/fleet/custom: comportamento invariato.** | — |
 | **S31-T4 ✅** | **Import Upgrade T4 — HotelPlacesModal: `lib/ImportModal.js` — nuovo componente `HotelPlacesModal` (props: `hotelName, productionId, onSave, onSkip`). Al mount chiama `GET /api/places/autocomplete?q=NAME` → suggestions list. Click suggestion → `GET /api/places/details?place_id=XXX` → pre-riempie `address, lat, lng, name`. Form: name editabile, address display-only, lat/lng auto, type selector HOTEL/HUB. "Save to Locations" → `POST /api/import/save-location` → `onSave(locationId, locationName)`. Stato `hotelModalIdx` (int|null) + `handleHotelSave(idx, locationId, locationName)` in `ImportModal`. Upgrade sezione 3 categorizing: pulsante "Add" apre `HotelPlacesModal` (zIndex 200) + "Skip/↩ Restore" toggle; badge ✅ locationName se già salvata. `handleHotelSave`: aggiorna `newHotels[idx]` + aggiorna righe accommodation con `hotel_id`+`hotelNotFound:false`. `reset()` include `setHotelModalIdx(null)`. Build: compilato OK 0 errori.** | — |
 | **S31-T5 ✅** | **Import Upgrade T5 — Context + Deploy: `CAPTAINDISPATCH_Context.md` aggiornato (S31 completata, prossimo S18-T4) + `git push origin master` deploy.** | — |
+| **S31 deploy fix ✅** | **Fix deploy S31: i file S31-T1→T4 (`confirm/route.js`, `parse/route.js`, `ImportModal.js`, `save-location/route.js` nuovo, `sheets/route.js` nuovo) erano rimasti uncommitted. Commit `e287e7f` (5 file, +908 righe) — S31 ora completamente online su Vercel.** | `e287e7f` |
 
 ---
 
