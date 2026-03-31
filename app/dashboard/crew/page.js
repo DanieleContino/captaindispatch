@@ -90,6 +90,28 @@ function NTNToggle({ crewId, current, onChange }) {
   )
 }
 
+// ─── Remote Toggle inline ────────────────────────────────────
+function RemoteToggle({ crewId, current, onChange }) {
+  const PRODUCTION_ID = getProductionId()
+  const [saving, setSaving] = useState(false)
+  const isRemote = current === false  // on_location=false → remoto
+  async function toggle() {
+    if (saving) return
+    setSaving(true)
+    const next = !isRemote
+    const { error } = await supabase.from('crew').update({ on_location: next }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    setSaving(false)
+    if (!error) onChange(crewId, next)
+  }
+  return (
+    <button onClick={e => { e.stopPropagation(); toggle() }} disabled={saving}
+      title={isRemote ? 'Segna come In Set' : 'Segna come Remoto / Non in Set'}
+      style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: saving ? 'default' : 'pointer', border: `1px solid ${isRemote ? '#94a3b8' : '#e2e8f0'}`, background: isRemote ? '#f1f5f9' : 'white', color: isRemote ? '#475569' : '#cbd5e1', opacity: saving ? 0.6 : 1, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+      🏠
+    </button>
+  )
+}
+
 // ─── Contact Popover ────────────────────────────────────────
 function ContactPopover({ crewId, email, phone, onSaved }) {
   const t = useT()
@@ -220,11 +242,12 @@ function ContactPopover({ crewId, email, phone, onSaved }) {
 }
 
 // ─── Crew card compatta ──────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete }) {
   const t = useT()
   const tc = TC[member.travel_status] || TC.PRESENT
   const hc = HC[member.hotel_status]  || HC.PENDING
   const hotel = locations[member.hotel_id] || member.hotel_id || '–'
+  const isRemote = member.on_location === false
   const depTomorrow = isTomorrow(member.departure_date)
   const depToday    = isToday(member.departure_date)
   const dim = member.hotel_status !== 'CONFIRMED'
@@ -240,7 +263,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit, onCo
   }
 
   return (
-    <div style={{ background: selected ? '#eff6ff' : 'white', border: `1px solid ${selected ? '#bfdbfe' : '#e2e8f0'}`, borderLeft: `4px solid ${selected ? '#3b82f6' : tc.border}`, borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: '20px 1fr auto auto auto auto auto', gap: '12px', alignItems: 'center' }}>
+    <div style={{ background: selected ? '#eff6ff' : (isRemote ? '#f8fafc' : 'white'), border: `1px solid ${selected ? '#bfdbfe' : (isRemote ? '#cbd5e1' : '#e2e8f0')}`, borderLeft: `4px solid ${selected ? '#3b82f6' : (isRemote ? '#94a3b8' : tc.border)}`, borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: '20px 1fr auto auto auto auto auto auto', gap: '12px', alignItems: 'center' }}>
 
       {/* Checkbox */}
       <input
@@ -254,7 +277,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit, onCo
       {/* Info */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: '700', color: dim ? '#94a3b8' : '#0f172a', fontSize: '14px' }}>{member.full_name}</span>
+          <span style={{ fontWeight: '700', color: (dim || isRemote) ? '#94a3b8' : '#0f172a', fontSize: '14px' }}>{member.full_name}</span>
           {member.role && (
             <span style={{ fontSize: '11px', color: '#374151', background: '#f1f5f9', padding: '1px 7px', borderRadius: '5px', fontWeight: '600' }}>{member.role}</span>
           )}
@@ -268,6 +291,11 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit, onCo
           {member.no_transport_needed && (
             <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
               🚐 SD
+            </span>
+          )}
+          {isRemote && (
+            <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #94a3b8' }}>
+              🏠 Remote
             </span>
           )}
         </div>
@@ -289,6 +317,9 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit, onCo
 
       {/* NTN toggle */}
       <NTNToggle crewId={member.id} current={member.no_transport_needed} onChange={onNTNChange} />
+
+      {/* Remote toggle */}
+      <RemoteToggle crewId={member.id} current={member.on_location} onChange={onRemoteChange} />
 
       {/* Contact button */}
       <ContactPopover crewId={member.id} email={member.email} phone={member.phone} onSaved={onContactSaved} />
@@ -321,7 +352,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onEdit, onCo
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
 function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
   const t = useT()
-  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, email: '', phone: '' }
+  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '' }
   const PRODUCTION_ID = getProductionId()
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -346,6 +377,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
         departure_date:       initial.departure_date || '',
         notes:                initial.notes || '',
         no_transport_needed:  initial.no_transport_needed || false,
+        on_location:          initial.on_location !== false,
         email:                initial.email || '',
         phone:                initial.phone || '',
       })
@@ -389,6 +421,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
       departure_date:        form.departure_date || null,
       notes:                 form.notes.trim() || null,
       no_transport_needed:   form.no_transport_needed,
+      on_location:           form.on_location,
       email:                 form.email.trim() || null,
       phone:                 form.phone.trim() || null,
     }
@@ -478,7 +511,7 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
             </div>
 
             {/* NTN / Self Drive toggle */}
-            <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ marginBottom: '8px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
               <div>
                 <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151' }}>🚐 {t.selfDrive} / {t.ntnShort}</div>
                 <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>{t.ntnExcludedHint}</div>
@@ -486,6 +519,18 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
               <button type="button" onClick={() => set('no_transport_needed', !form.no_transport_needed)}
                 style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.no_transport_needed ? '#6b7280' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
                 <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.no_transport_needed ? '20px' : '2px', display: 'block' }} />
+              </button>
+            </div>
+
+            {/* Remote / Non in Set toggle */}
+            <div style={{ marginBottom: '12px', padding: '10px 12px', background: form.on_location === false ? '#f1f5f9' : '#f8fafc', border: `1px solid ${form.on_location === false ? '#94a3b8' : '#e2e8f0'}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: form.on_location === false ? '#475569' : '#374151' }}>🏠 Non in Set — Remoto</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Lavora da casa o albergo. Pre-escluso da Rocket.</div>
+              </div>
+              <button type="button" onClick={() => set('on_location', !form.on_location)}
+                style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.on_location === false ? '#94a3b8' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
+                <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.on_location === false ? '20px' : '2px', display: 'block' }} />
               </button>
             </div>
 
@@ -685,8 +730,17 @@ export default function CrewPage() {
 
   useEffect(() => { if (user) loadCrew() }, [user, loadCrew])
 
+  // URL param ?remote=1 → auto-imposta filtro REMOTE
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('remote') === '1') setFT('REMOTE')
+    }
+  }, [])
+
   function handleStatusChange(id, s)            { setCrew(p => p.map(c => c.id === id ? { ...c, travel_status: s } : c)) }
   function handleNTNChange(id, val)             { setCrew(p => p.map(c => c.id === id ? { ...c, no_transport_needed: val } : c)) }
+  function handleRemoteChange(id, val)          { setCrew(p => p.map(c => c.id === id ? { ...c, on_location: val } : c)) }
   function handleContactSaved(id, { email, phone }) { setCrew(p => p.map(c => c.id === id ? { ...c, email, phone } : c)) }
 
   function handleSaved() { setSO(false); loadCrew() }
@@ -726,6 +780,7 @@ export default function CrewPage() {
   // Filtri
   const filtered = crew.filter(c => {
     if (filterTravel === 'NTN') { if (!c.no_transport_needed) return false }
+    else if (filterTravel === 'REMOTE') { if (c.on_location !== false) return false }
     else if (filterTravel !== 'ALL' && c.travel_status !== filterTravel) return false
     if (filterHotel  !== 'ALL' && c.hotel_status  !== filterHotel)  return false
     if (filterDept   !== 'ALL' && (normalizeDept(c.department) || 'NO DEPT') !== filterDept) return false
@@ -744,12 +799,15 @@ export default function CrewPage() {
     present:  crew.filter(c => c.travel_status === 'PRESENT').length,
     out:      crew.filter(c => c.travel_status === 'OUT').length,
     ntn:      crew.filter(c => c.no_transport_needed).length,
+    remote:   crew.filter(c => c.on_location === false).length,
     depTomorrow: crew.filter(c => isTomorrow(c.departure_date)).length,
   }
 
   const groups = groupByDept
-    ? Object.entries(filtered.reduce((a, c) => { const d = normalizeDept(c.department) || 'NO DEPT'; if (!a[d]) a[d] = []; a[d].push(c); return a }, {})).sort(([a], [b]) => a.localeCompare(b))
-    : [['', filtered]]
+    ? Object.entries(filtered.reduce((a, c) => { const d = normalizeDept(c.department) || 'NO DEPT'; if (!a[d]) a[d] = []; a[d].push(c); return a }, {}))
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([dept, members]) => [dept, [...members].sort((a, b) => (a.on_location === false ? 1 : 0) - (b.on_location === false ? 1 : 0))])
+    : [['', [...filtered].sort((a, b) => (a.on_location === false ? 1 : 0) - (b.on_location === false ? 1 : 0))]]
 
   if (!user) return <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
 
@@ -780,6 +838,11 @@ export default function CrewPage() {
             <button onClick={() => setFT('NTN')}
               style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterTravel === 'NTN' ? { background: '#f1f5f9', color: '#6b7280', borderColor: '#cbd5e1' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
               🚐 {t.ntnShort}
+            </button>
+            {/* REMOTE pill */}
+            <button onClick={() => setFT(filterTravel === 'REMOTE' ? 'ALL' : 'REMOTE')}
+              style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterTravel === 'REMOTE' ? { background: '#f1f5f9', color: '#475569', borderColor: '#94a3b8' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+              🏠 Remote
             </button>
           </div>
           {/* Hotel filter */}
@@ -825,6 +888,11 @@ export default function CrewPage() {
           {counts.ntn > 0 && (
             <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', border: '1px solid #cbd5e1' }}>
               🚐 {counts.ntn} {t.ntnShort}
+            </span>
+          )}
+          {counts.remote > 0 && (
+            <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#475569', background: '#f1f5f9', border: '1px solid #94a3b8' }}>
+              🏠 {counts.remote} Remote
             </span>
           )}
           <button onClick={loadCrew}
@@ -944,7 +1012,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} />
+                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} />
                   ))}
                 </div>
               </div>

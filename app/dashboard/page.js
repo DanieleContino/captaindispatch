@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [user,       setUser]       = useState(null)
   const [departures, setDepartures] = useState([])   // crew in partenza domani
   const [arrivals,   setArrivals]   = useState([])   // crew in arrivo domani
+  const [remoteCrew, setRemoteCrew] = useState([])   // crew non in set oggi
   const router = useRouter()
   const tomorrow = isoTomorrow()
 
@@ -56,9 +57,14 @@ export default function Dashboard() {
           .eq('hotel_status', 'CONFIRMED')
           .eq('arrival_date', tomorrow)
           .order('full_name').limit(20),
-      ]).then(([dR, aR]) => {
+        supabase.from('crew').select('id,full_name,department')
+          .eq('production_id', PRODUCTION_ID)
+          .eq('on_location', false)
+          .order('full_name').limit(20),
+      ]).then(([dR, aR, rR]) => {
         setDepartures(dR.data || [])
         setArrivals(aR.data || [])
+        setRemoteCrew(rR.data || [])
       })
     })
   }, [])
@@ -89,8 +95,8 @@ export default function Dashboard() {
 
       <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px' }}>
 
-        {/* ── Banner partenze/arrivi domani ── */}
-        {(departures.length > 0 || arrivals.length > 0) && (
+        {/* ── Banner partenze/arrivi domani + remote ── */}
+        {(departures.length > 0 || arrivals.length > 0 || remoteCrew.length > 0) && (
           <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {departures.length > 0 && (
               <div style={{ background: '#fff7ed', border: '1px solid #fdba74', borderLeft: '4px solid #ea580c', borderRadius: '10px', padding: '12px 16px' }}>
@@ -133,6 +139,19 @@ export default function Dashboard() {
                       {i < arrivals.length - 1 && <span style={{ color: '#86efac', margin: '0 6px' }}>·</span>}
                     </span>
                   ))}
+                </div>
+              </div>
+            )}
+            {remoteCrew.length > 0 && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderLeft: '4px solid #d97706', borderRadius: '10px', padding: '12px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>🏠</span>
+                  <span style={{ fontWeight: '800', fontSize: '13px', color: '#92400e' }}>
+                    {remoteCrew.length} crew remot{remoteCrew.length === 1 ? 'o' : 'i'} oggi — non inclusi in Rocket e Coverage
+                  </span>
+                  <a href="/dashboard/crew?remote=1" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#92400e', textDecoration: 'none', background: '#fde68a', padding: '2px 8px', borderRadius: '6px' }}>
+                    Crew List →
+                  </a>
                 </div>
               </div>
             )}

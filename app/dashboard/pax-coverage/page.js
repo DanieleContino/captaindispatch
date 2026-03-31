@@ -174,6 +174,37 @@ function NTNRow({ member, locsMap }) {
 }
 
 // ─── Pagina principale ─────────────────────────────────────────
+// Remote Row component
+function RemoteRow({ member, locsMap }) {
+  const tc = TC[member.travel_status] || TC.PRESENT
+  const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
+
+  return (
+    <div style={{
+      background: '#fffbeb',
+      border: '1px solid #fde68a',
+      borderLeft: '4px solid #d97706',
+      borderRadius: '9px',
+      padding: '10px 14px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+    }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+          <span style={{ fontWeight: '700', fontSize: '13px', color: '#92400e' }}>{member.full_name}</span>
+          <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{member.department || 'N/A'}</span>
+          <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
+            {member.travel_status}
+          </span>
+          <span style={{ fontSize: '10px', fontWeight: '700', color: '#d97706', background: '#fffbeb', padding: '1px 6px', borderRadius: '4px', border: '1px solid #fde68a' }}>🏠 Remote</span>
+        </div>
+        <div style={{ fontSize: '11px', color: '#64748b' }}>🏨 {hotel}</div>
+      </div>
+    </div>
+  )
+}
+
 export default function PaxCoveragePage() {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
@@ -211,7 +242,7 @@ export default function PaxCoveragePage() {
     setLoading(true)
 
     const [crewRes, tripsRes] = await Promise.all([
-      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,travel_status,departure_date,no_transport_needed')
+      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,travel_status,departure_date,no_transport_needed,on_location')
         .eq('production_id', PRODUCTION_ID)
         .eq('hotel_status', 'CONFIRMED')
         .order('department', { nullsLast: true })
@@ -266,13 +297,26 @@ export default function PaxCoveragePage() {
   const departments = [...new Set(crew.map(c => c.department || 'N/A'))].sort()
   const hotels      = [...new Set(crew.map(c => c.hotel_id).filter(Boolean))].sort()
 
-  // NTN split — regular crew excluded from coverage stats
-  const regularCrew = crew.filter(c => !c.no_transport_needed)
-  const ntnCrew     = crew.filter(c =>  c.no_transport_needed)
+  // Split: remote (on_location=false) | NTN | regular — remote esclusi dalle statistiche di copertura
+  const remoteCrew  = crew.filter(c => c.on_location === false)
+  const ntnCrew     = crew.filter(c =>  c.no_transport_needed && c.on_location !== false)
+  const regularCrew = crew.filter(c => !c.no_transport_needed && c.on_location !== false)
   const ntnCount    = ntnCrew.length
+  const remoteCount = remoteCrew.length
 
   // NTN filtered (dept/hotel/search — NOT showOnly, shown always in own section)
   const ntnFiltered = ntnCrew.filter(c => {
+    if (filterDept  !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
+    if (filterHotel !== 'ALL' && c.hotel_id !== filterHotel) return false
+    if (search) {
+      const q = search.toLowerCase()
+      if (!c.full_name.toLowerCase().includes(q) && !(c.department || '').toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  // remoteFiltered rispetta filtri dept/hotel/search ma NON showOnly (sempre visibile in fondo)
+  const remoteFiltered = remoteCrew.filter(c => {
     if (filterDept  !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
     if (filterHotel !== 'ALL' && c.hotel_id !== filterHotel) return false
     if (search) {
@@ -409,6 +453,12 @@ export default function PaxCoveragePage() {
                   <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', fontWeight: '600' }}>🚐 {t.ntnShort}</div>
                 </div>
               )}
+              {remoteCount > 0 && (
+                <div style={{ textAlign: 'center', padding: '8px 14px', borderRadius: '10px', background: '#fffbeb', border: '1px solid #fde68a' }}>
+                  <div style={{ fontSize: '22px', fontWeight: '900', color: '#d97706', lineHeight: 1 }}>{remoteCount}</div>
+                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', fontWeight: '600' }}>🏠 Remote</div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -421,7 +471,7 @@ export default function PaxCoveragePage() {
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>{t.noCrewConfirmedDb}</div>
             <a href="/dashboard/crew" style={{ marginTop: '12px', display: 'inline-block', color: '#2563eb', fontSize: '13px' }}>{t.goToCrewLink}</a>
           </div>
-        ) : filtered.length === 0 && ntnFiltered.length === 0 ? (
+        ) : filtered.length === 0 && ntnFiltered.length === 0 && remoteFiltered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '14px', color: '#64748b' }}>{t.noResultsFiltered}</div>
           </div>
@@ -491,6 +541,25 @@ export default function PaxCoveragePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {ntnFiltered.map(c => (
                     <NTNRow key={c.id} member={c} locsMap={locsMap} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ══ REMOTE TODAY ══ */}
+            {remoteFiltered.length > 0 && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #d97706' }}>
+                  <span style={{ fontSize: '16px' }}>🏠</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>Remote Today</span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', background: '#d97706', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
+                    {remoteFiltered.length} crew
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— non inclusi nelle statistiche di copertura</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {remoteFiltered.map(c => (
+                    <RemoteRow key={c.id} member={c} locsMap={locsMap} />
                   ))}
                 </div>
               </div>

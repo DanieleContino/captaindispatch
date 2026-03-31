@@ -1185,7 +1185,7 @@ export default function RocketPage() {
     if (!PRODUCTION_ID) return
     setLoading(true)
     const [cR, vR, lR, rR] = await Promise.all([
-      supabase.from('crew').select('id,full_name,department,hotel_id,travel_status,hotel_status,no_transport_needed')
+      supabase.from('crew').select('id,full_name,department,hotel_id,travel_status,hotel_status,no_transport_needed,on_location')
         .eq('production_id', PRODUCTION_ID).eq('travel_status', 'PRESENT').eq('hotel_status', 'CONFIRMED')
         .eq('no_transport_needed', false)
         .order('department').order('full_name'),
@@ -1194,7 +1194,13 @@ export default function RocketPage() {
       supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('name'),
       supabase.from('routes').select('from_id,to_id,duration_min').eq('production_id', PRODUCTION_ID),
     ])
-    setAllCrew(cR.data || [])
+    const crewData = cR.data || []
+    setAllCrew(crewData)
+    // S29-T3: pre-escludi automaticamente i crew con on_location === false (remoti)
+    const remoteCrewIds = crewData.filter(c => c.on_location === false).map(c => c.id)
+    if (remoteCrewIds.length > 0) {
+      setExcludedCrewIds(prev => new Set([...prev, ...remoteCrewIds]))
+    }
     setVehicles(vR.data || [])
     setLocations(lR.data || [])
     const rm = {}
@@ -1245,6 +1251,7 @@ export default function RocketPage() {
   const activeVehicles   = vehicles.filter(v => v.active)
   const includedVehicles = activeVehicles.filter(v => !excludedVehicleIds.has(v.id))
   const departments      = [...new Set(eligibleCrew.map(c => c.department).filter(Boolean))].sort()
+  const remoteEligibleCount = eligibleCrew.filter(c => c.on_location === false).length
 
   const searchLower = crewSearch.toLowerCase().trim()
   const filteredEligible = searchLower
@@ -1767,6 +1774,12 @@ export default function RocketPage() {
                           {filteredEligible.length === 0 ? t.rocketNoCrewFound : `${filteredEligible.length} match${filteredEligible.length !== 1 ? 'es' : ''}`}
                         </div>
                       )}
+                      {/* S29-T3: Banner crew remoti pre-esclusi */}
+                      {remoteEligibleCount > 0 && (
+                        <div style={{ marginTop: '8px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #94a3b8', borderRadius: '7px', fontSize: '11px', color: '#64748b', lineHeight: 1.5 }}>
+                          🏠 <strong style={{ color: '#374151' }}>{remoteEligibleCount} crew marcati come Remoti</strong> — pre-esclusi. Puoi includerli manualmente.
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 280px)', minHeight: '300px' }}>
@@ -1823,6 +1836,7 @@ export default function RocketPage() {
                                     onChange={e => setExcludedCrewIds(prev => { const next = new Set(prev); e.target.checked ? next.delete(c.id) : next.add(c.id); return next })}
                                     style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: '#2563eb', flexShrink: 0 }} />
                                   <span style={{ flex: 1, fontSize: '13px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.full_name}</span>
+                                  {c.on_location === false && <span style={{ fontSize: '9px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', border: '1px solid #e2e8f0', flexShrink: 0 }}>🏠</span>}
                                   <span style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0, maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locMap[c.hotel_id] || c.hotel_id || '—'}</span>
                                   {destOvr && <span style={{ fontSize: '9px', color: '#7c3aed', fontWeight: '700', flexShrink: 0 }}>●</span>}
                                   <span style={{ fontSize: '12px', fontWeight: '800', color: hasCallOvr ? '#d97706' : '#374151', flexShrink: 0, minWidth: '42px', textAlign: 'right', cursor: 'pointer' }}
