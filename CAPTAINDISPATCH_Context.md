@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 31 marzo 2026 | S30 Location Routes Enhancement — T1 ✅ · T2 ✅ · T3 ✅**
+**Aggiornato: 31 marzo 2026 | Fix VehicleSidebar crew search + S29 deploy ✅**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -340,6 +340,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 |-----|-------|------|
 | BUG-2: Sibling non eliminato a rimozione ultimo pax | ✅ Fix | RLS `FOR ALL` su `trips` non propagava DELETE lato client (0 rows, no error). **Fix codice**: `removePax()` ora chiama `POST /api/trips/delete-sibling` (service client, bypassa RLS). **Fix DB opzionale**: `fix-trips-rls-delete.sql` (policy esplicite). |
 | BUG-4: Trip non diventa MULTI-PKP/MULTI-DRP | 🟡 PARZIALE | **Fix applicato**: (1) Guard su `assignCtx.hotel` vuoto nell'else-sibling di `handleAddToExisting` → ora mostra errore chiaro invece di fallire silenziosamente. (2) `console.log('[handleAddToExisting]')` aggiunto per debug runtime con `{assignCtx, allGroupLegs, compatibleLeg, sibDropoff}`. (3) UI MIXED: selettore "🎯 Destination for [name]" per trip STANDARD con hotel diverso (bordo rosso se vuoto, badge viola `🔀 MIXED: HotelB → Loc2` se destinazione diversa, bottone disabled con `Select destination first ↑`). Testare in locale con browser console aperta. |
+| BUG-5: `preferred_crew_ids` / `preferred_dept` non salvati su veicolo | 🔴 APERTO | `VehicleSidebar` in `vehicles/page.js` invia `preferred_crew_ids TEXT[]` e `preferred_dept TEXT` al salvataggio, ma se `scripts/migrate-vehicles-v2.sql` **non è stato eseguito** in Supabase SQL Editor, le colonne non esistono e il salvataggio fallisce con errore `❌ column "preferred_crew_ids" does not exist`. **Fix richiesto**: eseguire `scripts/migrate-vehicles-v2.sql` nel Supabase Dashboard → SQL Editor. Fix codice crew search (display) già deployato (`28b76a2`). |
 
 ---
 
@@ -394,6 +395,8 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S30-T1 ✅** | **Location Routes T1: `refresh-location/route.js` — fix caso nuova location (`routes.length === 0`): query la location stessa + tutte le altre della produzione con coordinate, crea coppie bidirezionali via Google API, upsert in `routes` (source: `'google'`). Comportamento edit invariato.** | — |
 | **S30-T2 ✅** | **Location Routes T2: nuovo `app/api/routes/refresh-all-locations/route.js` (`GET ?production_id=XXX`, genera tutte le coppie A→B/B→A, salta MANUAL). `locations/page.js`: bottone 🔄 Ricalcola Rotte (sostituisce ↻), stati `routeRefreshing`/`routeMsg`, banner risultato colorato con ✕ chiudibile.** | — |
 | **S30-T3 ✅** | **Location Routes T3: Aggiornamento `CAPTAINDISPATCH_Context.md` (S30 completata, prossimo S18 T4) + `git push origin master` deploy.** | — |
+| **S29 deploy ✅** | **Deploy S29 in ritardo: `crew/page.js`, `dashboard/page.js`, `pax-coverage/page.js`, `rocket/page.js`, `scripts/migrate-on-location.sql` — commit `c6e9a76`.** | `c6e9a76` |
+| **VehicleSidebar fix ✅** | **Fix crew search in `vehicles/page.js`: `VehicleSidebar` usava query Supabase separata per crew (closure stale su `PRODUCTION_ID` → lista vuota → ricerca senza risultati). Fix: rimossa query interna, `crewList` passata come prop dalla pagina padre.** | `28b76a2` |
 
 ---
 
