@@ -36,6 +36,17 @@ function isTomorrow(s) {
 }
 function isToday(s) { return s === isoToday() }
 
+function hotelOccupancy(arrival, departure) {
+  const today = isoToday()
+  if (!arrival && !departure) return null
+  if (departure && isToday(departure))    return { label: '🏁 CHK OUT TODAY',    style: { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' } }
+  if (departure && isTomorrow(departure)) return { label: '🏁 CHK OUT TOMORROW', style: { bg: '#fff7ed', color: '#c2410c', border: '#fdba74' } }
+  if (arrival && today >= arrival && (!departure || today < departure)) return { label: '🏨 In Hotel', style: { bg: '#f0fdf4', color: '#15803d', border: '#86efac' } }
+  if (arrival && today < arrival)         return { label: '🔜 Arriving ' + fmtDate(arrival), style: { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd' } }
+  if (departure && today >= departure)    return { label: '🏁 Checked Out', style: { bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' } }
+  return null
+}
+
 function Badge({ label, style }) {
   return (
     <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', letterSpacing: '0.04em', border: `1px solid ${style.border || 'transparent'}`, background: style.bg, color: style.color }}>
@@ -283,11 +294,6 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
           )}
           <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '1px 7px', borderRadius: '5px' }}>{member.department || 'NO DEPT'}</span>
           <Badge label={member.hotel_status} style={hc} />
-          {(depToday || depTomorrow) && (
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '2px 8px', borderRadius: '6px', border: '1px solid #fecaca' }}>
-              {depToday ? '✈ TODAY' : '✈ TOMORROW'}
-            </span>
-          )}
           {member.no_transport_needed && (
             <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
               🚐 SD
@@ -307,6 +313,14 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
               dep {fmtDate(member.departure_date)}
             </span>
           )}
+          {(() => {
+            const occ = hotelOccupancy(member.arrival_date, member.departure_date)
+            return occ ? (
+              <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px', background: occ.style.bg, color: occ.style.color, border: `1px solid ${occ.style.border}` }}>
+                {occ.label}
+              </span>
+            ) : null
+          })()}
           <span style={{ color: '#cbd5e1', fontSize: '11px' }}>{member.id}</span>
         </div>
         {member.notes && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', fontStyle: 'italic' }}>{member.notes}</div>}
