@@ -48,9 +48,20 @@ async function insertNewLocations(supabase, productionId, newLocations) {
     if (!loc.name?.trim()) continue
     maxLocNum++
     const autoLocId = `H${String(maxLocNum).padStart(3, '0')}`
+    // Costruisci payload con lat/lng opzionali (vengono da Google Places via HotelPlacesModal)
+    const locPayload = {
+      id:           autoLocId,
+      name:         loc.name.trim(),
+      production_id: productionId,
+      is_hub:       false,
+      is_hotel:     true,   // location da import accommodation → sempre hotel
+    }
+    if (loc.lat != null) locPayload.lat = loc.lat
+    if (loc.lng != null) locPayload.lng = loc.lng
+
     const { data: newLoc, error: locErr } = await supabase
       .from('locations')
-      .insert({ id: autoLocId, name: loc.name.trim(), production_id: productionId, is_hub: false })
+      .insert(locPayload)
       .select('id, name')
       .single()
     if (!locErr && newLoc) {
@@ -293,6 +304,58 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
   return { inserted, updated, skipped }
 }
 
+// ── Accommodation processor ───────────────────────────────────
+
+/**
+ * Aggiorna crew esistenti con hotel_id, arrival_date, departure_date.
+ * Regola null-only: sovrascrive SOLO i campi attualmente null nel DB.
+ * NON inserisce mai nuovi crew (action='insert' viene trattato come skip).
+ */
+async function processAccommodation(supabase, productionId, updateRows, newLocationMap, errors) {
+  let updated = 0
+  let skipped = 0
+
+  for (const r of updateRows) {
+    if (!r.existingId) { skipped++; continue }
+
+    // Fetch existing per null-check
+    const { data: existing } = await supabase
+      .from('crew')
+      .select('hotel_id, arrival_date, departure_date')
+      .eq('id', r.existingId)
+      .single()
+
+    if (!existing) { skipped++; continue }
+
+    // Risolvi hotel_id: da match parse oppure da nuova location appena inserita
+    let hotel_id = r.hotel_id || null
+    if (!hotel_id && r.hotel_name) {
+      hotel_id = newLocationMap[r.hotel_name.trim().toLowerCase()] || null
+    }
+
+    const updateFields = {}
+    if (!existing.hotel_id       && hotel_id)          updateFields.hotel_id       = hotel_id
+    if (!existing.arrival_date   && r.arrival_date)    updateFields.arrival_date   = r.arrival_date
+    if (!existing.departure_date && r.departure_date)  updateFields.departure_date = r.departure_date
+
+    if (Object.keys(updateFields).length === 0) { skipped++; continue }
+
+    const { error: updateErr } = await supabase
+      .from('crew')
+      .update(updateFields)
+      .eq('id', r.existingId)
+      .eq('production_id', productionId)
+
+    if (updateErr) {
+      errors.push(`Errore update accommodation ${r.existingId}: ${updateErr.message}`)
+    } else {
+      updated++
+    }
+  }
+
+  return { inserted: 0, updated, skipped }
+}
+
 // ── POST handler ─────────────────────────────────────────────
 
 export async function POST(req) {
@@ -359,6 +422,16 @@ export async function POST(req) {
       inserted += crewRes.inserted  + fleetRes.inserted
       updated  += crewRes.updated   + fleetRes.updated
       skipped  += crewRes.skipped   + fleetRes.skipped
+    }
+
+    // ── ACCOMMODATION ────────────────────────────────────────
+    else if (effectiveMode === 'accommodation') {
+      // Accommodation: solo update crew esistenti (null-only), NON inserisce nuovi crew
+      // insertRows per accommodation saranno sempre vuoti (action='skip' per crew non trovati)
+      const res = await processAccommodation(supabase, productionId, updateRows, newLocationMap, errors)
+      inserted += res.inserted
+      updated  += res.updated
+      skipped  += res.skipped
     }
 
     // ── CUSTOM ──────────────────────────────────────────────

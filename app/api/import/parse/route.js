@@ -160,12 +160,48 @@ Fields per person:
   active       (boolean — true by default; set false if "not started" appears next to the person)
 Never invent values. If absent, use null.`
 
+const SYSTEM_PROMPT_ACCOMMODATION = `You are extracting accommodation data from one sheet of a film/TV production rooming list Excel file.
+
+Extract ALL rows that represent crew member accommodation assignments.
+Each row represents one person's hotel booking.
+
+Rules:
+- Extract every person with accommodation data, even if multiple people share the same hotel
+- first_name and last_name: split the full name if it appears in a single column
+- role: exact job title if available, null otherwise
+- department: use standard values (CAMERA, GRIP, ELECTRIC, SOUND, ART, COSTUME, MAKEUP, PRODUCTION,
+  TRANSPORT, HMU, AD, PROPS, SET DEC, ACCOUNTING, PRODUCERS, CATERING, SECURITY, MEDICAL, VFX,
+  DIRECTING, CAST, LOCATIONS, OTHER) — null if not available
+- hotel_name: the name of the hotel (e.g. "Hotel Excelsior", "Marriott Rome") — extract if present
+- hotel_address: full address or city of the hotel if available, null otherwise
+- arrival_date and departure_date: convert to ISO format YYYY-MM-DD;
+  accept DD/MM/YYYY, MM/DD/YYYY, D MMM YYYY, "Arr.", "Dep.", "Check-in", "Check-out" column labels
+- If a field is missing or unclear, return null
+- Skip header rows, totals, subtotal rows, and completely blank rows
+- Return ONLY a valid JSON array, no markdown, no explanation, no backticks
+
+Return format: JSON array
+[{
+  "first_name": "string|null",
+  "last_name": "string|null",
+  "role": "string|null",
+  "department": "string|null",
+  "hotel_name": "string|null",
+  "hotel_address": "string|null",
+  "arrival_date": "YYYY-MM-DD|null",
+  "departure_date": "YYYY-MM-DD|null"
+}]`
+
 // ── Helpers ──────────────────────────────────────────────────
 
 /**
  * Estrae testo dal file in base all'estensione.
+ * @param {Buffer} buffer
+ * @param {string} filename
+ * @param {string} instructions — usato come fallback per selezionare foglio in .xlsx
+ * @param {string|null} selectedSheet — nome esplicito del foglio da usare (priorità su instructions)
  */
-async function extractTextFromFile(buffer, filename, instructions = '') {
+async function extractTextFromFile(buffer, filename, instructions = '', selectedSheet = null) {
   const ext = (filename.split('.').pop() || '').toLowerCase()
 
   if (ext === 'pdf') {
@@ -185,7 +221,10 @@ async function extractTextFromFile(buffer, filename, instructions = '') {
     const workbook = XLSX.read(buffer, { type: 'buffer' })
 
     let targetSheet = workbook.SheetNames[0]
-    if (instructions && workbook.SheetNames.length > 1) {
+    // Priorità: selectedSheet esplicito sovrascrive la logica basata su instructions
+    if (selectedSheet && workbook.SheetNames.includes(selectedSheet)) {
+      targetSheet = selectedSheet
+    } else if (instructions && workbook.SheetNames.length > 1) {
       const lower = instructions.toLowerCase()
       const exactMatch = workbook.SheetNames.find(n => lower.includes(n.toLowerCase()))
       if (exactMatch) {
@@ -473,6 +512,100 @@ async function processCrewRows(rawRows, supabase, productionId) {
     return { ...row, action, existingId, existingData, newFields, hotel_id, hotelNotFound }
   })
 
+    return { rows, newHotels }
+}
+
+/**
+ * Duplicate detection per accommodation:
+ * - Match crew esistente per first_name + last_name
+ * - Hotel matching su hotel_name (confronto con locations)
+ * - Raccoglie nuovi hotel non trovati in locations (con address per Google Places)
+ * - action = 'update' se crew trovata, 'skip' altrimenti (NON inserisce nuovi crew)
+ */
+async function processAccommodationRows(rawRows, supabase, productionId) {
+  const [{ data: existingCrew }, { data: locations }] = await Promise.all([
+    supabase
+      .from('crew')
+      .select('id, full_name, hotel_id, arrival_date, departure_date')
+      .eq('production_id', productionId),
+    supabase
+      .from('locations')
+      .select('id, name')
+      .eq('production_id', productionId),
+  ])
+
+  const newHotels = []
+
+  const rows = rawRows.map(raw => {
+    const first_name     = raw.first_name     || null
+    const last_name      = raw.last_name      || null
+    const role           = raw.role           || null
+    const department     = normalizeDept(raw.department) || null
+    const hotel_name     = raw.hotel_name     || null
+    const hotel_address  = raw.hotel_address  || null
+    const arrival_date   = raw.arrival_date   || null
+    const departure_date = raw.departure_date || null
+
+    // Duplicate detection: first_name + last_name → full_name su crew esistente
+    // action = 'skip' di default — accommodation NON inserisce nuovi crew
+    let action = 'skip'
+    let existingId = null
+    let existingData = null
+    let newFields = []
+
+    const fullName = [first_name, last_name].filter(Boolean).join(' ')
+    if (fullName) {
+      const match = (existingCrew || []).find(c =>
+        c.full_name?.toLowerCase() === fullName.toLowerCase()
+      )
+      if (match) {
+        action = 'update'
+        existingId = match.id
+        existingData = {
+          full_name:      match.full_name      ?? null,
+          hotel_id:       match.hotel_id       ?? null,
+          arrival_date:   match.arrival_date   ?? null,
+          departure_date: match.departure_date ?? null,
+        }
+      }
+    }
+
+    // Hotel matching su hotel_name → locations
+    let hotel_id = null
+    let hotelNotFound = false
+    if (hotel_name) {
+      const hotelLower = hotel_name.toLowerCase()
+      const locMatch = (locations || []).find(loc => {
+        const locLower = (loc.name || '').toLowerCase()
+        return locLower.includes(hotelLower) || hotelLower.includes(locLower)
+      })
+      if (locMatch) {
+        hotel_id = locMatch.id
+      } else {
+        hotelNotFound = true
+        if (!newHotels.find(h => h.name.toLowerCase() === hotelLower)) {
+          // Mantieni hotel_address per il pre-fill di HotelPlacesModal (S31-T4)
+          newHotels.push({ name: hotel_name, address: hotel_address })
+        }
+      }
+    }
+
+    // newFields per update rows
+    if (existingData) {
+      if (!existingData.hotel_id       && hotel_id)          newFields.push('hotel_id')
+      if (!existingData.arrival_date   && arrival_date)      newFields.push('arrival_date')
+      if (!existingData.departure_date && departure_date)    newFields.push('departure_date')
+    }
+
+    return {
+      first_name, last_name, role, department,
+      hotel_name, hotel_address,
+      arrival_date, departure_date,
+      hotel_id, hotelNotFound,
+      action, existingId, existingData, newFields,
+    }
+  })
+
   return { rows, newHotels }
 }
 
@@ -487,10 +620,11 @@ export async function POST(req) {
     }
 
     const formData = await req.formData()
-    const file         = formData.get('file')
-    const mode         = formData.get('mode')           // 'hal' | 'fleet' | 'crew' | 'custom'
-    const instructions = formData.get('instructions') || ''
-    const productionId = formData.get('productionId')
+    const file          = formData.get('file')
+    const mode          = formData.get('mode')           // 'hal' | 'fleet' | 'crew' | 'accommodation' | 'custom'
+    const instructions  = formData.get('instructions') || ''
+    const productionId  = formData.get('productionId')
+    const selectedSheet = formData.get('selectedSheet') || null  // S31: foglio specifico per accommodation
 
     if (!file)         return NextResponse.json({ error: 'file è obbligatorio' }, { status: 400 })
     if (!mode)         return NextResponse.json({ error: 'mode è obbligatorio' }, { status: 400 })
@@ -502,7 +636,7 @@ export async function POST(req) {
     const filename = file.name || 'file'
 
     // ── STEP 1: Estrazione testo ────────────────────────────
-    let text = await extractTextFromFile(buffer, filename, instructions)
+    let text = await extractTextFromFile(buffer, filename, instructions, selectedSheet)
     if (!text || text.trim().length < 10) {
       return NextResponse.json({ error: 'Impossibile estrarre testo dal file. Verifica che non sia vuoto o protetto.' }, { status: 400 })
     }
@@ -533,12 +667,16 @@ export async function POST(req) {
         return NextResponse.json({ rows, newData: { hotels: [] }, detectedMode })
       }
 
-      if (detectedType === 'crew' || detectedType === 'accommodation') {
+      if (detectedType === 'accommodation') {
+        detectedMode = 'accommodation'
+        const rawAccommodation = Array.isArray(halResult.accommodation) ? halResult.accommodation : []
+        const { rows, newHotels } = await processAccommodationRows(rawAccommodation, supabase, productionId)
+        return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode })
+      }
+
+      if (detectedType === 'crew') {
         detectedMode = 'crew'
-        // accommodation → usa il sub-array crew se presente, altrimenti accommodation
-        const rawCrew = Array.isArray(halResult.crew) && halResult.crew.length > 0
-          ? halResult.crew
-          : (Array.isArray(halResult.accommodation) ? halResult.accommodation : [])
+        const rawCrew = Array.isArray(halResult.crew) ? halResult.crew : []
         const { rows, newHotels } = await processCrewRows(rawCrew, supabase, productionId)
         return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode })
       }
@@ -585,6 +723,14 @@ export async function POST(req) {
       const extracted = await callClaude(SYSTEM_PROMPT_CREW, userContent, 'array')
       const { rows, newHotels } = await processCrewRows(extracted, supabase, productionId)
       return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode: 'crew' })
+    }
+
+    // ── MODE: accommodation ──────────────────────────────────
+    if (mode === 'accommodation') {
+      const userContent = selectedSheet ? `Sheet: ${selectedSheet}\n\n${text}` : text
+      const extracted = await callClaude(SYSTEM_PROMPT_ACCOMMODATION, userContent, 'array')
+      const { rows, newHotels } = await processAccommodationRows(extracted, supabase, productionId)
+      return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode: 'accommodation' })
     }
 
     // ── MODE: custom ────────────────────────────────────────
