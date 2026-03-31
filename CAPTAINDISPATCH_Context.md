@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 31 marzo 2026 | S28 Vehicle Enhancement ✅ COMPLETATO — T1 ✅ · T2 ✅ · T3 ✅ · T4 ✅ · T5 ✅ Deploy**
+**Aggiornato: 31 marzo 2026 | S29 Remote Crew — T1 ✅ · T2 ✅ · T3 ✅ · T4 ✅ Deploy — S29 COMPLETATA**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -8,10 +8,72 @@
 
 ---
 
-## ▶ PROSSIMO — S18 i18n Completamento
+## ▶ PROSSIMO — S18 i18n Completamento (TASK 4)
 
-> **S28 completato ✅** — Riprendere S18 i18n da **TASK 4 (bridge/page.js)**.
-> ⚠️ Verificare che `scripts/migrate-vehicles-v2.sql` sia già stato eseguito in Supabase (S28-T1 prerequisito).
+> **S29 COMPLETATA ✅** — Riprendere **S18 i18n da TASK 4 (`bridge/page.js`)**.
+> Un task per sessione. Deploy unico dopo tutti i task S18.
+
+---
+
+### S29 — Remote Crew "Non in Set" (un task per sessione)
+Un unico deploy finale dopo T4. NON deployare tra un task e l'altro.
+
+| Task | File/Scope | Stato |
+|------|-----------|-------|
+| T1 — DB Migration + crew/page.js | `scripts/migrate-on-location.sql` + `crew/page.js` (toggle, card, sidebar, filtro, sort) | ✅ |
+| T2 — Dashboard + Pax Coverage | `dashboard/page.js` (banner) + `pax-coverage/page.js` (sezione Remote) | ✅ |
+| T3 — Rocket | `rocket/page.js` (pre-esclusione crew remote + badge + banner) | ✅ |
+| T4 — Context Update + Deploy | `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
+
+#### Campo DB
+```sql
+-- scripts/migrate-on-location.sql
+ALTER TABLE crew ADD COLUMN IF NOT EXISTS on_location BOOLEAN DEFAULT TRUE;
+UPDATE crew SET on_location = TRUE WHERE on_location IS NULL;
+```
+Aggiunge `on_location BOOLEAN DEFAULT TRUE` alla tabella `crew`. `false` = persona non in set oggi (lavora da casa/albergo). Persiste fino a cambio manuale.
+
+#### S29-T1 — DB Migration + crew/page.js
+- **Script SQL**: `scripts/migrate-on-location.sql` (sopra)
+- **`RemoteToggle`** (nuovo componente): bottone `🏠` inline nella card, accanto a `NTNToggle`. Salva `on_location = false/true` su Supabase.
+- **Card visiva** quando `on_location = false`: sfondo `#f8fafc`, bordo sinistro `#94a3b8`, nome dimmed `#94a3b8`, badge `🏠 Remote` grigio
+- **Ordinamento** gruppi dept: `on_location === false` → in fondo al gruppo (sort prima dei presenti, poi dei remoti)
+- **Filtro "REMOTE"** nella toolbar: pill `🏠 Remote` accanto al pill `🚐 NTN` esistente
+- **URL param `?remote=1`**: se presente al mount → auto-imposta filtro REMOTE (per link dal dashboard banner)
+- **Sidebar** `CrewSidebar`: switch `🏠 Non in Set — Remoto / Lavora da casa o albergo` subito DOPO il blocco NTN. Include `on_location` in EMPTY form, sync useEffect, row salvato.
+- **Stats header**: badge `🏠 N Remote` accanto al badge `🚐 N NTN` se > 0
+- **`counts.remote`**: `crew.filter(c => c.on_location === false).length`
+
+#### S29-T2 — Dashboard + Pax Coverage
+**`dashboard/page.js`:**
+- Query aggiuntiva nel `useEffect`: `supabase.from('crew').select('id,full_name,department').eq('production_id', PRODUCTION_ID).eq('on_location', false).order('full_name').limit(20)`
+- Banner amber (stile identico ai banner departures/arrivals esistenti):
+  ```
+  🏠 3 crew remoti oggi — non inclusi in Rocket e Coverage     [Crew List →]
+  ```
+  Link: `/dashboard/crew?remote=1`. Mostrato solo se `remoteCrew.length > 0`.
+
+**`pax-coverage/page.js`:**
+- Aggiungere `on_location` al select della query crew
+- Split: `remoteCrew = crew.filter(c => c.on_location === false)` (separato da regularCrew e ntnCrew)
+- Nuova sezione **"🏠 Remote Today"** (dopo NTN section): stile `NTNRow` ma bordo amber `#d97706`, badge `🏠 Remote` amber
+- `remoteCrew` NON conta nelle statistiche di copertura (non abbassa il %)
+- `remoteFiltered` rispetta filtri dept/hotel/search ma non il filtro `showOnly` (sempre visibile in fondo)
+
+#### S29-T3 — Rocket
+**`rocket/page.js`:**
+- Aggiungere `on_location` al `select` della query crew (NON al filtro DB — i remoti devono essere visibili)
+- Dopo `loadData()`: i crew con `on_location === false` vengono aggiunti a `excludedCrewIds` (set iniziale) → pre-esclusi automaticamente
+- **Badge `🏠`** nella lista crew di Step 1 accanto al nome (grigio, dim) per i crew remoti
+- **Banner avviso** in Step 1 (sopra la lista crew), se ci sono crew remoti: `🏠 N crew marcati come Remoti — pre-esclusi. Puoi includerli manualmente.`
+
+#### Schema DB aggiornato (dopo S29-T1)
+```sql
+crew (id TEXT PK, full_name, role TEXT, department, hotel_id, travel_status, hotel_status,
+      arrival_date, departure_date, email TEXT, phone TEXT,
+      no_transport_needed bool DEFAULT false,
+      on_location BOOLEAN DEFAULT TRUE)  -- S29-T1: false = remoto/non in set ✅
+```
 
 ---
 
@@ -76,7 +138,7 @@ chip classi:         padding 3px 8px, font 11px
 
 ---
 
-### S18 — i18n Completamento (IN SOSPESO — riprendere dopo S28)
+### S18 — i18n Completamento (IN SOSPESO — riprendere dopo S29)
 Un unico deploy finale dopo tutti i task. NON deployare tra un task e l'altro.
 
 | Task | File | Stato |
@@ -166,9 +228,11 @@ Banner amber in trips, badge ⭐ MATCH, `suggestedBaseIds` filtra hotel+ts
 
 **Multi-Production:** `lib/production.js` — `getProductionId()` / `switchProduction(id)` via localStorage
 
-**Rocket v2:** crew PRESENT+CONFIRMED+!NTN, veicoli attivi, raggruppa per (hotel_id, effectiveDest, effectiveCallMin) → greedy fino a pax_suggested. Trip ID: `R_MMDD_NN`. Multi-stop routing sequenziale A→B→Hub. Templates localStorage + Supabase `rocket_templates`. Suggerimenti statistici dopo 10-15 run. Service type per singola destinazione.
+**Rocket v2:** crew PRESENT+CONFIRMED+!NTN, veicoli attivi, raggruppa per (hotel_id, effectiveDest, effectiveCallMin) → greedy fino a pax_suggested. Trip ID: `R_MMDD_NN`. Multi-stop routing sequenziale A→B→Hub. Templates localStorage + Supabase `rocket_templates`. Suggerimenti statistici dopo 10-15 run. Service type per singola destinazione. Crew con `on_location=false` pre-esclusi automaticamente.
 
 **NTN/Self Drive:** `crew.no_transport_needed = true` → esclusi da Rocket + coperture, badge `🚐 SD`, sezione separata in Pax Coverage, aggiungibili come SD nei Trips.
+
+**Remote Crew (on_location):** `crew.on_location = false` → non in set (lavora da casa/albergo). Rocket: pre-esclusi automaticamente al caricamento (badge 🏠, banner avviso, riattivabili manualmente). Pax Coverage: sezione "🏠 Remote Today" separata, non contano nelle stats %. Dashboard: banner amber con link `/dashboard/crew?remote=1`. Crew page: card dimmed+bordo grigio+badge, filtro pill 🏠 Remote, URL `?remote=1`, sort in fondo al gruppo.
 
 **Captain Bridge:** ruolo `CAPTAIN`/`ADMIN`. Tab Pending (Sandbox/Add to prod/Ignore) + Tab Invites (8-char, role, max_uses, expires_at).
 > ⚠️ Query `production_invites`: join manuale (non PostgREST) per evitare errore schema cache.
@@ -198,7 +262,8 @@ user_roles
 locations (id TEXT PK, name, is_hub bool, is_hotel bool, lat, lng, default_pickup_point)
 routes (duration_min, google_duration_min, traffic_updated_at)
 crew (id TEXT PK, full_name, role TEXT, department, hotel_id, travel_status, hotel_status,
-      arrival_date, departure_date, email TEXT, phone TEXT, no_transport_needed bool DEFAULT false)
+      arrival_date, departure_date, email TEXT, phone TEXT, no_transport_needed bool DEFAULT false,
+      on_location BOOLEAN DEFAULT TRUE)  -- S29: false = remoto/non in set
 vehicles (id TEXT PK, capacity, pax_suggested, pax_max, driver_name, sign_code,
           active, available_from, available_to, vehicle_type TEXT, license_plate,
           vehicle_class TEXT[],         -- S28: multi-class (CLASSIC/LUX/ECONOMY/PREMIUM/MINIBUS/NCC)
@@ -223,6 +288,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 - `scripts/fix-functions-search-path.sql` — ✅ fix `SET search_path = public` su 3 funzioni
 - `scripts/fix-trips-rls-delete.sql` — ✅ fix BUG-2: drop `"own_production"` FOR ALL su `trips`, ricrea policy esplicite trips_select/insert/update/delete
 - `scripts/migrate-vehicles-v2.sql` — ✅ **S28**: vehicle_class TEXT[], preferred_dept, preferred_crew_ids TEXT[], in_transport BOOLEAN
+- `scripts/migrate-on-location.sql` — ✅ **S29-T1**: on_location BOOLEAN DEFAULT TRUE (false = remoto/non in set)
 
 **RLS productions (stato attuale dopo fix):**
 - `productions_select` FOR SELECT USING user_production_ids()
@@ -285,6 +351,10 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S28-T3** | **Vehicle Enhancement T3: `fleet/page.js` + `lists/page.js` — `.eq('in_transport', true)` sulla query vehicles.** | — |
 | **S28-T4 ✅** | **Vehicle Enhancement T4 (completo): `trips/page.js` — query vehicles `.eq('in_transport', true)` + campi preferred. Badge `⭐` nel dropdown veicolo (TripSidebar + EditTripSidebar). Variabili `suggestedCrew`/`suggestedCrewEdit` calcolate. Sezione UI "📌 Suggeriti per {veicolo}" aggiunta nel picker pax di entrambe le sidebar (sfondo `#fffbeb`, bordo `#fde68a`, quick-add `+`, nascosta se lista vuota).** | — |
 | **S28-T5 ✅** | **Vehicle Enhancement T5: Aggiornamento `CAPTAINDISPATCH_Context.md` (S28 completato, prossimo S18 T4) + `git push origin master` deploy.** | — |
+| **S29-T1 ✅** | **Remote Crew T1: `scripts/migrate-on-location.sql` (on_location BOOLEAN). `crew/page.js`: RemoteToggle inline 🏠, card visiva dimmed+bordo grigio+badge Remote, filtro pill 🏠 Remote, URL param ?remote=1, sort remoti in fondo ai gruppi, counts.remote, badge stats, sidebar switch "Non in Set".** | — |
+| **S29-T2 ✅** | **Remote Crew T2: `dashboard/page.js` — banner amber 🏠 N crew remoti con link `/dashboard/crew?remote=1`. `pax-coverage/page.js` — `on_location` nel select, split `remoteCrew`, sezione "🏠 Remote Today" (bordo amber, badge), remoti esclusi dalle stats copertura, `remoteFiltered` rispetta filtri dept/hotel/search.** | — |
+| **S29-T3 ✅** | **Remote Crew T3: `rocket/page.js` — `on_location` nel select query, pre-esclusione automatica in `loadData()` (`excludedCrewIds`), `remoteEligibleCount`, badge 🏠 inline nella riga crew accordion, banner "N crew marcati come Remoti — pre-esclusi. Puoi includerli manualmente."** | — |
+| **S29-T4 ✅** | **Remote Crew T4: Aggiornamento `CAPTAINDISPATCH_Context.md` (S29 completata, prossimo S18 T4) + `git push origin master` deploy.** | — |
 
 ---
 
