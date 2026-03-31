@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 31 marzo 2026 | Hotel Occupancy Badge deployato ✅ — avviare S18-T4**
+**Aggiornato: 31 marzo 2026 | Import fix: duplicate detection crew migliorato + AccommodationTable ✅ New — avviare S18-T4**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -482,6 +482,8 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S31-T5 ✅** | **Import Upgrade T5 — Context + Deploy: `CAPTAINDISPATCH_Context.md` aggiornato (S31 completata, prossimo S18-T4) + `git push origin master` deploy.** | — |
 | **S31 deploy fix ✅** | **Fix deploy S31: i file S31-T1→T4 (`confirm/route.js`, `parse/route.js`, `ImportModal.js`, `save-location/route.js` nuovo, `sheets/route.js` nuovo) erano rimasti uncommitted. Commit `e287e7f` (5 file, +908 righe) — S31 ora completamente online su Vercel.** | `e287e7f` |
 | **Hotel Occupancy Badge ✅** | **`crew/page.js`: nuova funzione `hotelOccupancy(arrival, departure)` → badge computato automaticamente nella riga date di ogni `CrewCard`. Logica: 🏁 CHK OUT TODAY (rosso), 🏁 CHK OUT TOMORROW (arancione), 🏨 In Hotel (verde), 🔜 Arriving [data] (blu), 🏁 Checked Out (grigio). Rimossi badge ✈ TODAY/✈ TOMORROW (sostituiti). Zero DB changes.** | — |
+| **Section 2 Unknown records fix ✅** | **`lib/ImportModal.js` fase `categorizing`: Section 2 "Unknown records" ora mostra sempre due bottoni separati `[Skip all]` + `[+ Add all]` (prima era un toggle che nascondeva "+ Add all" finché non si premeva "Skip all"). Commit `bd34c89`.** | `bd34c89` |
+| **Duplicate detection crew fix ✅** | **`app/api/import/parse/route.js` — `processCrewRows()` e `processAccommodationRows()`: matching migliorato. Primary: `(first_name + ' ' + last_name).trim().toLowerCase()` vs `full_name.trim().toLowerCase()`. Fallback: se no match, controlla se `full_name` contiene `last_name` (es. "Mario Rossi" in DB → "Rossi" dal file). `lib/ImportModal.js` — `AccommodationTable`: righe senza match DB ora mostrano `✅ New` (verde) invece di `❌ Not found` (rosso). `rowBg()` accommodation: rimosso sfondo rosso per `!existingId`. Commit `2039a21`.** | `2039a21` |
 
 ---
 
