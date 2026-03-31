@@ -314,30 +314,56 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [] }
                 <input placeholder="🔍 Cerca crew…" value={crewSearch} onChange={e => setCrewSearch(e.target.value)}
                   style={{ ...inp, marginBottom: '4px' }} />
                 {/* Lista crew */}
-                <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
-                    {crewList
-                      .filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase()))
-                      .sort((a, b) => (b.no_transport_needed ? 1 : 0) - (a.no_transport_needed ? 1 : 0))
-                      .map(cm => {
+                {(() => {
+                  const filteredCrew = crewList.filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase()))
+                  const sorted = [...filteredCrew].sort((a, b) => {
+                    const aDept = form.preferred_dept && a.department === form.preferred_dept ? 1 : 0
+                    const bDept = form.preferred_dept && b.department === form.preferred_dept ? 1 : 0
+                    const aSD = a.no_transport_needed ? 1 : 0
+                    const bSD = b.no_transport_needed ? 1 : 0
+                    if (bDept !== aDept) return bDept - aDept
+                    if (bSD !== aSD) return bSD - aSD
+                    return (a.full_name || '').localeCompare(b.full_name || '')
+                  })
+                  const deptSectionEnd = form.preferred_dept ? sorted.findLastIndex(c => c.department === form.preferred_dept) : -1
+                  return (
+                    <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
+                      {sorted.length === 0 && (
+                        <div style={{ fontSize: '11px', color: '#94a3b8', padding: '8px' }}>Nessun risultato</div>
+                      )}
+                      {form.preferred_dept && sorted.some(c => c.department === form.preferred_dept) && (
+                        <div style={{ padding: '3px 8px', fontSize: '9px', fontWeight: '800', color: (DEPT_COLOR[form.preferred_dept] || {}).color || '#7e22ce', background: (DEPT_COLOR[form.preferred_dept] || {}).bg || '#fdf4ff', borderBottom: `1px solid ${(DEPT_COLOR[form.preferred_dept] || {}).border || '#e9d5ff'}`, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                          ⭐ {form.preferred_dept}
+                        </div>
+                      )}
+                      {sorted.map((cm, idx) => {
                         const sel = form.preferred_crew_ids.includes(cm.id)
+                        const isLastDept = idx === deptSectionEnd
+                        const isOtherSection = form.preferred_dept && cm.department !== form.preferred_dept && idx === deptSectionEnd + 1
                         return (
-                          <div key={cm.id} onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.id) : [...f.preferred_crew_ids, cm.id] }))}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', background: sel ? '#eff6ff' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
-                            <span style={{ fontSize: '13px', flexShrink: 0 }}>{sel ? '✅' : '⬜'}</span>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <span style={{ fontSize: '11px', fontWeight: sel ? '700' : '500', color: sel ? '#1d4ed8' : '#0f172a' }}>
-                                {cm.no_transport_needed && <span style={{ fontSize: '10px', color: '#64748b', marginRight: '3px' }}>🚐</span>}
-                                {cm.full_name}
-                              </span>
-                              {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '5px' }}>{cm.department}</span>}
+                          <div key={cm.id}>
+                            {isOtherSection && sorted.some(c => c.department === form.preferred_dept) && (
+                              <div style={{ padding: '3px 8px', fontSize: '9px', fontWeight: '700', color: '#94a3b8', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderTop: '1px solid #e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Altri
+                              </div>
+                            )}
+                            <div onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.id) : [...f.preferred_crew_ids, cm.id] }))}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', background: sel ? '#eff6ff' : 'transparent', borderBottom: isLastDept && deptSectionEnd >= 0 ? 'none' : '1px solid #f1f5f9' }}>
+                              <span style={{ fontSize: '13px', flexShrink: 0 }}>{sel ? '✅' : '⬜'}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ fontSize: '11px', fontWeight: sel ? '700' : '500', color: sel ? '#1d4ed8' : '#0f172a' }}>
+                                  {cm.no_transport_needed && <span style={{ fontSize: '10px', color: '#64748b', marginRight: '3px' }}>🚐</span>}
+                                  {cm.full_name}
+                                </span>
+                                {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '5px' }}>{cm.department}</span>}
+                              </div>
                             </div>
                           </div>
                         )
                       })}
-                  {crewList.filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase())).length === 0 && (
-                    <div style={{ fontSize: '11px', color: '#94a3b8', padding: '8px' }}>Nessun risultato</div>
-                  )}
-                </div>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
 
@@ -510,7 +536,7 @@ export default function VehiclesPage() {
     setLoad(true)
     const [{ data: vData }, { data: cData }] = await Promise.all([
       supabase.from('vehicles').select('*').eq('production_id', PRODUCTION_ID).order('vehicle_type').order('id'),
-      supabase.from('crew').select('id, full_name, department, no_transport_needed').eq('production_id', PRODUCTION_ID).eq('active', true).order('full_name'),
+      supabase.from('crew').select('id, full_name, department, no_transport_needed').eq('production_id', PRODUCTION_ID).order('full_name'),
     ])
     setVhcs(vData || [])
     setCrewList(cData || [])
