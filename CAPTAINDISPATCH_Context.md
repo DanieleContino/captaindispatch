@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 31 marzo 2026 | Import fix: duplicate detection crew migliorato + AccommodationTable ✅ New — avviare S18-T4**
+**Aggiornato: 1 aprile 2026 | Import fix: modal done, field mapping accommodation, filtro colonne vuote, debug logs — avviare S18-T4**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -484,6 +484,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **Hotel Occupancy Badge ✅** | **`crew/page.js`: nuova funzione `hotelOccupancy(arrival, departure)` → badge computato automaticamente nella riga date di ogni `CrewCard`. Logica: 🏁 CHK OUT TODAY (rosso), 🏁 CHK OUT TOMORROW (arancione), 🏨 In Hotel (verde), 🔜 Arriving [data] (blu), 🏁 Checked Out (grigio). Rimossi badge ✈ TODAY/✈ TOMORROW (sostituiti). Zero DB changes.** | — |
 | **Section 2 Unknown records fix ✅** | **`lib/ImportModal.js` fase `categorizing`: Section 2 "Unknown records" ora mostra sempre due bottoni separati `[Skip all]` + `[+ Add all]` (prima era un toggle che nascondeva "+ Add all" finché non si premeva "Skip all"). Commit `bd34c89`.** | `bd34c89` |
 | **Duplicate detection crew fix ✅** | **`app/api/import/parse/route.js` — `processCrewRows()` e `processAccommodationRows()`: matching migliorato. Primary: `(first_name + ' ' + last_name).trim().toLowerCase()` vs `full_name.trim().toLowerCase()`. Fallback: se no match, controlla se `full_name` contiene `last_name` (es. "Mario Rossi" in DB → "Rossi" dal file). `lib/ImportModal.js` — `AccommodationTable`: righe senza match DB ora mostrano `✅ New` (verde) invece di `❌ Not found` (rosso). `rowBg()` accommodation: rimosso sfondo rosso per `!existingId`. Commit `2039a21`.** | `2039a21` |
+| **Import fix 4 bug (1 apr 2026) ✅** | **4 bug risolti nel sistema import accommodation: (1) `lib/ImportModal.js` — `onImported` spostato da `handleConfirm` al Close button della fase `done`: il parent non chiude più il modal prima che la schermata "Import complete!" sia visibile. (2) `app/api/import/parse/route.js` — `SYSTEM_PROMPT_ACCOMMODATION` aggiornato con mapping esplicito colonne Excel (`NAME→first_name, SURNAME→last_name, IN→arrival_date, OUT→departure_date`) + istruzione di usare il campo `metadata` come nome hotel per tutte le righe. (3) `parse/route.js` — `extractStructuredExcel()`: dopo aver costruito `dataRows`, elimina colonne null per TUTTE le righe (`usedKeys`): da 75 colonne→15 reali, JSON da 865KB→~80KB, tutte le 168 righe passano nel limite 100K. (4) `app/api/import/confirm/route.js` — `processAccommodation()`: aggiunto `console.log SKIP ${r.existingId}: fields already in DB` per debug quando null-only rule impedisce l'update. Commit `a6d23c5`.** | `a6d23c5` |
 
 ---
 
