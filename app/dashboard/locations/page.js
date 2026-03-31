@@ -398,9 +398,11 @@ export default function LocationsPage() {
   const [loading,   setLoad]  = useState(true)
   const [search,    setSearch]= useState('')
   const [filterHub, setFH]    = useState('ALL')  // ALL | HUB | HOTEL
-  const [sidebarOpen, setSO]  = useState(false)
-  const [mode,      setMode]  = useState('new')
-  const [editItem,  setEdit]  = useState(null)
+  const [sidebarOpen, setSO]       = useState(false)
+  const [mode,      setMode]       = useState('new')
+  const [editItem,  setEdit]       = useState(null)
+  const [routeRefreshing, setRouteRefresh] = useState(false)
+  const [routeMsg,        setRouteMsg]     = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -423,6 +425,30 @@ export default function LocationsPage() {
   function openNew()    { setMode('new');  setEdit(null); setSO(true) }
   function openEdit(l)  { setMode('edit'); setEdit(l);    setSO(true) }
   function onSaved()    { setSO(false); load() }
+
+  async function handleRefreshRoutes() {
+    if (!PRODUCTION_ID || routeRefreshing) return
+    setRouteRefresh(true)
+    setRouteMsg('🔄 Ricalcolo rotte in corso…')
+    try {
+      const res  = await fetch(`/api/routes/refresh-all-locations?production_id=${encodeURIComponent(PRODUCTION_ID)}`)
+      const data = await res.json()
+      if (data.error) {
+        setRouteMsg(`⚠ Errore: ${data.error}`)
+      } else if (data.message) {
+        setRouteMsg(`ℹ ${data.message}`)
+      } else {
+        const parts = [`✅ ${data.updated} rotte aggiornate`]
+        if (data.skipped) parts.push(`${data.skipped} saltate (MANUAL)`)
+        if (data.failed)  parts.push(`${data.failed} fallite`)
+        setRouteMsg(parts.join(' · '))
+      }
+    } catch {
+      setRouteMsg('⚠ Errore di rete nel ricalcolo rotte')
+    }
+    setRouteRefresh(false)
+    load()
+  }
 
   const filtered = locs.filter(l => {
     if (filterHub === 'HUB'   && !l.is_hub) return false
@@ -467,7 +493,10 @@ export default function LocationsPage() {
               {s}
             </button>
           ))}
-          <button onClick={load} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
+          <button onClick={handleRefreshRoutes} disabled={routeRefreshing}
+            style={{ background: routeRefreshing ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: routeRefreshing ? 'default' : 'pointer', fontSize: '12px', fontWeight: '700', color: routeRefreshing ? '#94a3b8' : '#374151', whiteSpace: 'nowrap' }}>
+            {routeRefreshing ? '⏳ Ricalcolo…' : '🔄 Ricalcola Rotte'}
+          </button>
           <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
             {t.addLocationBtn}
           </button>
@@ -477,6 +506,18 @@ export default function LocationsPage() {
       {/* Body */}
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px', transition: 'margin-right 0.25s', marginRight: sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
         {!PRODUCTION_ID && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>⚠ NEXT_PUBLIC_PRODUCTION_ID non impostato</div>}
+        {routeMsg && (
+          <div style={{
+            padding: '10px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '600', marginBottom: '16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+            background: routeMsg.startsWith('✅') ? '#f0fdf4' : routeMsg.startsWith('ℹ') ? '#f0f9ff' : routeMsg.startsWith('🔄') ? '#eff6ff' : '#fefce8',
+            border: `1px solid ${routeMsg.startsWith('✅') ? '#86efac' : routeMsg.startsWith('ℹ') ? '#bae6fd' : routeMsg.startsWith('🔄') ? '#bfdbfe' : '#fde68a'}`,
+            color: routeMsg.startsWith('✅') ? '#15803d' : routeMsg.startsWith('ℹ') ? '#0369a1' : routeMsg.startsWith('🔄') ? '#1d4ed8' : '#92400e',
+          }}>
+            <span>{routeMsg}</span>
+            {!routeRefreshing && <button onClick={() => setRouteMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: 'inherit', lineHeight: 1, flexShrink: 0 }}>✕</button>}
+          </div>
+        )}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
         ) : filtered.length === 0 ? (

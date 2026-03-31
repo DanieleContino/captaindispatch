@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 31 marzo 2026 | S29 Remote Crew — T1 ✅ · T2 ✅ · T3 ✅ · T4 ✅ Deploy — S29 COMPLETATA**
+**Aggiornato: 31 marzo 2026 | S30 Location Routes Enhancement — T1 ✅ · T2 ✅ · T3 ✅**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -8,10 +8,46 @@
 
 ---
 
-## ▶ PROSSIMO — S18 i18n Completamento (TASK 4)
+## ▶ PROSSIMO — S30 Location Routes Enhancement
 
-> **S29 COMPLETATA ✅** — Riprendere **S18 i18n da TASK 4 (`bridge/page.js`)**.
-> Un task per sessione. Deploy unico dopo tutti i task S18.
+> **S30 COMPLETATA ✅** — Avviare **S18 da T4 (`bridge/page.js`)** (i18n completamento in sospeso).
+> Un task per sessione.
+
+---
+
+### S30 — Location Routes Enhancement (un task per sessione)
+Un unico deploy finale dopo T3. NON deployare tra un task e l'altro.
+
+| Task | File/Scope | Stato |
+|------|-----------|-------|
+| T1 — Fix Nuova Location | `app/api/routes/refresh-location/route.js` (crea rotte verso tutte le altre location quando la location è nuova) | ✅ |
+| T2 — Bulk Refresh + UI | `app/api/routes/refresh-all-locations/route.js` (nuovo endpoint) + `app/dashboard/locations/page.js` (bottone 🔄 Ricalcola Rotte) | ✅ |
+| T3 — Context + Deploy | `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
+
+#### S30-T1 — Fix Nuova Location
+**`app/api/routes/refresh-location/route.js`:**
+- Quando `routes.length === 0` (location nuova, nessuna rotta esistente):
+  1. Query la location stessa per `production_id`, `lat`, `lng`
+  2. Query tutte le altre location della produzione con coordinate
+  3. Per ogni altra location: crea 2 rotte (`newLoc→other` e `other→newLoc`) via Google API
+  4. Upsert in `routes` table (source: `'google'`)
+  5. Ritorna `{ updated, failed, total }` come normale
+- Comportamento per edit (rotte esistenti): invariato
+
+#### S30-T2 — Bulk Refresh + UI
+**`app/api/routes/refresh-all-locations/route.js`** (nuovo file):
+- `GET /api/routes/refresh-all-locations?production_id=XXX`
+- Carica tutte le location della produzione con coordinate
+- Genera tutte le coppie A→B e B→A (salta `source='MANUAL'`)
+- Chiama Google API per ciascuna coppia (con `BATCH_PAUSE`)
+- Ritorna `{ updated, skipped, failed, total }`
+
+**`app/dashboard/locations/page.js`:**
+- Sostituire il bottone ↻ (che chiama solo `load()`) con bottone **🔄 Ricalcola Rotte**
+- Stato `routeRefreshing` + `routeMsg` per feedback
+- Chiama `GET /api/routes/refresh-all-locations?production_id=PRODUCTION_ID`
+- Mostra banner risultato (✅ N aggiornate, X saltate, Y fallite)
+- Dopo il refresh chiama `load()` per ricaricare la lista
 
 ---
 
@@ -355,6 +391,9 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S29-T2 ✅** | **Remote Crew T2: `dashboard/page.js` — banner amber 🏠 N crew remoti con link `/dashboard/crew?remote=1`. `pax-coverage/page.js` — `on_location` nel select, split `remoteCrew`, sezione "🏠 Remote Today" (bordo amber, badge), remoti esclusi dalle stats copertura, `remoteFiltered` rispetta filtri dept/hotel/search.** | — |
 | **S29-T3 ✅** | **Remote Crew T3: `rocket/page.js` — `on_location` nel select query, pre-esclusione automatica in `loadData()` (`excludedCrewIds`), `remoteEligibleCount`, badge 🏠 inline nella riga crew accordion, banner "N crew marcati come Remoti — pre-esclusi. Puoi includerli manualmente."** | — |
 | **S29-T4 ✅** | **Remote Crew T4: Aggiornamento `CAPTAINDISPATCH_Context.md` (S29 completata, prossimo S18 T4) + `git push origin master` deploy.** | — |
+| **S30-T1 ✅** | **Location Routes T1: `refresh-location/route.js` — fix caso nuova location (`routes.length === 0`): query la location stessa + tutte le altre della produzione con coordinate, crea coppie bidirezionali via Google API, upsert in `routes` (source: `'google'`). Comportamento edit invariato.** | — |
+| **S30-T2 ✅** | **Location Routes T2: nuovo `app/api/routes/refresh-all-locations/route.js` (`GET ?production_id=XXX`, genera tutte le coppie A→B/B→A, salta MANUAL). `locations/page.js`: bottone 🔄 Ricalcola Rotte (sostituisce ↻), stati `routeRefreshing`/`routeMsg`, banner risultato colorato con ✕ chiudibile.** | — |
+| **S30-T3 ✅** | **Location Routes T3: Aggiornamento `CAPTAINDISPATCH_Context.md` (S30 completata, prossimo S18 T4) + `git push origin master` deploy.** | — |
 
 ---
 

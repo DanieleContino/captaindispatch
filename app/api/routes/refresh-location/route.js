@@ -82,9 +82,95 @@ export async function GET(request) {
     return NextResponse.json({ error: routesErr.message }, { status: 500 })
   }
 
+  // ── CASO NUOVA LOCATION (nessuna rotta esistente) ──────────────────────────
   if (!routes || routes.length === 0) {
-    return NextResponse.json({ updated: 0, skipped: 0, failed: 0, message: 'Nessuna rotta trovata per questa location' })
+    // 1a. Query la location stessa per production_id, lat, lng
+    const { data: newLoc, error: newLocErr } = await supabase
+      .from('locations')
+      .select('id, production_id, lat, lng')
+      .eq('id', locationId)
+      .single()
+
+    if (newLocErr || !newLoc) {
+      return NextResponse.json({ error: 'Location non trovata' }, { status: 404 })
+    }
+    if (newLoc.lat == null || newLoc.lng == null) {
+      return NextResponse.json({ updated: 0, skipped: 0, failed: 0, total: 0, message: 'Location senza coordinate' })
+    }
+
+    // 1b. Query tutte le altre location della produzione con coordinate
+    const { data: otherLocs, error: otherLocsErr } = await supabase
+      .from('locations')
+      .select('id, lat, lng')
+      .eq('production_id', newLoc.production_id)
+      .neq('id', locationId)
+      .not('lat', 'is', null)
+      .not('lng', 'is', null)
+
+    if (otherLocsErr) {
+      return NextResponse.json({ error: otherLocsErr.message }, { status: 500 })
+    }
+    if (!otherLocs || otherLocs.length === 0) {
+      return NextResponse.json({ updated: 0, skipped: 0, failed: 0, total: 0, message: 'Nessuna altra location con coordinate nella produzione' })
+    }
+
+    const newCoord = { lat: parseFloat(newLoc.lat), lng: parseFloat(newLoc.lng) }
+    let updated = 0, skipped = 0, failed = 0
+
+    for (const other of otherLocs) {
+      const otherCoord = { lat: parseFloat(other.lat), lng: parseFloat(other.lng) }
+
+      // newLoc → other
+      const r1 = await googleDuration(newCoord.lat, newCoord.lng, otherCoord.lat, otherCoord.lng)
+      if (r1) {
+        const { error: e1 } = await supabase.from('routes').upsert(
+          {
+            production_id: newLoc.production_id,
+            from_id:       locationId,
+            to_id:         other.id,
+            duration_min:  r1.duration_min,
+            distance_km:   r1.distance_km,
+            source:        'google',
+            updated_at:    new Date().toISOString(),
+          },
+          { onConflict: 'production_id,from_id,to_id' }
+        )
+        if (e1) { failed++; console.error('[refresh-location new→other]', e1.message) }
+        else { updated++ }
+      } else {
+        failed++
+      }
+
+      await sleep(BATCH_PAUSE)
+
+      // other → newLoc
+      const r2 = await googleDuration(otherCoord.lat, otherCoord.lng, newCoord.lat, newCoord.lng)
+      if (r2) {
+        const { error: e2 } = await supabase.from('routes').upsert(
+          {
+            production_id: newLoc.production_id,
+            from_id:       other.id,
+            to_id:         locationId,
+            duration_min:  r2.duration_min,
+            distance_km:   r2.distance_km,
+            source:        'google',
+            updated_at:    new Date().toISOString(),
+          },
+          { onConflict: 'production_id,from_id,to_id' }
+        )
+        if (e2) { failed++; console.error('[refresh-location other→new]', e2.message) }
+        else { updated++ }
+      } else {
+        failed++
+      }
+
+      await sleep(BATCH_PAUSE)
+    }
+
+    const total = otherLocs.length * 2
+    return NextResponse.json({ updated, skipped, failed, total })
   }
+  // ── CASO EDIT (rotte esistenti) — comportamento invariato ─────────────────
 
   // 2. Raccoglie tutti i location IDs coinvolti
   const allLocIds = [...new Set(routes.flatMap(r => [r.from_id, r.to_id]))]
