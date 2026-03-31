@@ -328,22 +328,39 @@ function cellValueToString(val) {
   if (val === null || val === undefined) return null
   if (val instanceof Date) {
     if (isNaN(val.getTime())) return null
+    const y = val.getUTCFullYear()
+    if (y < 1900 || y > 2100) return null  // data non valida (es. seriale 0 = 1899)
     return val.toISOString().split('T')[0]
+  }
+  // Numero: seriale Excel date o valore generico — in entrambi i casi null
+  if (typeof val === 'number') {
+    if (val <= 0) return null  // seriale 0 = data non valida
+    return null  // altri numeri (costo, totali) → null
   }
   const s = String(val).trim()
   return s === '' ? null : s
 }
 
-/** Verifica se una riga è una riga totale/subtotale da saltare */
+/** Verifica se una riga è una riga totale/subtotale/nota da saltare */
 function isTotalRow(row) {
+  if (!Array.isArray(row) || row.length === 0) return false
+  // Controlla tutte le celle per match esatto
   for (const cell of row) {
     if (!cell) continue
     const s = String(cell).toLowerCase().trim()
     if (s === 'total' || s === 'totale' || s === 'subtotal' ||
-        s === 'grand total' || s === 'totali' || s === 'sub total') {
-      return true
-    }
+        s === 'grand total' || s === 'totali' || s === 'sub total') return true
   }
+  // Controlla la prima cella non vuota
+  const firstCell = row.find(c => c !== null && c !== undefined && String(c).trim() !== '')
+  if (!firstCell) return false
+  const first = String(firstCell).toLowerCase().trim()
+  if (first.startsWith('tot.') || first.startsWith('tot ')) return true
+  if (first.startsWith('total') || first.startsWith('grand total')) return true
+  if (first.startsWith('quantità notti') || first.startsWith('dal 21')) return true
+  if (first.startsWith('da spostare') || first.startsWith('note:')) return true
+  // Riga con testo molto lungo nella prima cella = probabilmente una nota contrattuale
+  if (first.length > 80) return true
   return false
 }
 
@@ -357,8 +374,15 @@ function isEmptyRow(row) {
 function isNamePlaceholder(val) {
   if (!val) return true
   const s = String(val).toLowerCase().trim()
-  return s === 'name tbd' || s === 'name tba' || s === 'tbd' || s === 'tba' ||
-         s === 'n/a' || s === '-' || s === 'nome' || s === 'name'
+  // Valori esatti da ignorare
+  if (['name tbd', 'name tba', 'tbd', 'tba', 'n/a', '-', 'nome', 'name'].includes(s)) return true
+  // Pattern da ignorare
+  if (s.includes('tbd') || s.includes('tba')) return true
+  if (s.startsWith('driver #') || s.startsWith('driver#')) return true
+  if (s.startsWith('tot.') || s.startsWith('total') || s.startsWith('grand total')) return true
+  if (s.startsWith('dal ') || s.startsWith('da ') || s.startsWith('quantità')) return true
+  if (s.startsWith('note:') || s.startsWith('note ')) return true
+  return false
 }
 
 /**
@@ -437,13 +461,27 @@ function extractStructuredExcel(buffer, selectedSheet = null) {
     dataRows.push(rowObj)
   }
 
-  // Filtra colonne che sono null per TUTTE le righe: riduce drasticamente la dimensione JSON
+  // Filtra colonne che sono null per TUTTE le righe
   const usedKeys = new Set()
   for (const row of dataRows) {
     for (const [k, v] of Object.entries(row)) {
       if (v !== null) usedKeys.add(k)
     }
   }
+
+  // Bug 1 fix: rimuovi colonne "calendario" — colonne dove >80% dei valori non-null
+  // sono "1", " ", o una singola lettera maiuscola (M/T/W/F/S/D = giorni settimana)
+  const CALENDAR_PATTERN = /^(\s*1\s*|\s+|[MTWFSD])$/
+  function isCalendarColumn(key, rows) {
+    const nonNull = rows.map(r => r[key]).filter(v => v !== null && v !== undefined)
+    if (nonNull.length === 0) return true
+    const calCount = nonNull.filter(v => CALENDAR_PATTERN.test(String(v))).length
+    return calCount / nonNull.length > 0.8
+  }
+  for (const key of [...usedKeys]) {
+    if (isCalendarColumn(key, dataRows)) usedKeys.delete(key)
+  }
+
   const filteredRows = dataRows.map(row => {
     const obj = {}
     for (const k of usedKeys) obj[k] = row[k] ?? null
@@ -682,14 +720,18 @@ async function processCrewRows(rawRows, supabase, productionId) {
       }
     }
 
-    // Hotel matching
+    // Hotel matching (multi-livello)
     let hotel_id = null
     let hotelNotFound = false
     if (row.hotel) {
-      const hotelLower = row.hotel.toLowerCase()
+      const hotelLower = row.hotel.toLowerCase().trim()
       const locMatch = (locations || []).find(loc => {
-        const locLower = (loc.name || '').toLowerCase()
-        return locLower.includes(hotelLower) || hotelLower.includes(locLower)
+        const locLower = (loc.name || '').toLowerCase().trim()
+        if (locLower === hotelLower) return true
+        if (locLower.includes(hotelLower) || hotelLower.includes(locLower)) return true
+        const parts = hotelLower.split(/[\|\-–,]/).map(p => p.trim()).filter(Boolean)
+        if (parts.some(p => p.length > 3 && (locLower.includes(p) || p.includes(locLower)))) return true
+        return false
       })
       if (locMatch) {
         hotel_id = locMatch.id
@@ -759,17 +801,34 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
     const fullName = [first_name, last_name].filter(Boolean).join(' ')
     if (fullName) {
       const fullNameNorm = fullName.trim().toLowerCase()
-      // Primary: first_name + ' ' + last_name vs full_name (trim + lowercase)
+      const cleanFull = fullNameNorm.replace(/[*+]/g, '').trim()
+
+      // Strategia 1: match esatto full_name
       let match = (existingCrew || []).find(c =>
-        (c.full_name || '').trim().toLowerCase() === fullNameNorm
+        (c.full_name || '').trim().toLowerCase() === cleanFull
       )
-      // Fallback: last_name contains (es. "Mario Rossi" in DB → "Rossi" dal file)
-      if (!match && last_name && last_name.trim().length > 1) {
-        const lastNorm = last_name.trim().toLowerCase()
+      // Strategia 2: il DB contiene il fullname del file
+      if (!match) {
         match = (existingCrew || []).find(c =>
-          (c.full_name || '').trim().toLowerCase().includes(lastNorm)
+          (c.full_name || '').trim().toLowerCase().includes(cleanFull)
         )
       }
+      // Strategia 3: il fullname del file contiene il full_name del DB
+      if (!match) {
+        match = (existingCrew || []).find(c => {
+          const dbName = (c.full_name || '').trim().toLowerCase()
+          return dbName.length > 3 && cleanFull.includes(dbName)
+        })
+      }
+      // Strategia 4: match solo sul cognome (last_name) come parola intera nel DB
+      if (!match && last_name && last_name.trim().length > 2) {
+        const lastNorm = last_name.trim().toLowerCase().replace(/[*]/g, '')
+        match = (existingCrew || []).find(c => {
+          const dbName = (c.full_name || '').trim().toLowerCase()
+          return dbName.split(' ').some(word => word === lastNorm)
+        })
+      }
+
       if (match) {
         action = 'update'
         existingId = match.id
@@ -782,14 +841,22 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
       }
     }
 
-    // Hotel matching su hotel_name → locations
+    // Hotel matching su hotel_name → locations (multi-livello)
     let hotel_id = null
     let hotelNotFound = false
     if (hotel_name) {
-      const hotelLower = hotel_name.toLowerCase()
+      const hotelLower = hotel_name.toLowerCase().trim()
       const locMatch = (locations || []).find(loc => {
-        const locLower = (loc.name || '').toLowerCase()
-        return locLower.includes(hotelLower) || hotelLower.includes(locLower)
+        const locLower = (loc.name || '').toLowerCase().trim()
+        // 1. Match esatto
+        if (locLower === hotelLower) return true
+        // 2. includes bidirezionale
+        if (locLower.includes(hotelLower) || hotelLower.includes(locLower)) return true
+        // 3. hotel_name contiene il nome del DB dopo un separatore ("|", "-", "–")
+        //    es. "MONOPOLI | TORRE CINTOLA" → cerca "torre cintola" nel DB
+        const parts = hotelLower.split(/[\|\-–,]/).map(p => p.trim()).filter(Boolean)
+        if (parts.some(p => p.length > 3 && (locLower.includes(p) || p.includes(locLower)))) return true
+        return false
       })
       if (locMatch) {
         hotel_id = locMatch.id
