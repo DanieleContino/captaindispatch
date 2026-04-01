@@ -786,7 +786,7 @@ export default function CrewPage() {
     setBulkDel(true)
     // Prima rimuovi trip_passengers per tutti gli id selezionati
     await supabase.from('trip_passengers').delete().in('crew_id', selectedIds)
-    const { error } = await supabase.from('crew').delete().in('id', selectedIds)
+    const { error } = await supabase.from('crew').delete().in('id', selectedIds).eq('production_id', PRODUCTION_ID)
     setBulkDel(false)
     if (!error) { setSelectedIds([]); setBulkConfirm(false); loadCrew() }
   }

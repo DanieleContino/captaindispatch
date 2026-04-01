@@ -167,7 +167,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
   async function handleDelete() {
     if (!confirmDel) { setCd(true); return }
     setDel(true)
-    const { error } = await supabase.from('locations').delete().eq('id', initial.id)
+    const { error } = await supabase.from('locations').delete().eq('id', initial.id).eq('production_id', PRODUCTION_ID)
     setDel(false)
     if (error) { setError(error.message); return }
     onSaved()
