@@ -602,11 +602,11 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
             {/* Date */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
-                <label style={lbl}>{t.arrivalDateLabel}</label>
+                <label style={lbl}>🏨 Check-in</label>
                 <input type="date" value={form.arrival_date} onChange={e => set('arrival_date', e.target.value)} style={inp} />
               </div>
               <div>
-                <label style={lbl}>{t.departureDateLabel}</label>
+                <label style={lbl}>🏁 Check-out</label>
                 <input type="date" value={form.departure_date} onChange={e => set('departure_date', e.target.value)} style={inp} />
               </div>
             </div>
