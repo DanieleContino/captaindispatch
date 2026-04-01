@@ -820,6 +820,9 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
           return dbName.length > 3 && cleanFull.includes(dbName)
         })
       }
+      if (match && first_name && last_name) {
+        console.log(`[DEBUG match] "${first_name} ${last_name}" → "${match.full_name}" (${match.id})`)
+      }
       if (match) {
         action = 'update'
         existingId = match.id
