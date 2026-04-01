@@ -817,11 +817,9 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
       if (!match) {
         match = (existingCrew || []).find(c => {
           const dbName = (c.full_name || '').trim().toLowerCase()
-          return dbName.length > 3 && cleanFull.includes(dbName)
+          // Richiede almeno nome + cognome (con spazio) per evitare falsi positivi
+          return dbName.length > 3 && dbName.includes(' ') && cleanFull.includes(dbName)
         })
-      }
-      if (match && first_name && last_name) {
-        console.log(`[DEBUG match] "${first_name} ${last_name}" → "${match.full_name}" (${match.id})`)
       }
       if (match) {
         action = 'update'
