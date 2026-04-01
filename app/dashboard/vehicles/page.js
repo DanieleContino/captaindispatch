@@ -107,7 +107,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [] }
   async function handleDelete() {
     if (!confirmDel) { setCd(true); return }
     setDel(true)
-    const { error } = await supabase.from('vehicles').delete().eq('id', initial.id)
+    const { error } = await supabase.from('vehicles').delete().eq('id', initial.id).eq('production_id', PRODUCTION_ID)
     setDel(false)
     if (error) { setError(error.message); return }
     onSaved()
@@ -562,7 +562,7 @@ export default function VehiclesPage() {
 
   // ─── Delete singolo (da riga) ─────────────────────────────
   async function handleDeleteSingle(id) {
-    const { error } = await supabase.from('vehicles').delete().eq('id', id)
+    const { error } = await supabase.from('vehicles').delete().eq('id', id).eq('production_id', PRODUCTION_ID)
     if (!error) {
       setSelectedIds(prev => prev.filter(x => x !== id))
       load()
@@ -573,7 +573,7 @@ export default function VehiclesPage() {
   async function handleBulkDelete() {
     if (!bulkConfirm) { setBulkConfirm(true); return }
     setBulkDel(true)
-    const { error } = await supabase.from('vehicles').delete().in('id', selectedIds)
+    const { error } = await supabase.from('vehicles').delete().in('id', selectedIds).eq('production_id', PRODUCTION_ID)
     setBulkDel(false)
     if (!error) { setSelectedIds([]); setBulkConfirm(false); load() }
   }
