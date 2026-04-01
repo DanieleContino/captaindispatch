@@ -1012,7 +1012,10 @@ export async function POST(req) {
 
     // ── MODE: hal ──────────────────────────────────────────
     if (mode === 'hal') {
-      const halResult = await callClaude(SYSTEM_PROMPT_HAL, text, 'object')
+      const halUserContent = instructions.trim()
+        ? `${text}\n\n---\nAdditional instructions: ${instructions.trim()}`
+        : text
+      const halResult = await callClaude(SYSTEM_PROMPT_HAL, halUserContent, 'object')
       const detectedType = halResult.type || 'crew'
 
       // Determina il modo effettivo da mostrare nel frontend
