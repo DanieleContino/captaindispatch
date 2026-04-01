@@ -489,8 +489,6 @@ function extractStructuredExcel(buffer, selectedSheet = null) {
   })
   const filteredHeaders = headers.filter(Boolean).filter(h => usedKeys.has(h))
 
-  console.log(`[DEBUG] usedKeys dopo filtro: ${[...usedKeys].join(', ')}`)
-  console.log(`[DEBUG] JSON size: ${JSON.stringify({sheet_name: sheetName, metadata, headers: filteredHeaders, rows: filteredRows}).length} chars`)
   console.log(`[import/parse] Excel structured: sheet="${sheetName}", headerIdx=${headerIdx}, headers=${headers.filter(Boolean).length}→${filteredHeaders.length}, rows=${filteredRows.length}`)
 
   return { sheet_name: sheetName, metadata, headers: filteredHeaders, rows: filteredRows }
