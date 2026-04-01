@@ -95,7 +95,7 @@ function NTNToggle({ crewId, current, onChange }) {
   }
   return (
     <button onClick={e => { e.stopPropagation(); toggle() }} disabled={saving} title={current ? 'Rimuovi NTN' : 'Segna come Self Drive / NTN'}
-      style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: saving ? 'default' : 'pointer', border: `1px solid ${current ? '#cbd5e1' : '#e2e8f0'}`, background: current ? '#f1f5f9' : 'white', color: current ? '#6b7280' : '#cbd5e1', opacity: saving ? 0.6 : 1, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+      style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: saving ? 'default' : 'pointer', border: `1px solid ${current ? '#0f2340' : '#e2e8f0'}`, background: current ? '#0f2340' : 'white', color: current ? 'white' : '#cbd5e1', opacity: saving ? 0.6 : 1, whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
       🚐
     </button>
   )
@@ -294,11 +294,6 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
           )}
           <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '1px 7px', borderRadius: '5px' }}>{member.department || 'NO DEPT'}</span>
           <Badge label={member.hotel_status} style={hc} />
-          {member.no_transport_needed && (
-            <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-              🚐 SD
-            </span>
-          )}
           {isRemote && (
             <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #94a3b8' }}>
               🏠 Remote
