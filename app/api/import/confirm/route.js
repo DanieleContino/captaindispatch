@@ -214,7 +214,12 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
   if (insertRows.length > 0) {
     let maxNum = await getMaxCrewNum(supabase, productionId)
 
-    const toInsert = insertRows.map(r => {
+    const toInsert = insertRows
+      .filter(r => {
+        const full_name = [r.first_name, r.last_name].filter(Boolean).join(' ').trim()
+        return full_name.length > 0
+      })
+      .map(r => {
       maxNum++
 
       // Risolvi hotel_id: da match esistente oppure da nuova location appena inserita
