@@ -64,7 +64,7 @@ Rules:
   LOCATION/LOCATION DEPARTMENT/SCOUTS/SOPRALLUOGHI → LOCATIONS
 - Director of Photography always → CAMERA (never DIRECTING)
 - EXCEPTION — role overrides section: person with role "Director" (standalone), "2nd Unit Director", "Insert Director" → always DIRECTING, even if listed under a PRODUCERS/WRITERS/DIRECTORS section heading
-- Vehicle type inference: Transit/Sprinter/Vito→VAN, Panda/Giulia/Model3→CAR, Tourismo/Irizar→BUS
+- Vehicle type inference: Transit/Sprinter/Vito→VAN, Panda/Giulia/Model3→CAR, Tourismo/Irizar→BUS, DUCATO/Doblo→CARGO
 - If a field is not found, return null
 - Return ONLY a valid JSON object, no markdown, no explanation, no backticks
 
@@ -96,7 +96,7 @@ PRIORITY RULE: If the user provides "Additional instructions" about column mappi
 follow them STRICTLY and they override any default interpretation below.
 
 Default column interpretation for budget/cost sheet format (apply only when no user instructions override):
-- First column (BRAND/TYPE): map to vehicle_type — MERCEDES/NCC/MINIVAN/MINIVAN CREW → "VAN", AUTO/DOBLO/PASINO → "CAR", BUS/TRUCK/DUCATO/PUP/75Q/CAMION → "BUS"; when in doubt default to "VAN"
+- First column (BRAND/TYPE): map to vehicle_type — MERCEDES/NCC/MINIVAN/MINIVAN CREW → "VAN", AUTO/PASINO → "CAR", BUS/TRUCK/PUP/75Q/CAMION → "BUS", DUCATO/DOBLO → "CARGO"; when in doubt default to "VAN"
 - Second column (MODEL): use as plate ONLY if it looks like a vehicle plate (e.g. "AB 123 CD", "GR 448 JY"); otherwise null
 - Third column (DRIVER): driver_name ONLY if it is a real person's full name or surname; IGNORE department siglas/abbreviations like "SD", "TBC", "A CHIAMATA", "TRANSP. DEPT.", "CO LINE PRODUCER", "DRIVERS CINETECNICA" etc.
 - Fourth column (DEPT./ROLE): use as sign_code (the department or role label the vehicle is assigned to)

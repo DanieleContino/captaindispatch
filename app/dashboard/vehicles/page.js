@@ -11,13 +11,14 @@ import { getProductionId } from '../../../lib/production'
 
 const SIDEBAR_W = 400
 
-const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌', TRUCK: '🚛', PICKUP: '🛻' }
+const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌', TRUCK: '🚛', PICKUP: '🛻', CARGO: '🚚' }
 const TYPE_COLOR = {
   VAN:    { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
   CAR:    { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
   BUS:    { bg: '#fef3c7', color: '#b45309', border: '#fde68a' },
   TRUCK:  { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
   PICKUP: { bg: '#fdf4ff', color: '#7e22ce', border: '#e9d5ff' },
+  CARGO:  { bg: '#fef3c7', color: '#b45309', border: '#fde68a' },
 }
 const CLASS_OPTIONS = ['CLASSIC', 'LUX', 'ECONOMY', 'PREMIUM', 'MINIBUS', 'NCC']
 const CLASS_COLOR = {
@@ -158,7 +159,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [] }
             <div style={fld}>
               <label style={lbl}>{t.vehicleTypeLabel}</label>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP'].map(type => {
+                {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(type => {
                   const c = TYPE_COLOR[type]; const active = form.vehicle_type === type
                   return (
                     <button key={type} type="button" onClick={() => set('vehicle_type', type)}
@@ -637,6 +638,7 @@ export default function VehiclesPage() {
     bus:    vhcs.filter(v => v.vehicle_type === 'BUS').length,
     truck:  vhcs.filter(v => v.vehicle_type === 'TRUCK').length,
     pickup: vhcs.filter(v => v.vehicle_type === 'PICKUP').length,
+    cargo:  vhcs.filter(v => v.vehicle_type === 'CARGO').length,
   }
 
   if (!user) return <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
@@ -655,7 +657,7 @@ export default function VehiclesPage() {
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>{vhcs.length} totale · {counts.active} attivi</span>
           <div style={{ display: 'flex', gap: '4px', marginLeft: '4px' }}>
-            {[['VAN', '🚐'], ['CAR', '🚗'], ['BUS', '🚌'], ['TRUCK', '🚛'], ['PICKUP', '🛻']].map(([tp, ic]) => counts[tp.toLowerCase()] > 0 && (
+            {[['VAN', '🚐'], ['CAR', '🚗'], ['BUS', '🚌'], ['TRUCK', '🚛'], ['PICKUP', '🛻'], ['CARGO', '🚚']].map(([tp, ic]) => counts[tp.toLowerCase()] > 0 && (
               <span key={tp} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', ...(TYPE_COLOR[tp]), border: `1px solid ${TYPE_COLOR[tp].border}` }}>
                 {ic} {counts[tp.toLowerCase()]} {tp}
               </span>
@@ -675,7 +677,7 @@ export default function VehiclesPage() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '3px' }}>
-            {['ALL', 'VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP'].map(s => {
+            {['ALL', 'VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(s => {
               const active = filterType === s; const c = s !== 'ALL' ? TYPE_COLOR[s] : null
               return (
                 <button key={s} onClick={() => setFT(s)}
