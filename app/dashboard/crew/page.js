@@ -110,7 +110,8 @@ function RemoteToggle({ crewId, current, onChange }) {
     if (saving) return
     setSaving(true)
     const next = !isRemote
-    const { error } = await supabase.from('crew').update({ on_location: next }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    const { error, data } = await supabase.from('crew').update({ on_location: next }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    console.log('[RemoteToggle]', { crewId, next, error, data })
     setSaving(false)
     if (!error) onChange(crewId, next)
   }
