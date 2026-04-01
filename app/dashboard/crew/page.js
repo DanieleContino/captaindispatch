@@ -364,7 +364,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
 }
 
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
-function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
+function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose, onSaved }) {
   const t = useT()
   const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '' }
   const PRODUCTION_ID = getProductionId()
@@ -521,7 +521,17 @@ function CrewSidebar({ open, mode, initial, locations, onClose, onSaved }) {
             {/* Dipartimento */}
             <div style={row}>
               <label style={lbl}>{t.departmentLabel}</label>
-              <input value={form.department} onChange={e => set('department', e.target.value)} style={inp} placeholder="GRIP, CAMERA, PRODUCTION…" />
+              <input
+                list="crew-dept-suggestions"
+                value={form.department}
+                onChange={e => set('department', e.target.value)}
+                style={inp}
+                placeholder="GRIP, CAMERA, PRODUCTION…"
+                autoComplete="off"
+              />
+              <datalist id="crew-dept-suggestions">
+                {deptOptions.map(d => <option key={d} value={d} />)}
+              </datalist>
             </div>
 
             {/* NTN / Self Drive toggle */}
@@ -1041,6 +1051,7 @@ export default function CrewPage() {
         mode={sidebarMode}
         initial={editTarget}
         locations={locations}
+        deptOptions={departments.filter(d => d !== 'NO DEPT')}
         onClose={() => setSO(false)}
         onSaved={handleSaved}
       />
