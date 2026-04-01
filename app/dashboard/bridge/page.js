@@ -8,6 +8,11 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
+import { getProductionId } from '../../../lib/production'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Cell, ResponsiveContainer,
+} from 'recharts'
 
 // ── helpers ──────────────────────────────────────────────
 function fmt(iso) {
@@ -226,6 +231,304 @@ function TomorrowPanel({ productionId }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Arrivals & Departures Chart ───────────────────────────
+function ArrivalsDeparturesChart({ productionId }) {
+  const [chartData, setChartData] = useState([])
+  const [loading,   setLoading]   = useState(true)
+
+  useEffect(() => {
+    if (!productionId) return
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const todayStr    = today.toISOString().split('T')[0]
+    const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+    // 30-day window: today → today+29
+    const to = new Date(today)
+    to.setDate(to.getDate() + 29)
+    const fromStr = todayStr
+    const toStr   = to.toISOString().split('T')[0]
+
+    Promise.all([
+      supabase.from('crew')
+        .select('arrival_date')
+        .eq('production_id', productionId)
+        .gte('arrival_date', fromStr)
+        .lte('arrival_date', toStr)
+        .not('arrival_date', 'is', null),
+      supabase.from('crew')
+        .select('departure_date')
+        .eq('production_id', productionId)
+        .gte('departure_date', fromStr)
+        .lte('departure_date', toStr)
+        .not('departure_date', 'is', null),
+    ]).then(([arrRes, depRes]) => {
+      const arrMap = {}
+      const depMap = {}
+      ;(arrRes.data || []).forEach(r => {
+        if (r.arrival_date) arrMap[r.arrival_date] = (arrMap[r.arrival_date] || 0) + 1
+      })
+      ;(depRes.data || []).forEach(r => {
+        if (r.departure_date) depMap[r.departure_date] = (depMap[r.departure_date] || 0) + 1
+      })
+
+      const days = []
+      const cur = new Date(today)
+      while (cur <= to) {
+        const d = cur.toISOString().split('T')[0]
+        days.push({
+          date:       d,
+          label:      cur.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+          arrivals:   arrMap[d]  || 0,
+          departures: depMap[d]  || 0,
+          isToday:    d === todayStr,
+          isTomorrow: d === tomorrowStr,
+        })
+        cur.setDate(cur.getDate() + 1)
+      }
+
+      setChartData(days)
+      setLoading(false)
+    })
+  }, [productionId])
+
+  if (loading) return null
+
+  const hasData = chartData.some(d => d.arrivals > 0 || d.departures > 0)
+
+  return (
+    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: '20px' }}>
+      {/* Header + Legend */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f2340' }}>
+          📊 Arrivals & Departures — 30 days
+        </div>
+        <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#64748b', flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '10px', height: '10px', background: '#86efac', borderRadius: '2px', display: 'inline-block' }} />
+            Arrivals
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '10px', height: '10px', background: '#fca5a5', borderRadius: '2px', display: 'inline-block' }} />
+            Departures
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '10px', height: '10px', background: '#0f2340', borderRadius: '2px', display: 'inline-block' }} />
+            Today
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '10px', height: '10px', background: '#f97316', borderRadius: '2px', display: 'inline-block' }} />
+            Tomorrow
+          </span>
+        </div>
+      </div>
+
+      {!hasData ? (
+        <div style={{ textAlign: 'center', padding: '30px 0', color: '#94a3b8', fontSize: '13px' }}>
+          No arrivals or departures in the next 30 days
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart
+            data={chartData}
+            barCategoryGap="20%"
+            barGap={2}
+            margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 9, fill: '#94a3b8' }}
+              tickLine={false}
+              axisLine={false}
+              interval={4}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 9, fill: '#94a3b8' }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip
+              contentStyle={{ fontSize: '11px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+              labelStyle={{ fontWeight: '700', color: '#0f2340', marginBottom: '4px' }}
+              formatter={(value, name) => [value, name === 'arrivals' ? '✈️ Arrivals' : '🏁 Departures']}
+              labelFormatter={(label, payload) => {
+                const d = payload?.[0]?.payload
+                if (d?.isToday)    return `${label} — TODAY`
+                if (d?.isTomorrow) return `${label} — TOMORROW`
+                return label
+              }}
+            />
+            <Bar dataKey="arrivals" name="arrivals" radius={[3, 3, 0, 0]} maxBarSize={20}>
+              {chartData.map((entry, i) => (
+                <Cell
+                  key={`arr-${i}`}
+                  fill={entry.isToday ? '#0f2340' : entry.isTomorrow ? '#f97316' : '#86efac'}
+                />
+              ))}
+            </Bar>
+            <Bar dataKey="departures" name="departures" radius={[3, 3, 0, 0]} maxBarSize={20}>
+              {chartData.map((entry, i) => (
+                <Cell
+                  key={`dep-${i}`}
+                  fill={entry.isToday ? '#1e40af' : entry.isTomorrow ? '#ea580c' : '#fca5a5'}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  )
+}
+
+// ── Mini Widgets (Fleet / Pax / Hub) ─────────────────────
+function MiniWidgets({ productionId }) {
+  const [vehicles, setVehicles] = useState([])
+  const [crew,     setCrew]     = useState([])
+
+  useEffect(() => {
+    if (!productionId) return
+    supabase.from('vehicles')
+      .select('id, sign_code, vehicle_type')
+      .eq('production_id', productionId)
+      .eq('active', true)
+      .then(({ data }) => setVehicles(data || []))
+    supabase.from('crew')
+      .select('id, travel_status, hotel_status')
+      .eq('production_id', productionId)
+      .then(({ data }) => setCrew(data || []))
+  }, [productionId])
+
+  const crewStats = {
+    present: crew.filter(c => c.travel_status === 'PRESENT').length,
+    in:      crew.filter(c => c.travel_status === 'IN').length,
+    out:     crew.filter(c => c.travel_status === 'OUT').length,
+    conf:    crew.filter(c => c.hotel_status  === 'CONFIRMED').length,
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+
+      {/* Fleet Mini */}
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+          🚐 Fleet
+        </div>
+        <div style={{ fontSize: '22px', fontWeight: '900', color: '#0f2340', marginBottom: '4px' }}>
+          {vehicles.length}
+        </div>
+        <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>vehicles active</div>
+        <a href="/dashboard/fleet" style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>
+          View Fleet Monitor →
+        </a>
+      </div>
+
+      {/* Pax Mini */}
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+          👥 Crew
+        </div>
+        <div style={{ fontSize: '22px', fontWeight: '900', color: '#0f2340', marginBottom: '4px' }}>
+          {crew.length}
+        </div>
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '10px' }}>
+          {[
+            { n: crewStats.present, l: 'PRESENT', bg: '#eff6ff', c: '#1d4ed8' },
+            { n: crewStats.in,      l: 'IN',      bg: '#dcfce7', c: '#15803d' },
+            { n: crewStats.out,     l: 'OUT',      bg: '#fff7ed', c: '#c2410c' },
+          ].map(s => s.n > 0 && (
+            <span key={s.l} style={{ fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: s.bg, color: s.c }}>
+              {s.n} {s.l}
+            </span>
+          ))}
+        </div>
+        <a href="/dashboard/pax-coverage" style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>
+          View Pax Coverage →
+        </a>
+      </div>
+
+      {/* Hub Mini */}
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
+        <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+          🛣️ Hub Coverage
+        </div>
+        <div style={{ fontSize: '22px', fontWeight: '900', color: '#0f2340', marginBottom: '4px' }}>
+          {crewStats.conf}
+        </div>
+        <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>crew confirmed</div>
+        <a href="/dashboard/hub-coverage" style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>
+          View Hub Coverage →
+        </a>
+      </div>
+    </div>
+  )
+}
+
+// ── Activity Log ─────────────────────────────────────────
+function ActivityLog({ productionId }) {
+  const [logs,    setLogs]    = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!productionId) return
+    supabase.from('activity_log')
+      .select('*')
+      .eq('production_id', productionId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data }) => { setLogs(data || []); setLoading(false) })
+  }, [productionId])
+
+  const actionIcon = {
+    import:   '📥',
+    rocket:   '🚀',
+    crew:     '👤',
+    trip:     '🚐',
+    vehicle:  '🚗',
+    location: '📍',
+    default:  '📋',
+  }
+
+  return (
+    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
+      <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f2340' }}>📋 Activity Log</div>
+        <div style={{ fontSize: '11px', color: '#94a3b8' }}>Last 50 actions</div>
+      </div>
+      {loading ? (
+        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>Loading…</div>
+      ) : logs.length === 0 ? (
+        <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No activity yet</div>
+      ) : (
+        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+          {logs.map(log => {
+            const icon = actionIcon[log.action_type] || actionIcon.default
+            const time = new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+            const date = new Date(log.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+            return (
+              <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 20px', borderBottom: '1px solid #f8fafc' }}>
+                <span style={{ fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>{icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '12px', color: '#374151', fontWeight: '500' }}>{log.description}</div>
+                </div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0, textAlign: 'right' }}>
+                  <div>{time}</div>
+                  <div>{date}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -620,6 +923,12 @@ export default function BridgePage() {
   // Pending badge state
   const [pendingCount, setPendingCount] = useState(null)
 
+  const [PRODUCTION_ID, setProductionId] = useState(null)
+
+  useEffect(() => {
+    setProductionId(getProductionId())
+  }, [])
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/login'); return }
@@ -675,6 +984,13 @@ export default function BridgePage() {
             Manage who accesses CaptainDispatch — approve pending users and control invite codes.
           </p>
         </div>
+
+        {/* ── Dashboard Panels ── */}
+        <NotificationsPanel productionId={PRODUCTION_ID} />
+        <TomorrowPanel productionId={PRODUCTION_ID} />
+        <ArrivalsDeparturesChart productionId={PRODUCTION_ID} />
+        <MiniWidgets productionId={PRODUCTION_ID} />
+        <ActivityLog productionId={PRODUCTION_ID} />
 
         {/* ── Tab bar ── */}
         <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', padding: '4px', borderRadius: '10px', border: '1px solid #e2e8f0', width: 'fit-content' }}>
