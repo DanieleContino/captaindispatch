@@ -403,7 +403,7 @@ function MiniWidgets({ productionId }) {
       .eq('active', true)
       .then(({ data }) => setVehicles(data || []))
     supabase.from('crew')
-      .select('id, travel_status, hotel_status')
+      .select('id, travel_status, hotel_status, no_transport_needed')
       .eq('production_id', productionId)
       .then(({ data }) => setCrew(data || []))
   }, [productionId])
@@ -456,6 +456,11 @@ function MiniWidgets({ productionId }) {
             </span>
           ))}
         </div>
+        {crew.filter(c => c.no_transport_needed).length > 0 && (
+          <div style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 8px', display: 'inline-block', marginBottom: '8px' }}>
+            🚐 {crew.filter(c => c.no_transport_needed).length} NTN
+          </div>
+        )}
         <a href="/dashboard/pax-coverage" style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>
           View Pax Coverage →
         </a>
