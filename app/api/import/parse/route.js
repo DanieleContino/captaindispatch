@@ -820,15 +820,6 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
           return dbName.length > 3 && cleanFull.includes(dbName)
         })
       }
-      // Strategia 4: match solo sul cognome (last_name) come parola intera nel DB
-      if (!match && last_name && last_name.trim().length > 2) {
-        const lastNorm = last_name.trim().toLowerCase().replace(/[*]/g, '')
-        match = (existingCrew || []).find(c => {
-          const dbName = (c.full_name || '').trim().toLowerCase()
-          return dbName.split(' ').some(word => word === lastNorm)
-        })
-      }
-
       if (match) {
         action = 'update'
         existingId = match.id
