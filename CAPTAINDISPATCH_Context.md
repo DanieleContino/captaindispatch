@@ -294,7 +294,7 @@ ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS preferred_crew_ids TEXT[];
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS in_transport BOOLEAN DEFAULT TRUE;
 ```
 **vehicles/page.js:**
-- Tipi: VAN 🚐 · CAR 🚗 · BUS 🚌 · **TRUCK 🚛** (Pasino) · **PICKUP 🛻** (nuovi)
+- Tipi: VAN 🚐 · CAR 🚗 · BUS 🚌 · **TRUCK 🚛** · **PICKUP 🛻** · **CARGO 🚚** (furgone da lavoro; DUCATO/Doblo → CARGO nell'inferenza AI)
 - Classi multi-chip (TEXT[]): CLASSIC · LUX · ECONOMY · PREMIUM · MINIBUS · **NCC** — selezione multipla, toggle chip
 - Switch `in_transport` (sotto Active): ON=verde "✅ In Transport" / OFF=grigio "🚐 SD — escluso da trips/liste/fleet"
 - VehicleRow: badge 🚐 SD se `in_transport=false`
@@ -545,6 +545,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **MIXED + BUG-4 fix** | **`trips/page.js`: (1) Guard `!assignCtx.hotel` nell'else-sibling branch → errore esplicito. (2) `console.log('[handleAddToExisting]'` con contesto completo per debug. (3) Selector UI `🎯 Destination for [name]` per STANDARD + hotel diverso → permette di creare sibling con dropoff diverso (MIXED). Bottone disabilitato se destinazione non scelta. Badge `🔀 MIXED` quando dropoff è diverso dal trip principale. `compute-chain` riconosce MIXED quando `uniquePickups.size>1 && uniqueDropoffs.size>1`.** | — |
 | **S28-T1** | **Vehicle Enhancement T1: `scripts/migrate-vehicles-v2.sql` (vehicle_class TEXT[], preferred_dept, preferred_crew_ids, in_transport). `vehicles/page.js`: tipi TRUCK 🚛+PICKUP 🛻, classi multi-chip TEXT[]+NCC 🔑, switch in_transport (blu), badge 🚐 SD in VehicleRow. ⚠️ Migration SQL da eseguire in Supabase.** | — |
 | **S28-T2** | **Vehicle Enhancement T2: `vehicles/page.js` — sezione "⭐ Preferenze Assegnazione" in sidebar: `preferred_dept` select (12 dept, DEPT_COLOR) + `preferred_crew_ids` multi-select con ricerca (SD 🚐 in cima, chips rimovibili). VehicleRow: badge dept colorato + nomi crew compatti (max 3+overflow). `load()` usa `Promise.all` vehicles+crew. Sidebar carica crew all'apertura.** | — |
+| **CARGO type ✅** | **Aggiunto vehicle type CARGO 🚚 (furgone da lavoro): `vehicles/page.js` TYPE_ICON+TYPE_COLOR+sidebar buttons+toolbar filter+counts+header badge. `lib/ImportModal.js` STANDARD_VTYPES include CARGO. `parse/route.js` SYSTEM_PROMPT_HAL+FLEET: DUCATO/Doblo → CARGO. Commit `425cc85`.** | `425cc85` |
 | **S28-T3** | **Vehicle Enhancement T3: `fleet/page.js` + `lists/page.js` — `.eq('in_transport', true)` sulla query vehicles.** | — |
 | **S28-T4 ✅** | **Vehicle Enhancement T4 (completo): `trips/page.js` — query vehicles `.eq('in_transport', true)` + campi preferred. Badge `⭐` nel dropdown veicolo (TripSidebar + EditTripSidebar). Variabili `suggestedCrew`/`suggestedCrewEdit` calcolate. Sezione UI "📌 Suggeriti per {veicolo}" aggiunta nel picker pax di entrambe le sidebar (sfondo `#fffbeb`, bordo `#fde68a`, quick-add `+`, nascosta se lista vuota).** | — |
 | **S28-T5 ✅** | **Vehicle Enhancement T5: Aggiornamento `CAPTAINDISPATCH_Context.md` (S28 completato, prossimo S18 T4) + `git push origin master` deploy.** | — |
