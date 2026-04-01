@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 1 aprile 2026 | Fix duplicate detection accommodation: (1) `hotel_name = sheet_name` direttamente (rimosso parsing metadata che generava nomi con colonne calendario). (2) Strategia 4 rimossa da `processAccommodationRows` (falsi positivi su cognomi singoli). (3) Strategia 3 rafforzata: `dbName.includes(' ')` richiede almeno nome+cognome nel DB prima del match. — prossimo: S18-T4**
+**Aggiornato: 1 aprile 2026 | S32-T7 ✅ `.env.local` (`NEXT_PUBLIC_APP_URL`) + Context aggiornato + deploy. S32 Google Drive Sync MVP completata. — prossimo: S18-T4**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -8,10 +8,53 @@
 
 ---
 
-## ▶ PROSSIMO — S31 Import Upgrade
+## ▶ PROSSIMO — S18-T4 i18n bridge/page.js
 
-> **S31 COMPLETATA ✅** — Avviare **S18-T4** (i18n bridge/page.js).
-> Un task per sessione.
+> **S32 COMPLETATA ✅** — T1→T7 tutte completate. Deploy S32 effettuato.
+> Prossimo: **S18-T4** — `bridge/page.js` i18n (useT() in BridgePage, PendingUsersTab, InviteCodesTabControlled, AddToProductionModal → chiavi `bridge*`).
+
+---
+
+### S32 — Google Drive Sync MVP (un task per sessione)
+Un unico deploy finale dopo T7. NON deployare tra un task e l'altro.
+
+| Task | File/Scope | Stato |
+|------|-----------|-------|
+| T1 — DB Migration | `scripts/migrate-drive-synced-files.sql` (nuovo) — tabella `drive_synced_files` + RLS | ✅ |
+| T2 — OAuth scope | `app/login/page.js` — aggiunge `drive.readonly` agli scopes Google OAuth | ✅ |
+| T3 — API files | `app/api/drive/files/route.js` (nuovo) — GET lista · POST collega · DELETE scollega | ✅ |
+| T4 — API sync | `app/api/drive/sync/route.js` (nuovo) — scarica da Drive, chiama parse+confirm interni | ✅ |
+| T5 — Cron + vercel.json | `app/api/cron/drive-sync/route.js` (nuovo) + `vercel.json` — cron ogni 30 min (MVP: log only) | ✅ |
+| T6 — UI ImportModal | `lib/ImportModal.js` — sezione "📁 Google Drive Sync" nella fase idle | ✅ |
+| T7 — Env + Context + Deploy | `.env.local` + `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
+
+#### Schema DB S32-T1
+```sql
+drive_synced_files (
+  id uuid PK,
+  production_id uuid FK→productions CASCADE,
+  file_id text,        -- Google Drive file ID
+  file_name text,      -- nome display
+  import_mode text,    -- 'crew' | 'accommodation' | 'fleet' | 'hal'
+  last_modified text,  -- modifiedTime Drive API (per delta check)
+  last_synced_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(production_id, file_id)
+)
+-- RLS: 4 policy granulari SELECT/INSERT/UPDATE/DELETE con IN (SELECT user_production_ids())
+```
+
+#### Note S32
+- `provider_token` (Google OAuth access token) disponibile solo nelle sessioni utente, NON nel cron → cron MVP logga file registrati, sync reale = click manuale "Sync now" dalla UI
+- `NEXT_PUBLIC_APP_URL` necessario in `.env.local` e Vercel env per chiamate interne parse/confirm
+- Picker Drive ufficiale (Google Picker API) = fase futura; per ora: input manuale file ID dall'URL Drive
+
+---
+
+
+## ▶ PRECEDENTE — S31 Import Upgrade
+
+> **S31 COMPLETATA ✅**
 
 ---
 
@@ -486,6 +529,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **Duplicate detection crew fix ✅** | **`app/api/import/parse/route.js` — `processCrewRows()` e `processAccommodationRows()`: matching migliorato. Primary: `(first_name + ' ' + last_name).trim().toLowerCase()` vs `full_name.trim().toLowerCase()`. Fallback: se no match, controlla se `full_name` contiene `last_name` (es. "Mario Rossi" in DB → "Rossi" dal file). `lib/ImportModal.js` — `AccommodationTable`: righe senza match DB ora mostrano `✅ New` (verde) invece di `❌ Not found` (rosso). `rowBg()` accommodation: rimosso sfondo rosso per `!existingId`. Commit `2039a21`.** | `2039a21` |
 | **Import fix 4 bug (1 apr 2026) ✅** | **4 bug risolti nel sistema import accommodation: (1) `lib/ImportModal.js` — `onImported` spostato da `handleConfirm` al Close button della fase `done`: il parent non chiude più il modal prima che la schermata "Import complete!" sia visibile. (2) `app/api/import/parse/route.js` — `SYSTEM_PROMPT_ACCOMMODATION` aggiornato con mapping esplicito colonne Excel (`NAME→first_name, SURNAME→last_name, IN→arrival_date, OUT→departure_date`) + istruzione di usare il campo `metadata` come nome hotel per tutte le righe. (3) `parse/route.js` — `extractStructuredExcel()`: dopo aver costruito `dataRows`, elimina colonne null per TUTTE le righe (`usedKeys`): da 75 colonne→15 reali, JSON da 865KB→~80KB, tutte le 168 righe passano nel limite 100K. (4) `app/api/import/confirm/route.js` — `processAccommodation()`: aggiunto `console.log SKIP ${r.existingId}: fields already in DB` per debug quando null-only rule impedisce l'update. Commit `a6d23c5`.** | `a6d23c5` |
 | **Accommodation duplicate detection fix (1 apr 2026) ✅** | **`app/api/import/parse/route.js` — 3 fix su `processAccommodationRows()` e `extractAccommodationFromStructured()`: (1) `hotel_name = sheet_name` direttamente — rimosso parsing metadata che produceva nomi contenenti colonne calendario (es. "M | T | W | …"). (2) Strategia 4 rimossa (match solo su last_name come parola intera nel DB → falsi positivi, es. "Rossi" matchava qualsiasi "Rossi *"). (3) Strategia 3 rafforzata: aggiunto `dbName.includes(' ')` — ora il full_name nel DB deve contenere almeno uno spazio (nome+cognome) prima che il match venga accettato. Commits `4b14249`, `f8bbd05`, `d06b832`.** | `d06b832` |
+| **S32-T7 ✅** | **Google Drive Sync MVP T7 — Env + Context + Deploy: `.env.local` aggiunto `NEXT_PUBLIC_APP_URL=https://captaindispatch.vercel.app` (necessario per chiamate interne parse/confirm dal cron). `CAPTAINDISPATCH_Context.md` aggiornato (S32 completata T1→T7, prossimo S18-T4). `git push origin master` deploy S32 completo.** | — |
 
 ---
 
