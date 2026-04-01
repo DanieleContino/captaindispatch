@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 1 aprile 2026 | S33 parziale (T1-T4 ✅). S33 Captain Bridge Upgrade in corso — riprende da T5. — prossimo: S33-T5**
+**Aggiornato: 1 aprile 2026 | S33 completata ✅ (T1-T10). — prossimo: S18-T4 (i18n bridge/page.js)**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -8,9 +8,9 @@
 
 ---
 
-## ▶ PROSSIMO — S33-T5 Captain Bridge Upgrade (riprende)
+## ▶ PROSSIMO — S18-T4 i18n bridge/page.js
 
-> **S33 IN CORSO 🔄** — T1→T4 completati. Riprende da T5 (ArrivalsDeparturesChart).
+> **S33 COMPLETATA ✅** — T1→T10 tutte completate. Deploy S33 effettuato.
 > **S32 COMPLETATA ✅** — T1→T7 tutte completate. Deploy S32 effettuato.
 
 ---
@@ -24,12 +24,12 @@ Un unico deploy finale dopo T10. NON deployare tra un task e l'altro.
 | T2 — EasyAccessShortcuts | `bridge/page.js` — barra navigazione rapida 8 shortcut sopra l'header | ✅ |
 | T3 — NotificationsPanel | `bridge/page.js` — panel 🚨 alerts unread da `notifications`, dismiss | ✅ |
 | T4 — TomorrowPanel | `bridge/page.js` — panel 📅 arrivals+departures di domani, high-traffic banner | ✅ |
-| T5 — ArrivalsDeparturesChart | `bridge/page.js` — grafico 📊 Recharts 30 giorni, colori today/tomorrow | ⬜ |
-| T6 — MiniWidgets | `bridge/page.js` — 3 widget Fleet/Pax/Hub con stats live | ⬜ |
-| T7 — ActivityLog | `bridge/page.js` — 📋 last 50 azioni da `activity_log`, icone per tipo | ⬜ |
-| T8 — Integrazione BridgePage | `bridge/page.js` — import Recharts + `getProductionId()` + tutti i componenti nel JSX | ⬜ |
-| T9 — Badge Navbar | `lib/navbar.js` — `useBridgeBadge()` + badge 🔴 pulse ogni 5 min | ⬜ |
-| T10 — CSS pulse + Context + Deploy | `app/globals.css` + `CAPTAINDISPATCH_Context.md` + `git push` | ⬜ |
+| T5 — ArrivalsDeparturesChart | `bridge/page.js` — grafico 📊 Recharts 30 giorni, colori today/tomorrow | ✅ |
+| T6 — MiniWidgets | `bridge/page.js` — 3 widget Fleet/Pax/Hub con stats live | ✅ |
+| T7 — ActivityLog | `bridge/page.js` — 📋 last 50 azioni da `activity_log`, icone per tipo | ✅ |
+| T8 — Integrazione BridgePage | `bridge/page.js` — import Recharts + `getProductionId()` + tutti i componenti nel JSX | ✅ |
+| T9 — Badge Navbar | `lib/navbar.js` — `useBridgeBadge()` + badge 🔴 pulse ogni 5 min | ✅ |
+| T10 — CSS pulse + Context + Deploy | `app/globals.css` + `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
 
 #### Schema DB S33-T1
 ```sql
@@ -47,6 +47,10 @@ activity_log (id uuid PK, production_id uuid FK→productions CASCADE,
 - `EasyAccessShortcuts`: barra shortcut in cima alla pagina (sopra header ⚓) — già nel JSX ✅
 - `NotificationsPanel`: componente definito, da aggiungere al JSX in T8 ⬜
 - `TomorrowPanel`: componente definito, da aggiungere al JSX in T8 ⬜
+- `ArrivalsDeparturesChart`: componente definito (Recharts BarChart 30gg, Cell colori today/tomorrow), da aggiungere al JSX in T8 ⬜
+- `MiniWidgets`: componente definito (3 widget Fleet/Pax/Hub, stats live), da aggiungere al JSX in T8 ⬜
+- `ActivityLog`: componente definito (last 50 azioni da `activity_log`, icone per tipo), da aggiungere al JSX in T8 ⬜
+- `recharts` installato come dipendenza ✅
 
 
 ---
@@ -566,6 +570,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **Import fix 4 bug (1 apr 2026) ✅** | **4 bug risolti nel sistema import accommodation: (1) `lib/ImportModal.js` — `onImported` spostato da `handleConfirm` al Close button della fase `done`: il parent non chiude più il modal prima che la schermata "Import complete!" sia visibile. (2) `app/api/import/parse/route.js` — `SYSTEM_PROMPT_ACCOMMODATION` aggiornato con mapping esplicito colonne Excel (`NAME→first_name, SURNAME→last_name, IN→arrival_date, OUT→departure_date`) + istruzione di usare il campo `metadata` come nome hotel per tutte le righe. (3) `parse/route.js` — `extractStructuredExcel()`: dopo aver costruito `dataRows`, elimina colonne null per TUTTE le righe (`usedKeys`): da 75 colonne→15 reali, JSON da 865KB→~80KB, tutte le 168 righe passano nel limite 100K. (4) `app/api/import/confirm/route.js` — `processAccommodation()`: aggiunto `console.log SKIP ${r.existingId}: fields already in DB` per debug quando null-only rule impedisce l'update. Commit `a6d23c5`.** | `a6d23c5` |
 | **Accommodation duplicate detection fix (1 apr 2026) ✅** | **`app/api/import/parse/route.js` — 3 fix su `processAccommodationRows()` e `extractAccommodationFromStructured()`: (1) `hotel_name = sheet_name` direttamente — rimosso parsing metadata che produceva nomi contenenti colonne calendario (es. "M | T | W | …"). (2) Strategia 4 rimossa (match solo su last_name come parola intera nel DB → falsi positivi, es. "Rossi" matchava qualsiasi "Rossi *"). (3) Strategia 3 rafforzata: aggiunto `dbName.includes(' ')` — ora il full_name nel DB deve contenere almeno uno spazio (nome+cognome) prima che il match venga accettato. Commits `4b14249`, `f8bbd05`, `d06b832`.** | `d06b832` |
 | **S32-T7 ✅** | **Google Drive Sync MVP T7 — Env + Context + Deploy: `.env.local` aggiunto `NEXT_PUBLIC_APP_URL=https://captaindispatch.vercel.app` (necessario per chiamate interne parse/confirm dal cron). `CAPTAINDISPATCH_Context.md` aggiornato (S32 completata T1→T7, prossimo S18-T4). `git push origin master` deploy S32 completo.** | — |
+| **S33 ✅** | **Captain Bridge Upgrade — T1: DB migration (notifications+activity_log+RLS). T2: EasyAccessShortcuts (8 shortcut). T3: NotificationsPanel (alert unread, dismiss). T4: TomorrowPanel (arrivals+departures domani, high-traffic banner). T5: ArrivalsDeparturesChart (Recharts 30gg, Cell colori today/tomorrow). T6: MiniWidgets (Fleet/Pax/Hub). T7: ActivityLog (last 50, icone per tipo). T8: Integrazione BridgePage (tutti i componenti nel JSX). T9: Badge Navbar (`useBridgeBadge()` + badge 🔴 pulse ogni 5 min). T10: `@keyframes pulse` in `globals.css` + Context + deploy.** | — |
 
 ---
 
