@@ -272,6 +272,8 @@ function ArrivalsDeparturesChart({ productionId }) {
     ]).then(([arrRes, depRes]) => {
       const arrMap = {}
       const depMap = {}
+      console.log('[Bridge Chart] arrRes.data:', JSON.stringify(arrRes.data))
+      console.log('[Bridge Chart] fromStr:', fromStr, 'toStr:', toStr)
       ;(arrRes.data || []).forEach(r => {
         if (r.arrival_date) {
           const d = String(r.arrival_date).slice(0, 10)
