@@ -107,6 +107,17 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [] }
   async function handleDelete() {
     if (!confirmDel) { setCd(true); return }
     setDel(true)
+    const { count } = await supabase
+      .from('trips')
+      .select('id', { count: 'exact', head: true })
+      .eq('vehicle_id', initial.id)
+      .eq('production_id', PRODUCTION_ID)
+    if (count > 0) {
+      setDel(false)
+      setCd(false)
+      setError(`Cannot delete — this vehicle has ${count} trip${count > 1 ? 's' : ''} assigned. Remove the trips first.`)
+      return
+    }
     const { error } = await supabase.from('vehicles').delete().eq('id', initial.id).eq('production_id', PRODUCTION_ID)
     setDel(false)
     if (error) { setError(error.message); return }
@@ -562,6 +573,17 @@ export default function VehiclesPage() {
 
   // ─── Delete singolo (da riga) ─────────────────────────────
   async function handleDeleteSingle(id) {
+    const { count } = await supabase
+      .from('trips')
+      .select('id', { count: 'exact', head: true })
+      .eq('vehicle_id', id)
+      .eq('production_id', PRODUCTION_ID)
+
+    if (count > 0) {
+      alert(`Cannot delete — this vehicle has ${count} trip${count > 1 ? 's' : ''} assigned. Remove the trips first.`)
+      return
+    }
+
     const { error } = await supabase.from('vehicles').delete().eq('id', id).eq('production_id', PRODUCTION_ID)
     if (!error) {
       setSelectedIds(prev => prev.filter(x => x !== id))
@@ -573,6 +595,24 @@ export default function VehiclesPage() {
   async function handleBulkDelete() {
     if (!bulkConfirm) { setBulkConfirm(true); return }
     setBulkDel(true)
+    // Controlla se uno dei veicoli selezionati ha trip associati
+    const tripChecks = await Promise.all(
+      selectedIds.map(async id => {
+        const { count } = await supabase
+          .from('trips')
+          .select('id', { count: 'exact', head: true })
+          .eq('vehicle_id', id)
+          .eq('production_id', PRODUCTION_ID)
+        return { id, count: count || 0 }
+      })
+    )
+    const withTrips = tripChecks.filter(x => x.count > 0)
+    if (withTrips.length > 0) {
+      setBulkDel(false)
+      setBulkConfirm(false)
+      alert(`Cannot delete — ${withTrips.length} vehicle${withTrips.length > 1 ? 's have' : ' has'} trips assigned:\n${withTrips.map(x => `• ${x.id}: ${x.count} trip${x.count > 1 ? 's' : ''}`).join('\n')}\nRemove the trips first.`)
+      return
+    }
     const { error } = await supabase.from('vehicles').delete().in('id', selectedIds).eq('production_id', PRODUCTION_ID)
     setBulkDel(false)
     if (!error) { setSelectedIds([]); setBulkConfirm(false); load() }
