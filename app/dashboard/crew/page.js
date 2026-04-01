@@ -739,6 +739,7 @@ export default function CrewPage() {
     if (!PRODUCTION_ID) return
     setLoading(true)
     const { data } = await supabase.from('crew').select('*').eq('production_id', PRODUCTION_ID).order('department', { nullsLast: true }).order('full_name')
+    console.log('[loadCrew] primo record:', data?.[0])
     setCrew(data || [])
     setLoading(false)
   }, [])
