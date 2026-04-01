@@ -919,28 +919,9 @@ function extractAccommodationFromStructured(structured) {
   const hasNames = headerMap.first_name || headerMap.last_name
   if (!hasNames) return null  // formato non riconoscibile → fallback a Claude
 
-  // Estrai nome hotel dal metadata o sheet_name
-  let hotel_name = sheet_name || null
-  let hotel_address = null
-  if (metadata) {
-    const lines = metadata.split('\n').map(l => l.trim()).filter(Boolean)
-    if (lines.length > 0) {
-      // Prende SOLO le parti che non contengono lettere singole (calendario)
-      const firstLine = lines[0]
-      const parts = firstLine.split(/[\|\-–]/).map(p => p.trim()).filter(p => 
-        p.length > 3 && !/^[MTWFSD]$/.test(p)
-      )
-      // Usa l'ultima parte valida come nome hotel
-      hotel_name = parts[parts.length - 1] || sheet_name
-    }
-    if (lines.length > 1) {
-      // Indirizzo: solo se non contiene il calendario
-      const secondLine = lines[1]
-      if (!secondLine.includes('| M |') && !secondLine.includes('| T |')) {
-        hotel_address = secondLine
-      }
-    }
-  }
+  // Il nome hotel è sempre il sheet_name — es. "TORRE CINTOLA", "TORRE MAIZZA"
+  const hotel_name = sheet_name || null
+  const hotel_address = null
 
   // Estrai righe
   const result = []
