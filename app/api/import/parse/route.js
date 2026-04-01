@@ -961,6 +961,9 @@ function extractAccommodationFromStructured(structured) {
   }
 
   console.log(`[import/parse] Accommodation JS extraction: ${result.length} righe estratte direttamente`)
+  console.log(`[DEBUG accomm] prime 5 righe estratte:`, JSON.stringify(result.slice(0, 5)))
+  console.log(`[DEBUG accomm] ultime 5 righe estratte:`, JSON.stringify(result.slice(-5)))
+  console.log(`[DEBUG accomm] cerca Fantoni:`, result.find(r => (r.last_name || '').toUpperCase().includes('FANTONI')))
   return result
 }
 
