@@ -273,10 +273,16 @@ function ArrivalsDeparturesChart({ productionId }) {
       const arrMap = {}
       const depMap = {}
       ;(arrRes.data || []).forEach(r => {
-        if (r.arrival_date) arrMap[r.arrival_date] = (arrMap[r.arrival_date] || 0) + 1
+        if (r.arrival_date) {
+          const d = String(r.arrival_date).slice(0, 10)
+          arrMap[d] = (arrMap[d] || 0) + 1
+        }
       })
       ;(depRes.data || []).forEach(r => {
-        if (r.departure_date) depMap[r.departure_date] = (depMap[r.departure_date] || 0) + 1
+        if (r.departure_date) {
+          const d = String(r.departure_date).slice(0, 10)
+          depMap[d] = (depMap[d] || 0) + 1
+        }
       })
 
       const days = []
