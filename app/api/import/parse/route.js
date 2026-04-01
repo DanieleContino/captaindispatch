@@ -925,12 +925,20 @@ function extractAccommodationFromStructured(structured) {
   if (metadata) {
     const lines = metadata.split('\n').map(l => l.trim()).filter(Boolean)
     if (lines.length > 0) {
-      // Prende l'ultima parte dopo separatori "|" o "-"
-      const parts = lines[0].split(/[\|\-–]/).map(p => p.trim()).filter(Boolean)
+      // Prende SOLO le parti che non contengono lettere singole (calendario)
+      const firstLine = lines[0]
+      const parts = firstLine.split(/[\|\-–]/).map(p => p.trim()).filter(p => 
+        p.length > 3 && !/^[MTWFSD]$/.test(p)
+      )
+      // Usa l'ultima parte valida come nome hotel
       hotel_name = parts[parts.length - 1] || sheet_name
     }
     if (lines.length > 1) {
-      hotel_address = lines[1]
+      // Indirizzo: solo se non contiene il calendario
+      const secondLine = lines[1]
+      if (!secondLine.includes('| M |') && !secondLine.includes('| T |')) {
+        hotel_address = secondLine
+      }
     }
   }
 
@@ -961,12 +969,6 @@ function extractAccommodationFromStructured(structured) {
   }
 
   console.log(`[import/parse] Accommodation JS extraction: ${result.length} righe estratte direttamente`)
-  console.log(`[DEBUG accomm] prime 5 righe estratte:`, JSON.stringify(result.slice(0, 5)))
-  console.log(`[DEBUG accomm] ultime 5 righe estratte:`, JSON.stringify(result.slice(-5)))
-  console.log(`[DEBUG accomm] cerca Fantoni:`, result.find(r => (r.last_name || '').toUpperCase().includes('FANTONI')))
-  console.log(`[DEBUG accomm] totale righe estratte: ${result.length}`)
-  console.log(`[DEBUG accomm] ultime 5:`, JSON.stringify(result.slice(-5)))
-  console.log(`[DEBUG accomm] Fantoni:`, JSON.stringify(result.find(r => (r.last_name || '').toUpperCase().includes('FANTONI'))))
   return result
 }
 
