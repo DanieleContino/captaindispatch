@@ -137,9 +137,8 @@ function TomorrowPanel({ productionId }) {
 
   useEffect(() => {
     if (!productionId) return
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowStr = tomorrow.toISOString().split('T')[0]
+    const tomorrowStr = new Date(Date.now() + 86400000)
+      .toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
 
     supabase.from('crew')
       .select('id, full_name, department, hotel_id')
@@ -243,18 +242,14 @@ function ArrivalsDeparturesChart({ productionId }) {
   useEffect(() => {
     if (!productionId) return
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const todayStr    = today.toISOString().split('T')[0]
-    const tomorrowStr = tomorrow.toISOString().split('T')[0]
-
-    // 30-day window: today → today+29
-    const to = new Date(today)
-    to.setDate(to.getDate() + 29)
-    const fromStr = todayStr
-    const toStr   = to.toISOString().split('T')[0]
+    function toRomeDate(d) {
+      return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+    }
+    const now         = new Date()
+    const todayStr    = toRomeDate(now)
+    const tomorrowStr = toRomeDate(new Date(now.getTime() + 86400000))
+    const fromStr     = todayStr
+    const toStr       = toRomeDate(new Date(now.getTime() + 29 * 86400000))
 
     Promise.all([
       supabase.from('crew')
@@ -288,9 +283,9 @@ function ArrivalsDeparturesChart({ productionId }) {
       })
 
       const days = []
-      const cur = new Date(today)
-      while (cur <= to) {
-        const d = cur.toISOString().split('T')[0]
+      const cur = new Date(todayStr + 'T00:00:00')
+      while (toRomeDate(cur) <= toStr) {
+        const d = toRomeDate(cur)
         days.push({
           date:       d,
           label:      cur.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
