@@ -109,9 +109,8 @@ function RemoteToggle({ crewId, current, onChange }) {
   async function toggle() {
     if (saving) return
     setSaving(true)
-    const next = !isRemote
-    const { error, data } = await supabase.from('crew').update({ on_location: next }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
-    console.log('[RemoteToggle]', { crewId, next, error, data })
+    const next = current === false ? true : false
+    const { error } = await supabase.from('crew').update({ on_location: next }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
     setSaving(false)
     if (!error) onChange(crewId, next)
   }
@@ -739,7 +738,6 @@ export default function CrewPage() {
     if (!PRODUCTION_ID) return
     setLoading(true)
     const { data } = await supabase.from('crew').select('*').eq('production_id', PRODUCTION_ID).order('department', { nullsLast: true }).order('full_name')
-    console.log('[loadCrew] primo record:', data?.[0])
     setCrew(data || [])
     setLoading(false)
   }, [])
