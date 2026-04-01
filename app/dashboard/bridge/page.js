@@ -190,10 +190,10 @@ function TomorrowPanel({ productionId }) {
         {/* Arrivals */}
         <div>
           <div style={{ fontSize: '11px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-            ✈️ Arrivals ({arrivals.length})
+            🏨 Check-in ({arrivals.length})
           </div>
           {arrivals.length === 0 ? (
-            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No arrivals tomorrow</div>
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No check-ins tomorrow</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
               {arrivals.slice(0, 5).map(c => (
@@ -212,10 +212,10 @@ function TomorrowPanel({ productionId }) {
         {/* Departures */}
         <div>
           <div style={{ fontSize: '11px', fontWeight: '800', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-            🏁 Departures ({departures.length})
+            🏁 Check-out ({departures.length})
           </div>
           {departures.length === 0 ? (
-            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No departures tomorrow</div>
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No check-outs tomorrow</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
               {departures.slice(0, 5).map(c => (
@@ -308,16 +308,16 @@ function ArrivalsDeparturesChart({ productionId }) {
       {/* Header + Legend */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f2340' }}>
-          📊 Arrivals & Departures — 30 days
+          📊 Hotel Check-in & Check-out — 30 days
         </div>
         <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#64748b', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '10px', height: '10px', background: '#86efac', borderRadius: '2px', display: 'inline-block' }} />
-            Arrivals
+            Check-in
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '10px', height: '10px', background: '#fca5a5', borderRadius: '2px', display: 'inline-block' }} />
-            Departures
+            Check-out
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '10px', height: '10px', background: '#0f2340', borderRadius: '2px', display: 'inline-block' }} />
@@ -359,7 +359,7 @@ function ArrivalsDeparturesChart({ productionId }) {
             <Tooltip
               contentStyle={{ fontSize: '11px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
               labelStyle={{ fontWeight: '700', color: '#0f2340', marginBottom: '4px' }}
-              formatter={(value, name) => [value, name === 'arrivals' ? '✈️ Arrivals' : '🏁 Departures']}
+              formatter={(value, name) => [value, name === 'arrivals' ? '🏨 Check-in' : '🏁 Check-out']}
               labelFormatter={(label, payload) => {
                 const d = payload?.[0]?.payload
                 if (d?.isToday)    return `${label} — TODAY`
