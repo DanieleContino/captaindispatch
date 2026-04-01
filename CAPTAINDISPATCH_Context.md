@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 1 aprile 2026 | S32-T7 ✅ `.env.local` (`NEXT_PUBLIC_APP_URL`) + Context aggiornato + deploy. S32 Google Drive Sync MVP completata. — prossimo: S18-T4**
+**Aggiornato: 1 aprile 2026 | S33 parziale (T1-T4 ✅). S33 Captain Bridge Upgrade in corso — riprende da T5. — prossimo: S33-T5**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -8,10 +8,46 @@
 
 ---
 
-## ▶ PROSSIMO — S18-T4 i18n bridge/page.js
+## ▶ PROSSIMO — S33-T5 Captain Bridge Upgrade (riprende)
 
+> **S33 IN CORSO 🔄** — T1→T4 completati. Riprende da T5 (ArrivalsDeparturesChart).
 > **S32 COMPLETATA ✅** — T1→T7 tutte completate. Deploy S32 effettuato.
-> Prossimo: **S18-T4** — `bridge/page.js` i18n (useT() in BridgePage, PendingUsersTab, InviteCodesTabControlled, AddToProductionModal → chiavi `bridge*`).
+
+---
+
+### S33 — Captain Bridge Upgrade (un task per sessione)
+Un unico deploy finale dopo T10. NON deployare tra un task e l'altro.
+
+| Task | File/Scope | Stato |
+|------|-----------|-------|
+| T1 — DB Migration | `scripts/migrate-s33-bridge-upgrade.sql` — tabelle `notifications` + `activity_log` + RLS | ✅ |
+| T2 — EasyAccessShortcuts | `bridge/page.js` — barra navigazione rapida 8 shortcut sopra l'header | ✅ |
+| T3 — NotificationsPanel | `bridge/page.js` — panel 🚨 alerts unread da `notifications`, dismiss | ✅ |
+| T4 — TomorrowPanel | `bridge/page.js` — panel 📅 arrivals+departures di domani, high-traffic banner | ✅ |
+| T5 — ArrivalsDeparturesChart | `bridge/page.js` — grafico 📊 Recharts 30 giorni, colori today/tomorrow | ⬜ |
+| T6 — MiniWidgets | `bridge/page.js` — 3 widget Fleet/Pax/Hub con stats live | ⬜ |
+| T7 — ActivityLog | `bridge/page.js` — 📋 last 50 azioni da `activity_log`, icone per tipo | ⬜ |
+| T8 — Integrazione BridgePage | `bridge/page.js` — import Recharts + `getProductionId()` + tutti i componenti nel JSX | ⬜ |
+| T9 — Badge Navbar | `lib/navbar.js` — `useBridgeBadge()` + badge 🔴 pulse ogni 5 min | ⬜ |
+| T10 — CSS pulse + Context + Deploy | `app/globals.css` + `CAPTAINDISPATCH_Context.md` + `git push` | ⬜ |
+
+#### Schema DB S33-T1
+```sql
+notifications (id uuid PK, production_id uuid FK→productions CASCADE,
+  type text CHECK(IN 'success'|'warning'|'error'|'info'),
+  message text, read boolean DEFAULT false, created_at timestamptz)
+-- RLS: 4 policy SELECT/UPDATE/INSERT/DELETE via user_production_ids()
+
+activity_log (id uuid PK, production_id uuid FK→productions CASCADE,
+  user_id uuid FK→auth.users, action_type text, description text, created_at timestamptz)
+-- RLS: 2 policy SELECT/INSERT via user_production_ids()
+```
+
+#### Stato attuale S33
+- `EasyAccessShortcuts`: barra shortcut in cima alla pagina (sopra header ⚓) — già nel JSX ✅
+- `NotificationsPanel`: componente definito, da aggiungere al JSX in T8 ⬜
+- `TomorrowPanel`: componente definito, da aggiungere al JSX in T8 ⬜
+
 
 ---
 

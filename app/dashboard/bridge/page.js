@@ -35,6 +35,201 @@ const btnSecondary= { padding: '7px 14px', borderRadius: '8px', border: '1px sol
 const btnGreen    = { ...btnPrimary, background: '#16a34a' }
 const btnRed      = { ...btnPrimary, background: '#dc2626' }
 
+// ── Easy Access Shortcuts ─────────────────────────────────
+function EasyAccessShortcuts({ currentPath }) {
+  const shortcuts = [
+    { icon: '🚀', label: 'Rocket',         href: '/dashboard/rocket' },
+    { icon: '🚐', label: 'Fleet',          href: '/dashboard/fleet' },
+    { icon: '👥', label: 'Pax',            href: '/dashboard/pax-coverage' },
+    { icon: '🛣️',  label: 'Hub',           href: '/dashboard/hub-coverage' },
+    { icon: '✈️',  label: 'Trips',         href: '/dashboard/trips' },
+    { icon: '👤', label: 'Crew',           href: '/dashboard/crew' },
+    { icon: '🚗', label: 'Vehicles',       href: '/dashboard/vehicles' },
+    { icon: '📋', label: 'Transport List', href: '/dashboard/lists' },
+  ]
+  return (
+    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
+      {shortcuts.map(s => (
+        <a key={s.href} href={s.href}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '7px 14px', borderRadius: '8px', textDecoration: 'none',
+            fontSize: '12px', fontWeight: '700',
+            border: '1px solid',
+            background: currentPath === s.href ? '#0f2340' : 'white',
+            color:      currentPath === s.href ? 'white'   : '#374151',
+            borderColor: currentPath === s.href ? '#0f2340' : '#e2e8f0',
+            transition: 'all 0.15s',
+          }}>
+          <span>{s.icon}</span>
+          <span>{s.label}</span>
+        </a>
+      ))}
+    </div>
+  )
+}
+
+// ── Notifications Panel ───────────────────────────────────
+function NotificationsPanel({ productionId }) {
+  const [notifications, setNotifications] = useState([])
+
+  useEffect(() => {
+    if (!productionId) return
+    supabase.from('notifications')
+      .select('*')
+      .eq('production_id', productionId)
+      .eq('read', false)
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => setNotifications(data || []))
+  }, [productionId])
+
+  function dismiss(id) {
+    supabase.from('notifications').update({ read: true }).eq('id', id)
+    setNotifications(prev => prev.filter(n => n.id !== id))
+  }
+
+  if (notifications.length === 0) return null
+
+  const typeStyle = {
+    success: { bg: '#f0fdf4', border: '#86efac', color: '#15803d', icon: '✅' },
+    warning: { bg: '#fefce8', border: '#fde68a', color: '#a16207', icon: '⚠️' },
+    error:   { bg: '#fef2f2', border: '#fecaca', color: '#dc2626', icon: '❌' },
+    info:    { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8', icon: 'ℹ️' },
+  }
+
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>
+        🚨 Alerts & Notifications
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {notifications.map(n => {
+          const s = typeStyle[n.type] || typeStyle.info
+          return (
+            <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: s.bg, border: `1px solid ${s.border}`, borderRadius: '8px' }}>
+              <span>{s.icon}</span>
+              <span style={{ flex: 1, fontSize: '13px', color: s.color, fontWeight: '600' }}>{n.message}</span>
+              <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                {new Date(n.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <button onClick={() => dismiss(n.id)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', lineHeight: 1, padding: '2px 4px' }}>
+                ×
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Tomorrow Panel ────────────────────────────────────────
+function TomorrowPanel({ productionId }) {
+  const [arrivals,   setArrivals]   = useState([])
+  const [departures, setDepartures] = useState([])
+
+  useEffect(() => {
+    if (!productionId) return
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+    supabase.from('crew')
+      .select('id, full_name, department, hotel_id')
+      .eq('production_id', productionId)
+      .eq('arrival_date', tomorrowStr)
+      .then(({ data }) => setArrivals(data || []))
+
+    supabase.from('crew')
+      .select('id, full_name, department, hotel_id')
+      .eq('production_id', productionId)
+      .eq('departure_date', tomorrowStr)
+      .then(({ data }) => setDepartures(data || []))
+  }, [productionId])
+
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = tomorrow.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+  const total = arrivals.length + departures.length
+  const isHighTraffic = total > 5
+
+  const rocketUrl = `/dashboard/rocket?date=${new Date(Date.now() + 86400000).toISOString().split('T')[0]}`
+
+  return (
+    <div style={{
+      marginBottom: '20px', padding: '16px 20px',
+      background: isHighTraffic ? '#fff7ed' : 'white',
+      border: `2px solid ${isHighTraffic ? '#f97316' : '#e2e8f0'}`,
+      borderRadius: '12px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f2340' }}>
+            📅 Tomorrow — {tomorrowStr}
+          </div>
+          {isHighTraffic && (
+            <div style={{ fontSize: '11px', color: '#c2410c', fontWeight: '700', marginTop: '2px' }}>
+              ⚠️ High traffic day — plan vehicles in advance
+            </div>
+          )}
+        </div>
+        <a href={rocketUrl}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', borderRadius: '8px', background: '#0f2340', color: 'white', textDecoration: 'none', fontSize: '12px', fontWeight: '800' }}>
+          🚀 Launch Rocket for tomorrow →
+        </a>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        {/* Arrivals */}
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+            ✈️ Arrivals ({arrivals.length})
+          </div>
+          {arrivals.length === 0 ? (
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No arrivals tomorrow</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              {arrivals.slice(0, 5).map(c => (
+                <div key={c.id} style={{ fontSize: '12px', color: '#374151' }}>
+                  <strong>{c.full_name}</strong>
+                  {c.department && <span style={{ color: '#94a3b8', marginLeft: '6px' }}>{c.department}</span>}
+                </div>
+              ))}
+              {arrivals.length > 5 && (
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>+{arrivals.length - 5} more</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Departures */}
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: '800', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+            🏁 Departures ({departures.length})
+          </div>
+          {departures.length === 0 ? (
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No departures tomorrow</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              {departures.slice(0, 5).map(c => (
+                <div key={c.id} style={{ fontSize: '12px', color: '#374151' }}>
+                  <strong>{c.full_name}</strong>
+                  {c.department && <span style={{ color: '#94a3b8', marginLeft: '6px' }}>{c.department}</span>}
+                </div>
+              ))}
+              {departures.length > 5 && (
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>+{departures.length - 5} more</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Pending Users tab ─────────────────────────────────────
 function PendingUsersTab({ productions }) {
   const [pending,   setPending]   = useState([])
@@ -467,6 +662,9 @@ export default function BridgePage() {
       <Navbar currentPath="/dashboard/bridge" />
 
       <div style={{ maxWidth: '920px', margin: '0 auto', padding: '32px 24px' }}>
+
+        {/* ── Easy Access Shortcuts ── */}
+        <EasyAccessShortcuts currentPath="/dashboard/bridge" />
 
         {/* ── Header ── */}
         <div style={{ marginBottom: '28px' }}>
