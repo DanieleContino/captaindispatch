@@ -888,6 +888,82 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
   return { rows, newHotels }
 }
 
+// ── Accommodation JS extraction ──────────────────────────────
+
+/**
+ * Tenta estrazione diretta dal JSON strutturato senza Claude.
+ * Ritorna array di righe se riesce, null se il formato non è riconoscibile.
+ */
+function extractAccommodationFromStructured(structured) {
+  const { sheet_name, metadata, headers, rows } = structured
+
+  // Mappa flessibile delle colonne — cerca corrispondenze case-insensitive
+  const headerMap = {}
+  for (const h of headers) {
+    const hl = h.toLowerCase().trim()
+    if (hl === 'name' || hl === 'nome' || hl === 'first name' || hl === 'first')
+      headerMap.first_name = h
+    else if (hl === 'surname' || hl === 'cognome' || hl === 'last name' || hl === 'last')
+      headerMap.last_name = h
+    else if (hl === 'position/role' || hl === 'role' || hl === 'position' || hl === 'ruolo' || hl === 'posizione')
+      headerMap.role = h
+    else if (hl === 'department' || hl === 'dept' || hl === 'dipartimento')
+      headerMap.department = h
+    else if (hl === 'in' || hl === 'arrival' || hl === 'arr' || hl === 'check-in' || hl === 'checkin' || hl === 'data arrivo')
+      headerMap.arrival_date = h
+    else if (hl === 'out' || hl === 'departure' || hl === 'dep' || hl === 'check-out' || hl === 'checkout' || hl === 'data partenza')
+      headerMap.departure_date = h
+  }
+
+  // Richiede almeno first_name/last_name — senza nomi non c'è niente da fare
+  const hasNames = headerMap.first_name || headerMap.last_name
+  if (!hasNames) return null  // formato non riconoscibile → fallback a Claude
+
+  // Estrai nome hotel dal metadata o sheet_name
+  let hotel_name = sheet_name || null
+  let hotel_address = null
+  if (metadata) {
+    const lines = metadata.split('\n').map(l => l.trim()).filter(Boolean)
+    if (lines.length > 0) {
+      // Prende l'ultima parte dopo separatori "|" o "-"
+      const parts = lines[0].split(/[\|\-–]/).map(p => p.trim()).filter(Boolean)
+      hotel_name = parts[parts.length - 1] || sheet_name
+    }
+    if (lines.length > 1) {
+      hotel_address = lines[1]
+    }
+  }
+
+  // Estrai righe
+  const result = []
+  for (const row of rows) {
+    const first_name = headerMap.first_name ? (row[headerMap.first_name] || null) : null
+    const last_name  = headerMap.last_name  ? (row[headerMap.last_name]  || null) : null
+
+    // Salta se nessun nome
+    if (!first_name && !last_name) continue
+
+    // Salta placeholder
+    const nameCheck = (first_name || last_name || '').toLowerCase()
+    if (nameCheck.includes('tbd') || nameCheck.includes('tba') ||
+        nameCheck.startsWith('driver #') || nameCheck.startsWith('tot')) continue
+
+    result.push({
+      first_name,
+      last_name,
+      role:           headerMap.role        ? (row[headerMap.role]        || null) : null,
+      department:     headerMap.department  ? (row[headerMap.department]  || null) : null,
+      hotel_name,
+      hotel_address,
+      arrival_date:   headerMap.arrival_date   ? (row[headerMap.arrival_date]   || null) : null,
+      departure_date: headerMap.departure_date ? (row[headerMap.departure_date] || null) : null,
+    })
+  }
+
+  console.log(`[import/parse] Accommodation JS extraction: ${result.length} righe estratte direttamente`)
+  return result
+}
+
 // ── POST handler ─────────────────────────────────────────────
 
 export async function POST(req) {
@@ -1030,9 +1106,24 @@ export async function POST(req) {
 
     // ── MODE: accommodation ──────────────────────────────────
     if (mode === 'accommodation') {
-      // Per Excel: sheet_name già presente nel JSON strutturato — non serve prepend
-      const userContent = (!isExcel && selectedSheet) ? `Sheet: ${selectedSheet}\n\n${text}` : text
-      const extracted = await callClaude(SYSTEM_PROMPT_ACCOMMODATION, userContent, 'array')
+      let extracted = null
+
+      if (isExcel) {
+        // Prova estrazione JavaScript diretta (veloce, zero API call)
+        const structured = JSON.parse(text)
+        extracted = extractAccommodationFromStructured(structured)
+        if (extracted) {
+          console.log(`[import/parse] Accommodation: JS extraction OK (${extracted.length} righe), skip Claude`)
+        }
+      }
+
+      if (!extracted) {
+        // Fallback a Claude (PDF, Word, CSV, o Excel con formato non riconoscibile)
+        console.log(`[import/parse] Accommodation: fallback a Claude`)
+        const userContent = (!isExcel && selectedSheet) ? `Sheet: ${selectedSheet}\n\n${text}` : text
+        extracted = await callClaude(SYSTEM_PROMPT_ACCOMMODATION, userContent, 'array')
+      }
+
       const { rows, newHotels } = await processAccommodationRows(extracted, supabase, productionId)
       return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode: 'accommodation' })
     }
