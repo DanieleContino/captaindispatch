@@ -1112,7 +1112,7 @@ export default function BridgePage() {
         {/* ── Dashboard Panels ── */}
         <NotificationsPanel productionId={PRODUCTION_ID} />
         <TomorrowPanel productionId={PRODUCTION_ID} />
-        <ArrivalsDeparturesChart productionId={PRODUCTION_ID} />
+        <ArrivalsDeparturesChart key={PRODUCTION_ID} productionId={PRODUCTION_ID} />
         <MiniWidgets productionId={PRODUCTION_ID} />
         <VehicleRentalWidget productionId={PRODUCTION_ID} />
         <ActivityLog productionId={PRODUCTION_ID} />
