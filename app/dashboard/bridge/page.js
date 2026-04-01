@@ -398,7 +398,7 @@ function MiniWidgets({ productionId }) {
   useEffect(() => {
     if (!productionId) return
     supabase.from('vehicles')
-      .select('id, sign_code, vehicle_type')
+      .select('id, sign_code, vehicle_type, in_transport')
       .eq('production_id', productionId)
       .eq('active', true)
       .then(({ data }) => setVehicles(data || []))
@@ -426,8 +426,13 @@ function MiniWidgets({ productionId }) {
         <div style={{ fontSize: '22px', fontWeight: '900', color: '#0f2340', marginBottom: '4px' }}>
           {vehicles.length}
         </div>
-        <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>vehicles active</div>
-        <a href="/dashboard/fleet" style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>
+        <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '6px' }}>vehicles active</div>
+        {vehicles.filter(v => v.in_transport === false).length > 0 && (
+          <div style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '2px 8px', display: 'inline-block', marginBottom: '8px' }}>
+            🚐 {vehicles.filter(v => v.in_transport === false).length} SD
+          </div>
+        )}
+        <a href="/dashboard/fleet" style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '600', display: 'block' }}>
           View Fleet Monitor →
         </a>
       </div>
@@ -468,6 +473,118 @@ function MiniWidgets({ productionId }) {
         <a href="/dashboard/hub-coverage" style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '600' }}>
           View Hub Coverage →
         </a>
+      </div>
+    </div>
+  )
+}
+
+// ── Vehicle Rental Monitor ────────────────────────────────
+function VehicleRentalWidget({ productionId }) {
+  const [vehicles, setVehicles] = useState([])
+
+  useEffect(() => {
+    if (!productionId) return
+    supabase.from('vehicles')
+      .select('id, vehicle_type, driver_name, sign_code, available_from, available_to')
+      .eq('production_id', productionId)
+      .eq('active', true)
+      .then(({ data }) => setVehicles(data || []))
+  }, [productionId])
+
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+
+  function diffDays(isoDate) {
+    const d = new Date(isoDate); d.setHours(0, 0, 0, 0)
+    return Math.round((d - today) / 86400000)
+  }
+
+  function fmtD(iso) {
+    if (!iso) return '—'
+    return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+  }
+
+  const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌', TRUCK: '🚛', PICKUP: '🛻', CARGO: '🚚' }
+
+  const expiring = vehicles
+    .filter(v => v.available_to)
+    .map(v => ({ ...v, diff: diffDays(v.available_to) }))
+    .filter(v => v.diff >= 0 && v.diff <= 3)
+    .sort((a, b) => a.diff - b.diff)
+
+  const arriving = vehicles
+    .filter(v => v.available_from)
+    .map(v => ({ ...v, diff: diffDays(v.available_from) }))
+    .filter(v => v.diff >= 0 && v.diff <= 1)
+    .sort((a, b) => a.diff - b.diff)
+
+  if (expiring.length === 0 && arriving.length === 0) return null
+
+  function expiringBadge(diff) {
+    if (diff === 0) return { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', label: 'TODAY' }
+    if (diff === 1) return { bg: '#fef2f2', color: '#dc2626', border: '#fecaca', label: 'TOMORROW' }
+    return { bg: '#fefce8', color: '#a16207', border: '#fde68a', label: `${diff} days` }
+  }
+
+  return (
+    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
+      <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f2340' }}>🚗 Vehicle Rental Monitor</div>
+        <div style={{ fontSize: '11px', color: '#94a3b8' }}>{expiring.length} expiring · {arriving.length} arriving</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {expiring.length > 0 && (
+          <div style={{ padding: '8px 20px', background: '#fef2f2', borderBottom: '1px solid #fecaca', fontSize: '10px', fontWeight: '800', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            ⚠️ Expiring — return trip needed
+          </div>
+        )}
+        {expiring.map(v => {
+          const badge = expiringBadge(v.diff)
+          return (
+            <div key={v.id + '-exp'} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', borderBottom: '1px solid #f8fafc' }}>
+              <span style={{ fontSize: '22px' }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
+                  {v.driver_name && <span style={{ fontSize: '12px', color: '#374151' }}>👤 {v.driver_name}</span>}
+                  {v.sign_code   && <span style={{ fontSize: '11px', color: '#94a3b8' }}>🏷 {v.sign_code}</span>}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                  📅 {v.available_from ? fmtD(v.available_from) : '—'} → <strong>{fmtD(v.available_to)}</strong>
+                </div>
+              </div>
+              <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, flexShrink: 0 }}>
+                {badge.label}
+              </span>
+              <a href="/dashboard/trips"
+                style={{ padding: '5px 12px', borderRadius: '7px', background: '#0f2340', color: 'white', textDecoration: 'none', fontSize: '11px', fontWeight: '700', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                + Return trip
+              </a>
+            </div>
+          )
+        })}
+        {arriving.length > 0 && (
+          <div style={{ padding: '8px 20px', background: '#f0fdf4', borderBottom: '1px solid #86efac', borderTop: expiring.length > 0 ? '1px solid #e2e8f0' : 'none', fontSize: '10px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            ✅ Arriving — new vehicle incoming
+          </div>
+        )}
+        {arriving.map(v => (
+          <div key={v.id + '-arr'} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', borderBottom: '1px solid #f8fafc' }}>
+            <span style={{ fontSize: '22px' }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
+                {v.driver_name && <span style={{ fontSize: '12px', color: '#374151' }}>👤 {v.driver_name}</span>}
+                {v.sign_code   && <span style={{ fontSize: '11px', color: '#94a3b8' }}>🏷 {v.sign_code}</span>}
+              </div>
+              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                📅 <strong>{fmtD(v.available_from)}</strong> → {v.available_to ? fmtD(v.available_to) : '—'}
+              </div>
+            </div>
+            <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', flexShrink: 0 }}>
+              {v.diff === 0 ? 'TODAY' : 'TOMORROW'}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -990,6 +1107,7 @@ export default function BridgePage() {
         <TomorrowPanel productionId={PRODUCTION_ID} />
         <ArrivalsDeparturesChart productionId={PRODUCTION_ID} />
         <MiniWidgets productionId={PRODUCTION_ID} />
+        <VehicleRentalWidget productionId={PRODUCTION_ID} />
         <ActivityLog productionId={PRODUCTION_ID} />
 
         {/* ── Tab bar ── */}
