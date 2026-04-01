@@ -30,7 +30,6 @@ const CLASS_COLOR = {
   NCC:     { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' },
 }
 
-const DEPT_OPTIONS = ['GRIP','CAMERA','ELECTRIC','ART','COSTUME','MAKEUP','SOUND','DIRECTING','PRODUCTION','TRANSPORT','CATERING','SECURITY']
 const DEPT_COLOR = {
   GRIP:       { bg: '#fef3c7', color: '#b45309', border: '#fde68a' },
   CAMERA:     { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
@@ -47,7 +46,7 @@ const DEPT_COLOR = {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────
-function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [] }) {
+function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [] }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [] }
@@ -297,8 +296,11 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [] }
                 <label style={lbl}>Dept Preferito</label>
                 <select value={form.preferred_dept || ''} onChange={e => set('preferred_dept', e.target.value || '')}
                   style={{ ...inp, background: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).bg || 'white') : 'white', color: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).color || '#0f172a') : '#94a3b8', fontWeight: form.preferred_dept ? '700' : '400' }}>
-                  <option value="">— Nessun dept preferito —</option>
-                  {DEPT_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+  <option value="">— Nessun dept preferito —</option>
+                  {deptOptions.map(d => <option key={d} value={d}>{d}</option>)}
+                  {form.preferred_dept && !deptOptions.includes(form.preferred_dept) && (
+                    <option value={form.preferred_dept}>{form.preferred_dept}</option>
+                  )}
                 </select>
               </div>
 
@@ -534,6 +536,7 @@ export default function VehiclesPage() {
   const [bulkDeleting, setBulkDel] = useState(false)
   const [bulkConfirm, setBulkConfirm] = useState(false)
   const [crewList, setCrewList] = useState([])
+  const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -774,7 +777,7 @@ export default function VehiclesPage() {
         )}
       </div>
 
-      <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} />
+<VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} />
 
       <ImportModal
         open={importOpen}
