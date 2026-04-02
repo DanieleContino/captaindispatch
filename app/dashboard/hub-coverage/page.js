@@ -325,7 +325,8 @@ export default function HubCoveragePage() {
   const PRODUCTION_ID = getProductionId()
   const router = useRouter()
   const [user,    setUser]    = useState(null)
-  const [date,    setDate]    = useState(isoToday())
+  const [date,      setDate]      = useState(isoToday())
+  const [stripDate, setStripDate] = useState(isoToday())
   const [loading, setLoading] = useState(true)
 
   // Raw data
@@ -472,12 +473,6 @@ export default function HubCoveragePage() {
 
       <Navbar currentPath="/dashboard/hub-coverage" />
 
-      <DayStrip
-        selectedDate={date}
-        onSelect={setDate}
-        productionId={PRODUCTION_ID}
-      />
-
       {/* ── Toolbar ── */}
       <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20, gap: '8px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -546,6 +541,13 @@ export default function HubCoveragePage() {
           <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
       </div>
+
+      {/* ── Day Strip (indipendente dalla toolbar) ── */}
+      <DayStrip
+        selectedDate={stripDate}
+        onSelect={setStripDate}
+        productionId={PRODUCTION_ID}
+      />
 
       {/* ── Content ── */}
       <div style={{ maxWidth: '980px', margin: '0 auto', padding: '24px' }}>
