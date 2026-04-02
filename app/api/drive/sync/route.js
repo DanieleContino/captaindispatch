@@ -197,7 +197,7 @@ async function syncOneFile(fileRecord, providerToken, cookieHeader) {
         }
       }
       if (pData.detectedMode) lastDetectedMode = pData.detectedMode
-      console.log(`[drive/sync] sheet "${sheetName}": ${(pData.rows || []).length} rows`)
+      console.log(`[drive/sync] sheet "${sheetName}": ${pData.rows?.length || 0} rows, error=${pData.error || 'none'}`)
     }
 
     console.log(`[drive/sync] accommodation aggregated: ${allRows.length} rows, ${allHotels.length} hotels`)
