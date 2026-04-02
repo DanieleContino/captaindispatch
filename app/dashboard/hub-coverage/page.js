@@ -46,7 +46,7 @@ const CLS_DOT = {
 }
 
 // ─── Riga crew COVERED ──────────────────────────────────────
-function CoveredRow({ member, trips, locsMap }) {
+function CoveredRow({ member, trips, locsMap, travelInfo }) {
   const tc = TC[member.travel_status] || TC.IN
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
   const dateLabel = member.travel_status === 'IN'
@@ -80,6 +80,28 @@ function CoveredRow({ member, trips, locsMap }) {
           )}
         </div>
         <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>🏨 {hotel}</div>
+        {/* Dati volo/treno da travel_movements */}
+        {travelInfo && travelInfo.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '6px' }}>
+            {travelInfo.map((tm, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#374151', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', marginTop: '2px' }}>
+                <span>{tm.travel_type === 'FLIGHT' ? '✈️' : tm.travel_type === 'TRAIN' ? '🚂' : '🚐'}</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{tm.travel_number || '–'}</span>
+                <span style={{ color: '#94a3b8' }}>·</span>
+                <span>{tm.from_location || '–'}</span>
+                <span style={{ color: '#94a3b8' }}>{tm.from_time || ''}</span>
+                <span>→</span>
+                <span>{tm.to_location || '–'}</span>
+                <span style={{ color: '#94a3b8' }}>{tm.to_time || ''}</span>
+                {tm.needs_transport && (
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 5px' }}>
+                    🚐 TRANSPORT
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         {/* Trip assegnati */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
           {trips.map(t => {
@@ -107,7 +129,7 @@ function CoveredRow({ member, trips, locsMap }) {
 }
 
 // ─── Riga crew MISSING ──────────────────────────────────────
-function MissingRow({ member, locsMap, onAssign }) {
+function MissingRow({ member, locsMap, onAssign, travelInfo }) {
   const t = useT()
   const tc = TC[member.travel_status] || TC.IN
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
@@ -142,6 +164,28 @@ function MissingRow({ member, locsMap, onAssign }) {
           <span style={{ fontSize: '10px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: '5px', border: '1px solid #fecaca' }}>MISSING</span>
         </div>
         <div style={{ fontSize: '11px', color: '#64748b' }}>🏨 {hotel}</div>
+        {/* Dati volo/treno da travel_movements */}
+        {travelInfo && travelInfo.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+            {travelInfo.map((tm, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#374151', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', marginTop: '2px' }}>
+                <span>{tm.travel_type === 'FLIGHT' ? '✈️' : tm.travel_type === 'TRAIN' ? '🚂' : '🚐'}</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{tm.travel_number || '–'}</span>
+                <span style={{ color: '#94a3b8' }}>·</span>
+                <span>{tm.from_location || '–'}</span>
+                <span style={{ color: '#94a3b8' }}>{tm.from_time || ''}</span>
+                <span>→</span>
+                <span>{tm.to_location || '–'}</span>
+                <span style={{ color: '#94a3b8' }}>{tm.to_time || ''}</span>
+                {tm.needs_transport && (
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 5px' }}>
+                    🚐 TRANSPORT
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <button onClick={onAssign} style={{
         fontSize: '11px', fontWeight: '700', color: '#dc2626',
@@ -169,6 +213,8 @@ export default function HubCoveragePage() {
   const [locsMap,   setLocsMap]   = useState({})
   // crewId → [trips] per la data selezionata
   const [assignMap, setAssignMap] = useState({})
+  // crewId → [travel_movements] per la data selezionata
+  const [travelMap, setTravelMap] = useState({})
 
   // Filtri
   const [filterTS,    setFTS]   = useState('ALL')   // IN / OUT / ALL
@@ -251,6 +297,22 @@ export default function HubCoveragePage() {
     }
 
     setAssignMap(map)
+
+    // Fetch travel_movements per questa data
+    const { data: travelData } = await supabase
+      .from('travel_movements')
+      .select('crew_id, travel_date, direction, from_location, from_time, to_location, to_time, travel_number, travel_type, pickup_dep, pickup_arr, needs_transport, hub_location_id')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('travel_date', d)
+
+    // Mappa crewId → travel movements
+    const travelMapData = {}
+    for (const tm of travelData || []) {
+      if (!travelMapData[tm.crew_id]) travelMapData[tm.crew_id] = []
+      travelMapData[tm.crew_id].push(tm)
+    }
+    setTravelMap(travelMapData)
+
     setLoading(false)
   }, [])
 
@@ -433,7 +495,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {missing.map(c => (
-                    <MissingRow key={c.id} member={c} locsMap={locsMap} onAssign={() => {
+                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} onAssign={() => {
                       const params = new URLSearchParams({
                         assignCrewId:   c.id,
                         assignCrewName: c.full_name,
@@ -460,7 +522,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {covered.map(c => (
-                    <CoveredRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} />
+                    <CoveredRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} travelInfo={travelMap[c.id] || []} />
                   ))}
                 </div>
               </div>
