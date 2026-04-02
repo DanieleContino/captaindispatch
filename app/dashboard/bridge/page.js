@@ -234,18 +234,25 @@ function TravelDiscrepanciesWidget({ productionId }) {
   const [items, setItems] = useState([])
   const [resolving, setResolving] = useState({})
   const [notes, setNotes] = useState({})
+  const [locations, setLocations] = useState([])
 
   useEffect(() => {
     if (!productionId) return
     supabase
       .from('travel_movements')
-      .select('id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, hub_location_id, crew:crew_id(full_name, hotel_id)')
+      .select('id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, crew:crew_id(full_name, hotel_id)')
       .eq('production_id', productionId)
       .eq('discrepancy_resolved', false)
       .or('travel_date_conflict.eq.true,hotel_conflict.eq.true,match_status.eq.unmatched')
       .order('travel_date', { ascending: true })
       .limit(50)
       .then(({ data }) => setItems(data || []))
+
+    supabase
+      .from('locations')
+      .select('id, name')
+      .eq('production_id', productionId)
+      .then(({ data }) => setLocations(data || []))
   }, [productionId])
 
   async function resolve(id) {
@@ -289,11 +296,15 @@ function TravelDiscrepanciesWidget({ productionId }) {
                         📅 Date: rooming {item.rooming_date} vs travel {item.travel_date}
                       </span>
                     )}
-                    {item.hotel_conflict && (
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
-                        🏨 Hotel conflict
-                      </span>
-                    )}
+                    {item.hotel_conflict && (() => {
+                      const roomingHotel = locations.find(l => l.id === item.rooming_hotel_id)?.name || item.rooming_hotel_id || '?'
+                      const travelHotel  = item.hotel_raw || '?'
+                      return (
+                        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
+                          🏨 Hotel conflict: rooming → <strong>{roomingHotel}</strong> vs travel → <strong>{travelHotel}</strong>
+                        </span>
+                      )
+                    })()}
                   </div>
                   <input
                     placeholder="Note (optional)…"
