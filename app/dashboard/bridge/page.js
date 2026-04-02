@@ -318,6 +318,16 @@ function TravelDiscrepanciesWidget({ productionId }) {
                     style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', textDecoration: 'none', textAlign: 'center' }}>
                     👤 Crew
                   </a>
+                  {item.match_status === 'unmatched' && (
+                    <button
+                      onClick={() => {
+                        sessionStorage.setItem('crewAddNew', item.full_name_raw)
+                        window.location.href = '/dashboard/crew'
+                      }}
+                      style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', background: '#2563eb', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', textAlign: 'center' }}>
+                      ➕ Add?
+                    </button>
+                  )}
                   <button
                     onClick={() => resolve(item.id)}
                     disabled={resolving[item.id]}

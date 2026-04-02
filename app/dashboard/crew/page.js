@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
@@ -726,20 +726,6 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
   )
 }
 
-// ─── SearchParams reader (must be in Suspense) ───────────────
-function CrewSearchParamsReader({ onParams }) {
-  const searchParams = useSearchParams()
-
-  useEffect(() => {
-    const remote = searchParams.get('remote')
-    const search = searchParams.get('search')
-    const addNew = searchParams.get('addNew')
-    onParams({ remote, search, addNew })
-  }, [searchParams])
-
-  return null
-}
-
 // ─── Pagina principale ─────────────────────────────────────────
 export default function CrewPage() {
   const t = useT()
@@ -774,6 +760,23 @@ export default function CrewPage() {
 
   function openNew()          { setSM('new');  setET(null); setSO(true) }
   function openEdit(member)   { setSM('edit'); setET(member); setSO(true) }
+
+  // sessionStorage addNew (from Bridge TravelDiscrepanciesWidget)
+  useEffect(() => {
+    const addNew = sessionStorage.getItem('crewAddNew')
+    if (addNew) {
+      sessionStorage.removeItem('crewAddNew')
+      const raw = addNew.trim()
+      const parts = raw.split(' ')
+      let fullName = raw
+      for (let i = 1; i < parts.length; i++) {
+        fullName = parts.slice(i).join(' ') + ' ' + parts.slice(0, i).join(' ')
+        break
+      }
+      setAddNewRawName(raw)
+      setAddNewBanner({ rawName: raw, fullName })
+    }
+  }, [])
 
   // Auth + dati
   useEffect(() => {
@@ -927,24 +930,6 @@ export default function CrewPage() {
 
       {/* Header */}
       <Navbar currentPath="/dashboard/crew" />
-
-      <Suspense fallback={null}>
-        <CrewSearchParamsReader onParams={({ remote, search, addNew }) => {
-          if (remote === '1') setFT('REMOTE')
-          if (search) setSearch(search)
-          if (addNew) {
-            const raw = decodeURIComponent(addNew)
-            const parts = raw.trim().split(' ')
-            let fullName = raw
-            for (let i = 1; i < parts.length; i++) {
-              fullName = parts.slice(i).join(' ') + ' ' + parts.slice(0, i).join(' ')
-              break
-            }
-            setAddNewRawName(raw)
-            setAddNewBanner({ rawName: raw, fullName })
-          }
-        }} />
-      </Suspense>
 
       {addNewBanner && (
         <div style={{
