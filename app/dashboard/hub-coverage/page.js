@@ -200,7 +200,7 @@ function MissingRow({ member, locsMap, onAssign, travelInfo }) {
 }
 
 // ─── DayStrip ──────────────────────────────────────────────────
-function DayStrip({ selectedDate, onSelect, productionId }) {
+function DayStrip({ selectedDate, centerDate, onSelectDay, onShiftCenter, productionId }) {
   const [counts, setCounts] = useState({})
 
   function getDays(center) {
@@ -213,7 +213,7 @@ function DayStrip({ selectedDate, onSelect, productionId }) {
     return days
   }
 
-  const days = getDays(selectedDate)
+  const days = getDays(centerDate)
   const today = isoToday()
 
   useEffect(() => {
@@ -236,7 +236,7 @@ function DayStrip({ selectedDate, onSelect, productionId }) {
         }
         setCounts(c)
       })
-  }, [selectedDate, productionId])
+  }, [centerDate, productionId])
 
   return (
     <div style={{
@@ -251,7 +251,7 @@ function DayStrip({ selectedDate, onSelect, productionId }) {
     }}>
       {/* Freccia sinistra */}
       <button
-        onClick={() => onSelect(isoAdd(selectedDate, -7))}
+        onClick={() => onShiftCenter(isoAdd(centerDate, -7))}
         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#94a3b8', padding: '4px 8px', flexShrink: 0 }}>
         ◀
       </button>
@@ -269,7 +269,7 @@ function DayStrip({ selectedDate, onSelect, productionId }) {
         return (
           <button
             key={d}
-            onClick={() => onSelect(d)}
+            onClick={() => onSelectDay(d)}
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -313,7 +313,7 @@ function DayStrip({ selectedDate, onSelect, productionId }) {
 
       {/* Freccia destra */}
       <button
-        onClick={() => onSelect(isoAdd(selectedDate, 7))}
+        onClick={() => onShiftCenter(isoAdd(centerDate, 7))}
         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#94a3b8', padding: '4px 8px', flexShrink: 0 }}>
         ▶
       </button>
@@ -328,6 +328,7 @@ export default function HubCoveragePage() {
   const router = useRouter()
   const [user,            setUser]            = useState(null)
   const [date,            setDate]            = useState(isoToday())
+  const [stripCenter,     setStripCenter]     = useState(isoToday())
   const [loading,         setLoading]         = useState(true)
 
   // Raw data
@@ -373,28 +374,40 @@ export default function HubCoveragePage() {
       .eq('travel_date', d)
       .eq('needs_transport', true)
       .not('crew_id', 'is', null)
-    if (!movements || movements.length === 0) {
-      setCrew([])
-      setAssignMap({})
-      setTravelMap({})
-      setLoading(false)
-      return
-    }
-    const crewIds = [...new Set(movements.map(m => m.crew_id))]
+    const crewIdsFromMovements = [...new Set((movements || []).map(m => m.crew_id))]
     const travelMapData = {}
-    for (const m of movements) {
+    for (const m of movements || []) {
       if (!travelMapData[m.crew_id]) travelMapData[m.crew_id] = []
       travelMapData[m.crew_id].push(m)
     }
     setTravelMap(travelMapData)
-    const { data: crewData } = await supabase
+    const { data: crewWithDates } = await supabase
       .from('crew')
       .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date')
       .eq('production_id', PRODUCTION_ID)
-      .in('id', crewIds)
+      .eq('hotel_status', 'CONFIRMED')
+      .or(`arrival_date.eq.${d},departure_date.eq.${d}`)
       .order('department', { nullsLast: true })
       .order('full_name')
-    setCrew(crewData || [])
+    const crewWithDatesIds = (crewWithDates || []).map(c => c.id)
+    const allCrewIds = [...new Set([...crewIdsFromMovements, ...crewWithDatesIds])]
+    let allCrewData = crewWithDates || []
+    const missingFromDates = crewIdsFromMovements.filter(id => !crewWithDatesIds.includes(id))
+    if (missingFromDates.length > 0) {
+      const { data: extra } = await supabase
+        .from('crew')
+        .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date')
+        .eq('production_id', PRODUCTION_ID)
+        .in('id', missingFromDates)
+      allCrewData = [...allCrewData, ...(extra || [])]
+    }
+    allCrewData.sort((a, b) => {
+      const da = a.department || 'ZZZ'
+      const db = b.department || 'ZZZ'
+      if (da !== db) return da.localeCompare(db)
+      return a.full_name.localeCompare(b.full_name)
+    })
+    setCrew(allCrewData)
     const { data: tripsData } = await supabase
       .from('trips')
       .select('id, trip_id, pickup_min, call_min, transfer_class, vehicle_id, pickup_id, dropoff_id, status')
@@ -412,15 +425,13 @@ export default function HubCoveragePage() {
       .from('trip_passengers')
       .select('crew_id, trip_row_id')
       .in('trip_row_id', tripIds)
-      .in('crew_id', crewIds)
+      .in('crew_id', allCrewIds.length > 0 ? allCrewIds : ['none'])
     const map = {}
     for (const p of paxData || []) {
       const trip = (tripsData || []).find(t => t.id === p.trip_row_id)
       if (!trip) continue
       if (!map[p.crew_id]) map[p.crew_id] = []
-      if (!map[p.crew_id].find(x => x.id === trip.id)) {
-        map[p.crew_id].push(trip)
-      }
+      if (!map[p.crew_id].find(x => x.id === trip.id)) map[p.crew_id].push(trip)
     }
     for (const key of Object.keys(map)) {
       map[key].sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999))
@@ -439,9 +450,13 @@ export default function HubCoveragePage() {
     if (filterTS !== 'ALL') { const movs = travelMap[c.id] || []; const hasDir = movs.some(m => m.direction === filterTS); if (!hasDir) return false }
     if (filterDept  !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
     if (filterHotel !== 'ALL' && c.hotel_id !== filterHotel) return false
-    const covered = !!assignMap[c.id]
-    if (showOnly === 'COVERED' && !covered) return false
-    if (showOnly === 'MISSING' &&  covered) return false
+    const hasTravel = (travelMap[c.id] || []).length > 0
+    const isCovered = hasTravel && !!assignMap[c.id]
+    const isMissing = hasTravel && !assignMap[c.id]
+    const isNoInfo  = !hasTravel
+    if (showOnly === 'COVERED' && !isCovered) return false
+    if (showOnly === 'MISSING' && !isMissing) return false
+    if (showOnly === 'NO_INFO' && !isNoInfo)  return false
     if (search) {
       const q = search.toLowerCase()
       if (!c.full_name.toLowerCase().includes(q) && !(c.department || '').toLowerCase().includes(q)) return false
@@ -449,11 +464,13 @@ export default function HubCoveragePage() {
     return true
   })
 
-  const covered  = filtered.filter(c =>  assignMap[c.id])
-  const missing  = filtered.filter(c => !assignMap[c.id])
+  const noInfo  = filtered.filter(c => !travelMap[c.id] || travelMap[c.id].length === 0)
+  const covered = filtered.filter(c => travelMap[c.id]?.length > 0 && assignMap[c.id])
+  const missing = filtered.filter(c => travelMap[c.id]?.length > 0 && !assignMap[c.id])
 
-  const totalCovered = crew.filter(c =>  assignMap[c.id]).length
-  const totalMissing = crew.filter(c => !assignMap[c.id]).length
+  const totalCovered = crew.filter(c => (travelMap[c.id] || []).length > 0 &&  assignMap[c.id]).length
+  const totalMissing = crew.filter(c => (travelMap[c.id] || []).length > 0 && !assignMap[c.id]).length
+  const totalNoInfo  = crew.filter(c => !travelMap[c.id] || travelMap[c.id].length === 0).length
   const pct = crew.length > 0 ? Math.round(totalCovered / crew.length * 100) : 0
 
   if (!user) return (
@@ -471,9 +488,9 @@ export default function HubCoveragePage() {
           <span style={{ fontSize: '18px' }}>✈️</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Hub Coverage</span>
           <span style={{ color: '#cbd5e1' }}>·</span>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+          <input type="date" value={date} onChange={e => { setDate(e.target.value); setStripCenter(e.target.value) }}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
-          <button onClick={() => setDate(isoToday())}
+          <button onClick={() => { setDate(isoToday()); setStripCenter(isoToday()) }}
             style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>
             {t.today}
           </button>
@@ -481,16 +498,18 @@ export default function HubCoveragePage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           {/* Show only toggle */}
-          {['ALL', 'MISSING', 'COVERED'].map(s => (
+          {['ALL', 'MISSING', 'COVERED', 'NO_INFO'].map(s => (
             <button key={s} onClick={() => setSO(s)}
               style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(showOnly === s
                 ? (s === 'MISSING'  ? { background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }
                   : s === 'COVERED' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
+                  : s === 'NO_INFO' ? { background: '#f8fafc', color: '#64748b', borderColor: '#cbd5e1' }
                   : { background: '#0f2340', color: 'white', borderColor: '#0f2340' })
                 : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
               {s === 'ALL'     ? `All (${crew.length})`
                 : s === 'MISSING' ? `❌ ${t.missingLabel} (${totalMissing})`
-                : `✅ ${t.coveredLabel} (${totalCovered})`}
+                : s === 'COVERED' ? `✅ ${t.coveredLabel} (${totalCovered})`
+                : `❓ No Info (${totalNoInfo})`}
             </button>
           ))}
 
@@ -537,7 +556,9 @@ export default function HubCoveragePage() {
       {/* ── Day Strip ── */}
       <DayStrip
         selectedDate={date}
-        onSelect={setDate}
+        centerDate={stripCenter}
+        onSelectDay={setDate}
+        onShiftCenter={setStripCenter}
         productionId={PRODUCTION_ID}
       />
 
@@ -644,6 +665,32 @@ export default function HubCoveragePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {covered.map(c => (
                     <CoveredRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} travelInfo={travelMap[c.id] || []} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ══ NO INFO ══ */}
+            {(showOnly === 'ALL' || showOnly === 'NO_INFO') && noInfo.length > 0 && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #94a3b8' }}>
+                  <span style={{ fontSize: '16px' }}>❓</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>No Travel Info</span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', background: '#94a3b8', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>{noInfo.length} crew</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— checkin/checkout date matches but no flight or train imported</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {noInfo.map(c => (
+                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={[]} onAssign={() => {
+                      const params = new URLSearchParams({
+                        assignCrewId:   c.id,
+                        assignCrewName: c.full_name,
+                        assignHotelId:  c.hotel_id || '',
+                        assignTS:       c.travel_status,
+                        assignDate:     date,
+                      })
+                      router.push('/dashboard/trips?' + params.toString())
+                    }} />
                   ))}
                 </div>
               </div>
