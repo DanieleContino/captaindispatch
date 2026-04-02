@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 1 aprile 2026 | S33 completata ✅ (T1-T10). Fix SSR navbar + production_id guards. — prossimo: S18-T4 (i18n bridge/page.js)**
+**Aggiornato: 2 aprile 2026 | S33 completata ✅ (T1-T10). `/api/drive/preview` aggiunto. — prossimo: S18-T4 (i18n bridge/page.js)**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -399,7 +399,7 @@ Supabase Project ID: lvxtvgxyancpegvfcnsk (West EU)
 
 **Pagine:** `/login` | `/dashboard` | `/dashboard/fleet` | `/dashboard/trips` | `/dashboard/crew` | `/dashboard/vehicles` | `/dashboard/locations` | `/dashboard/rocket` | `/dashboard/lists` | `/dashboard/pax-coverage` | `/dashboard/hub-coverage` | `/dashboard/productions` | `/dashboard/reports` | `/dashboard/qr-codes` | `/dashboard/settings/production` | `/wrap-trip` | `/pending` | `/scan` | `/dashboard/bridge`
 
-**API:** auth `callback/check-approval` | cron `arrival-status/refresh-routes-traffic/daily-briefing` | places `autocomplete/details/map` | bridge `pending-users/approve-user/invites` | invites `redeem` | productions `CRUD/upload-logo` | qr `resolve` | routes `refresh-traffic/traffic-check/refresh-location` | rocket `templates/suggestions` | push `subscribe/unsubscribe/send` | import `parse/confirm`
+**API:** auth `callback/check-approval` | cron `arrival-status/refresh-routes-traffic/daily-briefing` | places `autocomplete/details/map` | bridge `pending-users/approve-user/invites` | invites `redeem` | productions `CRUD/upload-logo` | qr `resolve` | routes `refresh-traffic/traffic-check/refresh-location` | rocket `templates/suggestions` | push `subscribe/unsubscribe/send` | import `parse/confirm` | drive `files/sync/preview`
 
 ---
 
@@ -573,6 +573,7 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S32-T7 ✅** | **Google Drive Sync MVP T7 — Env + Context + Deploy: `.env.local` aggiunto `NEXT_PUBLIC_APP_URL=https://captaindispatch.vercel.app` (necessario per chiamate interne parse/confirm dal cron). `CAPTAINDISPATCH_Context.md` aggiornato (S32 completata T1→T7, prossimo S18-T4). `git push origin master` deploy S32 completo.** | — |
 | **S33 ✅** | **Captain Bridge Upgrade — T1: DB migration (notifications+activity_log+RLS). T2: EasyAccessShortcuts (8 shortcut). T3: NotificationsPanel (alert unread, dismiss). T4: TomorrowPanel (arrivals+departures domani, high-traffic banner). T5: ArrivalsDeparturesChart (Recharts 30gg, Cell colori today/tomorrow). T6: MiniWidgets (Fleet/Pax/Hub). T7: ActivityLog (last 50, icone per tipo). T8: Integrazione BridgePage (tutti i componenti nel JSX). T9: Badge Navbar (`useBridgeBadge()` + badge 🔴 pulse ogni 5 min). T10: `@keyframes pulse` in `globals.css` + Context + deploy.** | — |
 | **S33 post-deploy fix ✅** | **2 fix post-deploy: (1) `bridge/page.js` — `PRODUCTION_ID` spostato da costante a `useState(null)` + `useEffect(() => setProductionId(getProductionId()), [])` (SSR safe, evita errore `localStorage is not defined` server-side). Commit `f3aa788`. (2) `npm install recharts` + commit `package.json`/`package-lock.json` (recharts era usato ma non dichiarato esplicitamente nelle deps → build Vercel falliva). Commit `1982fed`.** | `f3aa788` `1982fed` |
+| **`/api/drive/preview` ✅** | **Nuovo endpoint `POST { production_id, file_id }`: esegue auth check + provider_token, recupera record `drive_synced_files`, chiama Drive metadata API per `modifiedTime` → delta check (se uguale a `last_modified` → `{ hasChanges: false, file_name }`). Altrimenti: download (Workspace export / `?alt=media`), chiama `/api/import/parse` via multipart, ritorna `{ hasChanges: true, file_id, file_name, modifiedTime, rows, newData, detectedMode }`. NON chiama `/api/import/confirm`. Stessa pipeline di `/api/drive/sync` ma si ferma dopo il parse.** | `06b64ca` |
 | **Navbar SSR fix ✅** | **`lib/navbar.js` — `useBridgeBadge(getProductionId())` sostituito con `useState(null)` + `useEffect(() => setProductionId(getProductionId()), [])` → SSR-safe (evita `localStorage is not defined` server-side). Stesso pattern di `bridge/page.js`. Commit `58d9711`.** | `58d9711` |
 | **Production_id delete guards ✅** | **Aggiunto `.eq('production_id', PRODUCTION_ID)` su tutte le `.delete()` client-side che ne erano prive: `vehicles/page.js` (handleDeleteSingle, handleBulkDelete, VehicleSidebar.handleDelete — commit `4785849`), `locations/page.js` (LocationSidebar.handleDelete), `crew/page.js` (handleBulkDelete su `crew` table — commit `20c217c`). Le delete su `trip_passengers` non modificate (no colonna `production_id`). `trips/page.js` non ha `.delete()` dirette (usa API route).** | `4785849` `20c217c` |
 
