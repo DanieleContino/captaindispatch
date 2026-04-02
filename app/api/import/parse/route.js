@@ -1212,6 +1212,13 @@ export async function POST(req) {
         })
       }
 
+      if (detectedType === 'travel') {
+        detectedMode = 'travel'
+        const rawTravel = Array.isArray(halResult.travel) ? halResult.travel : []
+        const { rows, newHotels } = await processTravelRows(rawTravel, supabase, productionId)
+        return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode })
+      }
+
       // Fallback
       const { rows, newHotels } = await processCrewRows([], supabase, productionId)
       return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode: 'crew' })
