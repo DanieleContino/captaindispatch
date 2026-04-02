@@ -973,8 +973,8 @@ export default function CrewPage() {
         </div>
       )}
 
-      {/* Sub-toolbar — two-row sticky */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: '52px', zIndex: 29 }}>
+      {/* Sub-toolbar — two-row sticky; top shifts down when addNewBanner is visible */}
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: `${52 + (addNewBanner ? 64 : 0)}px`, zIndex: 29 }}>
 
         {/* Riga 1 — titolo + contatori + azioni */}
         <div style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
