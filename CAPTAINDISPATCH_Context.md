@@ -1,6 +1,6 @@
 # CAPTAIN — Context
 
-**Aggiornato: 2 aprile 2026 | S33 completata ✅ (T1-T10). `/api/drive/preview` aggiunto. — prossimo: S18-T4 (i18n bridge/page.js)**
+**Aggiornato: 2 aprile 2026 | S34 completata ✅ (T2-T4 Drive badge+ImportModal props+DriveSyncWidget). — prossimo: S18-T4 (i18n bridge/page.js)**
 
 > 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
 > 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
@@ -10,8 +10,19 @@
 
 ## ▶ PROSSIMO — S18-T4 i18n bridge/page.js
 
+> **S34 COMPLETATA ✅** — T2→T4 tutte completate (Drive badge navbar, ImportModal categorizing props, DriveSyncWidget). Deploy effettuato.
 > **S33 COMPLETATA ✅** — T1→T10 tutte completate. Deploy S33 effettuato.
 > **S32 COMPLETATA ✅** — T1→T7 tutte completate. Deploy S32 effettuato.
+
+---
+
+### S34 — Drive Badge + ImportModal + DriveSyncWidget
+
+| Task | File/Scope | Stato |
+|------|-----------|-------|
+| T2 — Navbar badge Drive | `lib/navbar.js` — `useBridgeBadge` aggiunge check su `drive_synced_files` (last_synced_at=null OR last_modified>last_synced_at), somma a notifiche non lette | ✅ |
+| T3 — ImportModal props categorizing | `lib/ImportModal.js` — 5 props opzionali (`initialPhase`, `initialRows`, `initialNewHotels`, `initialDetectedMode`, `initialSelMode`) + early-return in `useEffect` open | ✅ |
+| T4 — Bridge DriveSyncWidget | `bridge/page.js` — componente `DriveSyncWidget` (legge drive_synced_files aggiornati, bottone "🔍 Preview changes" → POST /api/drive/preview → apre ImportModal in fase categorizing) | ✅ |
 
 ---
 
@@ -574,6 +585,9 @@ push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_
 | **S33 ✅** | **Captain Bridge Upgrade — T1: DB migration (notifications+activity_log+RLS). T2: EasyAccessShortcuts (8 shortcut). T3: NotificationsPanel (alert unread, dismiss). T4: TomorrowPanel (arrivals+departures domani, high-traffic banner). T5: ArrivalsDeparturesChart (Recharts 30gg, Cell colori today/tomorrow). T6: MiniWidgets (Fleet/Pax/Hub). T7: ActivityLog (last 50, icone per tipo). T8: Integrazione BridgePage (tutti i componenti nel JSX). T9: Badge Navbar (`useBridgeBadge()` + badge 🔴 pulse ogni 5 min). T10: `@keyframes pulse` in `globals.css` + Context + deploy.** | — |
 | **S33 post-deploy fix ✅** | **2 fix post-deploy: (1) `bridge/page.js` — `PRODUCTION_ID` spostato da costante a `useState(null)` + `useEffect(() => setProductionId(getProductionId()), [])` (SSR safe, evita errore `localStorage is not defined` server-side). Commit `f3aa788`. (2) `npm install recharts` + commit `package.json`/`package-lock.json` (recharts era usato ma non dichiarato esplicitamente nelle deps → build Vercel falliva). Commit `1982fed`.** | `f3aa788` `1982fed` |
 | **`/api/drive/preview` ✅** | **Nuovo endpoint `POST { production_id, file_id }`: esegue auth check + provider_token, recupera record `drive_synced_files`, chiama Drive metadata API per `modifiedTime` → delta check (se uguale a `last_modified` → `{ hasChanges: false, file_name }`). Altrimenti: download (Workspace export / `?alt=media`), chiama `/api/import/parse` via multipart, ritorna `{ hasChanges: true, file_id, file_name, modifiedTime, rows, newData, detectedMode }`. NON chiama `/api/import/confirm`. Stessa pipeline di `/api/drive/sync` ma si ferma dopo il parse.** | `06b64ca` |
+| **S34-T2 navbar badge Drive ✅** | **`lib/navbar.js` — `useBridgeBadge`: funzione resa `async`, aggiunge query Supabase su `drive_synced_files` (filtra `last_synced_at=null OR last_modified>last_synced_at`), `driveUpdates` sommato a notifiche non lette. Nessuna chiamata Drive API, nessun provider_token. Commit `e9af3e0`.** | `e9af3e0` |
+| **S34-T3 ImportModal categorizing props ✅** | **`lib/ImportModal.js` — 5 props opzionali aggiunte alla firma: `initialPhase`, `initialRows`, `initialNewHotels`, `initialDetectedMode`, `initialSelMode`. `useEffect` open: se `open && initialPhase==='categorizing' && initialRows`, salta il reset e inizializza direttamente rows/newHotels/detectedMode/selMode/phase→categorizing (early return). Commit `254e6c7`.** | `254e6c7` |
+| **S34-T4 Bridge DriveSyncWidget ✅** | **`bridge/page.js` — import `ImportModal`. Nuovo componente `DriveSyncWidget({ productionId, onPreview })`: legge `drive_synced_files` da Supabase, filtra file con `last_synced_at=null OR last_modified>last_synced_at`, se lista vuota return null; per ogni file mostra nome, data sync, bottone "🔍 Preview changes". Click: fetch parallelo `locations`+`POST /api/drive/preview`; se `hasChanges=false` → messaggio inline ✅; se true → chiama `onPreview({rows,newHotels,detectedMode,selMode,locations})`. `BridgePage`: `useState(previewModal)`, widget posizionato tra NotificationsPanel e TomorrowPanel, `<ImportModal open initialPhase="categorizing" …>` condizionale in fondo al JSX. Commit `1bbfbac`.** | `1bbfbac` |
 | **Navbar SSR fix ✅** | **`lib/navbar.js` — `useBridgeBadge(getProductionId())` sostituito con `useState(null)` + `useEffect(() => setProductionId(getProductionId()), [])` → SSR-safe (evita `localStorage is not defined` server-side). Stesso pattern di `bridge/page.js`. Commit `58d9711`.** | `58d9711` |
 | **Production_id delete guards ✅** | **Aggiunto `.eq('production_id', PRODUCTION_ID)` su tutte le `.delete()` client-side che ne erano prive: `vehicles/page.js` (handleDeleteSingle, handleBulkDelete, VehicleSidebar.handleDelete — commit `4785849`), `locations/page.js` (LocationSidebar.handleDelete), `crew/page.js` (handleBulkDelete su `crew` table — commit `20c217c`). Le delete su `trip_passengers` non modificate (no colonna `production_id`). `trips/page.js` non ha `.delete()` dirette (usa API route).** | `4785849` `20c217c` |
 
