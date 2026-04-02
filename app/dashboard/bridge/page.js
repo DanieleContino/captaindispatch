@@ -235,6 +235,19 @@ function TravelDiscrepanciesWidget({ productionId }) {
   const [resolving, setResolving] = useState({})
   const [notes, setNotes] = useState({})
   const [locations, setLocations] = useState([])
+  const [highlightId, setHighlightId] = useState(null)
+
+  useEffect(() => {
+    const id = sessionStorage.getItem('bridgeHighlight')
+    if (id) {
+      sessionStorage.removeItem('bridgeHighlight')
+      setHighlightId(id)
+      setTimeout(() => {
+        const el = document.getElementById(`discrepancy-${id}`)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 300)
+    }
+  }, [])
 
   useEffect(() => {
     if (!productionId) return
@@ -276,7 +289,7 @@ function TravelDiscrepanciesWidget({ productionId }) {
         {items.map(item => {
           const name = item.crew?.full_name || item.full_name_raw
           return (
-            <div key={item.id} style={{ padding: '12px 20px', borderBottom: '1px solid #fef9c3' }}>
+            <div key={item.id} id={`discrepancy-${item.id}`} style={{ padding: '12px 20px', borderBottom: '1px solid #fef9c3', background: item.id === highlightId ? '#fef9c3' : 'transparent', transition: 'background 1s ease' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
@@ -314,20 +327,17 @@ function TravelDiscrepanciesWidget({ productionId }) {
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
-                  <a href={`/dashboard/crew?search=${encodeURIComponent(item.crew?.full_name || item.full_name_raw)}`}
-                    style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', textDecoration: 'none', textAlign: 'center' }}>
-                    👤 Crew
-                  </a>
-                  {item.match_status === 'unmatched' && (
-                    <button
-                      onClick={() => {
+                  <button
+                    onClick={() => {
+                      if (item.match_status === 'unmatched') {
                         sessionStorage.setItem('crewAddNew', item.full_name_raw)
-                        window.location.href = '/dashboard/crew'
-                      }}
-                      style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', background: '#2563eb', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', textAlign: 'center' }}>
-                      ➕ Add?
-                    </button>
-                  )}
+                        sessionStorage.setItem('crewAddNewMovementId', item.id)
+                      }
+                      window.location.href = '/dashboard/crew'
+                    }}
+                    style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', textAlign: 'center' }}>
+                    👤 Crew
+                  </button>
                   <button
                     onClick={() => resolve(item.id)}
                     disabled={resolving[item.id]}

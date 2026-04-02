@@ -959,9 +959,14 @@ export default function CrewPage() {
           </button>
           <button
             onClick={() => {
+              const movementId = sessionStorage.getItem('crewAddNewMovementId')
+              sessionStorage.removeItem('crewAddNewMovementId')
               setAddNewBanner(null)
               setAddNewRawName(null)
-              window.history.back()
+              if (movementId) {
+                sessionStorage.setItem('bridgeHighlight', movementId)
+              }
+              window.location.href = '/dashboard/bridge'
             }}
             style={{ padding: '7px 16px', borderRadius: '8px', border: '1px solid #bfdbfe', background: 'white', color: '#1d4ed8', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             ✕ No, go back
