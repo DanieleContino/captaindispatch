@@ -200,7 +200,7 @@ function MissingRow({ member, locsMap, onAssign, travelInfo }) {
 }
 
 // ─── DayStrip ──────────────────────────────────────────────────
-function DayStrip({ selectedDate, activeDate, onSelect, onToggle, productionId }) {
+function DayStrip({ selectedDate, onSelect, productionId }) {
   const [counts, setCounts] = useState({})
 
   function getDays(center) {
@@ -258,7 +258,6 @@ function DayStrip({ selectedDate, activeDate, onSelect, onToggle, productionId }
 
       {days.map(d => {
         const isSelected = d === selectedDate
-        const isActive   = d === activeDate
         const isToday    = d === today
         const c          = counts[d] || {}
         const hasData    = c.IN > 0 || c.OUT > 0
@@ -270,7 +269,7 @@ function DayStrip({ selectedDate, activeDate, onSelect, onToggle, productionId }
         return (
           <button
             key={d}
-            onClick={() => { onSelect(d); onToggle(d) }}
+            onClick={() => onSelect(d)}
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -278,11 +277,8 @@ function DayStrip({ selectedDate, activeDate, onSelect, onToggle, productionId }
               gap: '2px',
               padding: '6px 10px',
               borderRadius: '10px',
-              border: isActive  ? '2px solid #d97706'
-                    : isSelected ? '2px solid #0f2340'
-                    : '2px solid transparent',
-              background: isActive  ? '#d97706'
-                        : isSelected ? '#0f2340'
+              border: isSelected ? '2px solid #0f2340' : '2px solid transparent',
+              background: isSelected ? '#0f2340'
                         : isToday   ? '#eff6ff'
                         : 'transparent',
               cursor: 'pointer',
@@ -291,22 +287,22 @@ function DayStrip({ selectedDate, activeDate, onSelect, onToggle, productionId }
               transition: 'all 0.15s',
             }}>
             {/* Giorno settimana */}
-            <span style={{ fontSize: '10px', fontWeight: '700', color: (isActive || isSelected) ? '#fff' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {isToday && !isSelected && !isActive ? '★' : dayName}
+            <span style={{ fontSize: '10px', fontWeight: '700', color: isSelected ? '#fff' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {isToday && !isSelected ? '★' : dayName}
             </span>
             {/* Numero giorno */}
-            <span style={{ fontSize: '16px', fontWeight: '900', color: (isActive || isSelected) ? 'white' : isToday ? '#1d4ed8' : '#0f172a', lineHeight: 1 }}>
+            <span style={{ fontSize: '16px', fontWeight: '900', color: isSelected ? 'white' : isToday ? '#1d4ed8' : '#0f172a', lineHeight: 1 }}>
               {dayNum}
             </span>
             {/* Mese */}
-            <span style={{ fontSize: '9px', color: (isActive || isSelected) ? 'rgba(255,255,255,0.8)' : '#94a3b8' }}>
+            <span style={{ fontSize: '9px', color: isSelected ? 'rgba(255,255,255,0.8)' : '#94a3b8' }}>
               {monthAbbr}
             </span>
             {/* Badge movimenti */}
             {hasData ? (
               <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
-                {c.IN  > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isActive ? 'rgba(255,255,255,0.25)' : isSelected ? '#16a34a' : '#dcfce7', color: (isActive || isSelected) ? 'white' : '#15803d', padding: '1px 4px', borderRadius: '4px' }}>↓{c.IN}</span>}
-                {c.OUT > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isActive ? 'rgba(255,255,255,0.25)' : isSelected ? '#ea580c' : '#fff7ed', color: (isActive || isSelected) ? 'white' : '#c2410c', padding: '1px 4px', borderRadius: '4px' }}>↑{c.OUT}</span>}
+                {c.IN  > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isSelected ? '#16a34a' : '#dcfce7', color: isSelected ? 'white' : '#15803d', padding: '1px 4px', borderRadius: '4px' }}>↓{c.IN}</span>}
+                {c.OUT > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isSelected ? '#ea580c' : '#fff7ed', color: isSelected ? 'white' : '#c2410c', padding: '1px 4px', borderRadius: '4px' }}>↑{c.OUT}</span>}
               </div>
             ) : (
               <div style={{ height: '16px' }} />
@@ -332,8 +328,6 @@ export default function HubCoveragePage() {
   const router = useRouter()
   const [user,            setUser]            = useState(null)
   const [date,            setDate]            = useState(isoToday())
-  const [stripDate,       setStripDate]       = useState(isoToday())
-  const [activeStripDate, setActiveStripDate] = useState(null)
   const [loading,         setLoading]         = useState(true)
 
   // Raw data
@@ -372,91 +366,77 @@ export default function HubCoveragePage() {
   const loadData = useCallback(async d => {
     if (!PRODUCTION_ID) return
     setLoading(true)
-
-    // Crew expected: tutti quelli con travel_status IN o OUT e hotel_status CONFIRMED
-    const [crewRes, tripsRes] = await Promise.all([
-      supabase.from('crew')
-        .select('id,full_name,department,hotel_id,travel_status,arrival_date,departure_date')
-        .eq('production_id', PRODUCTION_ID)
-        .eq('hotel_status', 'CONFIRMED')
-        .in('travel_status', ['IN', 'OUT'])
-        .order('department', { nullsLast: true })
-        .order('full_name'),
-
-      supabase.from('trips')
-        .select('id,trip_id,pickup_min,call_min,transfer_class,vehicle_id,pickup_id,dropoff_id,status')
-        .eq('production_id', PRODUCTION_ID)
-        .eq('date', d)
-        .in('transfer_class', ['ARRIVAL', 'DEPARTURE'])
-        .neq('status', 'CANCELLED'),
-    ])
-
-    const crewData  = crewRes.data  || []
-    const tripsData = tripsRes.data || []
-    const tripIds   = tripsData.map(t => t.id)
-
-    setCrew(crewData)
-
+    const { data: movements } = await supabase
+      .from('travel_movements')
+      .select('crew_id, direction, travel_type, travel_number, from_location, from_time, to_location, to_time, needs_transport, hub_location_id')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('travel_date', d)
+      .eq('needs_transport', true)
+      .not('crew_id', 'is', null)
+    if (!movements || movements.length === 0) {
+      setCrew([])
+      setAssignMap({})
+      setTravelMap({})
+      setLoading(false)
+      return
+    }
+    const crewIds = [...new Set(movements.map(m => m.crew_id))]
+    const travelMapData = {}
+    for (const m of movements) {
+      if (!travelMapData[m.crew_id]) travelMapData[m.crew_id] = []
+      travelMapData[m.crew_id].push(m)
+    }
+    setTravelMap(travelMapData)
+    const { data: crewData } = await supabase
+      .from('crew')
+      .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date')
+      .eq('production_id', PRODUCTION_ID)
+      .in('id', crewIds)
+      .order('department', { nullsLast: true })
+      .order('full_name')
+    setCrew(crewData || [])
+    const { data: tripsData } = await supabase
+      .from('trips')
+      .select('id, trip_id, pickup_min, call_min, transfer_class, vehicle_id, pickup_id, dropoff_id, status')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('date', d)
+      .in('transfer_class', ['ARRIVAL', 'DEPARTURE'])
+      .neq('status', 'CANCELLED')
+    const tripIds = (tripsData || []).map(t => t.id)
     if (tripIds.length === 0) {
       setAssignMap({})
       setLoading(false)
       return
     }
-
-    // trip_passengers per i trip di questa data
     const { data: paxData } = await supabase
       .from('trip_passengers')
-      .select('crew_id,trip_row_id')
+      .select('crew_id, trip_row_id')
       .in('trip_row_id', tripIds)
-
-    // Costruisci mappa crewId → trips assegnati
+      .in('crew_id', crewIds)
     const map = {}
     for (const p of paxData || []) {
-      const trip = tripsData.find(t => t.id === p.trip_row_id)
+      const trip = (tripsData || []).find(t => t.id === p.trip_row_id)
       if (!trip) continue
       if (!map[p.crew_id]) map[p.crew_id] = []
       if (!map[p.crew_id].find(x => x.id === trip.id)) {
         map[p.crew_id].push(trip)
       }
     }
-    // Ordina i trip per pickup_min
     for (const key of Object.keys(map)) {
       map[key].sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999))
     }
-
     setAssignMap(map)
-
-    // Fetch travel_movements per questa data
-    const { data: travelData } = await supabase
-      .from('travel_movements')
-      .select('crew_id, travel_date, direction, from_location, from_time, to_location, to_time, travel_number, travel_type, pickup_dep, pickup_arr, needs_transport, hub_location_id')
-      .eq('production_id', PRODUCTION_ID)
-      .eq('travel_date', d)
-
-    // Mappa crewId → travel movements
-    const travelMapData = {}
-    for (const tm of travelData || []) {
-      if (!travelMapData[tm.crew_id]) travelMapData[tm.crew_id] = []
-      travelMapData[tm.crew_id].push(tm)
-    }
-    console.log('travelMap entries:', Object.keys(travelMapData).length)
-    console.log('travel types:', (travelData || []).map(t => t.travel_type))
-    setTravelMap(travelMapData)
-
     setLoading(false)
   }, [])
 
-  // Data effettiva: se lo strip è attivo usa quella data, altrimenti la toolbar
-  const effectiveDate = activeStripDate ?? date
-
-  useEffect(() => { if (user) loadData(activeStripDate ?? date) }, [user, activeStripDate, date, loadData])
+  useEffect(() => { if (user) loadData(date) }, [user, date, loadData])
 
   // ── Filtri applicati ──────────────────────────────────────
   const departments = [...new Set(crew.map(c => c.department || 'N/A'))].sort()
   const hotels      = [...new Set(crew.map(c => c.hotel_id).filter(Boolean))].sort()
 
   const filtered = crew.filter(c => {
-    if (filterTS    !== 'ALL' && c.travel_status !== filterTS) return false
+    if (filterTS !== 'ALL') { const movs = travelMap[c.id] || []; const hasDir = movs.some(m => m.direction === filterTS); if (!hasDir) return false }
     if (filterDept  !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
     if (filterHotel !== 'ALL' && c.hotel_id !== filterHotel) return false
     const covered = !!assignMap[c.id]
@@ -550,32 +530,16 @@ export default function HubCoveragePage() {
 
           <input type="text" placeholder={t.search} value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '120px' }} />
-          <button onClick={() => loadData(effectiveDate)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
+          <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
       </div>
 
-      {/* ── Day Strip (indipendente dalla toolbar) ── */}
+      {/* ── Day Strip ── */}
       <DayStrip
-        selectedDate={stripDate}
-        activeDate={activeStripDate}
-        onSelect={setStripDate}
-        onToggle={d => setActiveStripDate(prev => prev === d ? null : d)}
+        selectedDate={date}
+        onSelect={setDate}
         productionId={PRODUCTION_ID}
       />
-      {/* Banner quando lo strip è attivo */}
-      {activeStripDate && (
-        <div style={{ background: '#fef3c7', borderBottom: '1px solid #fcd34d', padding: '6px 24px', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
-          <span style={{ fontSize: '14px' }}>📅</span>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: '#92400e' }}>
-            Viewing: {fmtDate(activeStripDate)}
-          </span>
-          <button
-            onClick={() => setActiveStripDate(null)}
-            style={{ background: '#d97706', border: 'none', borderRadius: '5px', color: 'white', fontSize: '11px', fontWeight: '700', padding: '2px 8px', cursor: 'pointer' }}>
-            ✕ Reset
-          </button>
-        </div>
-      )}
 
       {/* ── Content ── */}
       <div style={{ maxWidth: '980px', margin: '0 auto', padding: '24px' }}>
@@ -645,7 +609,7 @@ export default function HubCoveragePage() {
                   <span style={{ fontSize: '11px', fontWeight: '700', background: '#ef4444', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
                     {missing.length} crew
                   </span>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— {t.noTripAssignedFor} {fmtDate(effectiveDate)}</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— {t.noTripAssignedFor} {fmtDate(date)}</span>
                   <a href="/dashboard/trips" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '3px 10px', borderRadius: '7px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                     {t.goToTrips}
                   </a>
@@ -658,7 +622,7 @@ export default function HubCoveragePage() {
                         assignCrewName: c.full_name,
                         assignHotelId:  c.hotel_id || '',
                         assignTS:       c.travel_status,   // 'IN' o 'OUT'
-                        assignDate:     effectiveDate,
+                        assignDate:     date,
                       })
                       router.push('/dashboard/trips?' + params.toString())
                     }} />
