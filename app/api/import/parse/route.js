@@ -955,23 +955,41 @@ async function processTravelRows(rawRows, supabase, productionId) {
 
     // Name matching con inversione Cognome/Nome
     const nameRaw = (raw.full_name_raw || '').trim()
-    const nameParts = nameRaw.split(' ')
-    const nameInverted = nameParts.length >= 2
-      ? nameParts.slice(1).join(' ') + ' ' + nameParts[0]
-      : nameRaw
     const nameLower = nameRaw.toLowerCase()
-    const nameInvLower = nameInverted.toLowerCase()
 
     let match = null
-    // Strategia 1: match diretto
-    match = (existingCrew || []).find(c => (c.full_name || '').toLowerCase() === nameLower)
-    // Strategia 2: nome invertito
-    if (!match) match = (existingCrew || []).find(c => (c.full_name || '').toLowerCase() === nameInvLower)
-    // Strategia 3: cognome (prima parola)
-    if (!match && nameParts[0] && nameParts[0].length > 3) {
-      const cognome = nameParts[0].toLowerCase()
-      match = (existingCrew || []).find(c => (c.full_name || '').toLowerCase().includes(cognome))
+
+    // Strategy 1: direct match
+    match = (existingCrew || []).find(c =>
+      (c.full_name || '').toLowerCase() === nameLower
+    )
+
+    // Strategy 2: try all possible surname/firstname splits
+    // "Del Gobbo Claudio" → tries "Claudio Del Gobbo" ✓
+    if (!match) {
+      const parts = nameRaw.split(' ')
+      for (let i = 1; i < parts.length; i++) {
+        const firstName = parts.slice(i).join(' ')
+        const lastName = parts.slice(0, i).join(' ')
+        const inverted = (firstName + ' ' + lastName).toLowerCase()
+        match = (existingCrew || []).find(c =>
+          (c.full_name || '').toLowerCase() === inverted
+        )
+        if (match) break
+      }
     }
+
+    // Strategy 3: partial match — DB full_name contains all parts of nameRaw
+    if (!match) {
+      const parts = nameRaw.toLowerCase().split(' ').filter(p => p.length > 2)
+      if (parts.length >= 2) {
+        match = (existingCrew || []).find(c => {
+          const dbName = (c.full_name || '').toLowerCase()
+          return parts.every(p => dbName.includes(p))
+        })
+      }
+    }
+
     const matchStatus = match ? 'matched' : 'unmatched'
 
     // Hotel matching
