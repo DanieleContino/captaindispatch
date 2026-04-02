@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
@@ -731,6 +731,7 @@ export default function CrewPage() {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser]         = useState(null)
   const [crew, setCrew]         = useState([])
   const [locations, setLocs]    = useState([])   // array completo per form
@@ -803,24 +804,24 @@ export default function CrewPage() {
 
   // URL param ?remote=1 → auto-imposta filtro REMOTE
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      if (params.get('remote') === '1') setFT('REMOTE')
-      if (params.get('search')) setSearch(params.get('search'))
-      if (params.get('addNew')) {
-        const raw = decodeURIComponent(params.get('addNew'))
-        const parts = raw.trim().split(' ')
-        let fullName = raw
-        for (let i = 1; i < parts.length; i++) {
-          fullName = parts.slice(i).join(' ') + ' ' + parts.slice(0, i).join(' ')
-          break
-        }
-        // Show banner instead of opening sidebar directly
-        setAddNewRawName(raw)
-        setAddNewBanner({ rawName: raw, fullName })
+    const remote  = searchParams.get('remote')
+    const search  = searchParams.get('search')
+    const addNew  = searchParams.get('addNew')
+
+    if (remote === '1') setFT('REMOTE')
+    if (search) setSearch(search)
+    if (addNew) {
+      const raw = decodeURIComponent(addNew)
+      const parts = raw.trim().split(' ')
+      let fullName = raw
+      for (let i = 1; i < parts.length; i++) {
+        fullName = parts.slice(i).join(' ') + ' ' + parts.slice(0, i).join(' ')
+        break
       }
+      setAddNewRawName(raw)
+      setAddNewBanner({ rawName: raw, fullName })
     }
-  }, [])
+  }, [searchParams])
 
   function handleStatusChange(id, s)            { setCrew(p => p.map(c => c.id === id ? { ...c, travel_status: s } : c)) }
   function handleNTNChange(id, val)             { setCrew(p => p.map(c => c.id === id ? { ...c, no_transport_needed: val } : c)) }
