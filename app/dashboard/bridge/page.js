@@ -344,16 +344,18 @@ function TomorrowPanel({ productionId }) {
     const tomorrowStr = new Date(Date.now() + 86400000)
       .toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
 
-    supabase.from('crew')
-      .select('id, full_name, department, hotel_id')
+    supabase.from('travel_movements')
+      .select('crew_id, full_name_raw, travel_date, direction, from_location, from_time, to_location, to_time, travel_number, travel_type, needs_transport, crew:crew_id(full_name, department)')
       .eq('production_id', productionId)
-      .eq('arrival_date', tomorrowStr)
+      .eq('travel_date', tomorrowStr)
+      .eq('direction', 'IN')
       .then(({ data }) => setArrivals(data || []))
 
-    supabase.from('crew')
-      .select('id, full_name, department, hotel_id')
+    supabase.from('travel_movements')
+      .select('crew_id, full_name_raw, travel_date, direction, from_location, from_time, to_location, to_time, travel_number, travel_type, needs_transport, crew:crew_id(full_name, department)')
       .eq('production_id', productionId)
-      .eq('departure_date', tomorrowStr)
+      .eq('travel_date', tomorrowStr)
+      .eq('direction', 'OUT')
       .then(({ data }) => setDepartures(data || []))
   }, [productionId])
 
@@ -393,18 +395,30 @@ function TomorrowPanel({ productionId }) {
         {/* Arrivals */}
         <div>
           <div style={{ fontSize: '11px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-            🏨 Check-in ({arrivals.length})
+            🛬 Arrivals ({arrivals.length})
           </div>
           {arrivals.length === 0 ? (
-            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No check-ins tomorrow</div>
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No arrivals tomorrow</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              {arrivals.slice(0, 5).map(c => (
-                <div key={c.id} style={{ fontSize: '12px', color: '#374151' }}>
-                  <strong>{c.full_name}</strong>
-                  {c.department && <span style={{ color: '#94a3b8', marginLeft: '6px' }}>{c.department}</span>}
-                </div>
-              ))}
+              {arrivals.slice(0, 5).map((c, idx) => {
+                const icon = c.travel_type === 'FLIGHT' ? '✈️'
+                           : c.travel_type === 'TRAIN'  ? '🚂'
+                           : '🚐'
+                const name = c.crew?.full_name || c.full_name_raw
+                return (
+                  <div key={idx} style={{ fontSize: '12px', color: '#374151' }}>
+                    <span>{icon}</span>
+                    <strong style={{ marginLeft: '4px' }}>{name}</strong>
+                    {c.crew?.department && <span style={{ color: '#94a3b8', marginLeft: '6px' }}>{c.crew.department}</span>}
+                    {c.travel_number && <span style={{ color: '#64748b', marginLeft: '6px', fontFamily: 'monospace' }}>{c.travel_number}</span>}
+                    {c.to_time && <span style={{ color: '#64748b', marginLeft: '4px' }}>arr {c.to_time}</span>}
+                    {c.needs_transport && (
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 5px', marginLeft: '6px' }}>🚐</span>
+                    )}
+                  </div>
+                )
+              })}
               {arrivals.length > 5 && (
                 <div style={{ fontSize: '11px', color: '#94a3b8' }}>+{arrivals.length - 5} more</div>
               )}
@@ -415,18 +429,30 @@ function TomorrowPanel({ productionId }) {
         {/* Departures */}
         <div>
           <div style={{ fontSize: '11px', fontWeight: '800', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-            🏁 Check-out ({departures.length})
+            🛫 Departures ({departures.length})
           </div>
           {departures.length === 0 ? (
-            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No check-outs tomorrow</div>
+            <div style={{ fontSize: '12px', color: '#94a3b8' }}>No departures tomorrow</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              {departures.slice(0, 5).map(c => (
-                <div key={c.id} style={{ fontSize: '12px', color: '#374151' }}>
-                  <strong>{c.full_name}</strong>
-                  {c.department && <span style={{ color: '#94a3b8', marginLeft: '6px' }}>{c.department}</span>}
-                </div>
-              ))}
+              {departures.slice(0, 5).map((c, idx) => {
+                const icon = c.travel_type === 'FLIGHT' ? '✈️'
+                           : c.travel_type === 'TRAIN'  ? '🚂'
+                           : '🚐'
+                const name = c.crew?.full_name || c.full_name_raw
+                return (
+                  <div key={idx} style={{ fontSize: '12px', color: '#374151' }}>
+                    <span>{icon}</span>
+                    <strong style={{ marginLeft: '4px' }}>{name}</strong>
+                    {c.crew?.department && <span style={{ color: '#94a3b8', marginLeft: '6px' }}>{c.crew.department}</span>}
+                    {c.travel_number && <span style={{ color: '#64748b', marginLeft: '6px', fontFamily: 'monospace' }}>{c.travel_number}</span>}
+                    {c.from_time && <span style={{ color: '#64748b', marginLeft: '4px' }}>dep {c.from_time}</span>}
+                    {c.needs_transport && (
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 5px', marginLeft: '6px' }}>🚐</span>
+                    )}
+                  </div>
+                )
+              })}
               {departures.length > 5 && (
                 <div style={{ fontSize: '11px', color: '#94a3b8' }}>+{departures.length - 5} more</div>
               )}
@@ -456,39 +482,34 @@ function ArrivalsDeparturesChart({ productionId }) {
     const toStr       = toRomeDate(new Date(now.getTime() + 29 * 86400000))
 
     Promise.all([
-      supabase.from('crew')
-        .select('arrival_date')
+      supabase.from('travel_movements')
+        .select('travel_date')
         .eq('production_id', productionId)
-        .gte('arrival_date', fromStr)
-        .lte('arrival_date', toStr)
-        .not('arrival_date', 'is', null),
-      supabase.from('crew')
-        .select('departure_date')
+        .eq('direction', 'IN')
+        .gte('travel_date', fromStr)
+        .lte('travel_date', toStr),
+      supabase.from('travel_movements')
+        .select('travel_date')
         .eq('production_id', productionId)
-        .gte('departure_date', fromStr)
-        .lte('departure_date', toStr)
-        .not('departure_date', 'is', null),
+        .eq('direction', 'OUT')
+        .gte('travel_date', fromStr)
+        .lte('travel_date', toStr),
     ]).then(([arrRes, depRes]) => {
       const arrMap = {}
       const depMap = {}
-      console.log('[Bridge Chart] arrRes.data:', JSON.stringify(arrRes.data))
-      console.log('[Bridge Chart] fromStr:', fromStr, 'toStr:', toStr)
       ;(arrRes.data || []).forEach(r => {
-        if (r.arrival_date) {
-          const d = String(r.arrival_date).slice(0, 10)
-          arrMap[d] = (arrMap[d] || 0) + 1
-        }
+        const d = String(r.travel_date).slice(0, 10)
+        arrMap[d] = (arrMap[d] || 0) + 1
       })
       ;(depRes.data || []).forEach(r => {
-        if (r.departure_date) {
-          const d = String(r.departure_date).slice(0, 10)
-          depMap[d] = (depMap[d] || 0) + 1
-        }
+        const d = String(r.travel_date).slice(0, 10)
+        depMap[d] = (depMap[d] || 0) + 1
       })
 
       const days = []
       const cur = new Date(todayStr + 'T00:00:00')
-      while (toRomeDate(cur) <= toStr) {
+      const to = new Date(toStr + 'T00:00:00')
+      while (cur <= to) {
         const d = toRomeDate(cur)
         days.push({
           date:       d,
@@ -515,16 +536,16 @@ function ArrivalsDeparturesChart({ productionId }) {
       {/* Header + Legend */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f2340' }}>
-          📊 Hotel Check-in & Check-out — 30 days
+          📊 Arrivals & Departures — 30 days (flights + trains)
         </div>
         <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#64748b', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '10px', height: '10px', background: '#86efac', borderRadius: '2px', display: 'inline-block' }} />
-            Check-in
+            🛬 Arrivals
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '10px', height: '10px', background: '#fca5a5', borderRadius: '2px', display: 'inline-block' }} />
-            Check-out
+            🛫 Departures
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{ width: '10px', height: '10px', background: '#0f2340', borderRadius: '2px', display: 'inline-block' }} />
@@ -566,7 +587,7 @@ function ArrivalsDeparturesChart({ productionId }) {
             <Tooltip
               contentStyle={{ fontSize: '11px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
               labelStyle={{ fontWeight: '700', color: '#0f2340', marginBottom: '4px' }}
-              formatter={(value, name) => [value, name === 'arrivals' ? '🏨 Check-in' : '🏁 Check-out']}
+              formatter={(value, name) => [value, name === 'arrivals' ? '🛬 Arrivals' : '🛫 Departures']}
               labelFormatter={(label, payload) => {
                 const d = payload?.[0]?.payload
                 if (d?.isToday)    return `${label} — TODAY`
