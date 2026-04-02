@@ -748,6 +748,8 @@ export default function CrewPage() {
   const [editTarget, setET]     = useState(null)
   const [importOpen, setImportOpen] = useState(false)
   const [addNewRawName, setAddNewRawName] = useState(null)
+  const [addNewBanner, setAddNewBanner] = useState(null)
+  // { rawName: string, fullName: string }
 
   const [travelMap, setTravelMap]       = useState({})
 
@@ -807,15 +809,15 @@ export default function CrewPage() {
       if (params.get('search')) setSearch(params.get('search'))
       if (params.get('addNew')) {
         const raw = decodeURIComponent(params.get('addNew'))
-        setAddNewRawName(raw) // save original name from travel calendar
-        // open sidebar in new mode with name pre-filled
         const parts = raw.trim().split(' ')
-        // try to invert "LASTNAME FIRSTNAME" → "FIRSTNAME LASTNAME"
-        if (parts.length >= 2) {
-          // expose the raw as initial search so user can adjust
-          setSearch(raw)
+        let fullName = raw
+        for (let i = 1; i < parts.length; i++) {
+          fullName = parts.slice(i).join(' ') + ' ' + parts.slice(0, i).join(' ')
+          break
         }
-        setSM('new'); setET(null); setSO(true)
+        // Show banner instead of opening sidebar directly
+        setAddNewRawName(raw)
+        setAddNewBanner({ rawName: raw, fullName })
       }
     }
   }, [])
@@ -932,6 +934,44 @@ export default function CrewPage() {
 
       {/* Header */}
       <Navbar currentPath="/dashboard/crew" />
+
+      {addNewBanner && (
+        <div style={{
+          position: 'sticky', top: '52px', zIndex: 30,
+          background: '#eff6ff', borderBottom: '2px solid #2563eb',
+          padding: '12px 24px', display: 'flex', alignItems: 'center',
+          gap: '12px', flexWrap: 'wrap'
+        }}>
+          <span style={{ fontSize: '20px' }}>👤</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#1d4ed8' }}>
+              "{addNewBanner.rawName}" is not in your crew
+            </div>
+            <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '2px' }}>
+              Coming from Travel Discrepancies — do you want to add this person?
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setAddNewBanner(null)
+              setSM('new')
+              setET({ full_name: addNewBanner.fullName })
+              setSO(true)
+            }}
+            style={{ padding: '7px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            ✓ Yes, add
+          </button>
+          <button
+            onClick={() => {
+              setAddNewBanner(null)
+              setAddNewRawName(null)
+              window.history.back()
+            }}
+            style={{ padding: '7px 16px', borderRadius: '8px', border: '1px solid #bfdbfe', background: 'white', color: '#1d4ed8', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            ✕ No, go back
+          </button>
+        </div>
+      )}
 
       {/* Sub-toolbar — two-row sticky */}
       <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: '52px', zIndex: 29 }}>
