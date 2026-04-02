@@ -155,7 +155,10 @@ async function syncOneFile(fileRecord, providerToken, cookieHeader) {
   const ext = downloadFileName.split('.').pop().toLowerCase()
   const isExcel = ext === 'xlsx' || ext === 'xls'
 
+  console.log(`[drive/sync] import_mode="${import_mode}", isExcel=${isExcel}, ext="${ext}"`)
+
   if (import_mode === 'accommodation' && isExcel) {
+    console.log('[drive/sync] ACCOMMODATION BRANCH ENTERED, validSheets will be listed')
     // Ottieni lista fogli
     const sheetsFd = new FormData()
     sheetsFd.append('file', new Blob([fileBuffer], { type: downloadMimeType }), downloadFileName)
