@@ -1059,12 +1059,12 @@ function extractAccommodationFromStructured(structured) {
   // Mappa flessibile delle colonne — cerca corrispondenze case-insensitive
   const headerMap = {}
   for (const h of headers) {
-    const hl = h.toLowerCase().trim()
+    const hl = h.trim().toLowerCase()
     if (hl === 'name' || hl === 'nome' || hl === 'first name' || hl === 'first')
       headerMap.first_name = h
     else if (hl === 'surname' || hl === 'cognome' || hl === 'last name' || hl === 'last')
       headerMap.last_name = h
-    else if (hl === 'position/role' || hl === 'role' || hl === 'position' || hl === 'ruolo' || hl === 'posizione')
+    else if (['position/role', 'position', 'role', 'ruolo', 'posizione'].includes(hl))
       headerMap.role = h
     else if (hl === 'department' || hl === 'dept' || hl === 'dipartimento')
       headerMap.department = h
@@ -1073,6 +1073,8 @@ function extractAccommodationFromStructured(structured) {
     else if (hl === 'out' || hl === 'departure' || hl === 'dep' || hl === 'check-out' || hl === 'checkout' || hl === 'data partenza')
       headerMap.departure_date = h
   }
+  console.log('[DEBUG accomm] headerMap:', JSON.stringify(headerMap))
+  console.log('[DEBUG accomm] headers ricevuti:', JSON.stringify(headers?.slice(0,7)))
 
   // Richiede almeno first_name/last_name — senza nomi non c'è niente da fare
   const hasNames = headerMap.first_name || headerMap.last_name
