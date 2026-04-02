@@ -364,6 +364,74 @@ async function processAccommodation(supabase, productionId, updateRows, newLocat
   return { inserted: 0, updated, skipped }
 }
 
+// ── Travel processor ─────────────────────────────────────────
+
+async function processTravelConfirm(supabase, productionId, insertRows, errors) {
+  let inserted = 0
+  let skipped = 0
+
+  function getNoTransport(pickup) {
+    const p = (pickup || '').trim().toUpperCase().replace(/\.$/, '')
+    if (p === 'TRANSPORT DEPT') return false
+    if (['TBD', 'TBA', 'TBR', '?'].includes(p)) return null
+    return true
+  }
+
+  const toInsert = []
+
+  for (const r of insertRows) {
+    if (r.existingId) {
+      const ntpArr = getNoTransport(r.pickup_arr)
+      const ntpDep = getNoTransport(r.pickup_dep)
+      const ntp = ntpArr === false || ntpDep === false ? false
+                : ntpArr === true  || ntpDep === true  ? true
+                : null
+      if (ntp !== null) {
+        await supabase.from('crew')
+          .update({ no_transport_needed: ntp })
+          .eq('id', r.existingId)
+          .eq('production_id', productionId)
+      }
+    }
+
+    toInsert.push({
+      production_id:        productionId,
+      crew_id:              r.existingId || null,
+      travel_date:          r.travel_date || null,
+      direction:            r.direction || null,
+      from_location:        r.from_location || null,
+      from_time:            r.from_time || null,
+      to_location:          r.to_location || null,
+      to_time:              r.to_time || null,
+      travel_number:        r.travel_number || null,
+      travel_type:          r.travel_type || null,
+      pickup_dep:           r.pickup_dep || null,
+      pickup_arr:           r.pickup_arr || null,
+      needs_transport:      r.needs_transport ?? false,
+      hub_location_id:      r.hub_location_id || null,
+      hotel_raw:            r.hotel_raw || null,
+      hotel_id:             r.hotel_id || null,
+      rooming_date:         r.rooming_date || null,
+      rooming_hotel_id:     r.rooming_hotel_id || null,
+      travel_date_conflict: r.travel_date_conflict || false,
+      hotel_conflict:       r.hotel_conflict || false,
+      full_name_raw:        r.full_name_raw || null,
+      match_status:         r.match_status || 'unmatched',
+    })
+  }
+
+  if (toInsert.length > 0) {
+    const { data, error } = await supabase
+      .from('travel_movements')
+      .insert(toInsert)
+      .select('id')
+    if (error) errors.push(`Errore insert travel_movements: ${error.message}`)
+    else inserted = data?.length || 0
+  }
+
+  return { inserted, updated: 0, skipped }
+}
+
 // ── POST handler ─────────────────────────────────────────────
 
 export async function POST(req) {
@@ -446,6 +514,13 @@ export async function POST(req) {
       // 2. Aggiorna crew esistenti con hotel/date (no null-only: overwrite sempre)
       const res = await processAccommodation(supabase, productionId, updateRows, newLocationMap, errors)
       updated  += res.updated
+      skipped  += res.skipped
+    }
+
+    // ── TRAVEL ──────────────────────────────────────────────
+    else if (effectiveMode === 'travel') {
+      const res = await processTravelConfirm(supabase, productionId, insertRows, errors)
+      inserted += res.inserted
       skipped  += res.skipped
     }
 
