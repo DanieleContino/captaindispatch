@@ -229,6 +229,100 @@ function DriveSyncWidget({ productionId, onPreview }) {
   )
 }
 
+// ── Travel Discrepancies Widget ──────────────────────────
+function TravelDiscrepanciesWidget({ productionId }) {
+  const [items, setItems] = useState([])
+  const [resolving, setResolving] = useState({})
+  const [notes, setNotes] = useState({})
+
+  useEffect(() => {
+    if (!productionId) return
+    supabase
+      .from('travel_movements')
+      .select('id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, hub_location_id, crew:crew_id(full_name, hotel_id)')
+      .eq('production_id', productionId)
+      .eq('discrepancy_resolved', false)
+      .or('travel_date_conflict.eq.true,hotel_conflict.eq.true,match_status.eq.unmatched')
+      .order('travel_date', { ascending: true })
+      .limit(50)
+      .then(({ data }) => setItems(data || []))
+  }, [productionId])
+
+  async function resolve(id) {
+    setResolving(p => ({ ...p, [id]: true }))
+    await supabase.from('travel_movements')
+      .update({ discrepancy_resolved: true, discrepancy_note: notes[id] || null })
+      .eq('id', id)
+    setItems(prev => prev.filter(i => i.id !== id))
+    setResolving(p => ({ ...p, [id]: false }))
+  }
+
+  if (items.length === 0) return null
+
+  return (
+    <div style={{ background: 'white', border: '1px solid #fde68a', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
+      <div style={{ padding: '12px 20px', background: '#fefce8', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: '13px', fontWeight: '800', color: '#a16207' }}>⚠️ Travel Discrepancies</div>
+        <div style={{ fontSize: '11px', color: '#a16207' }}>{items.length} to resolve</div>
+      </div>
+      <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+        {items.map(item => {
+          const name = item.crew?.full_name || item.full_name_raw
+          return (
+            <div key={item.id} style={{ padding: '12px 20px', borderBottom: '1px solid #fef9c3' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
+                    {name}
+                    <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color: item.direction === 'IN' ? '#15803d' : '#c2410c' }}>
+                      {item.direction === 'IN' ? '↓ IN' : '↑ OUT'} {item.travel_date}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {item.match_status === 'unmatched' && (
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: '700' }}>
+                        ❌ Not matched in crew
+                      </span>
+                    )}
+                    {item.travel_date_conflict && (
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
+                        📅 Date: rooming {item.rooming_date} vs travel {item.travel_date}
+                      </span>
+                    )}
+                    {item.hotel_conflict && (
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
+                        🏨 Hotel conflict
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    placeholder="Note (optional)…"
+                    value={notes[item.id] || ''}
+                    onChange={e => setNotes(p => ({ ...p, [item.id]: e.target.value }))}
+                    style={{ marginTop: '8px', width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
+                  <a href={`/dashboard/crew`}
+                    style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', textDecoration: 'none', textAlign: 'center' }}>
+                    👤 Crew
+                  </a>
+                  <button
+                    onClick={() => resolve(item.id)}
+                    disabled={resolving[item.id]}
+                    style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', background: '#16a34a', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', opacity: resolving[item.id] ? 0.6 : 1 }}>
+                    {resolving[item.id] ? '…' : '✓ Resolve'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Tomorrow Panel ────────────────────────────────────────
 function TomorrowPanel({ productionId }) {
   const [arrivals,   setArrivals]   = useState([])
@@ -1215,6 +1309,7 @@ export default function BridgePage() {
         {/* ── Dashboard Panels ── */}
         <NotificationsPanel productionId={PRODUCTION_ID} />
         <DriveSyncWidget productionId={PRODUCTION_ID} onPreview={setPreviewModal} />
+        <TravelDiscrepanciesWidget productionId={PRODUCTION_ID} />
         <TomorrowPanel productionId={PRODUCTION_ID} />
         <ArrivalsDeparturesChart key={PRODUCTION_ID} productionId={PRODUCTION_ID} />
         <MiniWidgets productionId={PRODUCTION_ID} />
