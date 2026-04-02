@@ -252,7 +252,7 @@ function ContactPopover({ crewId, email, phone, onSaved }) {
 }
 
 // ─── Crew card compatta ──────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [] }) {
   const t = useT()
   const tc = TC[member.travel_status] || TC.PRESENT
   const hc = HC[member.hotel_status]  || HC.PENDING
@@ -318,6 +318,38 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
           <span style={{ color: '#cbd5e1', fontSize: '11px' }}>{member.id}</span>
         </div>
         {member.notes && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', fontStyle: 'italic' }}>{member.notes}</div>}
+        {travelInfo.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+            {travelInfo.slice(0, 3).map((tm, idx) => {
+              const icon = tm.travel_type === 'FLIGHT' ? '✈️'
+                         : tm.travel_type === 'TRAIN'  ? '🚂'
+                         : '🚐'
+              const dateStr = new Date(tm.travel_date + 'T12:00:00Z')
+                .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+              return (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#374151', background: tm.direction === 'IN' ? '#f0fdf4' : '#fff7ed', border: `1px solid ${tm.direction === 'IN' ? '#86efac' : '#fdba74'}`, borderRadius: '5px', padding: '2px 8px' }}>
+                  <span>{icon}</span>
+                  <span style={{ fontWeight: '700', color: tm.direction === 'IN' ? '#15803d' : '#c2410c' }}>
+                    {tm.direction === 'IN' ? '↓' : '↑'}
+                  </span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '10px' }}>{tm.travel_number || '–'}</span>
+                  <span style={{ color: '#64748b' }}>{tm.from_location || '–'} → {tm.to_location || '–'}</span>
+                  {tm.direction === 'IN' && tm.to_time && <span style={{ color: '#64748b' }}>arr {tm.to_time}</span>}
+                  {tm.direction === 'OUT' && tm.from_time && <span style={{ color: '#64748b' }}>dep {tm.from_time}</span>}
+                  <span style={{ color: '#94a3b8', marginLeft: '2px' }}>{dateStr}</span>
+                  {tm.needs_transport && (
+                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 4px' }}>🚐</span>
+                  )}
+                </div>
+              )
+            })}
+            {travelInfo.length > 3 && (
+              <div style={{ fontSize: '10px', color: '#94a3b8', paddingLeft: '8px' }}>
+                +{travelInfo.length - 3} more movements
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Travel selector */}
@@ -714,6 +746,8 @@ export default function CrewPage() {
   const [editTarget, setET]     = useState(null)
   const [importOpen, setImportOpen] = useState(false)
 
+  const [travelMap, setTravelMap]       = useState({})
+
   // Selezione bulk
   const [selectedIds, setSelectedIds]   = useState([])
   const [bulkDeleting, setBulkDel]      = useState(false)
@@ -741,8 +775,22 @@ export default function CrewPage() {
   const loadCrew = useCallback(async () => {
     if (!PRODUCTION_ID) return
     setLoading(true)
-    const { data } = await supabase.from('crew').select('*').eq('production_id', PRODUCTION_ID).order('department', { nullsLast: true }).order('full_name')
-    setCrew(data || [])
+    const [{ data: vData }, { data: travelData }] = await Promise.all([
+      supabase.from('crew').select('*').eq('production_id', PRODUCTION_ID).order('department', { nullsLast: true }).order('full_name'),
+      supabase
+        .from('travel_movements')
+        .select('crew_id, travel_date, direction, from_location, from_time, to_location, to_time, travel_number, travel_type, needs_transport')
+        .eq('production_id', PRODUCTION_ID)
+        .gte('travel_date', new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }))
+        .order('travel_date', { ascending: true }),
+    ])
+    setCrew(vData || [])
+    const tMap = {}
+    for (const tm of travelData || []) {
+      if (!tMap[tm.crew_id]) tMap[tm.crew_id] = []
+      tMap[tm.crew_id].push(tm)
+    }
+    setTravelMap(tMap)
     setLoading(false)
   }, [])
 
@@ -1016,7 +1064,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} />
+                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} />
                   ))}
                 </div>
               </div>
