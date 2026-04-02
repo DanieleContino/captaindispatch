@@ -927,6 +927,108 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
   return { rows, newHotels }
 }
 
+async function processTravelRows(rawRows, supabase, productionId) {
+  const [{ data: existingCrew }, { data: hubs }, { data: locations }] = await Promise.all([
+    supabase.from('crew').select('id, full_name, arrival_date, departure_date, hotel_id').eq('production_id', productionId),
+    supabase.from('locations').select('id, name').eq('production_id', productionId).eq('is_hub', true),
+    supabase.from('locations').select('id, name').eq('production_id', productionId),
+  ])
+
+  const newHotels = []
+
+  const rows = rawRows.map((raw, i) => {
+    // Hub matching — filtra solo movimenti che toccano un hub locale
+    const fromLower = (raw.from_location || '').toLowerCase().trim()
+    const toLower = (raw.to_location || '').toLowerCase().trim()
+
+    const hubMatch = (hubs || []).find(h => {
+      const hn = (h.name || '').toLowerCase().trim()
+      const hnFirst = hn.split(' ')[0]
+      return fromLower.includes(hnFirst) || toLower.includes(hnFirst)
+    })
+    if (!hubMatch) return null
+
+    // Direction
+    const direction = (hubs || []).some(h =>
+      toLower.includes((h.name || '').toLowerCase().split(' ')[0])
+    ) ? 'IN' : 'OUT'
+
+    // Name matching con inversione Cognome/Nome
+    const nameRaw = (raw.full_name_raw || '').trim()
+    const nameParts = nameRaw.split(' ')
+    const nameInverted = nameParts.length >= 2
+      ? nameParts.slice(1).join(' ') + ' ' + nameParts[0]
+      : nameRaw
+    const nameLower = nameRaw.toLowerCase()
+    const nameInvLower = nameInverted.toLowerCase()
+
+    let match = null
+    // Strategia 1: match diretto
+    match = (existingCrew || []).find(c => (c.full_name || '').toLowerCase() === nameLower)
+    // Strategia 2: nome invertito
+    if (!match) match = (existingCrew || []).find(c => (c.full_name || '').toLowerCase() === nameInvLower)
+    // Strategia 3: cognome (prima parola)
+    if (!match && nameParts[0] && nameParts[0].length > 3) {
+      const cognome = nameParts[0].toLowerCase()
+      match = (existingCrew || []).find(c => (c.full_name || '').toLowerCase().includes(cognome))
+    }
+    const matchStatus = match ? 'matched' : 'unmatched'
+
+    // Hotel matching
+    let hotel_id = null
+    let hotelNotFound = false
+    if (raw.hotel_raw) {
+      const hotelLower = raw.hotel_raw.toLowerCase().trim()
+      const locMatch = (locations || []).find(loc => {
+        const locLower = (loc.name || '').toLowerCase().trim()
+        if (locLower === hotelLower) return true
+        if (locLower.includes(hotelLower) || hotelLower.includes(locLower)) return true
+        const parts = hotelLower.split(/[\|\-–,]/).map(p => p.trim()).filter(Boolean)
+        return parts.some(p => p.length > 3 && (locLower.includes(p) || p.includes(locLower)))
+      })
+      if (locMatch) {
+        hotel_id = locMatch.id
+      } else {
+        hotelNotFound = true
+        if (!newHotels.find(h => h.name.toLowerCase() === hotelLower)) {
+          newHotels.push({ name: raw.hotel_raw })
+        }
+      }
+    }
+
+    // Cross-check rooming vs travel
+    let travel_date_conflict = false
+    let hotel_conflict = false
+    let rooming_date = null
+    let rooming_hotel_id = null
+
+    if (match) {
+      rooming_hotel_id = match.hotel_id || null
+      rooming_date = direction === 'IN' ? (match.arrival_date || null) : (match.departure_date || null)
+      if (rooming_date && raw.travel_date && rooming_date !== raw.travel_date) travel_date_conflict = true
+      if (hotel_id && rooming_hotel_id && hotel_id !== rooming_hotel_id) hotel_conflict = true
+    }
+
+    return {
+      ...raw,
+      _idx: i,
+      action: 'insert',
+      existingId: match?.id || null,
+      match_status: matchStatus,
+      direction,
+      hub_location_id: hubMatch.id,
+      hotel_id,
+      hotelNotFound,
+      travel_date_conflict,
+      hotel_conflict,
+      rooming_date,
+      rooming_hotel_id,
+    }
+  }).filter(Boolean)
+
+  return { rows, newHotels }
+}
+
 // ── Accommodation JS extraction ──────────────────────────────
 
 /**
