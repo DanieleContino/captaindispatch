@@ -200,7 +200,7 @@ function MissingRow({ member, locsMap, onAssign, travelInfo }) {
 }
 
 // ─── DayStrip ──────────────────────────────────────────────────
-function DayStrip({ selectedDate, onSelect, productionId }) {
+function DayStrip({ selectedDate, activeDate, onSelect, onToggle, productionId }) {
   const [counts, setCounts] = useState({})
 
   function getDays(center) {
@@ -258,6 +258,7 @@ function DayStrip({ selectedDate, onSelect, productionId }) {
 
       {days.map(d => {
         const isSelected = d === selectedDate
+        const isActive   = d === activeDate
         const isToday    = d === today
         const c          = counts[d] || {}
         const hasData    = c.IN > 0 || c.OUT > 0
@@ -269,7 +270,7 @@ function DayStrip({ selectedDate, onSelect, productionId }) {
         return (
           <button
             key={d}
-            onClick={() => onSelect(d)}
+            onClick={() => { onSelect(d); onToggle(d) }}
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -277,30 +278,35 @@ function DayStrip({ selectedDate, onSelect, productionId }) {
               gap: '2px',
               padding: '6px 10px',
               borderRadius: '10px',
-              border: isSelected ? '2px solid #0f2340' : '2px solid transparent',
-              background: isSelected ? '#0f2340' : isToday ? '#eff6ff' : 'transparent',
+              border: isActive  ? '2px solid #d97706'
+                    : isSelected ? '2px solid #0f2340'
+                    : '2px solid transparent',
+              background: isActive  ? '#d97706'
+                        : isSelected ? '#0f2340'
+                        : isToday   ? '#eff6ff'
+                        : 'transparent',
               cursor: 'pointer',
               minWidth: '52px',
               flexShrink: 0,
               transition: 'all 0.15s',
             }}>
             {/* Giorno settimana */}
-            <span style={{ fontSize: '10px', fontWeight: '700', color: isSelected ? '#93c5fd' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {isToday && !isSelected ? '★' : dayName}
+            <span style={{ fontSize: '10px', fontWeight: '700', color: (isActive || isSelected) ? '#fff' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {isToday && !isSelected && !isActive ? '★' : dayName}
             </span>
             {/* Numero giorno */}
-            <span style={{ fontSize: '16px', fontWeight: '900', color: isSelected ? 'white' : isToday ? '#1d4ed8' : '#0f172a', lineHeight: 1 }}>
+            <span style={{ fontSize: '16px', fontWeight: '900', color: (isActive || isSelected) ? 'white' : isToday ? '#1d4ed8' : '#0f172a', lineHeight: 1 }}>
               {dayNum}
             </span>
             {/* Mese */}
-            <span style={{ fontSize: '9px', color: isSelected ? '#93c5fd' : '#94a3b8' }}>
+            <span style={{ fontSize: '9px', color: (isActive || isSelected) ? 'rgba(255,255,255,0.8)' : '#94a3b8' }}>
               {monthAbbr}
             </span>
             {/* Badge movimenti */}
             {hasData ? (
               <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
-                {c.IN  > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isSelected ? '#16a34a' : '#dcfce7', color: isSelected ? 'white' : '#15803d', padding: '1px 4px', borderRadius: '4px' }}>↓{c.IN}</span>}
-                {c.OUT > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isSelected ? '#ea580c' : '#fff7ed', color: isSelected ? 'white' : '#c2410c', padding: '1px 4px', borderRadius: '4px' }}>↑{c.OUT}</span>}
+                {c.IN  > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isActive ? 'rgba(255,255,255,0.25)' : isSelected ? '#16a34a' : '#dcfce7', color: (isActive || isSelected) ? 'white' : '#15803d', padding: '1px 4px', borderRadius: '4px' }}>↓{c.IN}</span>}
+                {c.OUT > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isActive ? 'rgba(255,255,255,0.25)' : isSelected ? '#ea580c' : '#fff7ed', color: (isActive || isSelected) ? 'white' : '#c2410c', padding: '1px 4px', borderRadius: '4px' }}>↑{c.OUT}</span>}
               </div>
             ) : (
               <div style={{ height: '16px' }} />
@@ -324,10 +330,11 @@ export default function HubCoveragePage() {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const router = useRouter()
-  const [user,    setUser]    = useState(null)
-  const [date,      setDate]      = useState(isoToday())
-  const [stripDate, setStripDate] = useState(isoToday())
-  const [loading, setLoading] = useState(true)
+  const [user,            setUser]            = useState(null)
+  const [date,            setDate]            = useState(isoToday())
+  const [stripDate,       setStripDate]       = useState(isoToday())
+  const [activeStripDate, setActiveStripDate] = useState(null)
+  const [loading,         setLoading]         = useState(true)
 
   // Raw data
   const [crew,      setCrew]      = useState([])
@@ -338,10 +345,10 @@ export default function HubCoveragePage() {
   const [travelMap, setTravelMap] = useState({})
 
   // Filtri
-  const [filterTS,    setFTS]   = useState('ALL')   // IN / OUT / ALL
-  const [filterDept,  setFD]    = useState('ALL')
-  const [filterHotel, setFH]    = useState('ALL')
-  const [showOnly,    setSO]    = useState('ALL')   // ALL | MISSING | COVERED
+  const [filterTS,    setFTS]    = useState('ALL')   // IN / OUT / ALL
+  const [filterDept,  setFD]     = useState('ALL')
+  const [filterHotel, setFH]     = useState('ALL')
+  const [showOnly,    setSO]     = useState('ALL')   // ALL | MISSING | COVERED
   const [search,      setSearch] = useState('')
 
   // Auth + location map
@@ -437,7 +444,10 @@ export default function HubCoveragePage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { if (user) loadData(date) }, [user, date, loadData])
+  // Data effettiva: se lo strip è attivo usa quella data, altrimenti la toolbar
+  const effectiveDate = activeStripDate ?? date
+
+  useEffect(() => { if (user) loadData(effectiveDate) }, [user, effectiveDate, loadData])
 
   // ── Filtri applicati ──────────────────────────────────────
   const departments = [...new Set(crew.map(c => c.department || 'N/A'))].sort()
@@ -538,16 +548,32 @@ export default function HubCoveragePage() {
 
           <input type="text" placeholder={t.search} value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '120px' }} />
-          <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
+          <button onClick={() => loadData(effectiveDate)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
       </div>
 
       {/* ── Day Strip (indipendente dalla toolbar) ── */}
       <DayStrip
         selectedDate={stripDate}
+        activeDate={activeStripDate}
         onSelect={setStripDate}
+        onToggle={d => setActiveStripDate(prev => prev === d ? null : d)}
         productionId={PRODUCTION_ID}
       />
+      {/* Banner quando lo strip è attivo */}
+      {activeStripDate && (
+        <div style={{ background: '#fef3c7', borderBottom: '1px solid #fcd34d', padding: '6px 24px', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+          <span style={{ fontSize: '14px' }}>📅</span>
+          <span style={{ fontSize: '12px', fontWeight: '700', color: '#92400e' }}>
+            Viewing: {fmtDate(activeStripDate)}
+          </span>
+          <button
+            onClick={() => setActiveStripDate(null)}
+            style={{ background: '#d97706', border: 'none', borderRadius: '5px', color: 'white', fontSize: '11px', fontWeight: '700', padding: '2px 8px', cursor: 'pointer' }}>
+            ✕ Reset
+          </button>
+        </div>
+      )}
 
       {/* ── Content ── */}
       <div style={{ maxWidth: '980px', margin: '0 auto', padding: '24px' }}>
@@ -617,7 +643,7 @@ export default function HubCoveragePage() {
                   <span style={{ fontSize: '11px', fontWeight: '700', background: '#ef4444', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
                     {missing.length} crew
                   </span>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— {t.noTripAssignedFor} {fmtDate(date)}</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— {t.noTripAssignedFor} {fmtDate(effectiveDate)}</span>
                   <a href="/dashboard/trips" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '3px 10px', borderRadius: '7px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                     {t.goToTrips}
                   </a>
@@ -630,7 +656,7 @@ export default function HubCoveragePage() {
                         assignCrewName: c.full_name,
                         assignHotelId:  c.hotel_id || '',
                         assignTS:       c.travel_status,   // 'IN' o 'OUT'
-                        assignDate:     date,
+                        assignDate:     effectiveDate,
                       })
                       router.push('/dashboard/trips?' + params.toString())
                     }} />
