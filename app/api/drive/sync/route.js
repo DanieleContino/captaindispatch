@@ -149,6 +149,90 @@ async function syncOneFile(fileRecord, providerToken, cookieHeader) {
   const fileBuffer = await downloadRes.arrayBuffer()
   console.log(`[drive/sync] Downloaded "${downloadFileName}" (${fileBuffer.byteLength} bytes)`)
 
+  // ── Accommodation multi-sheet path ──────────────────────
+  // Per file Excel in modalità accommodation: itera su tutti i fogli validi,
+  // aggrega rows e hotel, poi chiama confirm una sola volta.
+  const ext = downloadFileName.split('.').pop().toLowerCase()
+  const isExcel = ext === 'xlsx' || ext === 'xls'
+
+  if (import_mode === 'accommodation' && isExcel) {
+    // Ottieni lista fogli
+    const sheetsFd = new FormData()
+    sheetsFd.append('file', new Blob([fileBuffer], { type: downloadMimeType }), downloadFileName)
+    const sheetsRes = await fetch(`${APP_URL}/api/import/sheets`, {
+      method: 'POST',
+      headers: { Cookie: cookieHeader },
+      body: sheetsFd,
+    })
+    const sheetsData = await sheetsRes.json()
+    const allSheets = sheetsData.sheetNames || []
+    const validSheets = allSheets.filter(n => n !== 'COST REPORT' && !n.toUpperCase().includes('OLD'))
+    console.log(`[drive/sync] accommodation sheets: all=${allSheets.length} valid=${validSheets.length}`, validSheets)
+
+    // Parse ogni foglio e aggrega
+    let allRows = []
+    let allHotels = []
+    let lastDetectedMode = 'accommodation'
+
+    for (const sheetName of validSheets) {
+      const fd = new FormData()
+      fd.append('file', new Blob([fileBuffer], { type: downloadMimeType }), downloadFileName)
+      fd.append('mode', 'accommodation')
+      fd.append('productionId', production_id)
+      fd.append('selectedSheet', sheetName)
+      const pRes = await fetch(`${APP_URL}/api/import/parse`, {
+        method: 'POST',
+        headers: { Cookie: cookieHeader },
+        body: fd,
+      })
+      if (!pRes.ok) {
+        console.warn(`[drive/sync] parse failed for sheet "${sheetName}": ${pRes.status}`)
+        continue
+      }
+      const pData = await pRes.json()
+      if (pData.rows) allRows.push(...pData.rows)
+      if (pData.newData?.hotels) {
+        for (const h of pData.newData.hotels) {
+          if (!allHotels.find(x => x.name === h.name)) allHotels.push(h)
+        }
+      }
+      if (pData.detectedMode) lastDetectedMode = pData.detectedMode
+      console.log(`[drive/sync] sheet "${sheetName}": ${(pData.rows || []).length} rows`)
+    }
+
+    console.log(`[drive/sync] accommodation aggregated: ${allRows.length} rows, ${allHotels.length} hotels`)
+
+    // Confirm con tutti i rows aggregati
+    const confirmRes = await fetch(`${APP_URL}/api/import/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
+      body: JSON.stringify({
+        rows: allRows,
+        mode: import_mode,
+        productionId: production_id,
+        newLocations: allHotels,
+        detectedMode: lastDetectedMode,
+      }),
+    })
+    const confirmData = await confirmRes.json()
+    console.log(
+      `[drive/sync] accommodation confirm OK: inserted=${confirmData.inserted} updated=${confirmData.updated}` +
+      ` skipped=${confirmData.skipped} errors=${(confirmData.errors || []).length}`
+    )
+
+    return {
+      status: 'synced',
+      file_id,
+      file_name: driveName,
+      modifiedTime,
+      parsed: allRows.length,
+      inserted: confirmData.inserted || 0,
+      updated: confirmData.updated || 0,
+      skipped_rows: confirmData.skipped || 0,
+      errors: confirmData.errors || [],
+    }
+  }
+
   // ── Step 4: Parse ───────────────────────────────────────
   const formData = new FormData()
   formData.append(
