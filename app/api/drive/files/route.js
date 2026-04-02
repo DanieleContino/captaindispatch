@@ -13,7 +13,7 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabaseServer'
 import { NextResponse } from 'next/server'
 
-const VALID_MODES = ['crew', 'accommodation', 'fleet', 'hal']
+const VALID_MODES = ['crew', 'accommodation', 'fleet', 'hal', 'travel']
 
 // ── GET ────────────────────────────────────────────────────
 export async function GET(req) {
