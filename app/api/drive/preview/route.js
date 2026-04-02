@@ -169,33 +169,79 @@ export async function POST(req) {
     // ── Step 4: Parse ───────────────────────────────────────
     const cookieHeader = req.headers.get('cookie') || ''
 
-    const formData = new FormData()
-    formData.append(
-      'file',
-      new Blob([fileBuffer], { type: downloadMimeType }),
-      downloadFileName
-    )
-    formData.append('mode',         import_mode)
-    formData.append('productionId', production_id)
+    const ext = downloadFileName.split('.').pop().toLowerCase()
+    const isExcel = ext === 'xlsx' || ext === 'xls'
 
-    const parseRes = await fetch(`${APP_URL}/api/import/parse`, {
-      method:  'POST',
-      headers: { Cookie: cookieHeader },
-      body:    formData,
-    })
-    if (!parseRes.ok) {
-      const errText = await parseRes.text()
-      return NextResponse.json(
-        { error: `parse error ${parseRes.status}: ${errText.slice(0, 400)}` },
-        { status: 502 }
+    let rows = []
+    let newData = {}
+    let detectedMode = import_mode
+
+    if (import_mode === 'accommodation' && isExcel) {
+      // Multi-sheet: ottieni lista fogli, processa solo quelli validi
+      const sheetsFd = new FormData()
+      sheetsFd.append('file', new Blob([fileBuffer], { type: downloadMimeType }), downloadFileName)
+      const sheetsRes = await fetch(`${APP_URL}/api/import/sheets`, {
+        method: 'POST',
+        headers: { Cookie: cookieHeader },
+        body: sheetsFd,
+      })
+      const sheetsData = await sheetsRes.json()
+      const validSheets = (sheetsData.sheetNames || []).filter(n =>
+        n !== 'COST REPORT' && !n.toUpperCase().includes('OLD')
       )
-    }
-    const parseData = await parseRes.json()
-    if (parseData.error) {
-      return NextResponse.json({ error: `parse returned error: ${parseData.error}` }, { status: 422 })
+      console.log(`[drive/preview] accommodation sheets: ${validSheets.length} valid`, validSheets)
+
+      const allHotels = []
+      for (const sheetName of validSheets) {
+        const fd = new FormData()
+        fd.append('file', new Blob([fileBuffer], { type: downloadMimeType }), downloadFileName)
+        fd.append('mode', 'accommodation')
+        fd.append('productionId', production_id)
+        fd.append('selectedSheet', sheetName)
+        const pRes = await fetch(`${APP_URL}/api/import/parse`, {
+          method: 'POST',
+          headers: { Cookie: cookieHeader },
+          body: fd,
+        })
+        if (!pRes.ok) continue
+        const pData = await pRes.json()
+        if (pData.rows) rows.push(...pData.rows)
+        if (pData.newData?.hotels) {
+          for (const h of pData.newData.hotels) {
+            if (!allHotels.find(x => x.name === h.name)) allHotels.push(h)
+          }
+        }
+        if (pData.detectedMode) detectedMode = pData.detectedMode
+        console.log(`[drive/preview] sheet "${sheetName}": ${pData.rows?.length || 0} rows`)
+      }
+      newData = { hotels: allHotels }
+      // Riassegna _idx sequenziali
+      rows = rows.map((r, i) => ({ ...r, _idx: i }))
+
+    } else {
+      // Flusso standard (non accommodation o non Excel)
+      const formData = new FormData()
+      formData.append('file', new Blob([fileBuffer], { type: downloadMimeType }), downloadFileName)
+      formData.append('mode', import_mode)
+      formData.append('productionId', production_id)
+      const parseRes = await fetch(`${APP_URL}/api/import/parse`, {
+        method: 'POST',
+        headers: { Cookie: cookieHeader },
+        body: formData,
+      })
+      if (!parseRes.ok) {
+        const errText = await parseRes.text()
+        return NextResponse.json({ error: `parse error ${parseRes.status}: ${errText.slice(0, 400)}` }, { status: 502 })
+      }
+      const parseData = await parseRes.json()
+      if (parseData.error) {
+        return NextResponse.json({ error: `parse returned error: ${parseData.error}` }, { status: 422 })
+      }
+      rows = parseData.rows || []
+      newData = parseData.newData || {}
+      detectedMode = parseData.detectedMode || import_mode
     }
 
-    const { rows = [], newData = {}, detectedMode } = parseData
     console.log(`[drive/preview] parse OK: ${rows.length} rows, detectedMode=${detectedMode}`)
 
     // ── Risposta finale (nessuna confirm) ───────────────────
