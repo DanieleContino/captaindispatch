@@ -9,6 +9,7 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
+import { ImportModal } from '../../../lib/ImportModal'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Cell, ResponsiveContainer,
@@ -121,6 +122,104 @@ function NotificationsPanel({ productionId }) {
               <button onClick={() => dismiss(n.id)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', lineHeight: 1, padding: '2px 4px' }}>
                 ×
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Drive Sync Widget ─────────────────────────────────────
+function DriveSyncWidget({ productionId, onPreview }) {
+  const [files,          setFiles]          = useState([])
+  const [loading,        setLoading]        = useState(true)
+  const [previewLoading, setPreviewLoading] = useState({})
+  const [inlineMsg,      setInlineMsg]      = useState({})
+
+  useEffect(() => {
+    if (!productionId) return
+    supabase
+      .from('drive_synced_files')
+      .select('id, file_id, file_name, last_modified, last_synced_at, import_mode')
+      .eq('production_id', productionId)
+      .then(({ data }) => {
+        const updated = (data || []).filter(f =>
+          !f.last_synced_at ||
+          (f.last_modified && f.last_synced_at && f.last_modified > f.last_synced_at)
+        )
+        setFiles(updated)
+        setLoading(false)
+      })
+  }, [productionId])
+
+  if (loading || files.length === 0) return null
+
+  async function handlePreview(file) {
+    setPreviewLoading(prev => ({ ...prev, [file.file_id]: true }))
+    setInlineMsg(prev => ({ ...prev, [file.file_id]: null }))
+    try {
+      const [locRes, previewRes] = await Promise.all([
+        supabase.from('locations').select('id, name').eq('production_id', productionId),
+        fetch('/api/drive/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ production_id: productionId, file_id: file.file_id }),
+        }),
+      ])
+      const locations = locRes.data || []
+      const d = await previewRes.json()
+      if (!previewRes.ok) throw new Error(d.error || 'Preview error')
+      if (!d.hasChanges) {
+        setInlineMsg(prev => ({ ...prev, [file.file_id]: '✅ No changes since last sync' }))
+      } else {
+        onPreview({ rows: d.rows, newHotels: d.newHotels, detectedMode: d.detectedMode, selMode: d.selMode, locations })
+      }
+    } catch (e) {
+      setInlineMsg(prev => ({ ...prev, [file.file_id]: '❌ ' + e.message }))
+    } finally {
+      setPreviewLoading(prev => ({ ...prev, [file.file_id]: false }))
+    }
+  }
+
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <div style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>
+        📁 Drive Files with Updates
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {files.map(f => {
+          const lastSync = f.last_synced_at
+            ? new Date(f.last_synced_at).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+            : null
+          const isLoading = !!previewLoading[f.file_id]
+          const msg = inlineMsg[f.file_id]
+          return (
+            <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: '#fff7ed', border: '1px solid #fde68a', borderRadius: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '14px' }}>📄</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#92400e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {f.file_name || f.file_id}
+                </div>
+                <div style={{ fontSize: '11px', color: '#a16207', marginTop: '1px' }}>
+                  {lastSync ? `Last sync: ${lastSync}` : 'Never synced'}
+                </div>
+                {msg && (
+                  <div style={{ fontSize: '11px', marginTop: '3px', color: msg.startsWith('✅') ? '#15803d' : '#dc2626', fontWeight: '600' }}>
+                    {msg}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => handlePreview(f)}
+                disabled={isLoading}
+                style={{
+                  padding: '5px 12px', borderRadius: '7px', border: '1px solid #a16207',
+                  background: isLoading ? '#f1f5f9' : '#fefce8', color: isLoading ? '#94a3b8' : '#92400e',
+                  fontSize: '11px', fontWeight: '700', cursor: isLoading ? 'default' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                }}>
+                {isLoading ? '⏳ Loading…' : '🔍 Preview changes'}
               </button>
             </div>
           )
@@ -1051,6 +1150,7 @@ export default function BridgePage() {
   const [pendingCount, setPendingCount] = useState(null)
 
   const [PRODUCTION_ID, setProductionId] = useState(null)
+  const [previewModal,  setPreviewModal]  = useState(null)
 
   useEffect(() => {
     setProductionId(getProductionId())
@@ -1114,6 +1214,7 @@ export default function BridgePage() {
 
         {/* ── Dashboard Panels ── */}
         <NotificationsPanel productionId={PRODUCTION_ID} />
+        <DriveSyncWidget productionId={PRODUCTION_ID} onPreview={setPreviewModal} />
         <TomorrowPanel productionId={PRODUCTION_ID} />
         <ArrivalsDeparturesChart key={PRODUCTION_ID} productionId={PRODUCTION_ID} />
         <MiniWidgets productionId={PRODUCTION_ID} />
@@ -1173,6 +1274,22 @@ export default function BridgePage() {
         </div>
 
       </div>
+
+      {previewModal && (
+        <ImportModal
+          open={true}
+          mode={previewModal.selMode}
+          productionId={PRODUCTION_ID}
+          locations={previewModal.locations}
+          initialPhase="categorizing"
+          initialRows={previewModal.rows}
+          initialNewHotels={previewModal.newHotels}
+          initialDetectedMode={previewModal.detectedMode}
+          initialSelMode={previewModal.selMode}
+          onClose={() => setPreviewModal(null)}
+          onImported={() => setPreviewModal(null)}
+        />
+      )}
     </div>
   )
 }
