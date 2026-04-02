@@ -132,7 +132,7 @@ function NotificationsPanel({ productionId }) {
 }
 
 // ── Drive Sync Widget ─────────────────────────────────────
-function DriveSyncWidget({ productionId, onPreview }) {
+function DriveSyncWidget({ productionId, onPreview, refreshKey }) {
   const [files,          setFiles]          = useState([])
   const [loading,        setLoading]        = useState(true)
   const [previewLoading, setPreviewLoading] = useState({})
@@ -152,7 +152,7 @@ function DriveSyncWidget({ productionId, onPreview }) {
         setFiles(updated)
         setLoading(false)
       })
-  }, [productionId])
+  }, [productionId, refreshKey])
 
   if (loading || files.length === 0) return null
 
@@ -1336,6 +1336,7 @@ export default function BridgePage() {
 
   const [PRODUCTION_ID, setProductionId] = useState(null)
   const [previewModal,  setPreviewModal]  = useState(null)
+  const [driveRefreshKey, setDriveRefreshKey] = useState(0)
 
   useEffect(() => {
     setProductionId(getProductionId())
@@ -1399,7 +1400,7 @@ export default function BridgePage() {
 
         {/* ── Dashboard Panels ── */}
         <NotificationsPanel productionId={PRODUCTION_ID} />
-        <DriveSyncWidget productionId={PRODUCTION_ID} onPreview={setPreviewModal} />
+<DriveSyncWidget productionId={PRODUCTION_ID} onPreview={setPreviewModal} refreshKey={driveRefreshKey} />
         <TravelDiscrepanciesWidget productionId={PRODUCTION_ID} />
         <TomorrowPanel productionId={PRODUCTION_ID} />
         <ArrivalsDeparturesChart key={PRODUCTION_ID} productionId={PRODUCTION_ID} />
@@ -1481,7 +1482,7 @@ export default function BridgePage() {
                 .eq('file_id', previewModal.fileId)
                 .eq('production_id', PRODUCTION_ID)
             }
-            setPreviewModal(null)
+            setDriveRefreshKey(k => k + 1); setPreviewModal(null)
           }}
         />
       )}
