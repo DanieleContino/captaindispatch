@@ -174,7 +174,7 @@ function DriveSyncWidget({ productionId, onPreview }) {
       if (!d.hasChanges) {
         setInlineMsg(prev => ({ ...prev, [file.file_id]: '✅ No changes since last sync' }))
       } else {
-        onPreview({ rows: d.rows, newHotels: d.newHotels, detectedMode: d.detectedMode, selMode: d.selMode, locations })
+onPreview({ rows: d.rows, newHotels: d.newHotels, detectedMode: d.detectedMode, selMode: file.import_mode, locations })
       }
     } catch (e) {
       setInlineMsg(prev => ({ ...prev, [file.file_id]: '❌ ' + e.message }))
