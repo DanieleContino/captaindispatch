@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
@@ -726,12 +726,25 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
   )
 }
 
+// ─── SearchParams reader (must be in Suspense) ───────────────
+function CrewSearchParamsReader({ onParams }) {
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const remote = searchParams.get('remote')
+    const search = searchParams.get('search')
+    const addNew = searchParams.get('addNew')
+    onParams({ remote, search, addNew })
+  }, [searchParams])
+
+  return null
+}
+
 // ─── Pagina principale ─────────────────────────────────────────
 export default function CrewPage() {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [user, setUser]         = useState(null)
   const [crew, setCrew]         = useState([])
   const [locations, setLocs]    = useState([])   // array completo per form
@@ -801,27 +814,6 @@ export default function CrewPage() {
   }, [])
 
   useEffect(() => { if (user) loadCrew() }, [user, loadCrew])
-
-  // URL param ?remote=1 → auto-imposta filtro REMOTE
-  useEffect(() => {
-    const remote  = searchParams.get('remote')
-    const search  = searchParams.get('search')
-    const addNew  = searchParams.get('addNew')
-
-    if (remote === '1') setFT('REMOTE')
-    if (search) setSearch(search)
-    if (addNew) {
-      const raw = decodeURIComponent(addNew)
-      const parts = raw.trim().split(' ')
-      let fullName = raw
-      for (let i = 1; i < parts.length; i++) {
-        fullName = parts.slice(i).join(' ') + ' ' + parts.slice(0, i).join(' ')
-        break
-      }
-      setAddNewRawName(raw)
-      setAddNewBanner({ rawName: raw, fullName })
-    }
-  }, [searchParams])
 
   function handleStatusChange(id, s)            { setCrew(p => p.map(c => c.id === id ? { ...c, travel_status: s } : c)) }
   function handleNTNChange(id, val)             { setCrew(p => p.map(c => c.id === id ? { ...c, no_transport_needed: val } : c)) }
@@ -935,6 +927,24 @@ export default function CrewPage() {
 
       {/* Header */}
       <Navbar currentPath="/dashboard/crew" />
+
+      <Suspense fallback={null}>
+        <CrewSearchParamsReader onParams={({ remote, search, addNew }) => {
+          if (remote === '1') setFT('REMOTE')
+          if (search) setSearch(search)
+          if (addNew) {
+            const raw = decodeURIComponent(addNew)
+            const parts = raw.trim().split(' ')
+            let fullName = raw
+            for (let i = 1; i < parts.length; i++) {
+              fullName = parts.slice(i).join(' ') + ' ' + parts.slice(0, i).join(' ')
+              break
+            }
+            setAddNewRawName(raw)
+            setAddNewBanner({ rawName: raw, fullName })
+          }
+        }} />
+      </Suspense>
 
       {addNewBanner && (
         <div style={{
