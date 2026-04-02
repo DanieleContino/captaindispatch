@@ -439,6 +439,8 @@ export default function HubCoveragePage() {
       if (!travelMapData[tm.crew_id]) travelMapData[tm.crew_id] = []
       travelMapData[tm.crew_id].push(tm)
     }
+    console.log('travelMap entries:', Object.keys(travelMapData).length)
+    console.log('travel types:', (travelData || []).map(t => t.travel_type))
     setTravelMap(travelMapData)
 
     setLoading(false)
@@ -447,7 +449,7 @@ export default function HubCoveragePage() {
   // Data effettiva: se lo strip è attivo usa quella data, altrimenti la toolbar
   const effectiveDate = activeStripDate ?? date
 
-  useEffect(() => { if (user) loadData(effectiveDate) }, [user, effectiveDate, loadData])
+  useEffect(() => { if (user) loadData(activeStripDate ?? date) }, [user, activeStripDate, date, loadData])
 
   // ── Filtri applicati ──────────────────────────────────────
   const departments = [...new Set(crew.map(c => c.department || 'N/A'))].sort()
