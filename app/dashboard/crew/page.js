@@ -801,7 +801,7 @@ export default function CrewPage() {
     else if (filterTravel === 'REMOTE') { if (c.on_location !== false) return false }
     else if (filterTravel !== 'ALL' && c.travel_status !== filterTravel) return false
     if (filterHotel  !== 'ALL' && c.hotel_status  !== filterHotel)  return false
-    if (filterDept   !== 'ALL' && (normalizeDept(c.department) || 'NO DEPT') !== filterDept) return false
+    if (filterDept   !== 'ALL' && ((c.department || '').trim().toUpperCase() || 'NO DEPT') !== filterDept) return false
     if (search) {
       const q = search.toLowerCase()
       if (!c.full_name.toLowerCase().includes(q) && !(c.department || '').toLowerCase().includes(q) && !(c.id || '').toLowerCase().includes(q)) return false
@@ -809,7 +809,7 @@ export default function CrewPage() {
     return true
   })
 
-  const departments = [...new Set(crew.map(c => normalizeDept(c.department) || 'NO DEPT'))].sort()
+  const departments = [...new Set(crew.map(c => (c.department || '').trim().toUpperCase() || 'NO DEPT'))].sort()
   const counts = {
     total:    crew.length,
     conf:     crew.filter(c => c.hotel_status  === 'CONFIRMED').length,
