@@ -1,608 +1,127 @@
-# CAPTAIN — Context
-
-**Aggiornato: 2 aprile 2026 | S34 completata ✅ (T2-T4 Drive badge+ImportModal props+DriveSyncWidget). — prossimo: S18-T4 (i18n bridge/page.js)**
-
-> 🧠 Edit chirurgici per bug isolati, riscrittura completa per problemi sistemici.
-> 🚀 Avvio: `npm run dev` | Shell: **CMD** (`&&` per concatenare, non PowerShell)
-> ❌ `write_to_file` su file esistenti → usare sempre `replace_in_file`
+# CAPTAINDISPATCH — Context S9 (Cline)
+## Updated: 2 April 2026 (session continued)
 
 ---
 
-## ▶ PROSSIMO — S18-T4 i18n bridge/page.js
+## WHAT CHANGED IN SESSION S9
 
-> **S34 COMPLETATA ✅** — T2→T4 tutte completate (Drive badge navbar, ImportModal categorizing props, DriveSyncWidget). Deploy effettuato.
-> **S33 COMPLETATA ✅** — T1→T10 tutte completate. Deploy S33 effettuato.
-> **S32 COMPLETATA ✅** — T1→T7 tutte completate. Deploy S32 effettuato.
-
----
-
-### S34 — Drive Badge + ImportModal + DriveSyncWidget
-
-| Task | File/Scope | Stato |
-|------|-----------|-------|
-| T2 — Navbar badge Drive | `lib/navbar.js` — `useBridgeBadge` aggiunge check su `drive_synced_files` (last_synced_at=null OR last_modified>last_synced_at), somma a notifiche non lette | ✅ |
-| T3 — ImportModal props categorizing | `lib/ImportModal.js` — 5 props opzionali (`initialPhase`, `initialRows`, `initialNewHotels`, `initialDetectedMode`, `initialSelMode`) + early-return in `useEffect` open | ✅ |
-| T4 — Bridge DriveSyncWidget | `bridge/page.js` — componente `DriveSyncWidget` (legge drive_synced_files aggiornati, bottone "🔍 Preview changes" → POST /api/drive/preview → apre ImportModal in fase categorizing) | ✅ |
-
----
-
-### S33 — Captain Bridge Upgrade (un task per sessione)
-Un unico deploy finale dopo T10. NON deployare tra un task e l'altro.
-
-| Task | File/Scope | Stato |
-|------|-----------|-------|
-| T1 — DB Migration | `scripts/migrate-s33-bridge-upgrade.sql` — tabelle `notifications` + `activity_log` + RLS | ✅ |
-| T2 — EasyAccessShortcuts | `bridge/page.js` — barra navigazione rapida 8 shortcut sopra l'header | ✅ |
-| T3 — NotificationsPanel | `bridge/page.js` — panel 🚨 alerts unread da `notifications`, dismiss | ✅ |
-| T4 — TomorrowPanel | `bridge/page.js` — panel 📅 arrivals+departures di domani, high-traffic banner | ✅ |
-| T5 — ArrivalsDeparturesChart | `bridge/page.js` — grafico 📊 Recharts 30 giorni, colori today/tomorrow | ✅ |
-| T6 — MiniWidgets | `bridge/page.js` — 3 widget Fleet/Pax/Hub con stats live | ✅ |
-| T7 — ActivityLog | `bridge/page.js` — 📋 last 50 azioni da `activity_log`, icone per tipo | ✅ |
-| T8 — Integrazione BridgePage | `bridge/page.js` — import Recharts + `getProductionId()` + tutti i componenti nel JSX | ✅ |
-| T9 — Badge Navbar | `lib/navbar.js` — `useBridgeBadge()` + badge 🔴 pulse ogni 5 min | ✅ |
-| T10 — CSS pulse + Context + Deploy | `app/globals.css` + `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
-
-#### Schema DB S33-T1
+### New table: travel_movements
 ```sql
-notifications (id uuid PK, production_id uuid FK→productions CASCADE,
-  type text CHECK(IN 'success'|'warning'|'error'|'info'),
-  message text, read boolean DEFAULT false, created_at timestamptz)
--- RLS: 4 policy SELECT/UPDATE/INSERT/DELETE via user_production_ids()
-
-activity_log (id uuid PK, production_id uuid FK→productions CASCADE,
-  user_id uuid FK→auth.users, action_type text, description text, created_at timestamptz)
--- RLS: 2 policy SELECT/INSERT via user_production_ids()
+CREATE TABLE travel_movements (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  production_id uuid REFERENCES productions(id) ON DELETE CASCADE,
+  crew_id TEXT REFERENCES crew(id) ON DELETE SET NULL,
+  travel_date DATE,
+  direction TEXT,              -- 'IN' | 'OUT'
+  from_location TEXT,
+  from_time TIME,
+  to_location TEXT,
+  to_time TIME,
+  travel_number TEXT,
+  travel_type TEXT,            -- 'FLIGHT' | 'TRAIN' | 'GROUND' | 'OA'
+  pickup_dep TEXT,
+  pickup_arr TEXT,
+  needs_transport BOOLEAN DEFAULT false,
+  hub_location_id TEXT,
+  hotel_raw TEXT,
+  hotel_id TEXT,
+  rooming_date DATE,
+  rooming_hotel_id TEXT,
+  travel_date_conflict BOOLEAN DEFAULT false,
+  hotel_conflict BOOLEAN DEFAULT false,
+  discrepancy_resolved BOOLEAN DEFAULT false,
+  discrepancy_note TEXT,
+  full_name_raw TEXT,
+  match_status TEXT,           -- 'matched' | 'unmatched' | 'ambiguous'
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+-- RLS: Authenticated users can manage travel_movements (USING true, WITH CHECK true)
 ```
 
-#### Stato attuale S33
-- `EasyAccessShortcuts`: barra shortcut in cima alla pagina (sopra header ⚓) — già nel JSX ✅
-- `NotificationsPanel`: componente definito, da aggiungere al JSX in T8 ⬜
-- `TomorrowPanel`: componente definito, da aggiungere al JSX in T8 ⬜
-- `ArrivalsDeparturesChart`: componente definito (Recharts BarChart 30gg, Cell colori today/tomorrow), da aggiungere al JSX in T8 ⬜
-- `MiniWidgets`: componente definito (3 widget Fleet/Pax/Hub, stats live), da aggiungere al JSX in T8 ⬜
-- `ActivityLog`: componente definito (last 50 azioni da `activity_log`, icone per tipo), da aggiungere al JSX in T8 ⬜
-- `recharts` installato come dipendenza ✅
+### New import mode: Travel Calendar
+- File: /app/api/import/parse/route.js
+  - parseTravelCalendarDIG(buffer) — JS parser for DIG format Excel
+  - processTravelRows(rawRows, supabase, productionId) — hub matching + name matching + cross-check
+  - MODE: travel handler added
+- File: /app/api/import/confirm/route.js
+  - processTravelConfirm() — inserts into travel_movements, updates no_transport_needed on crew
+- File: /lib/ImportModal.js
+  - TravelTable component added
+  - '✈️ Travel Calendar' mode selector added
+  - initialPhase/initialRows/initialNewHotels/initialDetectedMode/initialSelMode props added
 
+### New API: /api/drive/preview
+- POST { production_id, file_id }
+- Downloads and parses without confirming
+- Returns { hasChanges, rows, newData, detectedMode }
 
----
+### Bridge updates (bridge/page.js)
+- DriveSyncWidget — shows Drive files with pending updates
+- TravelDiscrepanciesWidget — shows rooming vs travel discrepancies with resolve button
+- TomorrowPanel — now uses travel_movements (travel_date) instead of crew dates
+- ArrivalsDeparturesChart — uses travel_movements, range selector 30/45/60/90 days, tooltip shows flights+trains breakdown
+- navbar badge counts Drive files with last_modified > last_synced_at
 
-### S32 — Google Drive Sync MVP (un task per sessione)
-Un unico deploy finale dopo T7. NON deployare tra un task e l'altro.
+### Crew page updates (crew/page.js)
+- travelMap state — crewId → [travel_movements], loaded once for all crew
+- CrewCard shows upcoming travel movements (icon ✈️/🚂/🚐, direction, number, from→to, time, 🚐 badge)
+- dept filter uses raw department value without normalizeDept()
+- toolbar split into 2 rows (title+actions row 1, filters row 2), sticky top:52px zIndex:29
+- addNewRawName + addNewBanner state for flow from Travel Discrepancies
+- handleSaved updates travel_movements when coming from addNew flow
+- ⚠️ OPEN BUG: addNewBanner not showing — useSearchParams() causes Vercel build failure. Need alternative approach (sessionStorage or router state)
 
-| Task | File/Scope | Stato |
-|------|-----------|-------|
-| T1 — DB Migration | `scripts/migrate-drive-synced-files.sql` (nuovo) — tabella `drive_synced_files` + RLS | ✅ |
-| T2 — OAuth scope | `app/login/page.js` — aggiunge `drive.readonly` agli scopes Google OAuth | ✅ |
-| T3 — API files | `app/api/drive/files/route.js` (nuovo) — GET lista · POST collega · DELETE scollega | ✅ |
-| T4 — API sync | `app/api/drive/sync/route.js` (nuovo) — scarica da Drive, chiama parse+confirm interni | ✅ |
-| T5 — Cron + vercel.json | `app/api/cron/drive-sync/route.js` (nuovo) + `vercel.json` — cron ogni 30 min (MVP: log only) | ✅ |
-| T6 — UI ImportModal | `lib/ImportModal.js` — sezione "📁 Google Drive Sync" nella fase idle | ✅ |
-| T7 — Env + Context + Deploy | `.env.local` + `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
+### Hub Coverage (hub-coverage/page.js)
+- travelMap loaded from travel_movements for selected date
+- CoveredRow and MissingRow show flight/train info with icon ✈️/🚂/🚐
+- **DayStrip** added (commits 9fac6e4 → db8b567): week strip with ↓N/↑N badges from travel_movements (separate lightweight fetch)
+  - Positioned **below** the toolbar (not above)
+  - Two independent date states: `date` (toolbar, drives content) + `stripDate` (centers the strip)
+  - `activeStripDate` state (null = inactive): click a day → activates (orange/amber), re-click → deactivates
+  - When active: `effectiveDate = activeStripDate` drives `loadData`, amber banner shown, `+Assign` uses `effectiveDate`
+  - Arrows (◀▶) in DayStrip only move the strip center (setStripDate ±7), do NOT affect content
+  - ⚠️ **OPEN BUG (S9-fix1)**: The toggle activator does NOT work correctly — clicking a day in the DayStrip does not visibly change the content. Root cause unknown; `effectiveDate` derivation via `activeStripDate ?? date` is in place but `useEffect` dependency on derived value may not trigger reliably. Needs investigation.
 
-#### Schema DB S32-T1
-```sql
-drive_synced_files (
-  id uuid PK,
-  production_id uuid FK→productions CASCADE,
-  file_id text,        -- Google Drive file ID
-  file_name text,      -- nome display
-  import_mode text,    -- 'crew' | 'accommodation' | 'fleet' | 'hal'
-  last_modified text,  -- modifiedTime Drive API (per delta check)
-  last_synced_at timestamptz,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(production_id, file_id)
-)
--- RLS: 4 policy granulari SELECT/INSERT/UPDATE/DELETE con IN (SELECT user_production_ids())
-```
+### Vehicles page (vehicles/page.js)
+- toolbar split into 2 rows (same pattern as crew)
+- preferred_dept uses dynamic select from crew departments
 
-#### Note S32
-- `provider_token` (Google OAuth access token) disponibile solo nelle sessioni utente, NON nel cron → cron MVP logga file registrati, sync reale = click manuale "Sync now" dalla UI
-- `NEXT_PUBLIC_APP_URL` necessario in `.env.local` e Vercel env per chiamate interne parse/confirm
-- Picker Drive ufficiale (Google Picker API) = fase futura; per ora: input manuale file ID dall'URL Drive
-
----
-
-
-## ▶ PRECEDENTE — S31 Import Upgrade
-
-> **S31 COMPLETATA ✅**
-
----
-
-### S31 — Import Upgrade (un task per sessione)
-Un unico deploy finale dopo T5. NON deployare tra un task e l'altro.
-
-| Task | File/Scope | Stato |
-|------|-----------|-------|
-| T1 — Backend foundation | `app/api/import/sheets/route.js` (nuovo) + `app/api/import/save-location/route.js` (nuovo) + `parse/route.js` (accommodation mode + selectedSheet) + `confirm/route.js` (accommodation processing) | ✅ |
-| T2 — Selector + AccommodationTable | `lib/ImportModal.js`: opzione `🏨 Accommodation list`, check 10MB, `AccommodationTable` component, `effectiveDisplayMode` per accommodation | ✅ |
-| T3 — Multi-sheet flow | `lib/ImportModal.js`: fase `sheet-select`, loop per foglio in `parseFile()`, loading "Analyzing sheet X of N: NomeFoglio…" | ✅ |
-| T4 — HotelPlacesModal | `lib/ImportModal.js`: `HotelPlacesModal` (Google Places auto-fill, Save to Locations), upgrade sezione 3 categorizing | ✅ |
-| T5 — Context + Deploy | `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
-
-#### S31-T1 — Backend foundation
-
-**`app/api/import/sheets/route.js`** (nuovo):
-- `POST` multipart: riceve file Excel → estrae nomi fogli con `xlsx` → ritorna `{ sheetNames: [] }`
-
-**`app/api/import/save-location/route.js`** (nuovo):
-- `POST` JSON: `{ name, lat, lng, locationType, productionId }` → service client → auto-genera ID `H###` in sequenza → insert in `locations` con `is_hub: false` (o `true` se HUB), `is_hotel: true` → ritorna `{ id, name }`
-
-**`app/api/import/parse/route.js`**:
-- Aggiunge parametro `selectedSheet` (string) a `extractTextFromFile()`: se presente usa quel foglio specifico
-- Aggiunge `SYSTEM_PROMPT_ACCOMMODATION` (prompt per singolo foglio Excel rooming list)
-- Aggiunge `processAccommodationRows()`: duplicate detection per `first_name + last_name`, hotel matching su `hotel_name`, raccolta nuovi hotel
-- Aggiunge `case 'accommodation'` nel POST handler
-- HAL: gestisce `detectedType === 'accommodation'` → `detectedMode = 'accommodation'`
-- Aggiorna `SYSTEM_PROMPT_HAL` con campi `hotel_name`, `hotel_address`
-
-**`app/api/import/confirm/route.js`**:
-- `processAccommodation()`: aggiorna crew esistente con `hotel_id`, `arrival_date`, `departure_date` (null-only rule). NON inserisce nuovi crew.
-- `insertNewLocations()`: accetta campi opzionali `lat`, `lng` per quando vengono da Google Places
-- Aggiunge `case 'accommodation'` nel POST handler
-
-#### S31-T2 — Selector + AccommodationTable
-**`lib/ImportModal.js`**:
-- Aggiunge `{ id: 'accommodation', label: '🏨 Accommodation list', desc: 'Estrae nome, hotel, date arrivo/partenza' }` al selector (tra fleet e custom)
-- Check 10MB in `parseFile()` prima di tutto
-- Componente `AccommodationTable`: colonne First Name | Last Name | Role | Dept | Hotel | Arrival | Departure | Status. `rowBg()` adattato: giallo se date mancanti, grigio se skip
-- `effectiveDisplayMode` e `renderPreviewTable()` estesi per `'accommodation'`
-
-#### S31-T3 — Multi-sheet flow
-**`lib/ImportModal.js`** (solo per modalità `accommodation` e `hal` con file `.xlsx/.xls`):
-- Nuova fase `sheet-select` tra `idle` e `parsing`
-- `parseFile()` prima chiama `POST /api/import/sheets` → ottiene `sheetNames`
-- UI: lista checkbox fogli, pre-selezionati tutti eccetto "COST REPORT" e nomi con "OLD"
-- Button "Analyze selected sheets" → loop: per ogni foglio chiama `POST /api/import/parse` con `selectedSheet`, mostra "Analyzing sheet X of N: NomeFoglio…"
-- Aggrega tutti i risultati, poi → fase `categorizing`
-- Crew/fleet/custom: comportamento invariato
-
-#### S31-T4 — HotelPlacesModal
-**`lib/ImportModal.js`**:
-- Componente `HotelPlacesModal`: props `hotelName, productionId, onSave(locationId, locationName), onSkip`
-- Al mount: chiama `GET /api/places/autocomplete?q=NAME` → mostra suggestions
-- Click suggestion → `GET /api/places/details?place_id=XXX` → pre-riempie `lat, lng, address`
-- Form: `name` (editabile), `address` (display only), `lat/lng` (auto), selector `type: HOTEL/HUB`
-- "Save to Locations" → `POST /api/import/save-location` → aggiorna `newHotels[i]` con `locationId` + aggiorna righe accommodation con `hotel_id`
-- "Skip" → chiude senza salvare
-- Upgrade sezione 3 in fase `categorizing`: pulsante "Add" apre `HotelPlacesModal` invece di toggle semplice; mostra ✅ con nome location se già salvata
-
-#### Prompts S31
-
-**SYSTEM_PROMPT_ACCOMMODATION** (per singolo foglio):
-```
-Analyze this sheet: [NOME FOGLIO]
-
-You are extracting accommodation data from one sheet of a film/TV production rooming list Excel file.
-...
-Return format: JSON array [{ first_name, last_name, role, department, hotel_name, hotel_address, arrival_date, departure_date }]
-```
-(prompt completo dal documento originale del task)
-
-#### Note S31
-- `GOOGLE_MAPS_API_KEY` in `.env.local` (server-side, non NEXT_PUBLIC)
-- `locations` table NON ha colonna `address` → `hotel_address` è solo usato per pre-riempire Google Places modal
-- Check schema DB manuale prima di T1: crew, vehicles, locations colonne esistenti
+### Date timezone fix
+- All date calculations use toLocaleDateString('en-CA', {timeZone:'Europe/Rome'}) instead of toISOString()
+- Prevents day-shift bug between midnight and 02:00 CEST
 
 ---
 
-### S30 — Location Routes Enhancement (un task per sessione)
-Un unico deploy finale dopo T3. NON deployare tra un task e l'altro.
+## ACTIVE PRODUCTION DATA
 
-| Task | File/Scope | Stato |
-|------|-----------|-------|
-| T1 — Fix Nuova Location | `app/api/routes/refresh-location/route.js` (crea rotte verso tutte le altre location quando la location è nuova) | ✅ |
-| T2 — Bulk Refresh + UI | `app/api/routes/refresh-all-locations/route.js` (nuovo endpoint) + `app/dashboard/locations/page.js` (bottone 🔄 Ricalcola Rotte) | ✅ |
-| T3 — Context + Deploy | `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
-
-#### S30-T1 — Fix Nuova Location
-**`app/api/routes/refresh-location/route.js`:**
-- Quando `routes.length === 0` (location nuova, nessuna rotta esistente):
-  1. Query la location stessa per `production_id`, `lat`, `lng`
-  2. Query tutte le altre location della produzione con coordinate
-  3. Per ogni altra location: crea 2 rotte (`newLoc→other` e `other→newLoc`) via Google API
-  4. Upsert in `routes` table (source: `'google'`)
-  5. Ritorna `{ updated, failed, total }` come normale
-- Comportamento per edit (rotte esistenti): invariato
-
-#### S30-T2 — Bulk Refresh + UI
-**`app/api/routes/refresh-all-locations/route.js`** (nuovo file):
-- `GET /api/routes/refresh-all-locations?production_id=XXX`
-- Carica tutte le location della produzione con coordinate
-- Genera tutte le coppie A→B e B→A (salta `source='MANUAL'`)
-- Chiama Google API per ciascuna coppia (con `BATCH_PAUSE`)
-- Ritorna `{ updated, skipped, failed, total }`
-
-**`app/dashboard/locations/page.js`:**
-- Sostituire il bottone ↻ (che chiama solo `load()`) con bottone **🔄 Ricalcola Rotte**
-- Stato `routeRefreshing` + `routeMsg` per feedback
-- Chiama `GET /api/routes/refresh-all-locations?production_id=PRODUCTION_ID`
-- Mostra banner risultato (✅ N aggiornate, X saltate, Y fallite)
-- Dopo il refresh chiama `load()` per ricaricare la lista
+- Name: 360 Degrees Film
+- Production ID: 0b4553e1-dd49-46af-aa9d-54ca5346796d
+- Crew: ~211 people imported
+- travel_movements: imported from DIG Travel Calendar Excel
+- Hub locations: APT_BARI (Bari Airport), STN_BARI (Bari Centrale)
 
 ---
 
-### S29 — Remote Crew "Non in Set" (un task per sessione)
-Un unico deploy finale dopo T4. NON deployare tra un task e l'altro.
+## OPEN BUGS TO FIX
 
-| Task | File/Scope | Stato |
-|------|-----------|-------|
-| T1 — DB Migration + crew/page.js | `scripts/migrate-on-location.sql` + `crew/page.js` (toggle, card, sidebar, filtro, sort) | ✅ |
-| T2 — Dashboard + Pax Coverage | `dashboard/page.js` (banner) + `pax-coverage/page.js` (sezione Remote) | ✅ |
-| T3 — Rocket | `rocket/page.js` (pre-esclusione crew remote + badge + banner) | ✅ |
-| T4 — Context Update + Deploy | `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
+1. **addNewBanner in crew page** — Banner does not appear when navigating from Bridge TravelDiscrepanciesWidget with ?addNew= URL param. useSearchParams() with Suspense causes Vercel build failure. Solution: use sessionStorage to pass the name instead of URL params.
 
-#### Campo DB
-```sql
--- scripts/migrate-on-location.sql
-ALTER TABLE crew ADD COLUMN IF NOT EXISTS on_location BOOLEAN DEFAULT TRUE;
-UPDATE crew SET on_location = TRUE WHERE on_location IS NULL;
-```
-Aggiunge `on_location BOOLEAN DEFAULT TRUE` alla tabella `crew`. `false` = persona non in set oggi (lavora da casa/albergo). Persiste fino a cambio manuale.
+2. **ArrivalsDeparturesChart** — Verify key={PRODUCTION_ID} fix is working correctly.
 
-#### S29-T1 — DB Migration + crew/page.js
-- **Script SQL**: `scripts/migrate-on-location.sql` (sopra)
-- **`RemoteToggle`** (nuovo componente): bottone `🏠` inline nella card, accanto a `NTNToggle`. Salva `on_location = false/true` su Supabase.
-- **Card visiva** quando `on_location = false`: sfondo `#f8fafc`, bordo sinistro `#94a3b8`, nome dimmed `#94a3b8`, badge `🏠 Remote` grigio
-- **Ordinamento** gruppi dept: `on_location === false` → in fondo al gruppo (sort prima dei presenti, poi dei remoti)
-- **Filtro "REMOTE"** nella toolbar: pill `🏠 Remote` accanto al pill `🚐 NTN` esistente
-- **URL param `?remote=1`**: se presente al mount → auto-imposta filtro REMOTE (per link dal dashboard banner)
-- **Sidebar** `CrewSidebar`: switch `🏠 Non in Set — Remoto / Lavora da casa o albergo` subito DOPO il blocco NTN. Include `on_location` in EMPTY form, sync useEffect, row salvato.
-- **Stats header**: badge `🏠 N Remote` accanto al badge `🚐 N NTN` se > 0
-- **`counts.remote`**: `crew.filter(c => c.on_location === false).length`
-
-#### S29-T2 — Dashboard + Pax Coverage
-**`dashboard/page.js`:**
-- Query aggiuntiva nel `useEffect`: `supabase.from('crew').select('id,full_name,department').eq('production_id', PRODUCTION_ID).eq('on_location', false).order('full_name').limit(20)`
-- Banner amber (stile identico ai banner departures/arrivals esistenti):
-  ```
-  🏠 3 crew remoti oggi — non inclusi in Rocket e Coverage     [Crew List →]
-  ```
-  Link: `/dashboard/crew?remote=1`. Mostrato solo se `remoteCrew.length > 0`.
-
-**`pax-coverage/page.js`:**
-- Aggiungere `on_location` al select della query crew
-- Split: `remoteCrew = crew.filter(c => c.on_location === false)` (separato da regularCrew e ntnCrew)
-- Nuova sezione **"🏠 Remote Today"** (dopo NTN section): stile `NTNRow` ma bordo amber `#d97706`, badge `🏠 Remote` amber
-- `remoteCrew` NON conta nelle statistiche di copertura (non abbassa il %)
-- `remoteFiltered` rispetta filtri dept/hotel/search ma non il filtro `showOnly` (sempre visibile in fondo)
-
-#### S29-T3 — Rocket
-**`rocket/page.js`:**
-- Aggiungere `on_location` al `select` della query crew (NON al filtro DB — i remoti devono essere visibili)
-- Dopo `loadData()`: i crew con `on_location === false` vengono aggiunti a `excludedCrewIds` (set iniziale) → pre-esclusi automaticamente
-- **Badge `🏠`** nella lista crew di Step 1 accanto al nome (grigio, dim) per i crew remoti
-- **Banner avviso** in Step 1 (sopra la lista crew), se ci sono crew remoti: `🏠 N crew marcati come Remoti — pre-esclusi. Puoi includerli manualmente.`
-
-#### Schema DB aggiornato (dopo S29-T1)
-```sql
-crew (id TEXT PK, full_name, role TEXT, department, hotel_id, travel_status, hotel_status,
-      arrival_date, departure_date, email TEXT, phone TEXT,
-      no_transport_needed bool DEFAULT false,
-      on_location BOOLEAN DEFAULT TRUE)  -- S29-T1: false = remoto/non in set ✅
-```
+3. **DayStrip toggle activator** (hub-coverage) — Clicking a day in the DayStrip should activate it (set `activeStripDate`, show amber banner, reload content for that date). Visual changes (orange day button, amber banner) were implemented in commit db8b567 but user reports the feature does not work — content does not change when a strip day is clicked. Suspect: `useEffect([user, effectiveDate, loadData])` may not fire because derived value `activeStripDate ?? date` is not a state variable itself. Fix: move `effectiveDate` into `useMemo` or directly inline `activeStripDate ?? date` inside the `useEffect` callback.
 
 ---
 
-### S28 — Vehicle Enhancement (DA FARE — un task per sessione)
-Un unico deploy finale dopo T5. NON deployare tra un task e l'altro.
-
-| Task | File/Scope | Stato |
-|------|-----------|-------|
-| T1 — DB Migration + Tipi/Classi/Switch | `scripts/migrate-vehicles-v2.sql` + `vehicles/page.js` (tipi, classi, in_transport) | ✅ |
-| T2 — Preferred Dept + Crew Multi-Select | `vehicles/page.js` (sezione preferred con search) | ✅ |
-| T3 — Fleet + Lists Filter | `fleet/page.js` + `lists/page.js` | ✅ |
-| T4 — Trips: Badge + Auto-Suggest Crew | `trips/page.js` | ✅ |
-| T5 — Context Update + Deploy | `CAPTAINDISPATCH_Context.md` + `git push` | ✅ |
-
-#### S28-T1 — DB Migration + Tipi/Classi/Switch
-**Migration SQL** (`scripts/migrate-vehicles-v2.sql`):
-```sql
-ALTER TABLE vehicles ALTER COLUMN vehicle_class TYPE TEXT[]
-  USING CASE WHEN vehicle_class IS NULL THEN NULL ELSE ARRAY[vehicle_class] END;
-ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS preferred_dept TEXT;
-ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS preferred_crew_ids TEXT[];
-ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS in_transport BOOLEAN DEFAULT TRUE;
-```
-**vehicles/page.js:**
-- Tipi: VAN 🚐 · CAR 🚗 · BUS 🚌 · **TRUCK 🚛** · **PICKUP 🛻** · **CARGO 🚚** (furgone da lavoro; DUCATO/Doblo → CARGO nell'inferenza AI)
-- Classi multi-chip (TEXT[]): CLASSIC · LUX · ECONOMY · PREMIUM · MINIBUS · **NCC** — selezione multipla, toggle chip
-- Switch `in_transport` (sotto Active): ON=verde "✅ In Transport" / OFF=grigio "🚐 SD — escluso da trips/liste/fleet"
-- VehicleRow: badge 🚐 SD se `in_transport=false`
-
-#### S28-T2 — Preferred Dept + Crew Multi-Select
-**vehicles/page.js (sidebar):**
-- `preferred_dept` select: GRIP · CAMERA · ELECTRIC · ART · COSTUME · MAKEUP · SOUND · DIRECTING · PRODUCTION · TRANSPORT · CATERING · SECURITY
-- `preferred_crew_ids TEXT[]`: multi-select con ricerca testuale, SD crew in cima (no_transport_needed=true) evidenziati 🚐, chip selezionati rimovibili
-- Sidebar carica crew da Supabase all'apertura (solo production corrente)
-- VehicleRow: badge dept colorato + nomi crew preferiti compatti
-
-#### S28-T3 — Fleet + Lists Filter
-- `fleet/page.js`: query vehicles aggiunge `.eq('in_transport', true)`
-- `lists/page.js`: query vehicles aggiunge `.eq('in_transport', true)`
-
-#### S28-T4 — Trips: Badge + Auto-Suggest Crew (🟡 parziale)
-**Fatto:**
-- `trips/page.js` query vehicles: `.eq('in_transport', true)` + `preferred_dept`,`preferred_crew_ids` nel select
-- Dropdown veicolo TripSidebar + EditTripSidebar: badge `⭐ DEPT · Xp` via `hasPref`
-- `suggestedCrew` in TripSidebar + `suggestedCrewEdit` in EditTripSidebar: filtra `crewList`/`availableCrew` per `preferred_crew_ids` (crew_id match) o `preferred_dept` (department match)
-
-**Da fare (prossima sessione):**
-- Aggiungere sezione "📌 Suggeriti" UI nel picker pax di entrambe le sidebar
-- TripSidebar: inserire PRIMA dell'`<input type="text" placeholder="Search…">` (near `form.pickup_id && form.dropoff_id ? (`)
-- EditTripSidebar: inserire PRIMA del commento `{/* AVAILABLE + BUSY */}` (`{regularCrew.length > 0 ? ...`)
-- Sezione stile: `background: '#fffbeb'`, `border: '1px solid #fde68a'`, `borderRadius: '8px'`, titolo "📌 Suggeriti per {selVehicle.id}", lista compatta con quick-add `+` button, nascondere se `suggestedCrew.length === 0`
-
-#### UI Laptop Guidelines (applicare ovunque in S28)
-```
-font-size body:      11px
-font-size titoli:    13px max
-badge padding:       2px 6px
-emoji sidebar:       16-18px
-gap tra elementi:    6px
-chip classi:         padding 3px 8px, font 11px
-```
-
----
-
-### S18 — i18n Completamento (IN SOSPESO — riprendere dopo S29)
-Un unico deploy finale dopo tutti i task. NON deployare tra un task e l'altro.
-
-| Task | File | Stato |
-|------|------|-------|
-| TASK 1 — Chiavi i18n lib/i18n.js | `lib/i18n.js` | ✅ |
-| TASK 2 — fleet/page.js | `fleet/page.js` | ✅ |
-| TASK 3 | `reports/page.js` | ✅ |
-| TASK 4 | `bridge/page.js` | ⬜ |
-| TASK 5 | `qr-codes/page.js` | ⬜ |
-| TASK 6 | `lists/page.js` | ⬜ |
-| TASK 7 | `settings/production/page.js` | ⬜ |
-| TASK 8 | `lib/ImportModal.js` | ⬜ |
-| TASK 9 | `pending/page.js` | ⬜ |
-| TASK 10 | `scan/page.js` | ⬜ |
-
-**Pattern comune tutti i task:** `import { useT } from '[path]/lib/i18n'` + `const t = useT()` in ogni componente principale. NON tradurre: valori logici (`'BUSY'`,`'ARRIVAL'`,`'STANDARD'` ecc.), ID interni, costanti.
-
-### TASK 4 — bridge/page.js
-- `const t = useT()` in `BridgePage`, `PendingUsersTab`, `InviteCodesTabControlled`, `AddToProductionModal`
-- Tutti i testi → chiavi `bridge*` (vedi `lib/i18n.js` blocco S18 pages)
-- `confirm("Delete this invite code?")` → `confirm(t.bridgeDeleteConfirm)`
-
-### TASK 5 — qr-codes/page.js
-- `const t = useT()` in `QrCodesPage`
-- Tutti i testi → chiavi `qr*` (vedi `lib/i18n.js`)
-
-### TASK 6 — lists/page.js
-- `const t = useT()` in `ListsPage`
-- Toolbar + colonne + section headers + footer → chiavi `lists*`
-- ⚠️ NON tradurre il contenuto dinamico `TransportListHeader` (dati dal DB)
-
-### TASK 7 — settings/production/page.js
-- `import { useT } from '../../../../lib/i18n'` (path con 4 livelli) + `const t = useT()`
-- Label e bottoni → `t.settings*` | Campi form → riusa chiavi `t.productions*` da S17
-
-### TASK 8 — lib/ImportModal.js
-- `import { useT } from '../lib/i18n'` (da lib/) + `const t = useT()` in `ImportModal`
-- Header, mode selector, drag&drop, stati loading, banner stats, bottoni → chiavi `import*`
-
-### TASK 9 — pending/page.js
-- Fix residui: invite section → `t.pendingInviteLabel`, `t.pendingEnterBtn`, `t.pendingInvitePlaceholder`, `t.pendingJoinedMsg`, `t.pendingRedirectingMsg`
-
-### TASK 10 — scan/page.js
-- Fix residui in `CrewCard` e `VehicleCard`: `"Hotel"→t.scanHotelLabel`, `"Hotel Status"→t.scanHotelStatus`, `"👤 Driver"→t.scanDriverLabel`, `"Search…"→t.scanSearchPlaceholder`
-
----
-
-## Stack
+## FUNDAMENTAL RULES
 
 ```
-Next.js (App Router, JavaScript) | Supabase (PostgreSQL + Auth + Realtime) | Vercel
-Deploy: git push origin master → auto ~1-2 min
-GitHub: DanieleContino/captaindispatch (branch: master)
-Supabase Project ID: lvxtvgxyancpegvfcnsk (West EU)
-```
-
-**Env vars:** `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `ADMIN_EMAIL`, `GOOGLE_MAPS_API_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`, `ANTHROPIC_API_KEY`
-
----
-
-## Pagine & API Completate ✅
-
-**Pagine:** `/login` | `/dashboard` | `/dashboard/fleet` | `/dashboard/trips` | `/dashboard/crew` | `/dashboard/vehicles` | `/dashboard/locations` | `/dashboard/rocket` | `/dashboard/lists` | `/dashboard/pax-coverage` | `/dashboard/hub-coverage` | `/dashboard/productions` | `/dashboard/reports` | `/dashboard/qr-codes` | `/dashboard/settings/production` | `/wrap-trip` | `/pending` | `/scan` | `/dashboard/bridge`
-
-**API:** auth `callback/check-approval` | cron `arrival-status/refresh-routes-traffic/daily-briefing` | places `autocomplete/details/map` | bridge `pending-users/approve-user/invites` | invites `redeem` | productions `CRUD/upload-logo` | qr `resolve` | routes `refresh-traffic/traffic-check/refresh-location` | rocket `templates/suggestions` | push `subscribe/unsubscribe/send` | import `parse/confirm` | drive `files/sync/preview`
-
----
-
-## Logiche Core
-
-**Transfer_Class:** `pickup HUB→ARRIVAL | dropoff HUB→DEPARTURE | nessun HUB→STANDARD`
-
-**Calcolo Tempi Trip:**
-| Tipo | Call | Pickup |
-|------|------|--------|
-| ARRIVAL | = Arr_Time | = Call |
-| DEPARTURE | = Arr_Time - 120min | = Call - Duration |
-| STANDARD | manuale | = Call - Duration |
-| ROCKET | = effectiveCallMin | = Call - Duration |
-
-**Travel_Status Crew:** `IN` (ARRIVAL) | `OUT` (DEPARTURE) | `PRESENT` (default). ARRIVAL completato → IN → PRESENT (trigger 5min). Manuale vince sempre.
-
-**Login Approval:** `auth/callback` → verifica `user_roles` → `/dashboard` o `/pending` (polling 3sec)
-
-**Pattern Assign Coverage→Trips:** URL params `?assignCrewId=&assignCrewName=&assignHotelId=&assignTS=&assignDate=`
-Banner amber in trips, badge ⭐ MATCH, `suggestedBaseIds` filtra hotel+ts
-
-**Multi-Production:** `lib/production.js` — `getProductionId()` / `switchProduction(id)` via localStorage
-
-**Rocket v2:** crew PRESENT+CONFIRMED+!NTN, veicoli attivi, raggruppa per (hotel_id, effectiveDest, effectiveCallMin) → greedy fino a pax_suggested. Trip ID: `R_MMDD_NN`. Multi-stop routing sequenziale A→B→Hub. Templates localStorage + Supabase `rocket_templates`. Suggerimenti statistici dopo 10-15 run. Service type per singola destinazione. Crew con `on_location=false` pre-esclusi automaticamente.
-
-**NTN/Self Drive:** `crew.no_transport_needed = true` → esclusi da Rocket + coperture, badge `🚐 SD`, sezione separata in Pax Coverage, aggiungibili come SD nei Trips.
-
-**Remote Crew (on_location):** `crew.on_location = false` → non in set (lavora da casa/albergo). Rocket: pre-esclusi automaticamente al caricamento (badge 🏠, banner avviso, riattivabili manualmente). Pax Coverage: sezione "🏠 Remote Today" separata, non contano nelle stats %. Dashboard: banner amber con link `/dashboard/crew?remote=1`. Crew page: card dimmed+bordo grigio+badge, filtro pill 🏠 Remote, URL `?remote=1`, sort in fondo al gruppo.
-
-**Captain Bridge:** ruolo `CAPTAIN`/`ADMIN`. Tab Pending (Sandbox/Add to prod/Ignore) + Tab Invites (8-char, role, max_uses, expires_at).
-> ⚠️ Query `production_invites`: join manuale (non PostgREST) per evitare errore schema cache.
-
-**Push PWA:** `web-push` + SW + VAPID. Hook `useNotifications()`. Cron `daily-briefing` 07:00 UTC. `lib/webpush.js` usa `ensureVapidInit()` lazy. `next.config.ts` → `serverExternalPackages: ['web-push','nodemailer','pdf-parse','mammoth','xlsx']`
-
-**Import Intelligente:** Claude `claude-sonnet-4-20250514`. Mode: HAL (auto-detect) | crew | fleet | custom. Flusso: `parse` (multipart) → `categorizing` (4 sezioni) → `preview` → `confirm`. Row shape crew: `first_name, last_name, role, department, phone, email, active, hotel_id, arrival_date, departure_date`. Row shape fleet: `driver_name, vehicle_type, plate, sign_code, capacity, pax_suggested, pax_max`. ⚠️ `plate`→`license_plate` nel confirm. ⚠️ Tabelle `vehicles/locations/crew` usano TEXT PK senza auto-increment → ID generato lato server.
-
-**normalizeDept:** `lib/normalizeDept.js` — 150+ alias EN+IT, `normalizeDept()` usata in `parse/route.js` e `crew/page.js`. EXCEPTION: ruolo `"Director"` standalone → sempre `DIRECTING`.
-
-**i18n:** `lib/i18n.js` — `useT()` + `LanguageProvider`. `app/providers.jsx` + `app/layout.tsx`. `lib/navbar.js` — toggle 🇬🇧/🇮🇹. ❌ NO stringhe hardcoded. `useSearchParams()` → wrappare in `<Suspense fallback={null}>`.
-
-**UI Components** (`components/ui/`): `PageHeader` (sticky `top:52px z-20`, props `left/right`), `FilterBar`+`FilterPill`+`FilterInput`, `TableHeader` (genera `gridTemplateColumns`), `DataTable`.
-
-**Crew:** campo `role TEXT` (titolo es. "Director of Photography"). Campi `email TEXT`, `phone TEXT`. `ContactPopover` su card (view+edit, click-outside). Select multipla + delete inline + bulk delete (pattern identico Vehicles).
-
----
-
-## Database Schema
-
-```sql
-productions (id, name, slug, logo_url, director, producer,
-  production_manager, production_manager_phone, production_coordinator, production_coordinator_phone,
-  transportation_coordinator, transportation_coordinator_phone, transportation_captain, transportation_captain_phone,
-  production_office_phone, set_location, set_address, basecamp, general_call_time, shoot_day, revision)
-user_roles
-locations (id TEXT PK, name, is_hub bool, is_hotel bool, lat, lng, default_pickup_point)
-routes (duration_min, google_duration_min, traffic_updated_at)
-crew (id TEXT PK, full_name, role TEXT, department, hotel_id, travel_status, hotel_status,
-      arrival_date, departure_date, email TEXT, phone TEXT, no_transport_needed bool DEFAULT false,
-      on_location BOOLEAN DEFAULT TRUE)  -- S29: false = remoto/non in set
-vehicles (id TEXT PK, capacity, pax_suggested, pax_max, driver_name, sign_code,
-          active, available_from, available_to, vehicle_type TEXT, license_plate,
-          vehicle_class TEXT[],         -- S28: multi-class (CLASSIC/LUX/ECONOMY/PREMIUM/MINIBUS/NCC)
-          preferred_dept TEXT,          -- S28: dept preferito (GRIP/CAMERA/ecc.)
-          preferred_crew_ids TEXT[],    -- S28: array di crew.id preferiti
-          in_transport BOOLEAN DEFAULT TRUE) -- S28: false = veicolo SD, escluso da trips/liste/fleet
-trips (pickup_id, dropoff_id, call_min, pickup_min, start_dt, end_dt, service_type, status, terminal)
-trip_passengers
-service_types
-production_invites (code, label, role, max_uses, uses_count, expires_at, active, created_by, production_id)
-rocket_templates (id, production_id, name, config_json, created_by, created_at)
-push_subscriptions (user_id, production_id, endpoint, p256dh, auth) UNIQUE(user_id, endpoint)
--- RLS abilitato su tutte le tabelle
-```
-
-**Migrations da eseguire in Supabase SQL Editor se non ancora fatto:**
-- `scripts/migrate-crew-role.sql` — `ALTER TABLE crew ADD COLUMN IF NOT EXISTS role TEXT`
-- `scripts/migrate-crew-contacts.sql` — aggiunge `email TEXT`, `phone TEXT`
-- `scripts/migrate-ntn.sql` — aggiunge `no_transport_needed BOOLEAN DEFAULT FALSE`
-- `scripts/migrate-dept-uppercase.sql` — bonifica dept storici (opzionale)
-- `scripts/fix-productions-rls-duplicate.sql` — ✅ fix policy RLS productions (drop `productions_own`+`productions_insert` → `productions_select/update/delete`)
-- `scripts/fix-functions-search-path.sql` — ✅ fix `SET search_path = public` su 3 funzioni
-- `scripts/fix-trips-rls-delete.sql` — ✅ fix BUG-2: drop `"own_production"` FOR ALL su `trips`, ricrea policy esplicite trips_select/insert/update/delete
-- `scripts/migrate-vehicles-v2.sql` — ✅ **S28**: vehicle_class TEXT[], preferred_dept, preferred_crew_ids TEXT[], in_transport BOOLEAN
-- `scripts/migrate-on-location.sql` — ✅ **S29-T1**: on_location BOOLEAN DEFAULT TRUE (false = remoto/non in set)
-
-**RLS productions (stato attuale dopo fix):**
-- `productions_select` FOR SELECT USING user_production_ids()
-- `productions_update` FOR UPDATE USING user_production_ids()
-- `productions_delete` FOR DELETE USING user_production_ids()
-- ⚠️ Nessuna policy INSERT per `authenticated` — tutti gli INSERT passano da service client (API server)
-
----
-
-## Bug Aperti
-
-| Bug | Stato | Note |
-|-----|-------|------|
-| BUG-2: Sibling non eliminato a rimozione ultimo pax | ✅ Fix | RLS `FOR ALL` su `trips` non propagava DELETE lato client (0 rows, no error). **Fix codice**: `removePax()` ora chiama `POST /api/trips/delete-sibling` (service client, bypassa RLS). **Fix DB opzionale**: `fix-trips-rls-delete.sql` (policy esplicite). |
-| BUG-4: Trip non diventa MULTI-PKP/MULTI-DRP | 🟡 PARZIALE | **Fix applicato**: (1) Guard su `assignCtx.hotel` vuoto nell'else-sibling di `handleAddToExisting` → ora mostra errore chiaro invece di fallire silenziosamente. (2) `console.log('[handleAddToExisting]')` aggiunto per debug runtime con `{assignCtx, allGroupLegs, compatibleLeg, sibDropoff}`. (3) UI MIXED: selettore "🎯 Destination for [name]" per trip STANDARD con hotel diverso (bordo rosso se vuoto, badge viola `🔀 MIXED: HotelB → Loc2` se destinazione diversa, bottone disabled con `Select destination first ↑`). Testare in locale con browser console aperta. |
-| BUG-5: `preferred_crew_ids` / `preferred_dept` non salvati su veicolo | 🔴 APERTO | `VehicleSidebar` in `vehicles/page.js` invia `preferred_crew_ids TEXT[]` e `preferred_dept TEXT` al salvataggio, ma se `scripts/migrate-vehicles-v2.sql` **non è stato eseguito** in Supabase SQL Editor, le colonne non esistono e il salvataggio fallisce con errore `❌ column "preferred_crew_ids" does not exist`. **Fix richiesto**: eseguire `scripts/migrate-vehicles-v2.sql` nel Supabase Dashboard → SQL Editor. Fix codice crew search (display) già deployato (`28b76a2`). |
-
----
-
-## TODO
-
-- [ ] Rocket → export PDF piano generato
-- [ ] Dark mode
-
----
-
-## Sessioni Completate (storia compatta)
-
-| Sessione | Descrizione | Commit |
-|----------|-------------|--------|
-| S9 | Captain Bridge (pending users + invite codes) | — |
-| S11 | Push PWA — web-push, SW, cron daily-briefing | — |
-| S12 | Import Intelligente — Claude HAL+crew+fleet, parse/confirm API, ImportModal | — |
-| S13 | Vehicles delete inline + bulk select | — |
-| S14 | UI Components (PageHeader, FilterBar, TableHeader, DataTable) | — |
-| S15 | NTN/Self Drive — crew.no_transport_needed, Rocket/Trips/PaxCoverage/Crew | — |
-| S16 | i18n sidebar labels crew/vehicles/locations | `cb77bd4` |
-| S17 | i18n Productions ✅ + Rocket R1-R12 ✅ (chiavi in lib/i18n.js) | — |
-| S18 | i18n completamento — TASK 1 chiavi ✅, TASK 2 fleet ✅, TASK 3-10 ⬜ | — |
-| S19 | Crew role field (`role TEXT`) | `719ed19` |
-| S20 | Crew contact info (email, phone, ContactPopover) | — |
-| S21 | Import: HAL mode + Smart Categorization 4 sezioni | `46d94ce`+`1b0915b` |
-| S22 | Fix import dept duplicato + DIRECTORS→DIRECTING (inline) | `5bfa0a0` |
-| S23 | Crew select multipla + delete inline + bulk delete | `603ad61` |
-| S24 | normalizeDept shared lib (lib/normalizeDept.js) + DEPT_MAP 150+ alias EN+IT | `9de1527` |
-| **S24b** | **Fix RLS productions INSERT (chicken-and-egg) — POST usa service client** | `3cf2935` |
-| **S25** | **Fix multi-production: `getProductionId()` dentro ogni componente (11 pagine)** | `63b1601` |
-| **S26** | **Export/Archive Produzione — `GET /api/productions/export` + pulsante 📥 in productions/page** | — |
-| **S27** | **Delete Production — `DELETE /api/productions` (CAPTAIN/ADMIN, CASCADE) + modal confirm con archive check + input nome** | — |
-| **Logo fix** | **Upload logo via `/api/productions/upload-logo` (service client, bypassa RLS Storage). `productions/page.js` aggiornato + feedback visivo errori upload** | `abd737b` |
-| **Logo lists fix** | **Fix: logo non compariva in `TransportListHeader` (lists/page). Aggiunto `<img>` con flex layout affianco al nome produzione** | `0b70d5e` |
-| **Security fix** | **Fix Supabase security warnings: RLS productions (drop `productions_own`+`productions_insert` → policy granulari select/update/delete) + `SET search_path = public` su 3 funzioni. Scripts: `fix-productions-rls-duplicate.sql`, `fix-functions-search-path.sql`** | — |
-| **BUG-2 fix** | **Fix sibling trip non eliminato: `removePax()` ora usa `POST /api/trips/delete-sibling` (service client, bypassa RLS). Creata `app/api/trips/delete-sibling/route.js`. DB fix opzionale: `fix-trips-rls-delete.sql`** | — |
-| **BUG-3 fix** | **Fix dropdown "Add to existing trip" mostrava sibling (T001B/T001C) come voci separate. Ora dedup per `baseTripId`: una sola entry per gruppo. `isCompatibleGroup` controlla tutti i leg. `handleAddToExisting` trova il leg compatibile esistente prima di creare nuovi sibling.** | — |
-| **UX trips** | **Edit Trip sidebar: (1) hotel badge `🏨` su ogni passeggero ASSIGNED (single trip); (2) MULTI trip: sezione ASSIGNED raggruppa pax per leg con sub-header `[TripID] · 🏨 Hotel · 🕐 pickup`. Query `loadPaxData` ora include `hotel_id` dal crew.** | `ce03a13` |
-| **MULTI chain fix** | **Fix discrepanza PICKUP sidebar vs lista nei trip MULTI (es. 06:20 vs 06:10). Root cause: sidebar mostrava `call - duration_questo_leg` (naïve), ma DB aveva valore chain-computed da `compute-chain` (hotel più lontano parte prima). Fix: (1) box `PICKUP ⚡` e `START ⚡` in `EditTripSidebar` ora leggono `initial.pickup_min`/`initial.start_dt` dal DB per trip MULTI (sfondo giallo = chain-managed); (2) `handleSubmit` non scrive più `pickup_min`/`start_dt`/`end_dt` per i trip MULTI sul leg principale né sui sibling — `compute-chain` li ricalcola sempre come passaggio finale.** | `c09f617` |
-| **sibDropoff fix** | **Fix internal state in `TripSidebar`: aggiunto `sibDropoff`/`setSibDropoff` useState. `sibDropoffId` e `siblingRow.dropoff_id` ora usano `(sibDropoff \|\| selExistingTrip.dropoff_id)` per DEPARTURE multi-PKP. `onChange` del select inizializza `sibDropoff` al `dropoff_id` del trip selezionato. Fix solo logica interna, nessun cambio UI visibile. BUG-4 ancora aperto (il sibling non viene creato).** | `6ad0bb8` |
-| **MIXED + BUG-4 fix** | **`trips/page.js`: (1) Guard `!assignCtx.hotel` nell'else-sibling branch → errore esplicito. (2) `console.log('[handleAddToExisting]'` con contesto completo per debug. (3) Selector UI `🎯 Destination for [name]` per STANDARD + hotel diverso → permette di creare sibling con dropoff diverso (MIXED). Bottone disabilitato se destinazione non scelta. Badge `🔀 MIXED` quando dropoff è diverso dal trip principale. `compute-chain` riconosce MIXED quando `uniquePickups.size>1 && uniqueDropoffs.size>1`.** | — |
-| **S28-T1** | **Vehicle Enhancement T1: `scripts/migrate-vehicles-v2.sql` (vehicle_class TEXT[], preferred_dept, preferred_crew_ids, in_transport). `vehicles/page.js`: tipi TRUCK 🚛+PICKUP 🛻, classi multi-chip TEXT[]+NCC 🔑, switch in_transport (blu), badge 🚐 SD in VehicleRow. ⚠️ Migration SQL da eseguire in Supabase.** | — |
-| **S28-T2** | **Vehicle Enhancement T2: `vehicles/page.js` — sezione "⭐ Preferenze Assegnazione" in sidebar: `preferred_dept` select (12 dept, DEPT_COLOR) + `preferred_crew_ids` multi-select con ricerca (SD 🚐 in cima, chips rimovibili). VehicleRow: badge dept colorato + nomi crew compatti (max 3+overflow). `load()` usa `Promise.all` vehicles+crew. Sidebar carica crew all'apertura.** | — |
-| **CARGO type ✅** | **Aggiunto vehicle type CARGO 🚚 (furgone da lavoro): `vehicles/page.js` TYPE_ICON+TYPE_COLOR+sidebar buttons+toolbar filter+counts+header badge. `lib/ImportModal.js` STANDARD_VTYPES include CARGO. `parse/route.js` SYSTEM_PROMPT_HAL+FLEET: DUCATO/Doblo → CARGO. Commit `425cc85`.** | `425cc85` |
-| **S28-T3** | **Vehicle Enhancement T3: `fleet/page.js` + `lists/page.js` — `.eq('in_transport', true)` sulla query vehicles.** | — |
-| **S28-T4 ✅** | **Vehicle Enhancement T4 (completo): `trips/page.js` — query vehicles `.eq('in_transport', true)` + campi preferred. Badge `⭐` nel dropdown veicolo (TripSidebar + EditTripSidebar). Variabili `suggestedCrew`/`suggestedCrewEdit` calcolate. Sezione UI "📌 Suggeriti per {veicolo}" aggiunta nel picker pax di entrambe le sidebar (sfondo `#fffbeb`, bordo `#fde68a`, quick-add `+`, nascosta se lista vuota).** | — |
-| **S28-T5 ✅** | **Vehicle Enhancement T5: Aggiornamento `CAPTAINDISPATCH_Context.md` (S28 completato, prossimo S18 T4) + `git push origin master` deploy.** | — |
-| **S29-T1 ✅** | **Remote Crew T1: `scripts/migrate-on-location.sql` (on_location BOOLEAN). `crew/page.js`: RemoteToggle inline 🏠, card visiva dimmed+bordo grigio+badge Remote, filtro pill 🏠 Remote, URL param ?remote=1, sort remoti in fondo ai gruppi, counts.remote, badge stats, sidebar switch "Non in Set".** | — |
-| **S29-T2 ✅** | **Remote Crew T2: `dashboard/page.js` — banner amber 🏠 N crew remoti con link `/dashboard/crew?remote=1`. `pax-coverage/page.js` — `on_location` nel select, split `remoteCrew`, sezione "🏠 Remote Today" (bordo amber, badge), remoti esclusi dalle stats copertura, `remoteFiltered` rispetta filtri dept/hotel/search.** | — |
-| **S29-T3 ✅** | **Remote Crew T3: `rocket/page.js` — `on_location` nel select query, pre-esclusione automatica in `loadData()` (`excludedCrewIds`), `remoteEligibleCount`, badge 🏠 inline nella riga crew accordion, banner "N crew marcati come Remoti — pre-esclusi. Puoi includerli manualmente."** | — |
-| **S29-T4 ✅** | **Remote Crew T4: Aggiornamento `CAPTAINDISPATCH_Context.md` (S29 completata, prossimo S18 T4) + `git push origin master` deploy.** | — |
-| **S30-T1 ✅** | **Location Routes T1: `refresh-location/route.js` — fix caso nuova location (`routes.length === 0`): query la location stessa + tutte le altre della produzione con coordinate, crea coppie bidirezionali via Google API, upsert in `routes` (source: `'google'`). Comportamento edit invariato.** | — |
-| **S30-T2 ✅** | **Location Routes T2: nuovo `app/api/routes/refresh-all-locations/route.js` (`GET ?production_id=XXX`, genera tutte le coppie A→B/B→A, salta MANUAL). `locations/page.js`: bottone 🔄 Ricalcola Rotte (sostituisce ↻), stati `routeRefreshing`/`routeMsg`, banner risultato colorato con ✕ chiudibile.** | — |
-| **S30-T3 ✅** | **Location Routes T3: Aggiornamento `CAPTAINDISPATCH_Context.md` (S30 completata, prossimo S18 T4) + `git push origin master` deploy.** | — |
-| **S29 deploy ✅** | **Deploy S29 in ritardo: `crew/page.js`, `dashboard/page.js`, `pax-coverage/page.js`, `rocket/page.js`, `scripts/migrate-on-location.sql` — commit `c6e9a76`.** | `c6e9a76` |
-| **VehicleSidebar fix ✅** | **Fix crew search in `vehicles/page.js`: `VehicleSidebar` usava query Supabase separata per crew (closure stale su `PRODUCTION_ID` → lista vuota → ricerca senza risultati). Fix: rimossa query interna, `crewList` passata come prop dalla pagina padre.** | `28b76a2` |
-| **VehicleSidebar crew list fix ✅** | **Fix `vehicles/page.js`: (1) Rimosso `.eq('active', true)` dalla query crew in `load()` — la tabella `crew` non ha colonna `active`, causava lista sempre vuota nel multi-select "Crew Preferiti". (2) Sort migliorato nella lista crew: quando `preferred_dept` è selezionato, crew del dept appaiono in cima con header colorato (⭐ DEPT) + separatore "Altri" per il resto. SD (no_transport_needed) sempre prioritari nel gruppo.** | `0831722` |
-| **S31-T1 ✅** | **Import Upgrade T1 — Backend foundation: nuovo `app/api/import/sheets/route.js` (POST multipart → sheetNames[]). Nuovo `app/api/import/save-location/route.js` (POST JSON → insert H### con is_hotel:true, lat/lng opzionali, service client). `parse/route.js`: selectedSheet param in extractTextFromFile(), SYSTEM_PROMPT_ACCOMMODATION, processAccommodationRows() (action=skip/update, hotel matching su hotel_name, newHotels con address), case 'accommodation', HAL detectedType='accommodation'→detectedMode='accommodation'. `confirm/route.js`: insertNewLocations() con is_hotel:true+lat/lng, processAccommodation() null-only update su hotel_id/arrival_date/departure_date, case 'accommodation'.** | — |
-| **S31-T2 ✅** | **Import Upgrade T2 — Selector + AccommodationTable: `lib/ImportModal.js` — `🏨 Accommodation list` nel mode selector (tra fleet e custom). Check 10MB in `parseFile()`. Componente `AccommodationTable` (First Name/Last Name/Role/Dept/Hotel/Arrival/Departure/Status). `rowBg()` adattato: grigio=skip, rosso=not found in DB, giallo=date mancanti. `isUnrecognized()`/`hasNullFields()` estesi per accommodation. `getCatRowSub()`, `effectiveDisplayMode`, `renderPreviewTable()` estesi per accommodation. `newHotels` section in preview visibile anche per accommodation.** | — |
-| **S31-T3 ✅** | **Import Upgrade T3 — Multi-sheet flow: `lib/ImportModal.js` — nuova fase `sheet-select` tra `idle` e `parsing` per modalità `accommodation`/`hal` con file `.xlsx/.xls`. `parseFile()` chiama prima `POST /api/import/sheets` → ottiene `sheetNames`, pre-seleziona tutti tranne "COST REPORT" e nomi con "OLD" (badge `auto-excluded`). UI checklist fogli con Select all/Deselect all + contatore. Footer: Back + 🔍 Analyze N sheets. Funzione `analyzeSheets()`: loop sequenziale, chiama `POST /api/import/parse` con `selectedSheet` per ogni foglio, mostra "Analyzing sheet X of N: NomeFoglio…", aggrega righe + deduplica hotel, assegna `_idx` sequenziali → fase `categorizing`. Crew/fleet/custom: comportamento invariato.** | — |
-| **S31-T4 ✅** | **Import Upgrade T4 — HotelPlacesModal: `lib/ImportModal.js` — nuovo componente `HotelPlacesModal` (props: `hotelName, productionId, onSave, onSkip`). Al mount chiama `GET /api/places/autocomplete?q=NAME` → suggestions list. Click suggestion → `GET /api/places/details?place_id=XXX` → pre-riempie `address, lat, lng, name`. Form: name editabile, address display-only, lat/lng auto, type selector HOTEL/HUB. "Save to Locations" → `POST /api/import/save-location` → `onSave(locationId, locationName)`. Stato `hotelModalIdx` (int|null) + `handleHotelSave(idx, locationId, locationName)` in `ImportModal`. Upgrade sezione 3 categorizing: pulsante "Add" apre `HotelPlacesModal` (zIndex 200) + "Skip/↩ Restore" toggle; badge ✅ locationName se già salvata. `handleHotelSave`: aggiorna `newHotels[idx]` + aggiorna righe accommodation con `hotel_id`+`hotelNotFound:false`. `reset()` include `setHotelModalIdx(null)`. Build: compilato OK 0 errori.** | — |
-| **S31-T5 ✅** | **Import Upgrade T5 — Context + Deploy: `CAPTAINDISPATCH_Context.md` aggiornato (S31 completata, prossimo S18-T4) + `git push origin master` deploy.** | — |
-| **S31 deploy fix ✅** | **Fix deploy S31: i file S31-T1→T4 (`confirm/route.js`, `parse/route.js`, `ImportModal.js`, `save-location/route.js` nuovo, `sheets/route.js` nuovo) erano rimasti uncommitted. Commit `e287e7f` (5 file, +908 righe) — S31 ora completamente online su Vercel.** | `e287e7f` |
-| **Hotel Occupancy Badge ✅** | **`crew/page.js`: nuova funzione `hotelOccupancy(arrival, departure)` → badge computato automaticamente nella riga date di ogni `CrewCard`. Logica: 🏁 CHK OUT TODAY (rosso), 🏁 CHK OUT TOMORROW (arancione), 🏨 In Hotel (verde), 🔜 Arriving [data] (blu), 🏁 Checked Out (grigio). Rimossi badge ✈ TODAY/✈ TOMORROW (sostituiti). Zero DB changes.** | — |
-| **Section 2 Unknown records fix ✅** | **`lib/ImportModal.js` fase `categorizing`: Section 2 "Unknown records" ora mostra sempre due bottoni separati `[Skip all]` + `[+ Add all]` (prima era un toggle che nascondeva "+ Add all" finché non si premeva "Skip all"). Commit `bd34c89`.** | `bd34c89` |
-| **Duplicate detection crew fix ✅** | **`app/api/import/parse/route.js` — `processCrewRows()` e `processAccommodationRows()`: matching migliorato. Primary: `(first_name + ' ' + last_name).trim().toLowerCase()` vs `full_name.trim().toLowerCase()`. Fallback: se no match, controlla se `full_name` contiene `last_name` (es. "Mario Rossi" in DB → "Rossi" dal file). `lib/ImportModal.js` — `AccommodationTable`: righe senza match DB ora mostrano `✅ New` (verde) invece di `❌ Not found` (rosso). `rowBg()` accommodation: rimosso sfondo rosso per `!existingId`. Commit `2039a21`.** | `2039a21` |
-| **Import fix 4 bug (1 apr 2026) ✅** | **4 bug risolti nel sistema import accommodation: (1) `lib/ImportModal.js` — `onImported` spostato da `handleConfirm` al Close button della fase `done`: il parent non chiude più il modal prima che la schermata "Import complete!" sia visibile. (2) `app/api/import/parse/route.js` — `SYSTEM_PROMPT_ACCOMMODATION` aggiornato con mapping esplicito colonne Excel (`NAME→first_name, SURNAME→last_name, IN→arrival_date, OUT→departure_date`) + istruzione di usare il campo `metadata` come nome hotel per tutte le righe. (3) `parse/route.js` — `extractStructuredExcel()`: dopo aver costruito `dataRows`, elimina colonne null per TUTTE le righe (`usedKeys`): da 75 colonne→15 reali, JSON da 865KB→~80KB, tutte le 168 righe passano nel limite 100K. (4) `app/api/import/confirm/route.js` — `processAccommodation()`: aggiunto `console.log SKIP ${r.existingId}: fields already in DB` per debug quando null-only rule impedisce l'update. Commit `a6d23c5`.** | `a6d23c5` |
-| **Accommodation duplicate detection fix (1 apr 2026) ✅** | **`app/api/import/parse/route.js` — 3 fix su `processAccommodationRows()` e `extractAccommodationFromStructured()`: (1) `hotel_name = sheet_name` direttamente — rimosso parsing metadata che produceva nomi contenenti colonne calendario (es. "M | T | W | …"). (2) Strategia 4 rimossa (match solo su last_name come parola intera nel DB → falsi positivi, es. "Rossi" matchava qualsiasi "Rossi *"). (3) Strategia 3 rafforzata: aggiunto `dbName.includes(' ')` — ora il full_name nel DB deve contenere almeno uno spazio (nome+cognome) prima che il match venga accettato. Commits `4b14249`, `f8bbd05`, `d06b832`.** | `d06b832` |
-| **S32-T7 ✅** | **Google Drive Sync MVP T7 — Env + Context + Deploy: `.env.local` aggiunto `NEXT_PUBLIC_APP_URL=https://captaindispatch.vercel.app` (necessario per chiamate interne parse/confirm dal cron). `CAPTAINDISPATCH_Context.md` aggiornato (S32 completata T1→T7, prossimo S18-T4). `git push origin master` deploy S32 completo.** | — |
-| **S33 ✅** | **Captain Bridge Upgrade — T1: DB migration (notifications+activity_log+RLS). T2: EasyAccessShortcuts (8 shortcut). T3: NotificationsPanel (alert unread, dismiss). T4: TomorrowPanel (arrivals+departures domani, high-traffic banner). T5: ArrivalsDeparturesChart (Recharts 30gg, Cell colori today/tomorrow). T6: MiniWidgets (Fleet/Pax/Hub). T7: ActivityLog (last 50, icone per tipo). T8: Integrazione BridgePage (tutti i componenti nel JSX). T9: Badge Navbar (`useBridgeBadge()` + badge 🔴 pulse ogni 5 min). T10: `@keyframes pulse` in `globals.css` + Context + deploy.** | — |
-| **S33 post-deploy fix ✅** | **2 fix post-deploy: (1) `bridge/page.js` — `PRODUCTION_ID` spostato da costante a `useState(null)` + `useEffect(() => setProductionId(getProductionId()), [])` (SSR safe, evita errore `localStorage is not defined` server-side). Commit `f3aa788`. (2) `npm install recharts` + commit `package.json`/`package-lock.json` (recharts era usato ma non dichiarato esplicitamente nelle deps → build Vercel falliva). Commit `1982fed`.** | `f3aa788` `1982fed` |
-| **`/api/drive/preview` ✅** | **Nuovo endpoint `POST { production_id, file_id }`: esegue auth check + provider_token, recupera record `drive_synced_files`, chiama Drive metadata API per `modifiedTime` → delta check (se uguale a `last_modified` → `{ hasChanges: false, file_name }`). Altrimenti: download (Workspace export / `?alt=media`), chiama `/api/import/parse` via multipart, ritorna `{ hasChanges: true, file_id, file_name, modifiedTime, rows, newData, detectedMode }`. NON chiama `/api/import/confirm`. Stessa pipeline di `/api/drive/sync` ma si ferma dopo il parse.** | `06b64ca` |
-| **S34-T2 navbar badge Drive ✅** | **`lib/navbar.js` — `useBridgeBadge`: funzione resa `async`, aggiunge query Supabase su `drive_synced_files` (filtra `last_synced_at=null OR last_modified>last_synced_at`), `driveUpdates` sommato a notifiche non lette. Nessuna chiamata Drive API, nessun provider_token. Commit `e9af3e0`.** | `e9af3e0` |
-| **S34-T3 ImportModal categorizing props ✅** | **`lib/ImportModal.js` — 5 props opzionali aggiunte alla firma: `initialPhase`, `initialRows`, `initialNewHotels`, `initialDetectedMode`, `initialSelMode`. `useEffect` open: se `open && initialPhase==='categorizing' && initialRows`, salta il reset e inizializza direttamente rows/newHotels/detectedMode/selMode/phase→categorizing (early return). Commit `254e6c7`.** | `254e6c7` |
-| **S34-T4 Bridge DriveSyncWidget ✅** | **`bridge/page.js` — import `ImportModal`. Nuovo componente `DriveSyncWidget({ productionId, onPreview })`: legge `drive_synced_files` da Supabase, filtra file con `last_synced_at=null OR last_modified>last_synced_at`, se lista vuota return null; per ogni file mostra nome, data sync, bottone "🔍 Preview changes". Click: fetch parallelo `locations`+`POST /api/drive/preview`; se `hasChanges=false` → messaggio inline ✅; se true → chiama `onPreview({rows,newHotels,detectedMode,selMode,locations})`. `BridgePage`: `useState(previewModal)`, widget posizionato tra NotificationsPanel e TomorrowPanel, `<ImportModal open initialPhase="categorizing" …>` condizionale in fondo al JSX. Commit `1bbfbac`.** | `1bbfbac` |
-| **Navbar SSR fix ✅** | **`lib/navbar.js` — `useBridgeBadge(getProductionId())` sostituito con `useState(null)` + `useEffect(() => setProductionId(getProductionId()), [])` → SSR-safe (evita `localStorage is not defined` server-side). Stesso pattern di `bridge/page.js`. Commit `58d9711`.** | `58d9711` |
-| **Production_id delete guards ✅** | **Aggiunto `.eq('production_id', PRODUCTION_ID)` su tutte le `.delete()` client-side che ne erano prive: `vehicles/page.js` (handleDeleteSingle, handleBulkDelete, VehicleSidebar.handleDelete — commit `4785849`), `locations/page.js` (LocationSidebar.handleDelete), `crew/page.js` (handleBulkDelete su `crew` table — commit `20c217c`). Le delete su `trip_passengers` non modificate (no colonna `production_id`). `trips/page.js` non ha `.delete()` dirette (usa API route).** | `4785849` `20c217c` |
-
----
-
-## Regole Fondamentali
-
-```
-❌ write_to_file su file esistenti → replace_in_file chirurgico
-❌ Hardcodare stringhe UI → usare sempre useT()
-❌ Riscrivere interi file per aggiustamenti
-❌ Modificare rotte Source=MANUAL negli script
-❌ Sovrascrivere Travel_Status manuale con automazioni
-✅ Leggere codice esistente prima di modificarlo
-✅ JavaScript (non TypeScript), App Router
-✅ Testare su localhost prima del deploy
-✅ Deploy dopo OGNI sessione completata (non tra un task e l'altro in S18)
+❌ Never use useSearchParams() without Suspense — causes Vercel build failure
+❌ Never use toISOString() for date calculations — use toLocaleDateString('en-CA', {timeZone:'Europe/Rome'})
+❌ write_to_file on existing files → use replace_in_file surgical edits
+❌ Never rewrite entire files for small changes
+✅ Read existing code before modifying
+✅ JavaScript only (no TypeScript), App Router
+✅ Deploy after every completed task: git add . ; git commit -m "..." ; git push
+✅ PowerShell: use ; not && between commands
+✅ Always explain approach in one line before proceeding
 ```
