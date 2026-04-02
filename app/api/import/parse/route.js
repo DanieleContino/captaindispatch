@@ -45,6 +45,7 @@ The metadata field contains the hotel name and address. Field mapping: NAME=firs
 
 Rules:
 - Detect document type automatically
+- If the document is a travel calendar or movement schedule with columns like position/role, name, p/up dep, from, time, to, travel number, p/up arr, accommodation — detect it as type 'travel'.
 - For crew: extract first_name, last_name, role, department, phone, email, active
 - For fleet: extract driver_name, vehicle_type, plate, sign_code, pax_suggested, pax_max
 - For accommodation: extract first_name, last_name, hotel, arrival_date, departure_date
@@ -70,10 +71,11 @@ Rules:
 
 Return format:
 {
-  "type": "crew" | "fleet" | "accommodation" | "mixed",
+  "type": "crew" | "fleet" | "accommodation" | "mixed" | "travel",
   "crew": [...],
   "vehicles": [...],
-  "accommodation": [...]
+  "accommodation": [],
+  "travel": []
 }`
 
 const SYSTEM_PROMPT_FLEET = `You extract vehicle fleet data from documents.
@@ -202,6 +204,51 @@ Return format: JSON array
   "hotel_address": "string|null",
   "arrival_date": "YYYY-MM-DD|null",
   "departure_date": "YYYY-MM-DD|null"
+}]`
+
+const SYSTEM_PROMPT_TRAVEL = `You extract travel movement data from a film/TV production travel calendar.
+
+The document has a day-by-day structure where:
+- A date cell marks the start of a new day's movements
+- Section headers (FLIGHT, TRAIN, OA/SELF, GROUND TRANSPORT) separate movement types
+- Each data row represents one person's movement
+
+Column mapping (may vary by format):
+- position/role: job title
+- name: full name (may be "Lastname Firstname" or "Firstname Lastname")
+- p/up dep: who handles departure pickup
+- from: departure location (e.g. "Rome FCO", "Bari BRI")
+- time (departure): departure time
+- to: arrival location
+- time (arrival): arrival time
+- travel: flight or train number
+- p/up arr: who handles arrival pickup
+- accommodation: hotel name
+
+Rules:
+- Extract ALL rows that represent a person's movement
+- travel_date: YYYY-MM-DD format
+- travel_type: infer from section — FLIGHT, TRAIN, OA, GROUND
+- needs_transport: true ONLY if p/up arr OR p/up dep is 'TRANSPORT DEPT' or 'TRANSPORT DEPT.'
+- TBD, TBA, TBR, ? in any field → set to null
+- Skip header rows, blank rows, section header rows
+- Return ONLY a valid JSON array, no markdown, no explanation
+
+Return format:
+[{
+  "travel_date": "YYYY-MM-DD",
+  "travel_type": "FLIGHT|TRAIN|OA|GROUND",
+  "full_name_raw": "string",
+  "role": "string|null",
+  "pickup_dep": "string|null",
+  "from_location": "string|null",
+  "from_time": "HH:MM|null",
+  "to_location": "string|null",
+  "to_time": "HH:MM|null",
+  "travel_number": "string|null",
+  "pickup_arr": "string|null",
+  "hotel_raw": "string|null",
+  "needs_transport": true|false|null
 }]`
 
 // ── Helpers ──────────────────────────────────────────────────
