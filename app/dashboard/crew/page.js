@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
-import { PageHeader } from '../../../components/ui/PageHeader'
 import { normalizeDept } from '../../../lib/normalizeDept'
 import { getProductionId } from '../../../lib/production'
 
@@ -836,12 +835,34 @@ export default function CrewPage() {
       {/* Header */}
       <Navbar currentPath="/dashboard/crew" />
 
-      {/* Sub-toolbar */}
-      <PageHeader
-        left={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      {/* Sub-toolbar — two-row sticky */}
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: '52px', zIndex: 29 }}>
+
+        {/* Riga 1 — titolo + contatori + azioni */}
+        <div style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
+          <span style={{ fontSize: '18px' }}>👤</span>
+          <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Crew</span>
+          <span style={{ fontSize: '12px', color: '#94a3b8' }}>{counts.total} total · {counts.conf} confirmed</span>
+          {/* Badge contatori */}
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {counts.in > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>{counts.in} IN</span>}
+            {counts.present > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #93c5fd' }}>{counts.present} PRES</span>}
+            {counts.out > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba74' }}>{counts.out} OUT</span>}
+            {counts.ntn > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', border: '1px solid #cbd5e1' }}>🚐 {counts.ntn} NTN</span>}
+            {counts.remote > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#475569', background: '#f1f5f9', border: '1px solid #94a3b8' }}>🏠 {counts.remote} Remote</span>}
+            {counts.depTomorrow > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' }}>✈ {counts.depTomorrow} dep tomorrow</span>}
+          </div>
+          <div style={{ flex: 1 }} />
+          {/* Azioni */}
+          <button onClick={loadCrew} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
+          <button onClick={() => setImportOpen(true)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151' }}>{t.importFromFile}</button>
+          <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>{t.addCrew}</button>
+        </div>
+
+        {/* Riga 2 — filtri */}
+        <div style={{ padding: '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <input type="text" placeholder="Search name, dept, ID…" value={search} onChange={e => setSearch(e.target.value)}
-            style={{ padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px' }} />
+            style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px' }} />
           {/* Travel filter */}
           <div style={{ display: 'flex', gap: '3px' }}>
             {['ALL', 'IN', 'PRESENT', 'OUT'].map(s => {
@@ -853,12 +874,10 @@ export default function CrewPage() {
                 </button>
               )
             })}
-            {/* NTN pill */}
             <button onClick={() => setFT('NTN')}
               style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterTravel === 'NTN' ? { background: '#f1f5f9', color: '#6b7280', borderColor: '#cbd5e1' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
               🚐 {t.ntnShort}
             </button>
-            {/* REMOTE pill */}
             <button onClick={() => setFT(filterTravel === 'REMOTE' ? 'ALL' : 'REMOTE')}
               style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterTravel === 'REMOTE' ? { background: '#f1f5f9', color: '#475569', borderColor: '#94a3b8' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
               🏠 Remote
@@ -891,43 +910,8 @@ export default function CrewPage() {
             <button onClick={() => { setFT('ALL'); setFH('ALL'); setFD('ALL'); setSearch('') }}
               style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626' }}>✕ Reset</button>
           )}
-        </div>}
-        right={
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {[
-            { n: counts.conf, l: 'CONF',    c: '#15803d', bg: '#f0fdf4', b: '#86efac' },
-            { n: counts.in,   l: 'IN',      c: '#15803d', bg: '#dcfce7', b: '#86efac' },
-            { n: counts.present, l: 'PRES', c: '#1d4ed8', bg: '#eff6ff', b: '#93c5fd' },
-            { n: counts.out,  l: 'OUT',     c: '#c2410c', bg: '#fff7ed', b: '#fdba74' },
-          ].map(s => (
-            <span key={s.l} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: s.c, background: s.bg, border: `1px solid ${s.b}` }}>
-              {s.n} {s.l}
-            </span>
-          ))}
-          {counts.ntn > 0 && (
-            <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#6b7280', background: '#f1f5f9', border: '1px solid #cbd5e1' }}>
-              🚐 {counts.ntn} {t.ntnShort}
-            </span>
-          )}
-          {counts.remote > 0 && (
-            <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#475569', background: '#f1f5f9', border: '1px solid #94a3b8' }}>
-              🏠 {counts.remote} Remote
-            </span>
-          )}
-          <button onClick={loadCrew}
-            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
-            ↻
-          </button>
-          <button onClick={() => setImportOpen(true)}
-            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151' }}>
-            {t.importFromFile}
-          </button>
-          <button onClick={openNew}
-            style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-            {t.addCrew}
-          </button>
-        </div>}
-      />
+        </div>
+      </div>
 
       {/* Body */}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', transition: 'margin-right 0.25s', marginRight: sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
