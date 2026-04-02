@@ -483,27 +483,36 @@ function ArrivalsDeparturesChart({ productionId }) {
 
     Promise.all([
       supabase.from('travel_movements')
-        .select('travel_date')
+        .select('travel_date, travel_type')
         .eq('production_id', productionId)
         .eq('direction', 'IN')
         .gte('travel_date', fromStr)
         .lte('travel_date', toStr),
       supabase.from('travel_movements')
-        .select('travel_date')
+        .select('travel_date, travel_type')
         .eq('production_id', productionId)
         .eq('direction', 'OUT')
         .gte('travel_date', fromStr)
         .lte('travel_date', toStr),
     ]).then(([arrRes, depRes]) => {
-      const arrMap = {}
+      const arrMap = {}   // date → total
+      const arrFlight = {} // date → flights
+      const arrTrain = {}  // date → trains
       const depMap = {}
+      const depFlight = {}
+      const depTrain = {}
+
       ;(arrRes.data || []).forEach(r => {
         const d = String(r.travel_date).slice(0, 10)
         arrMap[d] = (arrMap[d] || 0) + 1
+        if (r.travel_type === 'FLIGHT') arrFlight[d] = (arrFlight[d] || 0) + 1
+        if (r.travel_type === 'TRAIN')  arrTrain[d]  = (arrTrain[d]  || 0) + 1
       })
       ;(depRes.data || []).forEach(r => {
         const d = String(r.travel_date).slice(0, 10)
         depMap[d] = (depMap[d] || 0) + 1
+        if (r.travel_type === 'FLIGHT') depFlight[d] = (depFlight[d] || 0) + 1
+        if (r.travel_type === 'TRAIN')  depTrain[d]  = (depTrain[d]  || 0) + 1
       })
 
       const days = []
@@ -512,12 +521,16 @@ function ArrivalsDeparturesChart({ productionId }) {
       while (cur <= to) {
         const d = toRomeDate(cur)
         days.push({
-          date:       d,
-          label:      cur.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
-          arrivals:   arrMap[d]  || 0,
-          departures: depMap[d]  || 0,
-          isToday:    d === todayStr,
-          isTomorrow: d === tomorrowStr,
+          date:        d,
+          label:       cur.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+          arrivals:    arrMap[d]    || 0,
+          departures:  depMap[d]   || 0,
+          arrFlights:  arrFlight[d] || 0,
+          arrTrains:   arrTrain[d]  || 0,
+          depFlights:  depFlight[d] || 0,
+          depTrains:   depTrain[d]  || 0,
+          isToday:     d === todayStr,
+          isTomorrow:  d === tomorrowStr,
         })
         cur.setDate(cur.getDate() + 1)
       }
@@ -587,12 +600,38 @@ function ArrivalsDeparturesChart({ productionId }) {
             <Tooltip
               contentStyle={{ fontSize: '11px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
               labelStyle={{ fontWeight: '700', color: '#0f2340', marginBottom: '4px' }}
-              formatter={(value, name) => [value, name === 'arrivals' ? '🛬 Arrivals' : '🛫 Departures']}
-              labelFormatter={(label, payload) => {
-                const d = payload?.[0]?.payload
-                if (d?.isToday)    return `${label} — TODAY`
-                if (d?.isTomorrow) return `${label} — TOMORROW`
-                return label
+              content={({ active, payload, label }) => {
+                if (!active || !payload || !payload.length) return null
+                const d = payload[0]?.payload
+                if (!d) return null
+                const dateLabel = d.isToday ? `${label} — TODAY`
+                                : d.isTomorrow ? `${label} — TOMORROW`
+                                : label
+                return (
+                  <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '11px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                    <div style={{ fontWeight: '800', color: '#0f2340', marginBottom: '6px' }}>{dateLabel}</div>
+                    {d.arrivals > 0 && (
+                      <div style={{ color: '#15803d', marginBottom: '2px' }}>
+                        🛬 Arrivals: <strong>{d.arrivals}</strong>
+                        {(d.arrFlights > 0 || d.arrTrains > 0) && (
+                          <span style={{ color: '#64748b', marginLeft: '6px' }}>
+                            ({d.arrFlights > 0 ? `${d.arrFlights} ✈️` : ''}{d.arrFlights > 0 && d.arrTrains > 0 ? ' + ' : ''}{d.arrTrains > 0 ? `${d.arrTrains} 🚂` : ''})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {d.departures > 0 && (
+                      <div style={{ color: '#dc2626' }}>
+                        🛫 Departures: <strong>{d.departures}</strong>
+                        {(d.depFlights > 0 || d.depTrains > 0) && (
+                          <span style={{ color: '#64748b', marginLeft: '6px' }}>
+                            ({d.depFlights > 0 ? `${d.depFlights} ✈️` : ''}{d.depFlights > 0 && d.depTrains > 0 ? ' + ' : ''}{d.depTrains > 0 ? `${d.depTrains} 🚂` : ''})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
               }}
             />
             <Bar dataKey="arrivals" name="arrivals" radius={[3, 3, 0, 0]} maxBarSize={20}>
