@@ -174,7 +174,7 @@ function DriveSyncWidget({ productionId, onPreview }) {
       if (!d.hasChanges) {
         setInlineMsg(prev => ({ ...prev, [file.file_id]: '✅ No changes since last sync' }))
       } else {
-onPreview({ rows: d.rows, newHotels: d.newHotels, detectedMode: d.detectedMode, selMode: file.import_mode, locations })
+onPreview({ rows: d.rows, newHotels: d.newHotels, detectedMode: d.detectedMode, selMode: file.import_mode, locations, fileId: file.file_id })
       }
     } catch (e) {
       setInlineMsg(prev => ({ ...prev, [file.file_id]: '❌ ' + e.message }))
@@ -1473,7 +1473,16 @@ export default function BridgePage() {
           initialDetectedMode={previewModal.detectedMode}
           initialSelMode={previewModal.selMode}
           onClose={() => setPreviewModal(null)}
-          onImported={() => setPreviewModal(null)}
+          onImported={async () => {
+            if (previewModal?.fileId) {
+              await supabase
+                .from('drive_synced_files')
+                .update({ last_synced_at: new Date().toISOString() })
+                .eq('file_id', previewModal.fileId)
+                .eq('production_id', PRODUCTION_ID)
+            }
+            setPreviewModal(null)
+          }}
         />
       )}
     </div>
