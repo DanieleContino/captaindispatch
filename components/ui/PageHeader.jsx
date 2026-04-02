@@ -10,7 +10,7 @@ export function PageHeader({ left, right, className = '' }) {
   return (
     <div
       className={
-        'bg-white border-b border-slate-200 px-6 h-[52px] flex items-center justify-between gap-3 sticky top-[52px] z-20 ' +
+        'bg-white border-b border-slate-200 px-6 h-[52px] flex items-center justify-between gap-3 sticky top-[52px] z-[29] ' +
         className
       }
     >
