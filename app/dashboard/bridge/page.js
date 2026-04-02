@@ -303,7 +303,7 @@ function TravelDiscrepanciesWidget({ productionId }) {
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
-                  <a href={`/dashboard/crew`}
+                  <a href={`/dashboard/crew?search=${encodeURIComponent(item.crew?.full_name || item.full_name_raw)}`}
                     style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', textDecoration: 'none', textAlign: 'center' }}>
                     👤 Crew
                   </a>

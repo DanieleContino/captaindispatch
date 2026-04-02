@@ -753,6 +753,7 @@ export default function CrewPage() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       if (params.get('remote') === '1') setFT('REMOTE')
+      if (params.get('search')) setSearch(params.get('search'))
     }
   }, [])
 
