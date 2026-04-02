@@ -468,16 +468,18 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
 
     let error
     if (mode === 'new') {
-      const r = await supabase.from('crew').insert({ ...row, id: form.id.trim().toUpperCase() })
+      const r = await supabase.from('crew').insert({ ...row, id: form.id.trim().toUpperCase() }).select('id').single()
       error = r.error
+      setSaving(false)
+      if (error) { setError(error.message); return }
+      onSaved(r.data?.id, row.full_name)
     } else {
       const r = await supabase.from('crew').update(row).eq('id', initial.id).eq('production_id', PRODUCTION_ID)
       error = r.error
+      setSaving(false)
+      if (error) { setError(error.message); return }
+      onSaved(initial.id, row.full_name)
     }
-
-    setSaving(false)
-    if (error) { setError(error.message); return }
-    onSaved()
   }
 
   async function handleDelete() {
@@ -488,7 +490,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
     const { error } = await supabase.from('crew').delete().eq('id', initial.id).eq('production_id', PRODUCTION_ID)
     setDeleting(false)
     if (error) { setError(error.message); return }
-    onSaved()
+    onSaved(null, null)
   }
 
   const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
@@ -745,6 +747,7 @@ export default function CrewPage() {
   const [sidebarMode, setSM]    = useState('new')  // 'new' | 'edit'
   const [editTarget, setET]     = useState(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [addNewRawName, setAddNewRawName] = useState(null)
 
   const [travelMap, setTravelMap]       = useState({})
 
@@ -802,6 +805,18 @@ export default function CrewPage() {
       const params = new URLSearchParams(window.location.search)
       if (params.get('remote') === '1') setFT('REMOTE')
       if (params.get('search')) setSearch(params.get('search'))
+      if (params.get('addNew')) {
+        const raw = decodeURIComponent(params.get('addNew'))
+        setAddNewRawName(raw) // save original name from travel calendar
+        // open sidebar in new mode with name pre-filled
+        const parts = raw.trim().split(' ')
+        // try to invert "LASTNAME FIRSTNAME" → "FIRSTNAME LASTNAME"
+        if (parts.length >= 2) {
+          // expose the raw as initial search so user can adjust
+          setSearch(raw)
+        }
+        setSM('new'); setET(null); setSO(true)
+      }
     }
   }, [])
 
@@ -810,7 +825,41 @@ export default function CrewPage() {
   function handleRemoteChange(id, val)          { setCrew(p => p.map(c => c.id === id ? { ...c, on_location: val } : c)) }
   function handleContactSaved(id, { email, phone }) { setCrew(p => p.map(c => c.id === id ? { ...c, email, phone } : c)) }
 
-  function handleSaved() { setSO(false); loadCrew() }
+  async function handleSaved(newCrewId, newFullName) {
+    setSO(false)
+
+    // If we came from Travel Discrepancies, update travel_movements
+    if (addNewRawName && newCrewId) {
+      // Build name variants to match against full_name_raw
+      const raw = addNewRawName.trim()
+      const parts = raw.split(' ')
+      const variants = [raw]
+      // Add all possible inversions
+      for (let i = 1; i < parts.length; i++) {
+        const firstName = parts.slice(i).join(' ')
+        const lastName = parts.slice(0, i).join(' ')
+        variants.push(firstName + ' ' + lastName)
+      }
+
+      // Update all matching unmatched rows
+      for (const variant of variants) {
+        await supabase
+          .from('travel_movements')
+          .update({
+            crew_id:              newCrewId,
+            match_status:         'matched',
+            discrepancy_resolved: true,
+          })
+          .eq('production_id', PRODUCTION_ID)
+          .eq('match_status', 'unmatched')
+          .ilike('full_name_raw', variant)
+      }
+
+      setAddNewRawName(null) // reset
+    }
+
+    loadCrew()
+  }
 
   // ─── Selezione ─────────────────────────────────────────
   function toggleSelect(id) {
