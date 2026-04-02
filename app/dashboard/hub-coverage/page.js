@@ -554,13 +554,15 @@ export default function HubCoveragePage() {
       </div>
 
       {/* ── Day Strip ── */}
-      <DayStrip
-        selectedDate={date}
-        centerDate={stripCenter}
-        onSelectDay={setDate}
-        onShiftCenter={setStripCenter}
-        productionId={PRODUCTION_ID}
-      />
+      <div style={{ position: 'sticky', top: '104px', zIndex: 19 }}>
+        <DayStrip
+          selectedDate={date}
+          centerDate={stripCenter}
+          onSelectDay={setDate}
+          onShiftCenter={setStripCenter}
+          productionId={PRODUCTION_ID}
+        />
+      </div>
 
       {/* ── Content ── */}
       <div style={{ maxWidth: '980px', margin: '0 auto', padding: '24px' }}>
