@@ -1094,6 +1094,96 @@ function extractAccommodationFromStructured(structured) {
   return result
 }
 
+// ── parseTravelCalendarDIG ────────────────────────────────────
+
+function parseTravelCalendarDIG(buffer) {
+  const XLSX = require('xlsx')
+  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true })
+  
+  const sheetName = workbook.SheetNames.find(n =>
+    n.toUpperCase() === 'DIG'
+  ) || workbook.SheetNames[0]
+  
+  const sheet = workbook.Sheets[sheetName]
+  const allRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null })
+  
+  const SECTIONS = ['FLIGHT', 'TRAIN', 'OA/SELF', 'GROUND TRANSPORT']
+  const TRANSPORT_VALS = ['TRANSPORT DEPT', 'TRANSPORT DEPT.']
+  const PENDING_VALS = ['TBD', 'TBA', 'TBR', '?']
+
+  let currentDate = null
+  let currentSection = 'FLIGHT'
+  const movements = []
+
+  for (const row of allRows) {
+    if (!Array.isArray(row)) continue
+
+    // Colonna 0: data del giorno
+    const col0 = row[0]
+    if (col0 instanceof Date && !isNaN(col0)) {
+      currentDate = col0.toISOString().split('T')[0]
+      continue
+    }
+
+    // Colonna 1: sezione o ruolo
+    const col1Str = row[1] ? String(row[1]).trim() : null
+    if (col1Str && SECTIONS.includes(col1Str)) {
+      currentSection = col1Str === 'OA/SELF' ? 'OA' : col1Str
+      continue
+    }
+
+    // Salta righe header, vuote, sezioni
+    if (!col1Str || col1Str === 'position') continue
+    const col2 = row[2]
+    if (!col2 || String(col2).trim() === '' || String(col2).trim() === 'name') continue
+    if (!currentDate) continue
+
+    function fmtTime(val) {
+      if (!val) return null
+      if (val instanceof Date) return val.toTimeString().slice(0, 5)
+      const s = String(val).trim()
+      const m = s.match(/^(\d{1,2})[.:](\d{2})/)
+      if (m) return m[1].padStart(2, '0') + ':' + m[2]
+      return null
+    }
+
+    const pickupDep = row[3] ? String(row[3]).trim() : null
+    const fromLoc   = row[4] ? String(row[4]).trim() : null
+    const fromTime  = fmtTime(row[5])
+    const toLoc     = row[6] ? String(row[6]).trim() : null
+    const toTime    = fmtTime(row[7])
+    const travelNum = row[8] ? String(row[8]).trim() : null
+    const pickupArr = row[9] ? String(row[9]).trim() : null
+    const hotelRaw  = row[11] ? String(row[11]).trim() : null
+
+    let needsTransport = false
+    if (TRANSPORT_VALS.includes(pickupArr) || TRANSPORT_VALS.includes(pickupDep)) {
+      needsTransport = true
+    } else if (PENDING_VALS.includes(pickupArr) && PENDING_VALS.includes(pickupDep)) {
+      needsTransport = null
+    }
+
+    movements.push({
+      travel_date:     currentDate,
+      travel_type:     currentSection,
+      full_name_raw:   String(col2).trim(),
+      role:            col1Str,
+      pickup_dep:      pickupDep,
+      from_location:   fromLoc,
+      from_time:       fromTime,
+      to_location:     toLoc,
+      to_time:         toTime,
+      travel_number:   travelNum,
+      pickup_arr:      pickupArr,
+      hotel_raw:       hotelRaw && hotelRaw !== '/' ? hotelRaw : null,
+      needs_transport: needsTransport,
+    })
+  }
+
+  console.log(`[parseTravelCalendarDIG] ${movements.length} movimenti da foglio "${sheetName}"`)
+  return movements
+}
+
 // ── POST handler ─────────────────────────────────────────────
 
 export async function POST(req) {
@@ -1266,6 +1356,13 @@ export async function POST(req) {
 
       const { rows, newHotels } = await processAccommodationRows(extracted, supabase, productionId)
       return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode: 'accommodation' })
+    }
+
+    // ── MODE: travel ─────────────────────────────────────────
+    if (mode === 'travel') {
+      const rawTravel = parseTravelCalendarDIG(buffer)
+      const { rows, newHotels } = await processTravelRows(rawTravel, supabase, productionId)
+      return NextResponse.json({ rows, newData: { hotels: newHotels }, detectedMode: 'travel' })
     }
 
     // ── MODE: custom ────────────────────────────────────────
