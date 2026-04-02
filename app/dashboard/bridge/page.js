@@ -160,22 +160,25 @@ function DriveSyncWidget({ productionId, onPreview, refreshKey }) {
     setPreviewLoading(prev => ({ ...prev, [file.file_id]: true }))
     setInlineMsg(prev => ({ ...prev, [file.file_id]: null }))
     try {
-      const [locRes, previewRes] = await Promise.all([
-        supabase.from('locations').select('id, name').eq('production_id', productionId),
-        fetch('/api/drive/preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ production_id: productionId, file_id: file.file_id }),
-        }),
-      ])
-      const locations = locRes.data || []
-      const d = await previewRes.json()
-      if (!previewRes.ok) throw new Error(d.error || 'Preview error')
-      if (!d.hasChanges) {
-        setInlineMsg(prev => ({ ...prev, [file.file_id]: '✅ No changes since last sync' }))
-      } else {
-onPreview({ rows: d.rows, newHotels: d.newHotels, detectedMode: d.detectedMode, selMode: file.import_mode, locations, fileId: file.file_id })
+      // 1. Scarica il file dal server
+      const dlRes = await fetch('/api/drive/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ production_id: productionId, file_id: file.file_id }),
+      })
+      if (!dlRes.ok) {
+        const errData = await dlRes.json().catch(() => ({}))
+        throw new Error(errData.error || 'Download error')
       }
+      // 2. Converti in File object
+      const blob = await dlRes.blob()
+      const filename = dlRes.headers.get('X-File-Name') || file.file_name || 'file.xlsx'
+      const fileObj = new File([blob], filename, { type: blob.type })
+      // 3. Carica locations
+      const locRes = await supabase.from('locations').select('id, name').eq('production_id', productionId)
+      const locations = locRes.data || []
+      // 4. Apri ImportModal con il file già pronto — il modal gestirà sheet-select
+      onPreview({ fileObj, selMode: file.import_mode, locations, fileId: file.file_id })
     } catch (e) {
       setInlineMsg(prev => ({ ...prev, [file.file_id]: '❌ ' + e.message }))
     } finally {
@@ -1468,11 +1471,7 @@ export default function BridgePage() {
           mode={previewModal.selMode}
           productionId={PRODUCTION_ID}
           locations={previewModal.locations}
-          initialPhase="categorizing"
-          initialRows={previewModal.rows}
-          initialNewHotels={previewModal.newHotels}
-          initialDetectedMode={previewModal.detectedMode}
-          initialSelMode={previewModal.selMode}
+          initialFile={previewModal.fileObj}
           onClose={() => setPreviewModal(null)}
           onImported={async () => {
             if (previewModal?.fileId) {
