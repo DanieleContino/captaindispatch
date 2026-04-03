@@ -478,6 +478,7 @@ export default function FleetPage() {
   const [trafficAlerts, setTrafficAlerts] = useState([])   // alert da traffic-check
   const [refreshingTraffic, setRefreshingTraffic] = useState(false)
   const [trafficMsg,    setTrafficMsg]    = useState(null)
+  const [autoRefresh,   setAutoRefresh]   = useState(true)
 
   // Ref per evitare stale closure nel channel Realtime
   const dateRef = useRef(date)
@@ -558,15 +559,17 @@ export default function FleetPage() {
 
   // ── Auto-refresh every 30s ─────────────────────────────────
   useEffect(() => {
+    if (!autoRefresh) return
     const timer = setInterval(() => loadData(dateRef.current), REFRESH_INTERVAL)
     return () => clearInterval(timer)
-  }, [loadData])
+  }, [loadData, autoRefresh])
 
   // ── Countdown display ─────────────────────────────────────
   useEffect(() => {
+    if (!autoRefresh) return
     const timer = setInterval(() => setCountdown(c => (c <= 1 ? 30 : c - 1)), 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [autoRefresh])
 
   // ── "Now" tick per progress bar ───────────────────────────
   useEffect(() => {
@@ -642,10 +645,27 @@ export default function FleetPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#94a3b8' }}>
             {lastRefresh && <span>{fmtLastRefresh(lastRefresh)}</span>}
             <span style={{ color: '#cbd5e1' }}>·</span>
-            <span>Refresh in {countdown}s</span>
+            <span>{autoRefresh ? `Refresh in ${countdown}s` : 'Auto-refresh paused'}</span>
             <button onClick={() => loadData(date)}
               style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
               {loading ? '…' : '↻'} {t.fleetRefreshBtn}
+            </button>
+            <button
+              onClick={() => { setAutoRefresh(p => !p); setCountdown(30) }}
+              style={{
+                background: autoRefresh ? '#fef2f2' : '#f0fdf4',
+                border: `1px solid ${autoRefresh ? '#fecaca' : '#bbf7d0'}`,
+                borderRadius: '7px',
+                padding: '5px 12px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '700',
+                color: autoRefresh ? '#dc2626' : '#15803d',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}>
+              {autoRefresh ? '⏸ Auto' : '▶ Auto'}
             </button>
             <button
               onClick={async () => {
