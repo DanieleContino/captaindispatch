@@ -1276,6 +1276,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   // Extra legs (UI-only, no save logic)
   const [extraLegs, setExtraLegs] = useState([])
   const [toDelete,  setToDelete]  = useState([])   // DB row IDs of existing legs removed with ✕
+  const [activeLeg, setActiveLeg] = useState(null)
 
   // Crew Lookup
   const [crewLookupQ,       setCrewLookupQ]       = useState('')
@@ -1294,26 +1295,29 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     setCrewLookupQ(''); setCrewLookupResults([]); setCrewInfoCrew(null)
     setExtraLegs([]); setToDelete([])
 
-    const arrStr  = initial.arr_time ? initial.arr_time.slice(0, 5) : ''
-    const callStr = (initial.transfer_class === 'STANDARD' && initial.call_min !== null)
-      ? minToHHMM(initial.call_min) : ''
+    const leg = group?.[0] ?? initial
+    setActiveLeg(leg)
+
+    const arrStr  = leg.arr_time ? leg.arr_time.slice(0, 5) : ''
+    const callStr = (leg.transfer_class === 'STANDARD' && leg.call_min !== null)
+      ? minToHHMM(leg.call_min) : ''
 
     setForm({
-      date:            initial.date || isoToday(),
-      pickup_id:       initial.pickup_id  || '',
-      dropoff_id:      initial.dropoff_id || '',
-      vehicle_id:      initial.vehicle_id || '',
-      service_type_id: initial.service_type_id || '',
+      date:            leg.date || isoToday(),
+      pickup_id:       leg.pickup_id  || '',
+      dropoff_id:      leg.dropoff_id || '',
+      vehicle_id:      leg.vehicle_id || '',
+      service_type_id: leg.service_type_id || '',
       arr_time:        arrStr,
       call_time:       callStr,
-      duration_min:    initial.duration_min ? String(initial.duration_min) : '',
-      flight_no:       initial.flight_no || '',
-      terminal:        initial.terminal  || '',
-      notes:           initial.notes     || '',
-      status:          initial.status    || 'PLANNED',
+      duration_min:    leg.duration_min ? String(leg.duration_min) : '',
+      flight_no:       leg.flight_no || '',
+      terminal:        leg.terminal  || '',
+      notes:           leg.notes     || '',
+      status:          leg.status    || 'PLANNED',
     })
 
-    loadPaxData(initial)
+    loadPaxData(leg)
 
     if (PRODUCTION_ID && initial.trip_id) {
       const baseId = baseTripId(initial.trip_id)
@@ -1330,12 +1334,35 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     }
   }, [open, initial?.id])
 
-  // Reload pax when group grows (sibling added externally from TripSidebar → onSaved → loadTrips → editTripGroup aggiornato)
+  // Reload pax when group grows OR when active leg switches
   useEffect(() => {
     if (!open || !initial) return
-    loadPaxData(initial)
+    loadPaxData(activeLeg ?? initial)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.length])
+  }, [group?.length, activeLeg?.id])
+
+  // Repopulate form when user switches leg tab (activeLeg changes after initial open)
+  useEffect(() => {
+    if (!open || !activeLeg) return
+    const arrStr  = activeLeg.arr_time ? activeLeg.arr_time.slice(0, 5) : ''
+    const callStr = (activeLeg.transfer_class === 'STANDARD' && activeLeg.call_min !== null)
+      ? minToHHMM(activeLeg.call_min) : ''
+    setForm({
+      date:            activeLeg.date || isoToday(),
+      pickup_id:       activeLeg.pickup_id  || '',
+      dropoff_id:      activeLeg.dropoff_id || '',
+      vehicle_id:      activeLeg.vehicle_id || '',
+      service_type_id: activeLeg.service_type_id || '',
+      arr_time:        arrStr,
+      call_time:       callStr,
+      duration_min:    activeLeg.duration_min ? String(activeLeg.duration_min) : '',
+      flight_no:       activeLeg.flight_no || '',
+      terminal:        activeLeg.terminal  || '',
+      notes:           activeLeg.notes     || '',
+      status:          activeLeg.status    || 'PLANNED',
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLeg?.id])
 
   // Auto route duration when pickup/dropoff change FROM initial values
   useEffect(() => {
@@ -1870,6 +1897,35 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
 
+            {/* ── Leg Selector (solo per gruppi multi-stop) ── */}
+            {group && group.length > 1 && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '4px 0 2px' }}>
+                {group.map((leg, i) => {
+                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(66 + i - 1)}`
+                  const isActive = activeLeg?.id === leg.id
+                  return (
+                    <button
+                      key={leg.id}
+                      type="button"
+                      onClick={() => setActiveLeg(leg)}
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: '99px',
+                        fontSize: '11px',
+                        fontWeight: isActive ? 600 : 400,
+                        background: isActive ? '#534AB7' : 'transparent',
+                        color: isActive ? '#fff' : '#888',
+                        border: isActive ? '0.5px solid #534AB7' : '0.5px solid #d0d0d0',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             {/* ── Crew Lookup ── */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '7px' }}>🔍 Crew Lookup</div>
@@ -1922,8 +1978,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               </select>
             </div>
 
-            {/* ── Extra Legs (multi-stop UI) ── */}
-            <div style={{ background: '#f8fafc', border: '3px solid red', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* ── Extra Legs (multi-stop UI) — solo per trip singoli; per multi il switcher sopra sostituisce questa UI ── */}
+            {(!group || group.length <= 1) && <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '2px' }}>Route Legs</div>
 
               {/* Leg A — read-only */}
@@ -1968,7 +2024,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                   + Add stop
                 </button>
               )}
-            </div>
+            </div>}
 
             {/* Vehicle + availability badge */}
             <div>
