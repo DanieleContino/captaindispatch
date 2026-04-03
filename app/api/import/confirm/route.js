@@ -370,6 +370,18 @@ async function processTravelConfirm(supabase, productionId, insertRows, errors) 
   let inserted = 0
   let skipped = 0
 
+  // Delete existing travel_movements before re-importing
+  const { error: deleteErr } = await supabase
+    .from('travel_movements')
+    .delete()
+    .eq('production_id', productionId)
+  if (deleteErr) {
+    console.error('[confirm/travel] delete existing error:', deleteErr.message)
+    errors.push(`Errore delete travel_movements: ${deleteErr.message}`)
+  } else {
+    console.log('[confirm/travel] existing movements deleted, proceeding with insert')
+  }
+
   function getNoTransport(pickup) {
     const p = (pickup || '').trim().toUpperCase().replace(/\.$/, '')
     if (p === 'TRANSPORT DEPT') return false
