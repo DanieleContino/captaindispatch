@@ -195,6 +195,7 @@ function FleetMonitor({ onBack }) {
   const [trafficAlerts,  setTrafficAlerts]  = useState([])   // alert da traffic-check
   const [loadingTraffic, setLoadingTraffic] = useState(false)
   const [trafficMsg,     setTrafficMsg]     = useState(null)
+  const [autoRefresh,    setAutoRefresh]    = useState(true)
 
   const loadFleet = useCallback(async (d) => {
     if (!PRODUCTION_ID) return
@@ -214,9 +215,10 @@ function FleetMonitor({ onBack }) {
 
   // Real-time ticker: update now every 30s
   useEffect(() => {
+    if (!autoRefresh) return
     const id = setInterval(() => { setTick(t => t + 1); loadFleet(date) }, 30000)
     return () => clearInterval(id)
-  }, [])
+  }, [autoRefresh, date, loadFleet])
 
   const now = new Date()
 
@@ -274,6 +276,21 @@ function FleetMonitor({ onBack }) {
             <input type="date" value={date} onChange={e => { setDate(e.target.value); loadFleet(e.target.value) }}
               style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '5px 8px', fontSize: '12px', background: 'white' }} />
             <button onClick={() => loadFleet(date)} style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>↻</button>
+            <button
+              onClick={() => setAutoRefresh(p => !p)}
+              style={{
+                background: autoRefresh ? '#dcfce7' : '#fef2f2',
+                color: autoRefresh ? '#15803d' : '#dc2626',
+                border: `1px solid ${autoRefresh ? '#86efac' : '#fecaca'}`,
+                borderRadius: '6px',
+                padding: '6px 10px',
+                fontSize: '12px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}>
+              {autoRefresh ? '⏸' : '▶'}
+            </button>
             <button
               onClick={async () => {
                 setLoadingTraffic(true)
