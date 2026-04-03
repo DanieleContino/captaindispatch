@@ -1163,14 +1163,22 @@ function parseTravelCalendarDIG(buffer) {
       continue
     }
 
-    // Salta header e righe vuote
-    if (!col1Str || col1Str === 'position') continue
+    // Salta riga header
+    if (col1Str === 'position') continue
+    // Se col1 è vuoto ma ci sono dati volo → potrebbe essere riga connessione, non saltare
+    if (!col1Str) {
+      const fromLoc = row[4] ? String(row[4]).trim() : null
+      const toLoc   = row[6] ? String(row[6]).trim() : null
+      if (!fromLoc && !toLoc) continue  // riga vuota, salta
+      if (!lastPerson) continue          // nessuna persona precedente, salta
+      // altrimenti continua — è una riga connessione
+    }
 
     const col2 = row[2]
     const col2Str = col2 ? String(col2).trim() : ''
 
-    // Riga con nome → aggiorna lastPerson
-    if (col2Str && col2Str !== 'name') {
+    // Riga con nome → aggiorna lastPerson solo se col2 ha un nome valido (non vuoto)
+    if (col2Str && col2Str !== 'name' && col1Str) {
       lastPerson = { name: col2Str, role: col1Str }
     }
 
