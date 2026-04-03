@@ -360,9 +360,13 @@ function CrewInfoModal({ crew, productionId, locations, onClose }) {
     setLoading(true)
     Promise.all([
       supabase.from('crew')
-        .select('id,full_name,role,department,phone,email,hotel_id,checkin_date,checkout_date')
+        .select(`
+          id, full_name, role, department, phone, email,
+          hotel_id, arrival_date, departure_date,
+          hotel:hotel_id(id, name)
+        `)
         .eq('id', crew.id)
-        .maybeSingle(),
+        .single(),
       supabase.from('travel_movements')
         .select('travel_date,direction,travel_type,from_location,from_time,to_location,to_time,travel_number,needs_transport')
         .eq('crew_id', crew.id)
@@ -376,7 +380,7 @@ function CrewInfoModal({ crew, productionId, locations, onClose }) {
   }, [crew?.id, productionId])
 
   const locsById  = Object.fromEntries((locations || []).map(l => [l.id, l.name]))
-  const hotelName = details?.hotel_id ? (locsById[details.hotel_id] || details.hotel_id) : '–'
+  const hotelName = details?.hotel?.name || (details?.hotel_id ? (locsById[details.hotel_id] || details.hotel_id) : '–')
   if (!crew) return null
 
   return (
@@ -409,8 +413,8 @@ function CrewInfoModal({ crew, productionId, locations, onClose }) {
             </div>
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <div style={{ fontSize: '13px', color: '#0f172a' }}>🏨 <strong>{hotelName}</strong></div>
-              {details?.checkin_date  && <div style={{ fontSize: '12px', color: '#64748b' }}>🛬 Check-in: <strong>{fmtDate(details.checkin_date)}</strong></div>}
-              {details?.checkout_date && <div style={{ fontSize: '12px', color: '#64748b' }}>🛫 Check-out: <strong>{fmtDate(details.checkout_date)}</strong></div>}
+              {details?.arrival_date   && <div style={{ fontSize: '12px', color: '#64748b' }}>🛬 Check-in: <strong>{fmtDate(details.arrival_date)}</strong></div>}
+              {details?.departure_date && <div style={{ fontSize: '12px', color: '#64748b' }}>🛫 Check-out: <strong>{fmtDate(details.departure_date)}</strong></div>}
             </div>
             <div>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>✈️ Travel Movements</div>
