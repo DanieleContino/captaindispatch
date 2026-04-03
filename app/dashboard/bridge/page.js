@@ -1438,12 +1438,6 @@ export default function BridgePage() {
 
       <div style={{ maxWidth: '920px', margin: '0 auto', padding: '32px 24px' }}>
 
-        {/* ── Easy Access Shortcuts ── */}
-        <EasyAccessShortcuts currentPath="/dashboard/bridge" />
-        <ImportSyncSection
-          onOpenImport={(mode) => { setImportMode(mode); setImportOpen(true) }}
-        />
-
         {/* ── Header ── */}
         <div style={{ marginBottom: '28px' }}>
           <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#0f2340', margin: 0, letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1463,6 +1457,9 @@ export default function BridgePage() {
         <MiniWidgets productionId={PRODUCTION_ID} />
         <VehicleRentalWidget productionId={PRODUCTION_ID} />
         <ActivityLog productionId={PRODUCTION_ID} />
+        <ImportSyncSection
+          onOpenImport={(mode) => { setImportMode(mode); setImportOpen(true) }}
+        />
 
         {/* ── Tab bar ── */}
         <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', padding: '4px', borderRadius: '10px', border: '1px solid #e2e8f0', width: 'fit-content' }}>
