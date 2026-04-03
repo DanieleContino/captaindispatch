@@ -1134,43 +1134,65 @@ function parseTravelCalendarDIG(buffer) {
   let currentDate = null
   let currentSection = 'FLIGHT'
   const movements = []
+  let lastPerson = null  // { name, role } — traccia ultima persona
+
+  function fmtTime(val) {
+    if (!val) return null
+    if (val instanceof Date) return val.toTimeString().slice(0, 5)
+    const s = String(val).trim()
+    const m = s.match(/^(\d{1,2})[.:](\d{2})/)
+    if (m) return m[1].padStart(2, '0') + ':' + m[2]
+    return null
+  }
 
   for (const row of allRows) {
     if (!Array.isArray(row)) continue
 
-    // Colonna 0: data del giorno
+    // Data giorno
     const col0 = row[0]
     if (col0 instanceof Date && !isNaN(col0)) {
       currentDate = col0.toISOString().split('T')[0]
+      lastPerson = null  // reset persona al cambio giorno
       continue
     }
 
-    // Colonna 1: sezione o ruolo
+    // Sezione
     const col1Str = row[1] ? String(row[1]).trim() : null
     if (col1Str && SECTIONS.includes(col1Str)) {
       currentSection = col1Str === 'OA/SELF' ? 'OA' : col1Str
       continue
     }
 
-    // Salta righe header, vuote, sezioni
+    // Salta header e righe vuote
     if (!col1Str || col1Str === 'position') continue
-    const col2 = row[2]
-    if (!col2 || String(col2).trim() === '' || String(col2).trim() === 'name') continue
-    if (!currentDate) continue
 
-    function fmtTime(val) {
-      if (!val) return null
-      if (val instanceof Date) return val.toTimeString().slice(0, 5)
-      const s = String(val).trim()
-      const m = s.match(/^(\d{1,2})[.:](\d{2})/)
-      if (m) return m[1].padStart(2, '0') + ':' + m[2]
-      return null
+    const col2 = row[2]
+    const col2Str = col2 ? String(col2).trim() : ''
+
+    // Riga con nome → aggiorna lastPerson
+    if (col2Str && col2Str !== 'name') {
+      lastPerson = { name: col2Str, role: col1Str }
     }
 
+    // Riga senza nome ma con dati volo → usa lastPerson (connessione)
+    const fromLoc = row[4] ? String(row[4]).trim() : null
+    const toLoc   = row[6] ? String(row[6]).trim() : null
+
+    if (!col2Str || col2Str === 'name') {
+      // Se non c'è nome e non ci sono dati volo → salta
+      if (!fromLoc && !toLoc) continue
+      // Se c'è un volo ma nessuna persona precedente → salta
+      if (!lastPerson) continue
+      // Altrimenti usa lastPerson (riga di connessione)
+    }
+
+    if (!currentDate) continue
+
+    const personName = (col2Str && col2Str !== 'name') ? col2Str : lastPerson.name
+    const personRole = (col2Str && col2Str !== 'name') ? col1Str : lastPerson.role
+
     const pickupDep = row[3] ? String(row[3]).trim() : null
-    const fromLoc   = row[4] ? String(row[4]).trim() : null
     const fromTime  = fmtTime(row[5])
-    const toLoc     = row[6] ? String(row[6]).trim() : null
     const toTime    = fmtTime(row[7])
     const travelNum = row[8] ? String(row[8]).trim() : null
     const pickupArr = row[9] ? String(row[9]).trim() : null
@@ -1186,8 +1208,8 @@ function parseTravelCalendarDIG(buffer) {
     movements.push({
       travel_date:     currentDate,
       travel_type:     currentSection,
-      full_name_raw:   String(col2).trim(),
-      role:            col1Str,
+      full_name_raw:   personName,
+      role:            personRole,
       pickup_dep:      pickupDep,
       from_location:   fromLoc,
       from_time:       fromTime,
