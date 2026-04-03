@@ -1882,7 +1882,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             </div>
 
             {/* ── Extra Legs (multi-stop UI) ── */}
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ background: '#f8fafc', border: '3px solid red', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '2px' }}>Route Legs</div>
 
               {/* Leg A — read-only */}
