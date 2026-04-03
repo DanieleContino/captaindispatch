@@ -10,8 +10,8 @@
 import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+import { getProductionId } from '../../lib/production'
 
-const PRODUCTION_ID = process.env.NEXT_PUBLIC_PRODUCTION_ID
 const SESSION_KEY   = 'captain_wrap_trip_v4'
 
 const SERVICE_TYPES = ['Wrap', 'Hotel Run', 'Airport', 'Unit Move', 'Charter', 'Shuttle', 'Other']
@@ -184,6 +184,7 @@ function Avatar({ name, size = 36 }) {
 
 // ─── Fleet Monitor ─────────────────────────────────────────────
 function FleetMonitor({ onBack }) {
+  const PRODUCTION_ID = getProductionId()
   const [date,           setDate]           = useState(isoToday())
   const [vehicles,       setVehicles]       = useState([])
   const [trips,          setTrips]          = useState([])
@@ -455,6 +456,7 @@ function FleetMonitor({ onBack }) {
 
 // ─── Main Content ──────────────────────────────────────────────
 function WrapTripContent() {
+  const PRODUCTION_ID = getProductionId()
   const searchParams = useSearchParams()
   const router       = useRouter()
   const preVehicle   = searchParams.get('vehicle') || ''
