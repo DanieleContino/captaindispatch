@@ -368,7 +368,7 @@ function CrewInfoModal({ crew, productionId, locations, onClose }) {
         .eq('id', crew.id)
         .single(),
       supabase.from('travel_movements')
-        .select('travel_date,direction,travel_type,from_location,from_time,to_location,to_time,travel_number,needs_transport')
+        .select('travel_date, direction, travel_type, from_location, from_time, to_location, to_time, travel_number, needs_transport, pickup_dep, pickup_arr')
         .eq('crew_id', crew.id)
         .eq('production_id', productionId)
         .order('travel_date', { ascending: true }),
@@ -422,24 +422,48 @@ function CrewInfoModal({ crew, productionId, locations, onClose }) {
                 <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '8px' }}>No travel movements found</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {movements.map((m, i) => (
-                    <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '8px 10px', fontSize: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: '800', color: '#0f2340', fontVariantNumeric: 'tabular-nums' }}>{m.travel_date}</span>
-                        <span style={{ padding: '1px 6px', borderRadius: '999px', fontSize: '10px', fontWeight: '800', background: m.direction === 'IN' ? '#dcfce7' : '#fff7ed', color: m.direction === 'IN' ? '#15803d' : '#c2410c', border: '1px solid ' + (m.direction === 'IN' ? '#86efac' : '#fdba74') }}>{m.direction}</span>
-                        <span style={{ color: '#64748b', fontSize: '11px' }}>{m.travel_type}</span>
-                        {m.travel_number && <span style={{ fontWeight: '700', color: '#2563eb', fontSize: '11px' }}>{m.travel_number}</span>}
+                  {movements.map((m, i) => {
+                    const travelTypeEmoji = m.travel_type === 'FLIGHT' ? '✈️' : m.travel_type === 'TRAIN' ? '🚂' : m.travel_type === 'GROUND' ? '🚐' : ''
+                    const pickupBadges = [m.pickup_dep, m.pickup_arr].filter(v => v && ['OA','SELF','EMPIRE','BLACKLANE'].includes(v?.toUpperCase?.()))
+                    return (
+                      <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '8px 10px', fontSize: '12px' }}>
+                        {/* Riga 1: data + direzione + tipo + numero */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: '800', color: '#0f2340', fontVariantNumeric: 'tabular-nums' }}>
+                            {m.travel_date ? fmtDate(m.travel_date) : '–'}
+                          </span>
+                          <span style={{ padding: '1px 6px', borderRadius: '999px', fontSize: '10px', fontWeight: '800', background: m.direction === 'IN' ? '#dcfce7' : '#fff7ed', color: m.direction === 'IN' ? '#15803d' : '#c2410c', border: '1px solid ' + (m.direction === 'IN' ? '#86efac' : '#fdba74') }}>
+                            {m.direction === 'IN' ? '↓ IN' : '↑ OUT'}
+                          </span>
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#374151' }}>
+                            {travelTypeEmoji} {m.travel_type || 'OA'}
+                          </span>
+                          {m.travel_number && (
+                            <span style={{ fontWeight: '700', color: '#2563eb', fontSize: '11px' }}>{m.travel_number}</span>
+                          )}
+                        </div>
+                        {/* Riga 2: from → to con orari */}
+                        <div style={{ marginTop: '4px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                          <span style={{ color: '#64748b' }}>{m.from_location || '–'}</span>
+                          {m.from_time && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums', fontSize: '11px' }}>({m.from_time.slice(0, 5)})</span>}
+                          <span style={{ color: '#cbd5e1' }}>→</span>
+                          <span style={{ fontWeight: '700', color: '#0f172a' }}>{m.to_location || '–'}</span>
+                          {m.to_time && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums', fontSize: '11px' }}>({m.to_time.slice(0, 5)})</span>}
+                        </div>
+                        {/* Riga 3: badge needs_transport + pickup service */}
+                        {(m.needs_transport || pickupBadges.length > 0) && (
+                          <div style={{ marginTop: '5px', display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                            {m.needs_transport && (
+                              <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '800', background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}>🚐 transport</span>
+                            )}
+                            {pickupBadges.map((b, bi) => (
+                              <span key={bi} style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>{b.toUpperCase()}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ marginTop: '3px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                        <span>{m.from_location}</span>
-                        {m.from_time && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>({m.from_time.slice(0, 5)})</span>}
-                        <span style={{ color: '#cbd5e1' }}>→</span>
-                        <span style={{ fontWeight: '700' }}>{m.to_location}</span>
-                        {m.to_time && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>({m.to_time.slice(0, 5)})</span>}
-                      </div>
-                      {m.needs_transport && <div style={{ marginTop: '2px', fontSize: '10px', color: '#2563eb', fontWeight: '700' }}>🚐 Needs transport</div>}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
