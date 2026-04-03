@@ -334,6 +334,7 @@ export default function HubCoveragePage() {
   // Raw data
   const [crew,      setCrew]      = useState([])
   const [locsMap,   setLocsMap]   = useState({})
+  const [rawMovements, setRawMovements] = useState([])
   // crewId → [trips] per la data selezionata
   const [assignMap, setAssignMap] = useState({})
   // crewId → [travel_movements] per la data selezionata
@@ -367,6 +368,16 @@ export default function HubCoveragePage() {
   const loadData = useCallback(async d => {
     if (!PRODUCTION_ID) return
     setLoading(true)
+
+    const { data: rawMovs } = await supabase
+      .from('travel_movements')
+      .select('crew_id, full_name_raw, match_status')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('travel_date', d)
+      .eq('direction', 'IN')
+
+    setRawMovements(rawMovs || [])
+
     const { data: movements } = await supabase
       .from('travel_movements')
       .select('crew_id, direction, travel_type, travel_number, from_location, from_time, to_location, to_time, needs_transport, hub_location_id')
@@ -472,6 +483,14 @@ export default function HubCoveragePage() {
   const totalMissing = crew.filter(c => (travelMap[c.id] || []).length > 0 && !assignMap[c.id]).length
   const totalNoInfo  = crew.filter(c => !travelMap[c.id] || travelMap[c.id].length === 0).length
   const pct = crew.length > 0 ? Math.round(totalCovered / crew.length * 100) : 0
+
+  const rawTotal     = rawMovements.length
+  const rawUnmatched = rawMovements.filter(m => m.match_status === 'unmatched').length
+  const rawMatchedIds = rawMovements
+    .filter(m => m.match_status === 'matched' && m.crew_id)
+    .map(m => m.crew_id)
+  const rawDuplicates = rawMatchedIds.length - new Set(rawMatchedIds).size
+  const showBanner = rawTotal > 0 && (rawUnmatched > 0 || rawDuplicates > 0)
 
   if (!user) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
@@ -599,6 +618,50 @@ export default function HubCoveragePage() {
                   <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', fontWeight: '600' }}>{s.l}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Travel Calendar breakdown banner ── */}
+        {!loading && showBanner && (
+          <div style={{
+            background: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            borderLeft: '4px solid #2563eb',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            fontSize: '12px',
+            color: '#1e40af',
+            lineHeight: 1.8,
+          }}>
+            <div style={{ fontWeight: '800', marginBottom: '4px', fontSize: '13px' }}>
+              ℹ️ Travel Calendar breakdown for {fmtDate(date)}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <div>
+                📋 <strong>{rawTotal}</strong> total movements found in Travel Calendar
+              </div>
+              <div style={{ color: '#15803d' }}>
+                ✅ <strong>{rawTotal - rawUnmatched - rawDuplicates}</strong> shown in list below
+              </div>
+              {rawDuplicates > 0 && (
+                <div style={{ color: '#92400e' }}>
+                  🔁 <strong>{rawDuplicates}</strong> duplicate{rawDuplicates > 1 ? 's' : ''} — same person on connecting flights, counted once
+                </div>
+              )}
+              {rawUnmatched > 0 && (
+                <div style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>
+                    ❌ <strong>{rawUnmatched}</strong> unmatched — not found in crew list
+                  </span>
+                  <a
+                    href="/dashboard/bridge"
+                    style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '6px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    → Go to Discrepancies
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         )}
