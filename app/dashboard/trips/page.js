@@ -349,6 +349,103 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
   )
 }
 
+// ─── CrewInfoModal ────────────────────────────────────────────
+function CrewInfoModal({ crew, productionId, locations, onClose }) {
+  const [details,   setDetails]   = useState(null)
+  const [movements, setMovements] = useState([])
+  const [loading,   setLoading]   = useState(true)
+
+  useEffect(() => {
+    if (!crew?.id || !productionId) return
+    setLoading(true)
+    Promise.all([
+      supabase.from('crew')
+        .select('id,full_name,role,department,phone,email,hotel_id,checkin_date,checkout_date')
+        .eq('id', crew.id)
+        .maybeSingle(),
+      supabase.from('travel_movements')
+        .select('travel_date,direction,travel_type,from_location,from_time,to_location,to_time,travel_number,needs_transport')
+        .eq('crew_id', crew.id)
+        .eq('production_id', productionId)
+        .order('travel_date', { ascending: true }),
+    ]).then(([crewRes, movRes]) => {
+      setDetails(crewRes.data)
+      setMovements(movRes.data || [])
+      setLoading(false)
+    })
+  }, [crew?.id, productionId])
+
+  const locsById  = Object.fromEntries((locations || []).map(l => [l.id, l.name]))
+  const hotelName = details?.hotel_id ? (locsById[details.hotel_id] || details.hotel_id) : '–'
+  if (!crew) return null
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,35,64,0.5)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 201, width: 'calc(100% - 40px)', maxWidth: '480px', background: 'white', borderRadius: '14px', boxShadow: '0 8px 40px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
+        <div style={{ background: '#0f2340', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '16px', fontWeight: '900', color: 'white' }}>{crew.full_name}</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+              {[details?.role, details?.department].filter(Boolean).join(' · ') || crew.department || ''}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+        </div>
+        {loading ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Loading…</div>
+        ) : (
+          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '70vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {details?.phone && (
+                <div style={{ fontSize: '13px', color: '#0f172a' }}>📞 <a href={`tel:${details.phone}`} style={{ color: '#0f172a', textDecoration: 'none' }}>{details.phone}</a></div>
+              )}
+              {details?.email && (
+                <div style={{ fontSize: '13px', color: '#0f172a' }}>✉️ <a href={`mailto:${details.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{details.email}</a></div>
+              )}
+              {!details?.phone && !details?.email && (
+                <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>No contact info</div>
+              )}
+            </div>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ fontSize: '13px', color: '#0f172a' }}>🏨 <strong>{hotelName}</strong></div>
+              {details?.checkin_date  && <div style={{ fontSize: '12px', color: '#64748b' }}>🛬 Check-in: <strong>{fmtDate(details.checkin_date)}</strong></div>}
+              {details?.checkout_date && <div style={{ fontSize: '12px', color: '#64748b' }}>🛫 Check-out: <strong>{fmtDate(details.checkout_date)}</strong></div>}
+            </div>
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>✈️ Travel Movements</div>
+              {movements.length === 0 ? (
+                <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '8px' }}>No travel movements found</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {movements.map((m, i) => (
+                    <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '8px 10px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: '800', color: '#0f2340', fontVariantNumeric: 'tabular-nums' }}>{m.travel_date}</span>
+                        <span style={{ padding: '1px 6px', borderRadius: '999px', fontSize: '10px', fontWeight: '800', background: m.direction === 'IN' ? '#dcfce7' : '#fff7ed', color: m.direction === 'IN' ? '#15803d' : '#c2410c', border: '1px solid ' + (m.direction === 'IN' ? '#86efac' : '#fdba74') }}>{m.direction}</span>
+                        <span style={{ color: '#64748b', fontSize: '11px' }}>{m.travel_type}</span>
+                        {m.travel_number && <span style={{ fontWeight: '700', color: '#2563eb', fontSize: '11px' }}>{m.travel_number}</span>}
+                      </div>
+                      <div style={{ marginTop: '3px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                        <span>{m.from_location}</span>
+                        {m.from_time && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>({m.from_time.slice(0, 5)})</span>}
+                        <span style={{ color: '#cbd5e1' }}>→</span>
+                        <span style={{ fontWeight: '700' }}>{m.to_location}</span>
+                        {m.to_time && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>({m.to_time.slice(0, 5)})</span>}
+                      </div>
+                      {m.needs_transport && <div style={{ marginTop: '2px', fontSize: '10px', color: '#2563eb', fontWeight: '700' }}>🚐 Needs transport</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 // ─── TripSidebar (CREATE new trip) ────────────────────────────
 function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips }) {
   const t = useT()
@@ -366,6 +463,9 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const [addingToTrip,    setAddingToTrip]    = useState(false)
   const [addedToTrip,     setAddedToTrip]     = useState(null)
   const [sibDropoff,      setSibDropoff]      = useState('')
+  const [crewLookupQ,       setCrewLookupQ]       = useState('')
+  const [crewLookupResults, setCrewLookupResults] = useState([])
+  const [crewInfoCrew,      setCrewInfoCrew]      = useState(null)
 
   const transferClass = getClass(form.pickup_id, form.dropoff_id)
   const arrMin  = timeStrToMin(form.arr_time)
@@ -386,6 +486,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     setForm(preForm)
     setError(null); setSelCrew([]); setCrewSearch(''); setVCheck(null)
     setSelExistingTrip(null); setAddedToTrip(null)
+    setCrewLookupQ(''); setCrewLookupResults([]); setCrewInfoCrew(null)
     if (PRODUCTION_ID) {
       supabase.from('trips').select('trip_id').eq('production_id', PRODUCTION_ID).like('trip_id', 'T%')
         .order('trip_id', { ascending: false }).limit(1).maybeSingle()
@@ -430,6 +531,16 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       }
     })
   }, [form.pickup_id, form.dropoff_id, transferClass])
+
+  // Crew Lookup (ricerca su tutto il crew della produzione, min 2 chars)
+  useEffect(() => {
+    if (crewLookupQ.length < 2 || !PRODUCTION_ID) { setCrewLookupResults([]); return }
+    supabase.from('crew').select('id,full_name,department,role')
+      .eq('production_id', PRODUCTION_ID)
+      .or(`full_name.ilike.%${crewLookupQ}%,department.ilike.%${crewLookupQ}%`)
+      .limit(8)
+      .then(({ data }) => setCrewLookupResults(data || []))
+  }, [crewLookupQ, PRODUCTION_ID])
 
   const selVehicle    = vehicles.find(v => v.id === form.vehicle_id)
   const suggestedCrew = (selVehicle && (selVehicle.preferred_dept || selVehicle.preferred_crew_ids?.length > 0))
@@ -778,6 +889,26 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
+            {/* ── Crew Lookup ── */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px' }}>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '7px' }}>🔍 Crew Lookup</div>
+              <input type="text" placeholder="Search by name or department…" value={crewLookupQ} onChange={e => setCrewLookupQ(e.target.value)} style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }} />
+              {crewLookupResults.length > 0 && (
+                <div style={{ marginTop: '4px', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden', background: 'white' }}>
+                  {crewLookupResults.map(c => (
+                    <div key={c.id} onClick={() => setCrewInfoCrew(c)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: 'white' }} onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
+                        <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#94a3b8', flexShrink: 0 }}>ℹ️</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {crewLookupQ.length >= 2 && crewLookupResults.length === 0 && <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', padding: '6px 0 2px', fontStyle: 'italic' }}>No results</div>}
+            </div>
+
             {/* ── Add to existing trip (solo se assignCtx attivo) ── */}
             {assignCtx && arrDepTrips.length > 0 && (
               <div style={{ background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: '10px', padding: '12px 14px' }}>
@@ -1081,6 +1212,9 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
           </div>
         </form>
       </div>
+      {crewInfoCrew && (
+        <CrewInfoModal crew={crewInfoCrew} productionId={PRODUCTION_ID} locations={locations} onClose={() => setCrewInfoCrew(null)} />
+      )}
     </>
   )
 }
@@ -1111,6 +1245,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   // Vehicle check
   const [vCheck, setVCheck] = useState(null)
 
+  // Crew Lookup
+  const [crewLookupQ,       setCrewLookupQ]       = useState('')
+  const [crewLookupResults, setCrewLookupResults] = useState([])
+  const [crewInfoCrew,      setCrewInfoCrew]      = useState(null)
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   // Initialize form when opening a new trip row
@@ -1120,6 +1259,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       return
     }
     setError(null); setConfirmDel(false); setPaxSearch(''); setVCheck(null)
+    setCrewLookupQ(''); setCrewLookupResults([]); setCrewInfoCrew(null)
 
     const arrStr  = initial.arr_time ? initial.arr_time.slice(0, 5) : ''
     const callStr = (initial.transfer_class === 'STANDARD' && initial.call_min !== null)
@@ -1172,6 +1312,16 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     const excludeIds = group ? group.map(g => g.id).filter(Boolean) : (initial?.id ? [initial.id] : [])
     checkVehicleAvail(form.vehicle_id, form.date, computed.startDt, computed.endDt, excludeIds).then(setVCheck)
   }, [open, form.vehicle_id, form.date, computed?.startDt, computed?.endDt, initial?.id])
+
+  // Crew Lookup (ricerca su tutto il crew della produzione, min 2 chars)
+  useEffect(() => {
+    if (crewLookupQ.length < 2 || !PRODUCTION_ID) { setCrewLookupResults([]); return }
+    supabase.from('crew').select('id,full_name,department,role')
+      .eq('production_id', PRODUCTION_ID)
+      .or(`full_name.ilike.%${crewLookupQ}%,department.ilike.%${crewLookupQ}%`)
+      .limit(8)
+      .then(({ data }) => setCrewLookupResults(data || []))
+  }, [crewLookupQ, PRODUCTION_ID])
 
   // ── Load pax data ─────────────────────────────────────────
   async function loadPaxData(trip) {
@@ -1527,6 +1677,26 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         {/* Scrollable form */}
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+
+            {/* ── Crew Lookup ── */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px' }}>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '7px' }}>🔍 Crew Lookup</div>
+              <input type="text" placeholder="Search by name or department…" value={crewLookupQ} onChange={e => setCrewLookupQ(e.target.value)} style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }} />
+              {crewLookupResults.length > 0 && (
+                <div style={{ marginTop: '4px', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden', background: 'white' }}>
+                  {crewLookupResults.map(c => (
+                    <div key={c.id} onClick={() => setCrewInfoCrew(c)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: 'white' }} onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
+                        <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#94a3b8', flexShrink: 0 }}>ℹ️</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {crewLookupQ.length >= 2 && crewLookupResults.length === 0 && <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', padding: '6px 0 2px', fontStyle: 'italic' }}>No results</div>}
+            </div>
 
             {/* Date + Status */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -1910,6 +2080,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           </div>
         </form>
       </div>
+      {crewInfoCrew && (
+        <CrewInfoModal crew={crewInfoCrew} productionId={PRODUCTION_ID} locations={locations} onClose={() => setCrewInfoCrew(null)} />
+      )}
     </>
   )
 }
