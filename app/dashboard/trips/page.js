@@ -1273,6 +1273,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   // Vehicle check
   const [vCheck, setVCheck] = useState(null)
 
+  // Extra legs (UI-only, no save logic)
+  const [extraLegs, setExtraLegs] = useState([])
+
   // Crew Lookup
   const [crewLookupQ,       setCrewLookupQ]       = useState('')
   const [crewLookupResults, setCrewLookupResults] = useState([])
@@ -1627,6 +1630,126 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       } catch (e) { console.warn('[handleSubmit] compute-chain:', e) }
     }
 
+    // ── Save extra legs (Leg B, C, D) ─────────────────────────────────────
+    // Logica INSERT identica a handleAddToExisting (in TripSidebar), che non è
+    // richiamabile direttamente da qui perché è in un componente separato e
+    // tightly coupled a assignCtx/selExistingTrip/sibDropoff.
+    if (extraLegs.length > 0) {
+      const baseId   = baseTripId(initial.trip_id)
+      const suffixes = ['B', 'C', 'D']
+      const newLegIds = []
+
+      for (let i = 0; i < extraLegs.length; i++) {
+        const leg = extraLegs[i]
+        if (!leg.pickup_id || !leg.dropoff_id) continue   // skip silenzioso
+
+        const newTripId = baseId + suffixes[i]
+
+        // 1. Cerca duration_min nella tabella routes
+        let legDurMin = null
+        if (PRODUCTION_ID) {
+          const { data: legRoute } = await supabase.from('routes')
+            .select('duration_min')
+            .eq('production_id', PRODUCTION_ID)
+            .eq('from_id', leg.pickup_id)
+            .eq('to_id', leg.dropoff_id)
+            .maybeSingle()
+          legDurMin = legRoute?.duration_min || null
+        }
+        // 2. Fallback: chiama /api/routes/compute (Google Maps)
+        if (!legDurMin) {
+          try {
+            const computeRes = await fetch('/api/routes/compute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ from_id: leg.pickup_id, to_id: leg.dropoff_id, production_id: PRODUCTION_ID }),
+            })
+            if (computeRes.ok) {
+              const computeData = await computeRes.json()
+              if (computeData.duration_min) legDurMin = computeData.duration_min
+            }
+          } catch (e) { console.warn('[handleSubmit] extra leg route compute:', e) }
+        }
+        // 3. Ultimo fallback: direzione inversa (Hotel→Hub ≈ Hub→Hotel stessa distanza)
+        if (!legDurMin && PRODUCTION_ID) {
+          const { data: revRoute } = await supabase.from('routes')
+            .select('duration_min')
+            .eq('production_id', PRODUCTION_ID)
+            .eq('from_id', leg.dropoff_id)
+            .eq('to_id', leg.pickup_id)
+            .maybeSingle()
+          if (revRoute?.duration_min) legDurMin = revRoute.duration_min
+        }
+
+        // Calcola timing del leg extra (stesso meccanismo di handleAddToExisting)
+        const legTC = getClass(leg.pickup_id, leg.dropoff_id)
+        const legCalc = legDurMin ? calcTimes({
+          date:          form.date,
+          arrTimeMin:    arrMin,
+          durationMin:   legDurMin,
+          transferClass: legTC,
+          callMin:       computed?.callMin ?? null,
+        }) : null
+
+        // ARRIVAL: pickup = call_min (driver già all'hub); DEPARTURE/STANDARD: pickup = call - duration
+        const legPickupMin = legCalc?.pickupMin ?? (legTC === 'ARRIVAL' ? (computed?.callMin ?? null) : null)
+        const legStartDt = legCalc?.startDt ?? (() => {
+          if (legPickupMin === null) return null
+          const [sy, smo, sdd] = form.date.split('-').map(Number)
+          return new Date(sy, smo - 1, sdd, Math.floor(legPickupMin / 60), legPickupMin % 60, 0, 0).toISOString()
+        })()
+
+        // Costruisce il sibling row con i campi del trip originale + pickup/dropoff del leg extra
+        // (copia: date, vehicle_id, unit, service_type, duration_min; sovrascrive: trip_id, pickup_id, dropoff_id)
+        const siblingRow = {
+          production_id:   PRODUCTION_ID,
+          trip_id:         newTripId,
+          date:            form.date,
+          pickup_id:       leg.pickup_id,
+          dropoff_id:      leg.dropoff_id,
+          vehicle_id:      form.vehicle_id || null,
+          driver_name:     selVehicle?.driver_name ?? null,
+          sign_code:       selVehicle?.sign_code   ?? null,
+          capacity:        selVehicle?.capacity    ?? null,
+          service_type_id: form.service_type_id || null,
+          duration_min:    legDurMin,
+          arr_time:        form.arr_time ? form.arr_time + ':00' : null,
+          call_min:        computed?.callMin   ?? null,
+          pickup_min:      legPickupMin,
+          start_dt:        legStartDt,
+          end_dt:          legCalc?.endDt ?? null,
+          flight_no:       form.flight_no || null,
+          terminal:        form.terminal  || null,
+          notes:           form.notes     || null,
+          status:          form.status,
+          pax_count:       0,
+        }
+
+        const { data: newRow, error: legErr } = await supabase.from('trips').insert(siblingRow).select('id').single()
+        if (legErr || !newRow?.id) {
+          setError(`❌ Leg ${newTripId}: ${legErr?.message || 'insert failed'}`)
+          break
+        }
+        newLegIds.push(newRow.id)
+      }
+
+      // Ricalcola catena sequenziale includendo i nuovi leg
+      if (newLegIds.length > 0) {
+        const allLegIds = [
+          ...(group ? group.map(g => g.id) : [initial.id]),
+          ...newLegIds,
+        ]
+        try {
+          await fetch('/api/routes/compute-chain', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ leg_ids: allLegIds, production_id: PRODUCTION_ID }),
+          })
+        } catch (e) { console.warn('[handleSubmit] extra legs compute-chain:', e) }
+      }
+    }
+
+    setExtraLegs([])
     setSaving(false)
     onSaved()
   }
@@ -1756,6 +1879,51 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                 <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
                 <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
               </select>
+            </div>
+
+            {/* ── Extra Legs (multi-stop UI) ── */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '2px' }}>Route Legs</div>
+
+              {/* Leg A — read-only */}
+              <div style={{ fontSize: '12px', color: '#64748b', padding: '5px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px' }}>
+                <span style={{ fontWeight: '800', color: '#0f172a', marginRight: '6px', fontFamily: 'monospace' }}>Leg A</span>
+                {locShortEdit(form.pickup_id) || '–'} → {locShortEdit(form.dropoff_id) || '–'}
+              </div>
+
+              {/* Extra legs */}
+              {extraLegs.map((leg, i) => (
+                <div key={leg.id} style={{ display: 'flex', flexDirection: 'column', gap: '5px', padding: '8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>Leg {String.fromCharCode(66 + i)}</span>
+                    <button type="button" onClick={() => setExtraLegs(extraLegs.filter(l => l.id !== leg.id))}
+                      style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '2px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', lineHeight: 1 }}>✕</button>
+                  </div>
+                  <select value={leg.pickup_id}
+                    onChange={e => setExtraLegs(extraLegs.map(l => l.id === leg.id ? { ...l, pickup_id: e.target.value } : l))}
+                    style={{ ...inp, fontSize: '12px' }}>
+                    <option value="">Select pickup…</option>
+                    <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                    <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                  </select>
+                  <select value={leg.dropoff_id}
+                    onChange={e => setExtraLegs(extraLegs.map(l => l.id === leg.id ? { ...l, dropoff_id: e.target.value } : l))}
+                    style={{ ...inp, fontSize: '12px' }}>
+                    <option value="">Select dropoff…</option>
+                    <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                    <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                  </select>
+                </div>
+              ))}
+
+              {/* + Add stop */}
+              {extraLegs.length < 3 && (
+                <button type="button"
+                  onClick={() => setExtraLegs([...extraLegs, { id: Date.now(), pickup_id: '', dropoff_id: '' }])}
+                  style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #94a3b8', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                  + Add stop
+                </button>
+              )}
             </div>
 
             {/* Vehicle + availability badge */}
