@@ -1275,6 +1275,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   // Extra legs (UI-only, no save logic)
   const [extraLegs, setExtraLegs] = useState([])
+  const [toDelete,  setToDelete]  = useState([])   // DB row IDs of existing legs removed with ✕
 
   // Crew Lookup
   const [crewLookupQ,       setCrewLookupQ]       = useState('')
@@ -1291,6 +1292,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     }
     setError(null); setConfirmDel(false); setPaxSearch(''); setVCheck(null)
     setCrewLookupQ(''); setCrewLookupResults([]); setCrewInfoCrew(null)
+    setExtraLegs([]); setToDelete([])
 
     const arrStr  = initial.arr_time ? initial.arr_time.slice(0, 5) : ''
     const callStr = (initial.transfer_class === 'STANDARD' && initial.call_min !== null)
@@ -1312,6 +1314,20 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     })
 
     loadPaxData(initial)
+
+    if (PRODUCTION_ID && initial.trip_id) {
+      const baseId = baseTripId(initial.trip_id)
+      supabase.from('trips').select('id,trip_id,pickup_id,dropoff_id')
+        .eq('production_id', PRODUCTION_ID).like('trip_id', `${baseId}%`)
+        .neq('trip_id', initial.trip_id).order('trip_id', { ascending: true })
+        .then(({ data }) => {
+          if (data && data.length > 0) setExtraLegs(data.map(row => ({
+            id: row.id, trip_id: row.trip_id,
+            pickup_id: row.pickup_id || '', dropoff_id: row.dropoff_id || '',
+            existing: true, _origPickup: row.pickup_id || '', _origDropoff: row.dropoff_id || '',
+          })))
+        })
+    }
   }, [open, initial?.id])
 
   // Reload pax when group grows (sibling added externally from TripSidebar → onSaved → loadTrips → editTripGroup aggiornato)
@@ -1634,16 +1650,24 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     // Logica INSERT identica a handleAddToExisting (in TripSidebar), che non è
     // richiamabile direttamente da qui perché è in un componente separato e
     // tightly coupled a assignCtx/selExistingTrip/sibDropoff.
-    if (extraLegs.length > 0) {
+    if (extraLegs.length > 0 || toDelete.length > 0) {
       const baseId   = baseTripId(initial.trip_id)
       const suffixes = ['B', 'C', 'D']
       const newLegIds = []
 
+      for (const delId of toDelete) {
+        await fetch('/api/trips/delete-sibling', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tripId: delId, productionId: PRODUCTION_ID }),
+        })
+      }
+
       for (let i = 0; i < extraLegs.length; i++) {
         const leg = extraLegs[i]
         if (!leg.pickup_id || !leg.dropoff_id) continue   // skip silenzioso
+        if (leg.existing && leg.pickup_id === leg._origPickup && leg.dropoff_id === leg._origDropoff) continue
 
-        const newTripId = baseId + suffixes[i]
+        const newTripId = leg.existing ? leg.trip_id : baseId + suffixes[i]
 
         // 1. Cerca duration_min nella tabella routes
         let legDurMin = null
@@ -1725,12 +1749,28 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           pax_count:       0,
         }
 
-        const { data: newRow, error: legErr } = await supabase.from('trips').insert(siblingRow).select('id').single()
-        if (legErr || !newRow?.id) {
-          setError(`❌ Leg ${newTripId}: ${legErr?.message || 'insert failed'}`)
-          break
+        if (leg.existing) {
+          const { error: legErr } = await supabase.from('trips').update({
+            pickup_id: leg.pickup_id, dropoff_id: leg.dropoff_id,
+            duration_min: legDurMin,
+            call_min: computed?.callMin ?? null,
+            pickup_min: legPickupMin,
+            start_dt: legStartDt,
+            end_dt: legCalc?.endDt ?? null,
+          }).eq('id', leg.id)
+          if (legErr) {
+            setError(`❌ Leg ${leg.trip_id}: ${legErr.message}`)
+            break
+          }
+          newLegIds.push(leg.id)
+        } else {
+          const { data: newRow, error: legErr } = await supabase.from('trips').insert(siblingRow).select('id').single()
+          if (legErr || !newRow?.id) {
+            setError(`❌ Leg ${newTripId}: ${legErr?.message || 'insert failed'}`)
+            break
+          }
+          newLegIds.push(newRow.id)
         }
-        newLegIds.push(newRow.id)
       }
 
       // Ricalcola catena sequenziale includendo i nuovi leg
@@ -1750,6 +1790,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     }
 
     setExtraLegs([])
+    setToDelete([])
     setSaving(false)
     onSaved()
   }
@@ -1896,7 +1937,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                 <div key={leg.id} style={{ display: 'flex', flexDirection: 'column', gap: '5px', padding: '8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
                     <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>Leg {String.fromCharCode(66 + i)}</span>
-                    <button type="button" onClick={() => setExtraLegs(extraLegs.filter(l => l.id !== leg.id))}
+                    <button type="button" onClick={() => {
+                      if (leg.existing) setToDelete(prev => [...prev, leg.id])
+                      setExtraLegs(extraLegs.filter(l => l.id !== leg.id))
+                    }}
                       style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '2px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', lineHeight: 1 }}>✕</button>
                   </div>
                   <select value={leg.pickup_id}

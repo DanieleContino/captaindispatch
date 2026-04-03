@@ -1,5 +1,53 @@
-# CAPTAINDISPATCH — Context S9 (Cline)
-## Updated: 2 April 2026 (session continued)
+# CAPTAINDISPATCH — Context S10 (Cline)
+## Updated: 3 April 2026
+
+---
+
+## WHAT CHANGED IN SESSION S10
+
+### Drive Sync — accommodation multi-sheet path (commits 4353404 → 198eb64)
+- `drive/sync`: aggiunta branch accommodation separata che:
+  1. Chiama `/api/import/sheets` per ottenere la lista fogli
+  2. Filtra fogli validi (esclude `COST REPORT` e fogli con `OLD`)
+  3. Itera su ogni foglio, chiama `/api/import/parse` con `selectedSheet`
+  4. Aggrega tutti i rows e tutti gli hotel (dedup per nome)
+  5. Chiama `/api/import/confirm` **una sola volta** con tutto aggregato
+- Fix: `String(h)` cast nell'headerMap per gestire header numerici
+- Debug log dettagliati: `[drive/sync] ACCOMMODATION BRANCH ENTERED`, sheet count, per-sheet rows
+
+### Import accommodation fixes (commits 2c6fe47 → f7a301f)
+- `ImportModal.js`: `isUnrecognized()` ora ignora righe accommodation con `existingId` (non le marca come non riconosciute)
+- `ImportModal.js`: per mode `accommodation`, la fase `categorizing` viene saltata → va diretto a `preview`
+- Extraction fixes nel parser accommodation (headerMap robustness)
+
+### DriveSyncWidget auto-reload + last_synced_at (commits b873949, d1511de)
+- `DriveSyncWidget` si ricarica automaticamente dopo che un confirm import è completato con successo
+- `last_synced_at` in `drive_synced_files` viene aggiornato anche dopo confirm dal preview Drive (non solo dal sync diretto)
+
+### `/api/drive/preview` — multi-sheet (commit 153ebb0)
+- Stesso path multi-sheet dell'accommodation aggiunto in `drive/preview`
+- Per `accommodation` + Excel: itera su tutti i fogli validi, aggrega rows e `newData.hotels`, riassegna `_idx` sequenziali
+- Risposta finale: `{ hasChanges, file_id, file_name, modifiedTime, rows, newData, detectedMode }`
+
+### `/api/drive/download` + ImportModal `initialFile` (commit 4eabbf9)
+- **Nuovo route**: `POST /api/drive/download { production_id, file_id }`
+  - Scarica il file da Google Drive e lo restituisce come blob binario
+  - Headers: `Content-Type`, `Content-Disposition`, `X-File-Name`
+  - Supporta Google Workspace export (Sheets → xlsx, Docs → docx)
+- `ImportModal.js`: nuova prop `initialFile` (oggetto `File`)
+  - Se presente quando il modal si apre → resetta lo state e chiama `parseFile(initialFile)` immediatamente
+  - Permette a `DriveSyncWidget` di scaricare il file lato server e aprire l'ImportModal direttamente nella fase `sheet-select`
+
+### CrewInfoModal + Crew Lookup in TripSidebar e EditTripSidebar (commit 20f068e)
+- **`CrewInfoModal`** — nuovo componente modale in `trips/page.js`:
+  - Carica in parallelo: dati crew (telefono, email, hotel_id, checkin/checkout) + travel_movements
+  - Mostra: contatti (tel + email cliccabili), hotel + date check-in/out, lista travel movements con direzione/tipo/numero/rotta
+  - Props: `{ crew, productionId, locations, onClose }`
+- **Crew Lookup** aggiunto in `TripSidebar` (create) e `EditTripSidebar` (edit):
+  - Sezione `🔍 Crew Lookup` nella sidebar
+  - Ricerca per `full_name` o `department` con ilike, min 2 caratteri, limit 8
+  - Click su un risultato → apre `CrewInfoModal`
+  - Stati: `crewLookupQ`, `crewLookupResults`, `crewInfoCrew`
 
 ---
 
@@ -54,9 +102,10 @@ CREATE TABLE travel_movements (
 - POST { production_id, file_id }
 - Downloads and parses without confirming
 - Returns { hasChanges, rows, newData, detectedMode }
+- **S10 update**: added multi-sheet accommodation path
 
 ### Bridge updates (bridge/page.js)
-- DriveSyncWidget — shows Drive files with pending updates
+- DriveSyncWidget — shows Drive files with pending updates; auto-reloads after confirm
 - TravelDiscrepanciesWidget — shows rooming vs travel discrepancies with resolve button
 - TomorrowPanel — now uses travel_movements (travel_date) instead of crew dates
 - ArrivalsDeparturesChart — uses travel_movements, range selector 30/45/60/90 days, tooltip shows flights+trains breakdown
@@ -121,7 +170,7 @@ CREATE TABLE travel_movements (
 ❌ Never rewrite entire files for small changes
 ✅ Read existing code before modifying
 ✅ JavaScript only (no TypeScript), App Router
-✅ Deploy after every completed task: git add . ; git commit -m "..." ; git push
-✅ PowerShell: use ; not && between commands
+✅ Deploy after every completed task: git add . && git commit -m "..." && git push
+✅ CMD shell: use && not ; between commands (this is cmd.exe, not PowerShell)
 ✅ Always explain approach in one line before proceeding
 ```
