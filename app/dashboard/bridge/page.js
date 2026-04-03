@@ -1324,6 +1324,46 @@ function InviteCodesTab({ productions }) {
   )
 }
 
+// ── Import & Sync Section ─────────────────────────────────
+function ImportSyncSection({ onOpenImport }) {
+  const modes = [
+    { id: 'hal',           icon: '🔴', label: 'HAL',            desc: 'Auto-detect' },
+    { id: 'crew',          icon: '👥', label: 'Crew list',       desc: 'Names, roles, dept' },
+    { id: 'fleet',         icon: '🚗', label: 'Fleet list',      desc: 'Vehicles' },
+    { id: 'accommodation', icon: '🏨', label: 'Accommodation',   desc: 'Rooming list' },
+    { id: 'travel',        icon: '✈️',  label: 'Travel Calendar', desc: 'DIG format' },
+    { id: 'custom',        icon: '✏️',  label: 'Custom',          desc: 'Free prompt' },
+  ]
+  return (
+    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: '20px' }}>
+      <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9' }}>
+        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f2340' }}>📥 Import & Sync</div>
+        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>Import files into this production</div>
+      </div>
+      <div style={{ padding: '14px 20px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {modes.map(m => (
+            <button
+              key={m.id}
+              onClick={() => onOpenImport(m.id)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+                padding: '10px 14px', borderRadius: '10px',
+                border: '1px solid #e2e8f0', background: '#f8fafc',
+                cursor: 'pointer', minWidth: '90px',
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>{m.icon}</span>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f2340' }}>{m.label}</span>
+              <span style={{ fontSize: '10px', color: '#94a3b8' }}>{m.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────
 export default function BridgePage() {
   const router = useRouter()
@@ -1340,10 +1380,20 @@ export default function BridgePage() {
   const [PRODUCTION_ID, setProductionId] = useState(null)
   const [previewModal,  setPreviewModal]  = useState(null)
   const [driveRefreshKey, setDriveRefreshKey] = useState(0)
+  const [importOpen,  setImportOpen]  = useState(false)
+  const [importMode,  setImportMode]  = useState('hal')
+  const [locations,   setLocations]   = useState([])
 
   useEffect(() => {
     setProductionId(getProductionId())
   }, [])
+
+  useEffect(() => {
+    if (!PRODUCTION_ID) return
+    supabase.from('locations').select('id, name, is_hub')
+      .eq('production_id', PRODUCTION_ID)
+      .then(({ data }) => setLocations(data || []))
+  }, [PRODUCTION_ID])
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -1390,6 +1440,9 @@ export default function BridgePage() {
 
         {/* ── Easy Access Shortcuts ── */}
         <EasyAccessShortcuts currentPath="/dashboard/bridge" />
+        <ImportSyncSection
+          onOpenImport={(mode) => { setImportMode(mode); setImportOpen(true) }}
+        />
 
         {/* ── Header ── */}
         <div style={{ marginBottom: '28px' }}>
@@ -1464,6 +1517,17 @@ export default function BridgePage() {
         </div>
 
       </div>
+
+      {importOpen && (
+        <ImportModal
+          open={true}
+          mode={importMode}
+          productionId={PRODUCTION_ID}
+          locations={locations}
+          onClose={() => setImportOpen(false)}
+          onImported={() => { setImportOpen(false); setDriveRefreshKey(k => k + 1) }}
+        />
+      )}
 
       {previewModal && (
         <ImportModal
