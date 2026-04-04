@@ -806,7 +806,33 @@ export default function CrewPage() {
         .gte('travel_date', new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }))
         .order('travel_date', { ascending: true }),
     ])
-    setCrew(vData || [])
+    // Auto-aggiorna travel_status basato su arrival_date / departure_date
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+    const toUpdate = (vData || []).filter(c => {
+      if (!c.arrival_date && !c.departure_date) return false
+      let expected
+      if (c.departure_date && today > c.departure_date)                          expected = 'OUT'
+      else if (c.arrival_date && today >= c.arrival_date)                        expected = 'PRESENT'
+      else if (c.arrival_date && today < c.arrival_date)                         expected = 'IN'
+      else return false
+      return expected && c.travel_status !== expected
+    }).map(c => {
+      let expected
+      if (c.departure_date && today > c.departure_date)       expected = 'OUT'
+      else if (c.arrival_date && today >= c.arrival_date)     expected = 'PRESENT'
+      else                                                     expected = 'IN'
+      return { id: c.id, travel_status: expected }
+    })
+
+    for (const u of toUpdate) {
+      await supabase.from('crew').update({ travel_status: u.travel_status }).eq('id', u.id).eq('production_id', PRODUCTION_ID)
+    }
+
+    // Ricarica dopo aggiornamenti se necessario
+    const finalCrew = toUpdate.length > 0
+      ? (vData || []).map(c => { const u = toUpdate.find(x => x.id === c.id); return u ? { ...c, travel_status: u.travel_status } : c })
+      : (vData || [])
+    setCrew(finalCrew)
     const tMap = {}
     for (const tm of travelData || []) {
       if (!tMap[tm.crew_id]) tMap[tm.crew_id] = []
