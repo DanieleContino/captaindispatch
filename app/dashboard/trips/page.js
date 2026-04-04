@@ -1274,9 +1274,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const [vCheck, setVCheck] = useState(null)
 
   // Extra legs (UI-only, no save logic)
-  const [extraLegs, setExtraLegs] = useState([])
-  const [toDelete,  setToDelete]  = useState([])   // DB row IDs of existing legs removed with ✕
-  const [activeLeg, setActiveLeg] = useState(null)
+  const [extraLegs,    setExtraLegs]    = useState([])
+  const [toDelete,     setToDelete]     = useState([])   // DB row IDs of existing legs removed with ✕
+  const [activeLeg,    setActiveLeg]    = useState(null)
+  const [newLegPax,    setNewLegPax]    = useState([])   // pax selezionati per leg nuovi (pre-save)
 
   // Crew Lookup
   const [crewLookupQ,       setCrewLookupQ]       = useState('')
@@ -1293,7 +1294,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     }
     setError(null); setConfirmDel(false); setPaxSearch(''); setVCheck(null)
     setCrewLookupQ(''); setCrewLookupResults([]); setCrewInfoCrew(null)
-    setExtraLegs([]); setToDelete([])
+    setExtraLegs([]); setToDelete([]); setNewLegPax([])
 
     const leg = group?.[0] ?? initial
     setActiveLeg(leg)
@@ -1469,6 +1470,12 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   // ── Pax add/remove ────────────────────────────────────────
   async function addPax(crew) {
+    // Leg nuova (non ancora in DB) → salva in stato locale, verrà scritta al Save
+    if (activeLeg?.isNew) {
+      setNewLegPax(prev => prev.some(c => c.id === crew.id) ? prev : [...prev, crew])
+      setAvailableCrew(p => p.filter(c => c.id !== crew.id))
+      return
+    }
     if (!initial?.id || !PRODUCTION_ID) return
     const { error } = await supabase.from('trip_passengers').insert({
       production_id: PRODUCTION_ID, trip_row_id: initial.id, crew_id: crew.id,
@@ -1806,6 +1813,16 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             setError(`❌ Leg ${newTripId}: ${legErr?.message || 'insert failed'}`)
             break
           }
+          // Inserisci i pax selezionati per questa nuova leg
+          if (newLegPax.length > 0) {
+            await supabase.from('trip_passengers').insert(
+              newLegPax.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: c.id }))
+            )
+            await supabase.from('trips').update({
+              pax_count: newLegPax.length,
+              passenger_list: newLegPax.map(c => c.full_name).join(', '),
+            }).eq('id', newRow.id)
+          }
           newLegIds.push(newRow.id)
         }
       }
@@ -2121,6 +2138,26 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                 <div style={{ padding: '10px', color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>{t.loadingPax}</div>
               ) : (
                 <>
+                  {/* PAX selezionati per nuova leg (pre-save) */}
+                  {activeLeg?.isNew && newLegPax.length > 0 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#7c3aed', letterSpacing: '0.05em', marginBottom: '5px' }}>
+                        ✦ Leg B — selezionati ({newLegPax.length})
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        {newLegPax.map(c => (
+                          <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: '#f3e8ff', border: '1px solid #d8b4fe', borderRadius: '6px', fontSize: '12px' }}>
+                            <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
+                            <button type="button" onClick={() => {
+                              setNewLegPax(prev => prev.filter(x => x.id !== c.id))
+                              setAvailableCrew(prev => [...prev, c].sort((a, b) => (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name)))
+                            }} style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '1px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* ASSIGNED */}
                   {assignedPax.length > 0 && (
                     <div style={{ marginBottom: '12px' }}>
