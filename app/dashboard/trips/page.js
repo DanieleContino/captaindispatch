@@ -1274,10 +1274,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const [vCheck, setVCheck] = useState(null)
 
   // Extra legs (UI-only, no save logic)
-  const [extraLegs,    setExtraLegs]    = useState([])
-  const [toDelete,     setToDelete]     = useState([])   // DB row IDs of existing legs removed with ✕
-  const [activeLeg,    setActiveLeg]    = useState(null)
-  const [newLegPax,    setNewLegPax]    = useState([])   // pax selezionati per leg nuovi (pre-save)
+  const [extraLegs, setExtraLegs] = useState([])
+  const [toDelete,  setToDelete]  = useState([])   // DB row IDs of existing legs removed with ✕
+  const [activeLeg, setActiveLeg] = useState(null)
 
   // Crew Lookup
   const [crewLookupQ,       setCrewLookupQ]       = useState('')
@@ -1294,7 +1293,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     }
     setError(null); setConfirmDel(false); setPaxSearch(''); setVCheck(null)
     setCrewLookupQ(''); setCrewLookupResults([]); setCrewInfoCrew(null)
-    setExtraLegs([]); setToDelete([]); setNewLegPax([])
+    setExtraLegs([]); setToDelete([])
 
     const leg = group?.[0] ?? initial
     setActiveLeg(leg)
@@ -1340,15 +1339,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (!open || !initial) return
     loadPaxData(activeLeg ?? initial)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.length, activeLeg?.id, form.pickup_id, form.dropoff_id])
+  }, [group?.length, activeLeg?.id])
 
   // Repopulate form when user switches leg tab (activeLeg changes after initial open)
   useEffect(() => {
     if (!open || !activeLeg) return
-    if (activeLeg.isNew) {
-      setForm(f => ({ ...f, pickup_id: '', dropoff_id: '' }))
-      return
-    }
     const arrStr  = activeLeg.arr_time ? activeLeg.arr_time.slice(0, 5) : ''
     const callStr = (activeLeg.transfer_class === 'STANDARD' && activeLeg.call_min !== null)
       ? minToHHMM(activeLeg.call_min) : ''
@@ -1404,28 +1399,21 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   // ── Load pax data ─────────────────────────────────────────
   async function loadPaxData(trip) {
-    if (!PRODUCTION_ID) return
-    const activeLegData = trip?.isNew ? extraLegs.find(l => l.id === trip.id) : null
-    const effectivePickup  = trip?.isNew ? (activeLegData?.pickup_id  || '') : trip?.pickup_id
-    const effectiveDropoff = trip?.isNew ? (activeLegData?.dropoff_id || '') : trip?.dropoff_id
-    if (!effectivePickup || !effectiveDropoff) return
+    if (!PRODUCTION_ID || !trip?.id) return
     setPaxLoading(true)
-    const tc = getClass(effectivePickup, effectiveDropoff)
+    const tc = getClass(trip.pickup_id, trip.dropoff_id)
     // Per multi-stop: carica pax da tutti i leg del gruppo
-    const isNewLeg = trip?.isNew === true
-    const groupIds = isNewLeg ? [] : ((group && group.length > 1) ? group.map(g => g.id) : [trip?.id].filter(Boolean))
+    const groupIds = (group && group.length > 1) ? group.map(g => g.id) : [trip.id]
     // Per multi-stop Hub: raccogli tutti gli hotel di tutti i leg (ARRIVAL→dropoff, DEP→pickup)
-    const allGroupLegs  = isNewLeg ? [{ pickup_id: effectivePickup, dropoff_id: effectiveDropoff }] : ((group && group.length > 1) ? group : [trip])
-    const allDropoffIds = isNewLeg ? [effectiveDropoff] : [...new Set(allGroupLegs.map(g => g.dropoff_id).filter(Boolean))]
-    const allPickupIds  = isNewLeg ? [effectivePickup]  : [...new Set(allGroupLegs.map(g => g.pickup_id).filter(Boolean))]
+    const allGroupLegs  = (group && group.length > 1) ? group : [trip]
+    const allDropoffIds = [...new Set(allGroupLegs.map(g => g.dropoff_id).filter(Boolean))]
+    const allPickupIds  = [...new Set(allGroupLegs.map(g => g.pickup_id).filter(Boolean))]
 
     // Run all three queries in parallel
     const [paxRes, crewRes, dayTripsRes] = await Promise.all([
-      groupIds.length > 0
-        ? supabase.from('trip_passengers')
-            .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed,hotel_id)')
-            .in('trip_row_id', groupIds)
-        : Promise.resolve({ data: [] }),
+      supabase.from('trip_passengers')
+        .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed,hotel_id)')
+        .in('trip_row_id', groupIds),
 
       (() => {
         let q = supabase.from('crew').select('id,full_name,department,no_transport_needed,hotel_id')
@@ -1471,12 +1459,6 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   // ── Pax add/remove ────────────────────────────────────────
   async function addPax(crew) {
-    // Leg nuova (non ancora in DB) → salva in stato locale, verrà scritta al Save
-    if (activeLeg?.isNew) {
-      setNewLegPax(prev => prev.some(c => c.id === crew.id) ? prev : [...prev, crew])
-      setAvailableCrew(p => p.filter(c => c.id !== crew.id))
-      return
-    }
     if (!initial?.id || !PRODUCTION_ID) return
     const { error } = await supabase.from('trip_passengers').insert({
       production_id: PRODUCTION_ID, trip_row_id: initial.id, crew_id: crew.id,
@@ -1569,9 +1551,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     const isMulti    = group && group.length > 1
     const selVehicle = vehicles.find(v => v.id === form.vehicle_id)
     const row = {
-      date: form.date,
-      pickup_id:  form.pickup_id  || initial.pickup_id,
-      dropoff_id: form.dropoff_id || initial.dropoff_id,
+      date: form.date, pickup_id: form.pickup_id, dropoff_id: form.dropoff_id,
       vehicle_id:  form.vehicle_id || null,
       driver_name: selVehicle?.driver_name ?? null,
       sign_code:   selVehicle?.sign_code   ?? null,
@@ -1816,16 +1796,6 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             setError(`❌ Leg ${newTripId}: ${legErr?.message || 'insert failed'}`)
             break
           }
-          // Inserisci i pax selezionati per questa nuova leg
-          if (newLegPax.length > 0) {
-            await supabase.from('trip_passengers').insert(
-              newLegPax.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: c.id }))
-            )
-            await supabase.from('trips').update({
-              pax_count: newLegPax.length,
-              passenger_list: newLegPax.map(c => c.full_name).join(', '),
-            }).eq('id', newRow.id)
-          }
           newLegIds.push(newRow.id)
         }
       }
@@ -1890,10 +1860,6 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       )
     : []
 
-  const activeLegAssignedPax = activeLeg?.isNew
-    ? newLegPax
-    : assignedPax.filter(p => p.trip_row_id === activeLeg?.id)
-
   const regularCrew  = availableCrew.filter(c => !c.no_transport_needed)
   const ntnCrew      = availableCrew.filter(c =>  c.no_transport_needed)
   const freeCount    = regularCrew.filter(c => !busyMap[c.id]).length
@@ -1932,11 +1898,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
 
             {/* ── Leg Selector (solo per gruppi multi-stop) ── */}
-            {open && (
+            {group && group.length > 1 && (
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '4px 0 2px' }}>
-                {[...(group || []), ...extraLegs].map((leg, i) => {
-                  const isNew = !leg.existing && !(group || []).find(g => g.id === leg.id)
-                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(65 + i)}${isNew ? ' ✦' : ''}`
+                {group.map((leg, i) => {
+                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(66 + i - 1)}`
                   const isActive = activeLeg?.id === leg.id
                   return (
                     <button
@@ -1951,47 +1916,13 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                         background: isActive ? '#534AB7' : 'transparent',
                         color: isActive ? '#fff' : '#888',
                         border: isActive ? '0.5px solid #534AB7' : '0.5px solid #d0d0d0',
-                      cursor: 'pointer',
+                        cursor: 'pointer',
                       }}
                     >
                       {label}
-                      {isActive && i > 0 && (
-                        <span
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (leg.existing) setToDelete(prev => [...prev, leg.id])
-                            else setExtraLegs(prev => prev.filter(l => l.id !== leg.id))
-                            setActiveLeg((group || [])[0] ?? initial)
-                          }}
-                          style={{ marginLeft: '6px', opacity: 0.6 }}
-                        >
-                          ✕
-                        </span>
-                      )}
                     </button>
                   )
                 })}
-                {(group || []).length + extraLegs.length < 4 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newLeg = {
-                        id: Date.now(), pickup_id: '', dropoff_id: '',
-                        existing: false, isNew: true
-                      }
-                      setExtraLegs(prev => [...prev, newLeg])
-                      setActiveLeg(newLeg)
-                    }}
-                    style={{
-                      padding: '4px 12px', borderRadius: '99px',
-                      fontSize: '11px', background: 'transparent',
-                      color: '#534AB7', border: '0.5px solid #534AB7',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    + Add stop
-                  </button>
-                )}
               </div>
             )}
 
@@ -2032,13 +1963,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {/* Pickup / Dropoff */}
             <div>
               <label style={lbl}>Pickup</label>
-              <select
-                value={activeLeg?.isNew ? (extraLegs.find(l => l.id === activeLeg.id)?.pickup_id || '') : form.pickup_id}
-                onChange={e => {
-                  if (activeLeg?.isNew) setExtraLegs(prev => prev.map(l => l.id === activeLeg.id ? { ...l, pickup_id: e.target.value } : l))
-                  else set('pickup_id', e.target.value)
-                }}
-                style={inp} required>
+              <select value={form.pickup_id} onChange={e => set('pickup_id', e.target.value)} style={inp} required>
                 <option value="">Select pickup…</option>
                 <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
                 <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
@@ -2046,18 +1971,60 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             </div>
             <div>
               <label style={lbl}>Dropoff</label>
-              <select
-                value={activeLeg?.isNew ? (extraLegs.find(l => l.id === activeLeg.id)?.dropoff_id || '') : form.dropoff_id}
-                onChange={e => {
-                  if (activeLeg?.isNew) setExtraLegs(prev => prev.map(l => l.id === activeLeg.id ? { ...l, dropoff_id: e.target.value } : l))
-                  else set('dropoff_id', e.target.value)
-                }}
-                style={inp} required>
+              <select value={form.dropoff_id} onChange={e => set('dropoff_id', e.target.value)} style={inp} required>
                 <option value="">Select dropoff…</option>
                 <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
                 <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
               </select>
             </div>
+
+            {/* ── Extra Legs (multi-stop UI) — solo per trip singoli; per multi il switcher sopra sostituisce questa UI ── */}
+            {(!group || group.length <= 1) && <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '2px' }}>Route Legs</div>
+
+              {/* Leg A — read-only */}
+              <div style={{ fontSize: '12px', color: '#64748b', padding: '5px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px' }}>
+                <span style={{ fontWeight: '800', color: '#0f172a', marginRight: '6px', fontFamily: 'monospace' }}>Leg A</span>
+                {locShortEdit(form.pickup_id) || '–'} → {locShortEdit(form.dropoff_id) || '–'}
+              </div>
+
+              {/* Extra legs */}
+              {extraLegs.map((leg, i) => (
+                <div key={leg.id} style={{ display: 'flex', flexDirection: 'column', gap: '5px', padding: '8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>Leg {String.fromCharCode(66 + i)}</span>
+                    <button type="button" onClick={() => {
+                      if (leg.existing) setToDelete(prev => [...prev, leg.id])
+                      setExtraLegs(extraLegs.filter(l => l.id !== leg.id))
+                    }}
+                      style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '2px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', lineHeight: 1 }}>✕</button>
+                  </div>
+                  <select value={leg.pickup_id}
+                    onChange={e => setExtraLegs(extraLegs.map(l => l.id === leg.id ? { ...l, pickup_id: e.target.value } : l))}
+                    style={{ ...inp, fontSize: '12px' }}>
+                    <option value="">Select pickup…</option>
+                    <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                    <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                  </select>
+                  <select value={leg.dropoff_id}
+                    onChange={e => setExtraLegs(extraLegs.map(l => l.id === leg.id ? { ...l, dropoff_id: e.target.value } : l))}
+                    style={{ ...inp, fontSize: '12px' }}>
+                    <option value="">Select dropoff…</option>
+                    <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                    <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                  </select>
+                </div>
+              ))}
+
+              {/* + Add stop */}
+              {extraLegs.length < 3 && (
+                <button type="button"
+                  onClick={() => setExtraLegs([...extraLegs, { id: Date.now(), pickup_id: '', dropoff_id: '' }])}
+                  style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #94a3b8', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                  + Add stop
+                </button>
+              )}
+            </div>}
 
             {/* Vehicle + availability badge */}
             <div>
@@ -2150,7 +2117,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {/* ── Passengers ── */}
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                Passengers ({activeLegAssignedPax.length}{initial?.capacity ? `/${initial.capacity}` : ''})
+                Passengers ({assignedPax.length}{initial?.capacity ? `/${initial.capacity}` : ''})
               </div>
 
               {paxLoading ? (
@@ -2158,10 +2125,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               ) : (
                 <>
                   {/* ASSIGNED */}
-                  {activeLegAssignedPax.length > 0 && (
+                  {assignedPax.length > 0 && (
                     <div style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: activeLeg?.isNew ? '#7c3aed' : '#15803d', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                        {activeLeg?.isNew ? `✦ Leg B — selezionati` : t.assignedSection} ({activeLegAssignedPax.length})
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', letterSpacing: '0.05em', marginBottom: '5px' }}>
+                        {t.assignedSection} ({assignedPax.length})
                       </div>
 
                       {/* ── MULTI: raggruppa pax per leg con sub-header ── */}
@@ -2214,7 +2181,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       ) : (
                         /* ── SINGLE trip: lista flat con hotel badge ── */
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                          {activeLegAssignedPax.map(c => (
+                          {assignedPax.map(c => (
                             <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', minWidth: 0 }}>
                                 <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
