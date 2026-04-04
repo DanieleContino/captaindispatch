@@ -1707,13 +1707,19 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         : Promise.resolve({ data: [] }),
 
       (() => {
-        let q = supabase.from('crew').select('id,full_name,department,no_transport_needed,hotel_id')
-          .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
-        // Filtra per l'hotel del leg corrente — cambia quando si switcha tab
-        if (tc === 'ARRIVAL')        q = q.eq('hotel_id', legHotelDropoff).eq('travel_status', 'IN')
-        else if (tc === 'DEPARTURE') q = q.eq('hotel_id', legHotelPickup).eq('travel_status', 'OUT')
-        else                         q = q.eq('hotel_id', legHotelPickup).eq('travel_status', 'PRESENT')
-        return q.order('department').order('full_name')
+        // Filtra crew tramite crew_stays per la data del trip
+        // invece di travel_status — supporta multi-stay
+        const tripDate = trip?.date || isoToday()
+        const hotelId  = tc === 'ARRIVAL' ? legHotelDropoff : legHotelPickup
+        return supabase.from('crew_stays')
+          .select('crew_id, departure_date, crew!inner(id, full_name, department, no_transport_needed, hotel_id, hotel_status)')
+          .eq('production_id', PRODUCTION_ID)
+          .eq('hotel_id', hotelId)
+          .lte('arrival_date', tripDate)
+          .gte('departure_date', tripDate)
+          .eq('crew.hotel_status', 'CONFIRMED')
+          .order('crew.department')
+          .order('crew.full_name')
       })(),
 
       isNewLeg
@@ -1751,7 +1757,12 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       }
     }
     setBusyMap(bMap)
-    setAvailableCrew((crewRes.data || []).filter(c => !assignedIds.has(c.id)))
+    const today = isoToday()
+    const crewFromStays = (crewRes.data || []).map(s => ({
+      ...s.crew,
+      _checkoutToday: s.departure_date === today,
+    }))
+    setAvailableCrew(crewFromStays.filter(c => !assignedIds.has(c.id)))
     setPaxLoading(false)
   }
 
@@ -2660,6 +2671,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                                 <div style={{ fontSize: '10px', color: '#94a3b8', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '3px' }}>
                                   <span>{c.department}</span>
                                   {c.hotel_id && locsById[c.hotel_id] && <span style={{ background: '#f1f5f9', padding: '1px 4px', borderRadius: '3px', border: '1px solid #e2e8f0', color: '#475569' }}>🏨 {locShortEdit(c.hotel_id)}</span>}
+                                  {c._checkoutToday && c.no_transport_needed && <span style={{ color: '#d97706', fontWeight: '700', background: '#fef9c3', padding: '1px 4px', borderRadius: '3px', border: '1px solid #fde68a' }}>⚠ CHK-OUT oggi · OA</span>}
+                                  {c._checkoutToday && !c.no_transport_needed && <span style={{ color: '#d97706', fontWeight: '700', background: '#fef9c3', padding: '1px 4px', borderRadius: '3px', border: '1px solid #fde68a' }}>⚠ CHK-OUT oggi</span>}
                                   {isBusy && <span style={{ color: '#a16207' }}>⚠ BUSY on {busyMap[c.id]}</span>}
                                 </div>
                               </div>
