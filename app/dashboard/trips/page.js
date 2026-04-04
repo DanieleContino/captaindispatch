@@ -1674,7 +1674,15 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     const activeLegData = isNewLeg ? extraLegs.find(l => l.id === trip?.id) : null
     const effectivePickup  = isNewLeg ? (activeLegData?.pickup_id  || '') : (trip?.pickup_id  || '')
     const effectiveDropoff = isNewLeg ? (activeLegData?.dropoff_id || '') : (trip?.dropoff_id || '')
-    if (!effectivePickup || !effectiveDropoff) return
+    if (!effectivePickup || !effectiveDropoff) {
+      if (isNewLeg) {
+        setAssignedPax([])
+        setAvailableCrew([])
+        setBusyMap({})
+        setPaxLoading(false)
+      }
+      return
+    }
     const tripId = isNewLeg ? null : trip?.id
     if (!isNewLeg && !tripId) return
     const reqId = ++loadPaxReqRef.current
