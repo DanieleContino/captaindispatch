@@ -442,8 +442,8 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
       })
     } else {
       // Auto-genera Crew ID: prende il più alto CR#### esistente e incrementa
-      console.log('[CrewSidebar] useEffect new mode, initial:', initial)
-      setForm({ ...EMPTY })
+      // Spread initial (se presente) per pre-popolare name/hotel/date dal banner "Yes, add"
+      setForm({ ...EMPTY, ...(initial || {}) })
       if (PRODUCTION_ID) {
         supabase.from('crew').select('id').eq('production_id', PRODUCTION_ID)
           .then(({ data }) => {
