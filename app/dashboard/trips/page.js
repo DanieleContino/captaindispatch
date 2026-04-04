@@ -550,14 +550,16 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
   // Available crew (Captain rules)
   useEffect(() => {
+    let cancelled = false
     setSelCrew([]); setCrewList([])
-    if (!PRODUCTION_ID || !form.pickup_id || !form.dropoff_id) return
+    if (!PRODUCTION_ID || !form.pickup_id || !form.dropoff_id) return () => { cancelled = true }
     let q = supabase.from('crew').select('id,full_name,department')
       .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
     if (transferClass === 'ARRIVAL')        q = q.eq('hotel_id', form.dropoff_id).eq('travel_status', 'IN')
     else if (transferClass === 'DEPARTURE') q = q.eq('hotel_id', form.pickup_id).eq('travel_status', 'OUT')
     else                                    q = q.eq('hotel_id', form.pickup_id).eq('travel_status', 'PRESENT')
     q.order('department').order('full_name').then(({ data }) => {
+      if (cancelled) return
       if (data) {
         setCrewList(data)
         if (assignCtx?.id) {
@@ -566,6 +568,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         }
       }
     })
+    return () => { cancelled = true }
   }, [form.pickup_id, form.dropoff_id, transferClass])
 
   // Crew Lookup (ricerca su tutto il crew della produzione, min 2 chars)
@@ -682,16 +685,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   async function handleMultiSubmit() {
     setError(null)
     const allLegs = [...savedLegs]
-    if (form.pickup_id && form.dropoff_id) {
-      allLegs.push({
-        localId:       '_current',
-        form:          { ...form },
-        selCrew:       [...selCrew],
-        computed:      computed ? { ...computed } : null,
-        transferClass: getClass(form.pickup_id, form.dropoff_id),
-      })
-    }
-    if (allLegs.length < 2) { setError('Aggiungi almeno 2 leg per creare un multi-trip'); return }
+    if (allLegs.length < 2) { setError('Aggiungi almeno 2 leg con "+ Add Leg" prima di salvare'); return }
     if (!form.trip_id)      { setError('Trip ID base richiesto'); return }
     setMultiSaving(true)
     const insertedIds = []
@@ -1452,7 +1446,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                   </button>
                 </div>
                 {(() => {
-                  const totalLegs = savedLegs.length + (form.pickup_id && form.dropoff_id ? 1 : 0)
+                  const totalLegs = savedLegs.length
                   const canSave   = totalLegs >= 2 && !multiSaving
                   return (
                     <button type="button" onClick={handleMultiSubmit} disabled={!canSave}
