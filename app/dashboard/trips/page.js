@@ -1716,11 +1716,13 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         return q.order('department').order('full_name')
       })(),
 
-      supabase.from('trips')
-        .select('id,trip_id,start_dt,end_dt')
-        .eq('production_id', PRODUCTION_ID).eq('date', trip.date)
-        .not('id', 'in', `(${groupIds.join(',')})`)
-        .not('start_dt', 'is', null),
+      isNewLeg
+        ? Promise.resolve({ data: [] })
+        : supabase.from('trips')
+            .select('id,trip_id,start_dt,end_dt')
+            .eq('production_id', PRODUCTION_ID).eq('date', trip.date)
+            .not('id', 'in', `(${groupIds.join(',')})`)
+            .not('start_dt', 'is', null),
     ])
 
     // Ignora risultati stale (se loadPaxData è stata richiamata di nuovo nel frattempo)
