@@ -1339,7 +1339,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (!open || !initial) return
     loadPaxData(activeLeg ?? initial)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.length, activeLeg?.id])
+  }, [group?.length, activeLeg?.id, form.pickup_id, form.dropoff_id])
 
   // Repopulate form when user switches leg tab (activeLeg changes after initial open)
   useEffect(() => {
@@ -1403,21 +1403,27 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   // ── Load pax data ─────────────────────────────────────────
   async function loadPaxData(trip) {
-    if (!PRODUCTION_ID || !trip?.id) return
+    if (!PRODUCTION_ID) return
+    const effectivePickup  = trip?.isNew ? form.pickup_id  : trip?.pickup_id
+    const effectiveDropoff = trip?.isNew ? form.dropoff_id : trip?.dropoff_id
+    if (!effectivePickup || !effectiveDropoff) return
     setPaxLoading(true)
-    const tc = getClass(trip.pickup_id, trip.dropoff_id)
+    const tc = getClass(effectivePickup, effectiveDropoff)
     // Per multi-stop: carica pax da tutti i leg del gruppo
-    const groupIds = (group && group.length > 1) ? group.map(g => g.id) : [trip.id]
+    const isNewLeg = trip?.isNew === true
+    const groupIds = isNewLeg ? [] : ((group && group.length > 1) ? group.map(g => g.id) : [trip?.id].filter(Boolean))
     // Per multi-stop Hub: raccogli tutti gli hotel di tutti i leg (ARRIVAL→dropoff, DEP→pickup)
-    const allGroupLegs  = (group && group.length > 1) ? group : [trip]
-    const allDropoffIds = [...new Set(allGroupLegs.map(g => g.dropoff_id).filter(Boolean))]
-    const allPickupIds  = [...new Set(allGroupLegs.map(g => g.pickup_id).filter(Boolean))]
+    const allGroupLegs  = isNewLeg ? [{ pickup_id: effectivePickup, dropoff_id: effectiveDropoff }] : ((group && group.length > 1) ? group : [trip])
+    const allDropoffIds = isNewLeg ? [effectiveDropoff] : [...new Set(allGroupLegs.map(g => g.dropoff_id).filter(Boolean))]
+    const allPickupIds  = isNewLeg ? [effectivePickup]  : [...new Set(allGroupLegs.map(g => g.pickup_id).filter(Boolean))]
 
     // Run all three queries in parallel
     const [paxRes, crewRes, dayTripsRes] = await Promise.all([
-      supabase.from('trip_passengers')
-        .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed,hotel_id)')
-        .in('trip_row_id', groupIds),
+      groupIds.length > 0
+        ? supabase.from('trip_passengers')
+            .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed,hotel_id)')
+            .in('trip_row_id', groupIds)
+        : Promise.resolve({ data: [] }),
 
       (() => {
         let q = supabase.from('crew').select('id,full_name,department,no_transport_needed,hotel_id')
