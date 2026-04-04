@@ -32,6 +32,14 @@ function isoAdd(d, n) {
 function fmtDate(d) {
   return new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
 }
+function fmtPax(fullName) {
+  if (!fullName) return ''
+  const parts = fullName.trim().split(' ')
+  if (parts.length === 1) return parts[0]
+  const last  = parts[parts.length - 1]
+  const first = parts[0]
+  return `${last} ${first[0]}.`
+}
 function isHub(id) { return /^(APT_|STN_|PRT_)/.test(id || '') }
 function baseTripId(id) { return id ? id.replace(/[A-Z]$/, '') : id }
 function getClass(p, d) {
@@ -314,7 +322,7 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
             return (
               <div key={r.id || ri} style={{ fontSize: '10px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '16.5px', marginBottom: ri < group.length - 1 ? '4px' : 0 }}>
                 {legPax.length > 0
-                  ? legPax.join(', ')
+                  ? legPax.map(fmtPax).join(', ')
                   : <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
                 }
               </div>
@@ -324,7 +332,7 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
           <>
             {paxNames.slice(0, 4).map((name, i) => (
               <div key={i} style={{ fontSize: '10px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
-                {name}
+                {fmtPax(name)}
               </div>
             ))}
             {paxNames.length > 4 && (
