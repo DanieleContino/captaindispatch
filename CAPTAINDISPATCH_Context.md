@@ -1,5 +1,35 @@
-# CAPTAINDISPATCH — Context S11 (Cline)
+# CAPTAINDISPATCH — Context S12 (Cline)
 ## Updated: 4 April 2026
+
+---
+
+## WHAT CHANGED IN SESSION S12
+
+### Multi-trip bug fixes (commits bad38cd → 53852ad) — `app/dashboard/trips/page.js`
+
+#### Bug 1 — Available crew dropdown stale (race condition)
+- `useEffect` crew in `TripSidebar`: aggiunto flag `cancelled` + cleanup `return () => { cancelled = true }`
+- Le query async della leg precedente vengono ignorate se la leg è cambiata nel frattempo (stale result ignored)
+
+#### Bug 2 — Leg extra creata (leg C non richiesta)
+- **Causa radice**: in ARRIVAL mode `pickup_id` veniva mantenuto dopo "+ Add Leg" (keephub logic), quindi `form.pickup_id && form.dropoff_id` poteva essere `true` anche dopo il reset → auto-include indesiderato
+- **Fix**: `handleAddLeg` ora resetta SEMPRE **entrambi** `pickup_id` e `dropoff_id` per tutti i mode (rimossa logica keephub ARRIVAL/DEPARTURE)
+- `handleMultiSubmit` auto-include del form corrente **ripristinato**: scatta solo se l'utente ha esplicitamente compilato entrambi i campi (form sempre vuoto dopo "+ Add Leg" → bug impossibile)
+- Contatore bottone ripristinato: `totalLegs = savedLegs.length + (form.pickup_id && form.dropoff_id ? 1 : 0)`
+
+#### Bug 3 — EditTripSidebar: available pax non cambia cambiando tab Leg A/B/C
+- `loadPaxData` usava `allDropoffIds`/`allPickupIds` di TUTTI i leg del gruppo → lista identica per ogni tab
+- **Fix**: query usa `trip.dropoff_id`/`trip.pickup_id` del leg attivo (singolo `eq()` invece di `in()`)
+- Aggiunto `loadPaxReqRef = useRef(0)` con `reqId !== loadPaxReqRef.current` check dopo `Promise.all` per evitare stale updates
+
+#### Bug 4 — Crash: useRef non importato
+- Aggiunto `useRef` agli import React (era mancante dopo l'introduzione di `loadPaxReqRef`)
+
+#### Feature — Veicolo condiviso e bloccato in multi-trip
+- In `handleAddLeg`: `sharedVehicle` calcolato dal primo leg (o dal leg appena salvato se è il primo)
+- `vehicle_id` viene forzato a `sharedVehicle` nel form reset di ogni leg successivo
+- Nel render, quando `multiMode && savedLegs.length > 0`: campo Vehicle sostituito da badge read-only `🚐 VAN01 🔒 shared`
+- **Risultato**: tutti i leg del multi-trip condividono automaticamente lo stesso mezzo
 
 ---
 
