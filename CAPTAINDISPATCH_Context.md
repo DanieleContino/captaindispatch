@@ -1,5 +1,32 @@
-# CAPTAINDISPATCH — Context S10 (Cline)
-## Updated: 3 April 2026
+# CAPTAINDISPATCH — Context S11 (Cline)
+## Updated: 4 April 2026
+
+---
+
+## WHAT CHANGED IN SESSION S11
+
+### Multi-trip creation in TripSidebar (commit 354eb33)
+- **Nuovo "🔀 MULTI" toggle button** nell'header della `TripSidebar` (create new trip):
+  - Attiva/disattiva la modalità multi-trip; al click resetta `savedLegs` e `editingLegLocalId`
+  - In multi mode l'header mostra `🔀 Multi-trip` + badge verde con numero di legs salvati e range trip_id
+- **3 tipologie** selezionabili con pill buttons: `🛬 ARR` (ARRIVAL), `🛫 DEP` (DEPARTURE), `🔀 STD` (STANDARD/MIXED)
+  - Mostrano hint informativo sotto (quale campo viene mantenuto tra i leg)
+- **Leg Builder UX** — step sequenziale:
+  1. Compilare il form normalmente (pickup, dropoff, veicolo, orario, passeggeri)
+  2. `+ Add Leg (T004B)` — salva il leg corrente in `savedLegs`, resetta il form per il leg successivo:
+     - ARRIVAL: mantiene `pickup_id` (hub); reset `dropoff_id`
+     - DEPARTURE: mantiene `dropoff_id` (hub); reset `pickup_id`
+     - STANDARD: reset entrambi
+  3. Legs salvati appaiono in lista verde con `✏️` (edit) e `🗑` (delete)
+  4. `✏️ Aggiorna Leg` — ricarica un leg salvato nel form per modificarlo
+  5. `💾 Salva Multi-trip (N legs)` — verde, abilitato solo con ≥ 2 legs totali
+- **`handleMultiSubmit`**: crea tutti i trip in DB (T004 → T004B → T004C…), inserisce passeggeri per ogni leg, chiama `/api/routes/compute-chain` per calcolare pickup_min sequenziali
+- **Nuovo stato multi-trip** in `TripSidebar`:
+  - `multiMode`, `multiType`, `savedLegs`, `editingLegLocalId`, `multiSaving`
+  - Tutti resettati al close della sidebar (`useEffect` on `open`)
+- **Nuove funzioni**: `getLegTripId(idx)`, `handleAddLeg()`, `handleEditLeg(leg)`, `handleDeleteLeg(localId)`, `handleMultiSubmit()`
+- Il form `handleSubmit` (single trip) rimane invariato — multi mode usa bottoni `type="button"` separati
+- **File modificato**: `app/dashboard/trips/page.js` (+242/-9)
 
 ---
 
