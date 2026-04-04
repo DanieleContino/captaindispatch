@@ -793,8 +793,11 @@ export default function CrewPage() {
         fullName = parts.slice(i).join(' ') + ' ' + parts.slice(0, i).join(' ')
         break
       }
+      const extraData = sessionStorage.getItem('crewAddNewData')
+      sessionStorage.removeItem('crewAddNewData')
+      const extra = extraData ? JSON.parse(extraData) : {}
       setAddNewRawName(raw)
-      setAddNewBanner({ rawName: raw, fullName })
+      setAddNewBanner({ rawName: raw, fullName, ...extra })
     }
   }, [])
 
@@ -1008,7 +1011,12 @@ export default function CrewPage() {
             onClick={() => {
               setAddNewBanner(null)
               setSM('new')
-              setET({ full_name: addNewBanner.fullName })
+              setET({
+                full_name:      addNewBanner.fullName,
+                hotel_id:       addNewBanner.hotel_id       || '',
+                arrival_date:   addNewBanner.arrival_date   || '',
+                departure_date: addNewBanner.departure_date || '',
+              })
               setSO(true)
             }}
             style={{ padding: '7px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}>

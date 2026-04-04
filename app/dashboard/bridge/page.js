@@ -256,7 +256,7 @@ function TravelDiscrepanciesWidget({ productionId }) {
     if (!productionId) return
     supabase
       .from('travel_movements')
-      .select('id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, crew:crew_id(full_name, hotel_id)')
+      .select('id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, travel_type, from_location, from_time, to_location, to_time, travel_number, crew:crew_id(full_name, hotel_id, department, role)')
       .eq('production_id', productionId)
       .eq('discrepancy_resolved', false)
       .or('travel_date_conflict.eq.true,hotel_conflict.eq.true,match_status.eq.unmatched')
@@ -335,6 +335,11 @@ function TravelDiscrepanciesWidget({ productionId }) {
                       if (item.match_status === 'unmatched') {
                         sessionStorage.setItem('crewAddNew', item.full_name_raw)
                         sessionStorage.setItem('crewAddNewMovementId', item.id)
+                        sessionStorage.setItem('crewAddNewData', JSON.stringify({
+                          hotel_id:       item.rooming_hotel_id || null,
+                          arrival_date:   item.rooming_date     || null,
+                          departure_date: null,
+                        }))
                       }
                       window.location.href = '/dashboard/crew'
                     }}
