@@ -1570,8 +1570,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     const selVehicle = vehicles.find(v => v.id === form.vehicle_id)
     const row = {
       date: form.date,
-      pickup_id:  form.pickup_id,
-      dropoff_id: form.dropoff_id,
+      pickup_id:  form.pickup_id  || initial.pickup_id,
+      dropoff_id: form.dropoff_id || initial.dropoff_id,
       vehicle_id:  form.vehicle_id || null,
       driver_name: selVehicle?.driver_name ?? null,
       sign_code:   selVehicle?.sign_code   ?? null,
