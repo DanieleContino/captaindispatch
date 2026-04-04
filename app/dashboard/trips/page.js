@@ -495,6 +495,13 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const [crewLookupResults, setCrewLookupResults] = useState([])
   const [crewInfoCrew,      setCrewInfoCrew]      = useState(null)
 
+  // ── Multi-trip state ──────────────────────────────────────
+  const [multiMode,         setMultiMode]         = useState(false)
+  const [multiType,         setMultiType]         = useState('ARRIVAL')
+  const [savedLegs,         setSavedLegs]         = useState([])
+  const [editingLegLocalId, setEditingLegLocalId] = useState(null)
+  const [multiSaving,       setMultiSaving]       = useState(false)
+
   const transferClass = getClass(form.pickup_id, form.dropoff_id)
   const arrMin  = timeStrToMin(form.arr_time)
   const callMin = timeStrToMin(form.call_time)
@@ -515,6 +522,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     setError(null); setSelCrew([]); setCrewSearch(''); setVCheck(null)
     setSelExistingTrip(null); setAddedToTrip(null)
     setCrewLookupQ(''); setCrewLookupResults([]); setCrewInfoCrew(null)
+    setMultiMode(false); setSavedLegs([]); setEditingLegLocalId(null)
     if (PRODUCTION_ID) {
       supabase.from('trips').select('trip_id').eq('production_id', PRODUCTION_ID).like('trip_id', 'T%')
         .order('trip_id', { ascending: false }).limit(1).maybeSingle()
@@ -621,9 +629,130 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     }
   }
 
-  // ── Existing trip assignment helpers (assignCtx only) ─────
+  // ── Multi-trip helpers ─────────────────────────────────────
   const locsById = Object.fromEntries(locations.map(l => [l.id, l.name]))
   const locShort = id => (locsById[id] || id || '–').split(' ').slice(0, 3).join(' ')
+
+  function getLegTripId(idx) {
+    const base = form.trip_id || 'T001'
+    return idx === 0 ? base : base + 'BCDEFGHIJKLMNOPQRSTUVWXYZ'[idx - 1]
+  }
+
+  function handleAddLeg() {
+    if (!form.pickup_id || !form.dropoff_id) { setError('Seleziona Pickup e Dropoff per questo leg'); return }
+    const snap = {
+      localId:       Date.now().toString(),
+      form:          { ...form },
+      selCrew:       [...selCrew],
+      computed:      computed ? { ...computed } : null,
+      transferClass: getClass(form.pickup_id, form.dropoff_id),
+    }
+    if (editingLegLocalId) {
+      setSavedLegs(prev => prev.map(l => l.localId === editingLegLocalId ? { ...snap, localId: editingLegLocalId } : l))
+      setEditingLegLocalId(null)
+    } else {
+      setSavedLegs(prev => [...prev, snap])
+    }
+    // Reset per-leg fields; keep shared fields based on multiType
+    setForm(f => ({
+      ...f,
+      pickup_id:    multiType === 'ARRIVAL'   ? f.pickup_id  : '',
+      dropoff_id:   multiType === 'DEPARTURE' ? f.dropoff_id : '',
+      duration_min: '',
+    }))
+    setSelCrew([]); setCrewSearch(''); setError(null)
+  }
+
+  function handleEditLeg(leg) {
+    setForm({ ...leg.form })
+    setSelCrew([...leg.selCrew])
+    setEditingLegLocalId(leg.localId)
+    setError(null)
+  }
+
+  function handleDeleteLeg(localId) {
+    setSavedLegs(prev => prev.filter(l => l.localId !== localId))
+    if (editingLegLocalId === localId) {
+      setEditingLegLocalId(null)
+      setForm(f => ({ ...f, pickup_id: '', dropoff_id: '', duration_min: '' }))
+      setSelCrew([])
+    }
+  }
+
+  async function handleMultiSubmit() {
+    setError(null)
+    const allLegs = [...savedLegs]
+    if (form.pickup_id && form.dropoff_id) {
+      allLegs.push({
+        localId:       '_current',
+        form:          { ...form },
+        selCrew:       [...selCrew],
+        computed:      computed ? { ...computed } : null,
+        transferClass: getClass(form.pickup_id, form.dropoff_id),
+      })
+    }
+    if (allLegs.length < 2) { setError('Aggiungi almeno 2 leg per creare un multi-trip'); return }
+    if (!form.trip_id)      { setError('Trip ID base richiesto'); return }
+    setMultiSaving(true)
+    const insertedIds = []
+    try {
+      for (let i = 0; i < allLegs.length; i++) {
+        const leg     = allLegs[i]
+        const legForm = leg.form
+        const legComp = leg.computed
+        const legDurMin = parseInt(legForm.duration_min) || null
+        const legVeh  = vehicles.find(v => v.id === legForm.vehicle_id)
+        const row = {
+          production_id:   PRODUCTION_ID,
+          trip_id:         getLegTripId(i),
+          date:            legForm.date,
+          pickup_id:       legForm.pickup_id,
+          dropoff_id:      legForm.dropoff_id,
+          vehicle_id:      legForm.vehicle_id      || null,
+          driver_name:     legVeh?.driver_name     || null,
+          sign_code:       legVeh?.sign_code       || null,
+          capacity:        legVeh?.capacity        || null,
+          service_type_id: legForm.service_type_id || null,
+          duration_min:    legDurMin,
+          arr_time:        legForm.arr_time ? legForm.arr_time + ':00' : null,
+          call_min:        legComp?.callMin   ?? null,
+          pickup_min:      legComp?.pickupMin ?? null,
+          start_dt:        legComp?.startDt   ?? null,
+          end_dt:          legComp?.endDt     ?? null,
+          flight_no:       legForm.flight_no || null,
+          terminal:        legForm.terminal  || null,
+          notes:           legForm.notes     || null,
+          status:          'PLANNED',
+          pax_count:       0,
+        }
+        const { data: ins, error: tripErr } = await supabase.from('trips').insert(row).select('id').single()
+        if (tripErr || !ins?.id) throw new Error(tripErr?.message || `Errore inserimento leg ${i + 1}`)
+        insertedIds.push(ins.id)
+        if (leg.selCrew.length > 0) {
+          await supabase.from('trip_passengers').insert(
+            leg.selCrew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.id }))
+          )
+          await supabase.from('trips').update({
+            pax_count:      leg.selCrew.length,
+            passenger_list: leg.selCrew.map(c => c.full_name).join(', '),
+          }).eq('id', ins.id)
+        }
+      }
+      if (insertedIds.length >= 2) {
+        await fetch('/api/routes/compute-chain', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ leg_ids: insertedIds, production_id: PRODUCTION_ID }),
+        })
+      }
+      setMultiSaving(false); setSavedLegs([]); setEditingLegLocalId(null); setMultiMode(false)
+      onSaved()
+    } catch (e) {
+      setMultiSaving(false); setError(e.message)
+    }
+  }
+
+  // ── Existing trip assignment helpers (assignCtx only) ─────
   const correctClass = assignCtx?.ts === 'IN' ? 'ARRIVAL' : assignCtx?.ts === 'OUT' ? 'DEPARTURE' : 'STANDARD'
   // Tutti i trip con la transfer class corretta, ordinati per orario (include sibling per lookup interno)
   const allArrDepTrips = (trips || [])
@@ -903,11 +1032,24 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div>
-          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>{t.newTrip}</div>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
+              {multiMode ? `🔀 Multi-trip` : t.newTrip}
+            </div>
             {assignCtx && <div style={{ fontSize: '11px', color: '#fbbf24', fontWeight: '700', marginTop: '2px' }}>👤 {assignCtx.name}</div>}
+            {multiMode && savedLegs.length > 0 && (
+              <div style={{ fontSize: '11px', color: '#86efac', fontWeight: '700', marginTop: '2px' }}>
+                {savedLegs.length} leg{savedLegs.length > 1 ? 's' : ''} salvati · {form.trip_id}–{getLegTripId(savedLegs.length - 1)}
+              </div>
+            )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {(form.pickup_id && form.dropoff_id) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => { setMultiMode(m => !m); setSavedLegs([]); setEditingLegLocalId(null) }}
+              style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '10px', fontWeight: '800', background: multiMode ? '#f59e0b' : 'rgba(255,255,255,0.15)', color: multiMode ? '#0f2340' : 'white', letterSpacing: '0.04em' }}>
+              🔀 MULTI
+            </button>
+            {(!multiMode && form.pickup_id && form.dropoff_id) && (
               <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{transferClass}</span>
             )}
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
@@ -936,6 +1078,73 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               )}
               {crewLookupQ.length >= 2 && crewLookupResults.length === 0 && <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', padding: '6px 0 2px', fontStyle: 'italic' }}>No results</div>}
             </div>
+
+            {/* ── Multi-trip: type selector + saved legs ── */}
+            {multiMode && (
+              <>
+                <div style={{ display: 'flex', gap: '5px' }}>
+                  {(['ARRIVAL', 'DEPARTURE', 'STANDARD']).map(tp => {
+                    const c = CLS[tp]
+                    return (
+                      <button key={tp} type="button" onClick={() => setMultiType(tp)}
+                        style={{ flex: 1, padding: '7px 4px', borderRadius: '8px', border: `2px solid ${multiType === tp ? c.border : '#e2e8f0'}`, background: multiType === tp ? c.bg : 'white', color: multiType === tp ? c.color : '#94a3b8', fontSize: '10px', fontWeight: '800', cursor: 'pointer', letterSpacing: '0.04em' }}>
+                        {tp === 'ARRIVAL' ? '🛬 ARR' : tp === 'DEPARTURE' ? '🛫 DEP' : '🔀 STD'}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {savedLegs.length > 0 && (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#15803d', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '7px' }}>
+                      ✅ Legs configurati ({savedLegs.length})
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {savedLegs.map((leg, idx) => {
+                        const legTripId = getLegTripId(idx)
+                        const isEditing = editingLegLocalId === leg.localId
+                        const legCls    = CLS[leg.transferClass] || CLS.STANDARD
+                        return (
+                          <div key={leg.localId} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${isEditing ? '#2563eb' : legCls.border}`, background: isEditing ? '#eff6ff' : 'white' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f2340', fontFamily: 'monospace' }}>{legTripId}</div>
+                              <div style={{ fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {locShort(leg.form.pickup_id)} → {locShort(leg.form.dropoff_id)}
+                                {leg.selCrew.length > 0 && <span style={{ color: '#2563eb', fontWeight: '700' }}> · {leg.selCrew.length} pax</span>}
+                              </div>
+                            </div>
+                            <button type="button" onClick={() => handleEditLeg(leg)}
+                              style={{ background: isEditing ? '#2563eb' : '#f1f5f9', border: 'none', borderRadius: '5px', padding: '3px 8px', fontSize: '10px', color: isEditing ? 'white' : '#374151', cursor: 'pointer', fontWeight: '700', flexShrink: 0 }}>
+                              ✏️
+                            </button>
+                            <button type="button" onClick={() => handleDeleteLeg(leg.localId)}
+                              style={{ background: '#fef2f2', border: 'none', borderRadius: '5px', padding: '3px 8px', fontSize: '10px', color: '#dc2626', cursor: 'pointer', fontWeight: '700', flexShrink: 0 }}>
+                              🗑
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {multiType === 'ARRIVAL' && (
+                  <div style={{ fontSize: '10px', color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '7px', padding: '6px 10px' }}>
+                    💡 <strong>ARRIVAL</strong>: Pickup hub mantenuto tra i leg · scegli Dropoff diverso ogni volta
+                  </div>
+                )}
+                {multiType === 'DEPARTURE' && (
+                  <div style={{ fontSize: '10px', color: '#c2410c', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: '7px', padding: '6px 10px' }}>
+                    💡 <strong>DEPARTURE</strong>: Dropoff hub mantenuto tra i leg · scegli Pickup diverso ogni volta
+                  </div>
+                )}
+                {multiType === 'STANDARD' && (
+                  <div style={{ fontSize: '10px', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '7px', padding: '6px 10px' }}>
+                    💡 <strong>STANDARD</strong>: Pickup e Dropoff liberi per ogni leg (MIXED)
+                  </div>
+                )}
+              </>
+            )}
 
             {/* ── Add to existing trip (solo se assignCtx attivo) ── */}
             {assignCtx && arrDepTrips.length > 0 && (
@@ -1232,11 +1441,35 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
           </div>
 
           {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
-          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexShrink: 0, position: 'sticky', bottom: 0, background: 'white' }}>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>{t.cancel}</button>
-            <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
-              {saving ? t.saving : t.saveTrip}
-            </button>
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, position: 'sticky', bottom: 0, background: 'white' }}>
+            {multiMode ? (
+              <>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>{t.cancel}</button>
+                  <button type="button" onClick={handleAddLeg}
+                    style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: (form.pickup_id && form.dropoff_id) ? (editingLegLocalId ? '#2563eb' : '#6366f1') : '#94a3b8', color: 'white', fontSize: '12px', cursor: (form.pickup_id && form.dropoff_id) ? 'pointer' : 'default', fontWeight: '800' }}>
+                    {editingLegLocalId ? '✏️ Aggiorna Leg' : `+ Add Leg (${getLegTripId(savedLegs.length)})`}
+                  </button>
+                </div>
+                {(() => {
+                  const totalLegs = savedLegs.length + (form.pickup_id && form.dropoff_id ? 1 : 0)
+                  const canSave   = totalLegs >= 2 && !multiSaving
+                  return (
+                    <button type="button" onClick={handleMultiSubmit} disabled={!canSave}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: 'none', background: canSave ? '#15803d' : '#94a3b8', color: 'white', fontSize: '13px', cursor: canSave ? 'pointer' : 'default', fontWeight: '800' }}>
+                      {multiSaving ? '⏳ Creazione in corso…' : `💾 Salva Multi-trip (${totalLegs} leg${totalLegs !== 1 ? 's' : ''})`}
+                    </button>
+                  )
+                })()}
+              </>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>{t.cancel}</button>
+                <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+                  {saving ? t.saving : t.saveTrip}
+                </button>
+              </div>
+            )}
           </div>
         </form>
       </div>
