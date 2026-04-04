@@ -252,7 +252,7 @@ function ContactPopover({ crewId, email, phone, onSaved }) {
 }
 
 // ─── Crew card compatta ──────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [] }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [] }) {
   const t = useT()
   const tc = TC[member.travel_status] || TC.PRESENT
   const hc = HC[member.hotel_status]  || HC.PENDING
@@ -301,20 +301,39 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
         </div>
         <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center', fontSize: '12px' }}>
           <span>🏨 <strong>{hotel}</strong></span>
-          {member.arrival_date && <span style={{ color: '#64748b' }}>arr {fmtDate(member.arrival_date)}</span>}
-          {member.departure_date && (
-            <span style={{ color: depTomorrow || depToday ? '#dc2626' : '#64748b', fontWeight: depTomorrow || depToday ? '700' : '400' }}>
-              dep {fmtDate(member.departure_date)}
-            </span>
+          {stays.length > 1 ? (
+            stays.map((s, i) => {
+              const sHotel = locations[s.hotel_id] || s.hotel_id || '–'
+              const occ = hotelOccupancy(s.arrival_date, s.departure_date)
+              const sDepToday    = isToday(s.departure_date)
+              const sDepTomorrow = isTomorrow(s.departure_date)
+              return (
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '2px 7px' }}>
+                  🏨 <strong>{sHotel}</strong>
+                  <span style={{ color: '#64748b' }}>arr {fmtDate(s.arrival_date)}</span>
+                  <span style={{ color: sDepTomorrow || sDepToday ? '#dc2626' : '#64748b', fontWeight: sDepTomorrow || sDepToday ? '700' : '400' }}>dep {fmtDate(s.departure_date)}</span>
+                  {occ && <span style={{ fontWeight: '700', color: occ.style.color }}>· {occ.label}</span>}
+                </span>
+              )
+            })
+          ) : (
+            <>
+              {member.arrival_date && <span style={{ color: '#64748b' }}>arr {fmtDate(member.arrival_date)}</span>}
+              {member.departure_date && (
+                <span style={{ color: depTomorrow || depToday ? '#dc2626' : '#64748b', fontWeight: depTomorrow || depToday ? '700' : '400' }}>
+                  dep {fmtDate(member.departure_date)}
+                </span>
+              )}
+              {(() => {
+                const occ = hotelOccupancy(member.arrival_date, member.departure_date)
+                return occ ? (
+                  <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px', background: occ.style.bg, color: occ.style.color, border: `1px solid ${occ.style.border}` }}>
+                    {occ.label}
+                  </span>
+                ) : null
+              })()}
+            </>
           )}
-          {(() => {
-            const occ = hotelOccupancy(member.arrival_date, member.departure_date)
-            return occ ? (
-              <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px', background: occ.style.bg, color: occ.style.color, border: `1px solid ${occ.style.border}` }}>
-                {occ.label}
-              </span>
-            ) : null
-          })()}
           <span style={{ color: '#cbd5e1', fontSize: '11px' }}>{member.id}</span>
         </div>
         {member.notes && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px', fontStyle: 'italic' }}>{member.notes}</div>}
@@ -752,6 +771,7 @@ export default function CrewPage() {
   // { rawName: string, fullName: string }
 
   const [travelMap, setTravelMap]       = useState({})
+  const [staysMap,  setStaysMap]        = useState({})
 
   // Selezione bulk
   const [selectedIds, setSelectedIds]   = useState([])
@@ -797,7 +817,7 @@ export default function CrewPage() {
   const loadCrew = useCallback(async () => {
     if (!PRODUCTION_ID) return
     setLoading(true)
-    const [{ data: vData }, { data: travelData }] = await Promise.all([
+    const [{ data: vData }, { data: travelData }, { data: staysData }] = await Promise.all([
       supabase.from('crew').select('*').eq('production_id', PRODUCTION_ID).order('department', { nullsLast: true }).order('full_name'),
       supabase
         .from('travel_movements')
@@ -805,6 +825,11 @@ export default function CrewPage() {
         .eq('production_id', PRODUCTION_ID)
         .gte('travel_date', new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }))
         .order('travel_date', { ascending: true }),
+      supabase
+        .from('crew_stays')
+        .select('crew_id, hotel_id, arrival_date, departure_date')
+        .eq('production_id', PRODUCTION_ID)
+        .order('arrival_date', { ascending: true }),
     ])
     // Auto-aggiorna travel_status basato su arrival_date / departure_date
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
@@ -839,6 +864,12 @@ export default function CrewPage() {
       tMap[tm.crew_id].push(tm)
     }
     setTravelMap(tMap)
+    const sMap = {}
+    for (const s of staysData || []) {
+      if (!sMap[s.crew_id]) sMap[s.crew_id] = []
+      sMap[s.crew_id].push(s)
+    }
+    setStaysMap(sMap)
     setLoading(false)
   }, [])
 
@@ -1180,7 +1211,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} />
+                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} stays={staysMap[m.id] || []} />
                   ))}
                 </div>
               </div>
