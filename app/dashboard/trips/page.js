@@ -1281,7 +1281,10 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
             <div>
               <label style={lbl}>Pickup</label>
-              <select value={form.pickup_id} onChange={e => set('pickup_id', e.target.value)} style={inp} required>
+              <select value={form.pickup_id} onChange={e => {
+                set('pickup_id', e.target.value)
+                if (activeLeg?.isNew) setExtraLegs(prev => prev.map(l => l.id === activeLeg.id ? { ...l, pickup_id: e.target.value } : l))
+              }} style={inp} required>
                 <option value="">Select pickup…</option>
                 <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
                 <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
@@ -2310,7 +2313,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             </div>
             <div>
               <label style={lbl}>Dropoff</label>
-              <select value={form.dropoff_id} onChange={e => set('dropoff_id', e.target.value)} style={inp} required>
+              <select value={form.dropoff_id} onChange={e => {
+                set('dropoff_id', e.target.value)
+                if (activeLeg?.isNew) setExtraLegs(prev => prev.map(l => l.id === activeLeg.id ? { ...l, dropoff_id: e.target.value } : l))
+              }} style={inp} required>
                 <option value="">Select dropoff…</option>
                 <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
                 <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
