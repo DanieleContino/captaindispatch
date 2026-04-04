@@ -2307,7 +2307,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {/* Pickup / Dropoff */}
             <div>
               <label style={lbl}>Pickup</label>
-              <select value={form.pickup_id} onChange={e => set('pickup_id', e.target.value)} style={inp} required>
+              <select value={form.pickup_id} onChange={e => {
+                set('pickup_id', e.target.value)
+                if (activeLeg?.isNew) setExtraLegs(prev => prev.map(l => l.id === activeLeg.id ? { ...l, pickup_id: e.target.value } : l))
+              }} style={inp} required>
                 <option value="">Select pickup…</option>
                 <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
                 <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
