@@ -1725,18 +1725,21 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   // ── Pax add/remove ────────────────────────────────────────
   async function addPax(crew) {
-    if (!initial?.id || !PRODUCTION_ID) return
+    if (!PRODUCTION_ID) return
+    const targetId = activeLeg?.id ?? initial?.id
+    if (!targetId) return
     const { error } = await supabase.from('trip_passengers').insert({
-      production_id: PRODUCTION_ID, trip_row_id: initial.id, crew_id: crew.id,
+      production_id: PRODUCTION_ID, trip_row_id: targetId, crew_id: crew.id,
     })
     if (!error) {
-      const newPax = [...assignedPax, crew]
+      const newPax = [...assignedPax, { ...crew, trip_row_id: targetId }]
       setAssignedPax(newPax)
       setAvailableCrew(p => p.filter(c => c.id !== crew.id))
+      const legPax = newPax.filter(p => p.trip_row_id === targetId)
       await supabase.from('trips').update({
-        pax_count: newPax.length,
-        passenger_list: newPax.map(c => c.full_name).join(', '),
-      }).eq('id', initial.id)
+        pax_count: legPax.length,
+        passenger_list: legPax.map(c => c.full_name).join(', '),
+      }).eq('id', targetId)
       onPaxChanged?.()
     }
   }
