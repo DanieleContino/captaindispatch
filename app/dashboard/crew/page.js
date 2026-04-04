@@ -1017,11 +1017,11 @@ export default function CrewPage() {
                 arrival_date:   addNewBanner.arrival_date   || '',
                 departure_date: addNewBanner.departure_date || '',
               }
-              console.log('[crewAddNew] setET:', newInitial)
               setAddNewBanner(null)
               setSM('new')
               setET(newInitial)
-              setSO(true)
+              // Apri sidebar nel tick successivo così editTarget è già aggiornato
+              setTimeout(() => setSO(true), 0)
             }}
             style={{ padding: '7px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             ✓ Yes, add
