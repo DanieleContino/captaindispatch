@@ -2203,7 +2203,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                     </button>
                   )
                 })}
-                {group.length < 4 && (
+                {((group?.length ?? 1) + extraLegs.length) < 4 && (
                   <button
                     type="button"
                     onClick={() => {
