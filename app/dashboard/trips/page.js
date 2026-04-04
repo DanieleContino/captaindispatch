@@ -1601,11 +1601,19 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (!open || !initial) return
     loadPaxData(activeLeg ?? initial)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [group?.length, activeLeg?.id])
+  }, [group?.length, activeLeg?.id,
+    activeLeg?.isNew ? (extraLegs.find(l => l.id === activeLeg?.id)?.pickup_id ?? '') : null,
+    activeLeg?.isNew ? (extraLegs.find(l => l.id === activeLeg?.id)?.dropoff_id ?? '') : null,
+  ])
 
   // Repopulate form when user switches leg tab (activeLeg changes after initial open)
   useEffect(() => {
     if (!open || !activeLeg) return
+    // Per leg nuovi: resetta solo pickup/dropoff, mantieni tutto il resto dal form corrente
+    if (activeLeg.isNew) {
+      setForm(f => ({ ...f, pickup_id: '', dropoff_id: '' }))
+      return
+    }
     const arrStr  = activeLeg.arr_time ? activeLeg.arr_time.slice(0, 5) : ''
     const callStr = (activeLeg.transfer_class === 'STANDARD' && activeLeg.call_min !== null)
       ? minToHHMM(activeLeg.call_min) : ''
@@ -1661,22 +1669,28 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   // ── Load pax data ─────────────────────────────────────────
   async function loadPaxData(trip) {
-    if (!PRODUCTION_ID || !trip?.id) return
+    if (!PRODUCTION_ID) return
+    const isNewLeg = trip?.isNew === true
+    const activeLegData = isNewLeg ? extraLegs.find(l => l.id === trip?.id) : null
+    const effectivePickup  = isNewLeg ? (activeLegData?.pickup_id  || '') : (trip?.pickup_id  || '')
+    const effectiveDropoff = isNewLeg ? (activeLegData?.dropoff_id || '') : (trip?.dropoff_id || '')
+    if (!effectivePickup || !effectiveDropoff) return
+    const tripId = isNewLeg ? null : trip?.id
+    if (!isNewLeg && !tripId) return
     const reqId = ++loadPaxReqRef.current
     setPaxLoading(true)
-    const tc = getClass(trip.pickup_id, trip.dropoff_id)
-    // Pax assegnati: carica da TUTTI i leg del gruppo
-    const groupIds = (group && group.length > 1) ? group.map(g => g.id) : [trip.id]
-    // Available crew: usa SOLO l'hotel del leg attivo (non tutti i leg)
-    // — così cambiando tab Leg A/B/C il dropdown si aggiorna al crew di quell'hotel
-    const legHotelDropoff = trip.dropoff_id || ''
-    const legHotelPickup  = trip.pickup_id  || ''
+    const tc = getClass(effectivePickup, effectiveDropoff)
+    const groupIds = isNewLeg ? [] : ((group && group.length > 1) ? group.map(g => g.id) : [tripId])
+    const legHotelDropoff = effectiveDropoff
+    const legHotelPickup  = effectivePickup
 
     // Run all three queries in parallel
     const [paxRes, crewRes, dayTripsRes] = await Promise.all([
-      supabase.from('trip_passengers')
-        .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed,hotel_id)')
-        .in('trip_row_id', groupIds),
+      groupIds.length > 0
+        ? supabase.from('trip_passengers')
+            .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed,hotel_id)')
+            .in('trip_row_id', groupIds)
+        : Promise.resolve({ data: [] }),
 
       (() => {
         let q = supabase.from('crew').select('id,full_name,department,no_transport_needed,hotel_id')
