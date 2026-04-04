@@ -740,16 +740,40 @@ async function processCrewRows(rawRows, supabase, productionId) {
     const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ')
     if (fullName) {
       const fullNameNorm = fullName.trim().toLowerCase()
-      // Primary: first_name + ' ' + last_name vs full_name (trim + lowercase)
+      // Strategia 1: match esatto first_name + last_name
       let match = (existingCrew || []).find(c =>
         (c.full_name || '').trim().toLowerCase() === fullNameNorm
       )
-      // Fallback: last_name contains (es. "Mario Rossi" in DB → "Rossi" dal file)
-      if (!match && row.last_name && row.last_name.trim().length > 1) {
-        const lastNorm = row.last_name.trim().toLowerCase()
+      // Strategia 2: inversione Nome Cognome → Cognome Nome e viceversa
+      if (!match && row.first_name && row.last_name) {
+        const invertedNorm = `${row.last_name} ${row.first_name}`.trim().toLowerCase()
         match = (existingCrew || []).find(c =>
-          (c.full_name || '').trim().toLowerCase().includes(lastNorm)
+          (c.full_name || '').trim().toLowerCase() === invertedNorm
         )
+      }
+      // Strategia 3: tutte le possibili split per nomi composti
+      // es. "Del Gobbo Claudio" → "Claudio Del Gobbo"
+      if (!match) {
+        const parts = fullName.trim().split(' ')
+        for (let i = 1; i < parts.length; i++) {
+          const firstName = parts.slice(i).join(' ')
+          const lastName  = parts.slice(0, i).join(' ')
+          const inverted  = `${firstName} ${lastName}`.toLowerCase()
+          match = (existingCrew || []).find(c =>
+            (c.full_name || '').trim().toLowerCase() === inverted
+          )
+          if (match) break
+        }
+      }
+      // Strategia 4: tutti i parts presenti nel full_name del DB
+      if (!match) {
+        const parts = fullName.toLowerCase().split(' ').filter(p => p.length > 2)
+        if (parts.length >= 2) {
+          match = (existingCrew || []).find(c => {
+            const dbName = (c.full_name || '').toLowerCase()
+            return parts.every(p => dbName.includes(p))
+          })
+        }
       }
       if (match) {
         action = 'update'
