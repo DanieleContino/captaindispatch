@@ -315,48 +315,79 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
 
 // ── Accommodation processor ───────────────────────────────────
 
-/**
- * Aggiorna crew esistenti con hotel_id, arrival_date, departure_date.
- * NESSUNA regola null-only: sovrascrive sempre se il nuovo valore è non-null.
- * Questo permette di re-importare una rooming list aggiornata senza doverla
- * prima azzerare nel DB. NON inserisce nuovi crew (gestiti da processCrew).
- */
 async function processAccommodation(supabase, productionId, updateRows, newLocationMap, errors) {
   let updated = 0
   let skipped = 0
 
+  // Raggruppa le righe per crew_id
+  const byCrewId = {}
   for (const r of updateRows) {
     if (!r.existingId) { skipped++; continue }
+    if (!byCrewId[r.existingId]) byCrewId[r.existingId] = []
+    byCrewId[r.existingId].push(r)
+  }
 
-    // Risolvi hotel_id: da match parse oppure da nuova location appena inserita
-    let hotel_id = r.hotel_id || null
-    if (!hotel_id && r.hotel_name) {
-      hotel_id = newLocationMap[r.hotel_name.trim().toLowerCase()] || null
-    }
-
-    // Overwrite sempre se il nuovo valore è non-null (no null-only per accommodation)
-    const updateFields = {}
-    if (hotel_id)          updateFields.hotel_id       = hotel_id
-    if (r.arrival_date)    updateFields.arrival_date   = r.arrival_date
-    if (r.departure_date)  updateFields.departure_date = r.departure_date
-    if (r.arrival_date && r.departure_date) updateFields.hotel_status = 'CONFIRMED'
-
-    if (Object.keys(updateFields).length === 0) {
-      console.log(`[confirm/accommodation] SKIP ${r.existingId}: no new values to set (hotel_name=${r.hotel_name}, arrival=${r.arrival_date}, departure=${r.departure_date})`)
-      skipped++; continue
-    }
-
-    console.log(`[confirm/accommodation] UPDATE ${r.existingId}:`, updateFields)
-
-    const { error: updateErr } = await supabase
-      .from('crew')
-      .update(updateFields)
-      .eq('id', r.existingId)
+  for (const [crewId, rows] of Object.entries(byCrewId)) {
+    // Elimina stays esistenti per questo crew in questa produzione
+    await supabase.from('crew_stays')
+      .delete()
+      .eq('crew_id', crewId)
       .eq('production_id', productionId)
 
+    // Inserisci una stay per ogni riga
+    const staysToInsert = []
+    for (const r of rows) {
+      let hotel_id = r.hotel_id || null
+      if (!hotel_id && r.hotel_name) {
+        hotel_id = newLocationMap[r.hotel_name.trim().toLowerCase()] || null
+      }
+      if (!r.arrival_date || !r.departure_date) continue
+      staysToInsert.push({
+        production_id:  productionId,
+        crew_id:        crewId,
+        hotel_id:       hotel_id,
+        arrival_date:   r.arrival_date,
+        departure_date: r.departure_date,
+      })
+    }
+
+    if (staysToInsert.length === 0) { skipped++; continue }
+
+    const { error: stayErr } = await supabase.from('crew_stays').insert(staysToInsert)
+    if (stayErr) {
+      errors.push(`Errore insert crew_stays ${crewId}: ${stayErr.message}`)
+      continue
+    }
+
+    // Calcola min arrival, max departure e hotel attivo oggi
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+    const minArrival   = staysToInsert.reduce((m, s) => s.arrival_date   < m ? s.arrival_date   : m, staysToInsert[0].arrival_date)
+    const maxDeparture = staysToInsert.reduce((m, s) => s.departure_date > m ? s.departure_date : m, staysToInsert[0].departure_date)
+
+    // Hotel attivo = stay che include oggi, altrimenti prossima stay futura
+    const activeStay = staysToInsert.find(s => s.arrival_date <= today && today <= s.departure_date)
+      || staysToInsert.filter(s => s.arrival_date > today).sort((a, b) => a.arrival_date.localeCompare(b.arrival_date))[0]
+      || staysToInsert[0]
+
+    // Calcola travel_status
+    let travel_status
+    if (activeStay.arrival_date <= today && today <= activeStay.departure_date) travel_status = 'PRESENT'
+    else if (activeStay.arrival_date > today)                                    travel_status = 'IN'
+    else                                                                          travel_status = 'OUT'
+
+    const updateFields = {
+      hotel_id:       activeStay.hotel_id,
+      arrival_date:   minArrival,
+      departure_date: maxDeparture,
+      hotel_status:   'CONFIRMED',
+      travel_status,
+    }
+
+    const { error: updateErr } = await supabase.from('crew').update(updateFields)
+      .eq('id', crewId).eq('production_id', productionId)
+
     if (updateErr) {
-      console.error(`[confirm/accommodation] UPDATE ERROR ${r.existingId}:`, updateErr.message)
-      errors.push(`Errore update accommodation ${r.existingId}: ${updateErr.message}`)
+      errors.push(`Errore update crew ${crewId}: ${updateErr.message}`)
     } else {
       updated++
     }
