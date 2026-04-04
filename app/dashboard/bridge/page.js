@@ -331,13 +331,24 @@ function TravelDiscrepanciesWidget({ productionId }) {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (item.match_status === 'unmatched') {
                         sessionStorage.setItem('crewAddNew', item.full_name_raw)
                         sessionStorage.setItem('crewAddNewMovementId', item.id)
+
+                        // Cerca hotel_id da locations usando hotel_raw
+                        let hotel_id = item.rooming_hotel_id || null
+                        if (!hotel_id && item.hotel_raw) {
+                          const matchedLoc = locations.find(l =>
+                            l.name.toLowerCase().includes(item.hotel_raw.toLowerCase()) ||
+                            item.hotel_raw.toLowerCase().includes(l.name.toLowerCase())
+                          )
+                          if (matchedLoc) hotel_id = matchedLoc.id
+                        }
+
                         sessionStorage.setItem('crewAddNewData', JSON.stringify({
-                          hotel_id:       item.rooming_hotel_id || null,
-                          arrival_date:   item.rooming_date     || null,
+                          hotel_id:       hotel_id,
+                          arrival_date:   item.rooming_date || item.travel_date || null,
                           departure_date: null,
                         }))
                       }
