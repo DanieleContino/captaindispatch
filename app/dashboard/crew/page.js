@@ -442,6 +442,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
       })
     } else {
       // Auto-genera Crew ID: prende il più alto CR#### esistente e incrementa
+      console.log('[CrewSidebar] useEffect new mode, initial:', initial)
       setForm({ ...EMPTY })
       if (PRODUCTION_ID) {
         supabase.from('crew').select('id').eq('production_id', PRODUCTION_ID)
@@ -1010,15 +1011,16 @@ export default function CrewPage() {
           </div>
           <button
             onClick={() => {
-              setAddNewBanner(null)
-              setSM('new')
-              setET({
+              const newInitial = {
                 full_name:      addNewBanner.fullName,
                 hotel_id:       addNewBanner.hotel_id       || '',
                 arrival_date:   addNewBanner.arrival_date   || '',
                 departure_date: addNewBanner.departure_date || '',
-              })
-              console.log('[crewAddNew] setET:', { full_name: addNewBanner.fullName, hotel_id: addNewBanner.hotel_id, arrival_date: addNewBanner.arrival_date })
+              }
+              console.log('[crewAddNew] setET:', newInitial)
+              setAddNewBanner(null)
+              setSM('new')
+              setET(newInitial)
               setSO(true)
             }}
             style={{ padding: '7px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}>
