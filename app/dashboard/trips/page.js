@@ -656,15 +656,17 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     } else {
       setSavedLegs(prev => [...prev, snap])
     }
-    // Reset per-leg fields; keep shared fields based on multiType
+    // Reset per-leg fields — sempre entrambi pickup e dropoff, così il form è
+    // sempre vuoto dopo "+ Add Leg" e l'auto-include in handleMultiSubmit
+    // si attiva solo se l'utente riempie esplicitamente entrambi i campi.
     // vehicle_id: forzato al primo leg per tutti i leg successivi (mezzo condiviso)
     const sharedVehicle = savedLegs.length > 0
       ? savedLegs[0].form.vehicle_id   // già salvato: prende dal leg 0
       : snap.form.vehicle_id           // questo era il primo leg: usa il suo veicolo
     setForm(f => ({
       ...f,
-      pickup_id:    multiType === 'ARRIVAL'   ? f.pickup_id  : '',
-      dropoff_id:   multiType === 'DEPARTURE' ? f.dropoff_id : '',
+      pickup_id:    '',
+      dropoff_id:   '',
       duration_min: '',
       vehicle_id:   sharedVehicle || f.vehicle_id,
     }))
@@ -690,7 +692,19 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   async function handleMultiSubmit() {
     setError(null)
     const allLegs = [...savedLegs]
-    if (allLegs.length < 2) { setError('Aggiungi almeno 2 leg con "+ Add Leg" prima di salvare'); return }
+    // Auto-include del form corrente come ultima leg se pickup e dropoff sono entrambi compilati
+    // (il form è sempre vuoto dopo "+ Add Leg", quindi questo scatta solo se l'utente ha
+    // esplicitamente compilato i campi per un leg aggiuntivo senza cliccare "+ Add Leg")
+    if (form.pickup_id && form.dropoff_id) {
+      allLegs.push({
+        localId:       '_current',
+        form:          { ...form },
+        selCrew:       [...selCrew],
+        computed:      computed ? { ...computed } : null,
+        transferClass: getClass(form.pickup_id, form.dropoff_id),
+      })
+    }
+    if (allLegs.length < 2) { setError('Aggiungi almeno 2 leg: usa "+ Add Leg" o compila il form per l\'ultima leg'); return }
     if (!form.trip_id)      { setError('Trip ID base richiesto'); return }
     setMultiSaving(true)
     const insertedIds = []
@@ -1461,7 +1475,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                   </button>
                 </div>
                 {(() => {
-                  const totalLegs = savedLegs.length
+                  const totalLegs = savedLegs.length + (form.pickup_id && form.dropoff_id ? 1 : 0)
                   const canSave   = totalLegs >= 2 && !multiSaving
                   return (
                     <button type="button" onClick={handleMultiSubmit} disabled={!canSave}
