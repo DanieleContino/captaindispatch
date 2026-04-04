@@ -657,11 +657,16 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       setSavedLegs(prev => [...prev, snap])
     }
     // Reset per-leg fields; keep shared fields based on multiType
+    // vehicle_id: forzato al primo leg per tutti i leg successivi (mezzo condiviso)
+    const sharedVehicle = savedLegs.length > 0
+      ? savedLegs[0].form.vehicle_id   // già salvato: prende dal leg 0
+      : snap.form.vehicle_id           // questo era il primo leg: usa il suo veicolo
     setForm(f => ({
       ...f,
       pickup_id:    multiType === 'ARRIVAL'   ? f.pickup_id  : '',
       dropoff_id:   multiType === 'DEPARTURE' ? f.dropoff_id : '',
       duration_min: '',
+      vehicle_id:   sharedVehicle || f.vehicle_id,
     }))
     setSelCrew([]); setCrewSearch(''); setError(null)
   }
@@ -1277,18 +1282,28 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             {/* Vehicle + check */}
             <div>
               <label style={lbl}>Vehicle</label>
-              <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={inp}>
-                <option value="">No vehicle</option>
-                {vehicles.map(v => {
-                  const avail   = isVehicleAvailableForDate(v, form.date)
-                  const hasPref = v.preferred_dept || v.preferred_crew_ids?.length > 0
-                  return (
-                    <option key={v.id} value={v.id}>
-                      {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
-                    </option>
-                  )
-                })}
-              </select>
+              {/* In multi-mode con almeno 1 leg salvato: mezzo bloccato (condiviso tra tutti i leg) */}
+              {multiMode && savedLegs.length > 0 ? (
+                <div style={{ padding: '8px 12px', border: '1px solid #bbf7d0', borderRadius: '8px', background: '#f0fdf4', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#15803d', flex: 1 }}>
+                    🚐 {selVehicle ? `${selVehicle.id} — ${selVehicle.driver_name} (${selVehicle.sign_code}) ×${selVehicle.capacity}` : 'No vehicle'}
+                  </span>
+                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#15803d', background: '#bbf7d0', padding: '2px 7px', borderRadius: '999px', flexShrink: 0 }}>🔒 shared</span>
+                </div>
+              ) : (
+                <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={inp}>
+                  <option value="">No vehicle</option>
+                  {vehicles.map(v => {
+                    const avail   = isVehicleAvailableForDate(v, form.date)
+                    const hasPref = v.preferred_dept || v.preferred_crew_ids?.length > 0
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
+                      </option>
+                    )
+                  })}
+                </select>
+              )}
               {form.vehicle_id && vCheck && (
                 <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: '700', color: vCheck.available ? '#15803d' : '#dc2626' }}>
                   {vCheck.available ? '✅ Vehicle available' : `⚠ Busy on ${vCheck.conflictTripId}`}
