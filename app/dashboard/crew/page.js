@@ -301,8 +301,8 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
         </div>
         <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center', fontSize: '12px' }}>
           <span>🏨 <strong>{hotel}</strong></span>
-          {stays.length > 1 ? (
-            stays.map((s, i) => {
+          {stays.filter(s => s.hotel_id && s.arrival_date && s.departure_date).length > 1 ? (
+            stays.filter(s => s.hotel_id && s.arrival_date && s.departure_date).map((s, i) => {
               const sHotel = locations[s.hotel_id] || s.hotel_id || '–'
               const occ = hotelOccupancy(s.arrival_date, s.departure_date)
               const sDepToday    = isToday(s.departure_date)
