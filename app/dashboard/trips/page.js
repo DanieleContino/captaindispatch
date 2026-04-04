@@ -1760,6 +1760,18 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (!PRODUCTION_ID) return
     const targetId = activeLeg?.id ?? initial?.id
     if (!targetId) return
+
+    // New leg (not yet in DB): store pax locally in extraLegs.pendingPax, flush at save
+    if (activeLeg?.isNew) {
+      const newPax = [...assignedPax, { ...crew, trip_row_id: targetId }]
+      setAssignedPax(newPax)
+      setAvailableCrew(p => p.filter(c => c.id !== crew.id))
+      setExtraLegs(prev => prev.map(l =>
+        l.id === activeLeg.id ? { ...l, pendingPax: [...(l.pendingPax || []), crew] } : l
+      ))
+      return
+    }
+
     const { error } = await supabase.from('trip_passengers').insert({
       production_id: PRODUCTION_ID, trip_row_id: targetId, crew_id: crew.id,
     })
@@ -1778,6 +1790,22 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   async function removePax(crew) {
     if (!initial?.id) return
+
+    // New leg: remove only from local state (no DB row yet)
+    const isNewLegPax = extraLegs.some(l => l.isNew === true && l.id === crew.trip_row_id)
+    if (isNewLegPax) {
+      setAssignedPax(assignedPax.filter(c => c.id !== crew.id))
+      setAvailableCrew(p =>
+        [...p, { id: crew.id, full_name: crew.full_name, department: crew.department }].sort((a, b) =>
+          (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name)
+        )
+      )
+      setExtraLegs(prev => prev.map(l =>
+        l.id === crew.trip_row_id ? { ...l, pendingPax: (l.pendingPax || []).filter(c => c.id !== crew.id) } : l
+      ))
+      return
+    }
+
     // Use the crew's own trip_row_id (set in loadPaxData) so multi-stop siblings are handled correctly
     const targetTripId = crew.trip_row_id ?? initial.id
     console.log('[removePax] crew:', crew.full_name, '| crew.trip_row_id:', crew.trip_row_id, '| initial.id:', initial.id, '→ targetTripId:', targetTripId)
@@ -2098,6 +2126,16 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             break
           }
           newLegIds.push(newRow.id)
+          // Inserisce i pax selezionati per questo nuovo leg
+          if (leg.pendingPax?.length > 0) {
+            await supabase.from('trip_passengers').insert(
+              leg.pendingPax.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: c.id }))
+            )
+            await supabase.from('trips').update({
+              pax_count:      leg.pendingPax.length,
+              passenger_list: leg.pendingPax.map(c => c.full_name).join(', '),
+            }).eq('id', newRow.id)
+          }
         }
       }
 
@@ -2369,7 +2407,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               {/* + Add stop */}
               {extraLegs.length < 3 && (
                 <button type="button"
-                  onClick={() => setExtraLegs([...extraLegs, { id: Date.now(), pickup_id: '', dropoff_id: '' }])}
+                  onClick={() => setExtraLegs([...extraLegs, { id: Date.now(), pickup_id: '', dropoff_id: '', pendingPax: [] }])}
                   style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #94a3b8', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
                   + Add stop
                 </button>
