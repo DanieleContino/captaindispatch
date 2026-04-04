@@ -1879,21 +1879,33 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     e.preventDefault(); setError(null); setSaving(true)
     const isMulti    = group && group.length > 1
     const selVehicle = vehicles.find(v => v.id === form.vehicle_id)
+
+    // When user is configuring a NEW leg (activeLeg.isNew), form.pickup_id/dropoff_id
+    // belong to the new leg — NOT to Leg A (initial). Use initial values to preserve Leg A's route.
+    const mainPickupId  = activeLeg?.isNew ? initial.pickup_id  : form.pickup_id
+    const mainDropoffId = activeLeg?.isNew ? initial.dropoff_id : form.dropoff_id
+    const mainArrTime   = activeLeg?.isNew ? initial.arr_time   : (form.arr_time ? form.arr_time + ':00' : null)
+    const mainDurMin    = activeLeg?.isNew ? (initial.duration_min || null) : durMin
+    const mainCallMin   = activeLeg?.isNew ? initial.call_min   : (computed?.callMin ?? null)
+    const mainPickupMin = activeLeg?.isNew ? initial.pickup_min : (computed?.pickupMin ?? null)
+    const mainStartDt   = activeLeg?.isNew ? initial.start_dt   : (computed?.startDt ?? null)
+    const mainEndDt     = activeLeg?.isNew ? initial.end_dt     : (computed?.endDt ?? null)
+
     const row = {
-      date: form.date, pickup_id: form.pickup_id, dropoff_id: form.dropoff_id,
+      date: form.date, pickup_id: mainPickupId, dropoff_id: mainDropoffId,
       vehicle_id:  form.vehicle_id || null,
       driver_name: selVehicle?.driver_name ?? null,
       sign_code:   selVehicle?.sign_code   ?? null,
       capacity:    selVehicle?.capacity    ?? null,
       service_type_id: form.service_type_id || null,
-      duration_min: durMin,
-      arr_time:   form.arr_time ? form.arr_time + ':00' : null,
-      call_min:   computed?.callMin   ?? null,
+      duration_min: mainDurMin,
+      arr_time:   mainArrTime,
+      call_min:   mainCallMin,
       // MULTI: pickup_min/start_dt/end_dt sono gestiti da compute-chain — non sovrascrivere con valori naïve
       ...(!isMulti && {
-        pickup_min: computed?.pickupMin ?? null,
-        start_dt:   computed?.startDt   ?? null,
-        end_dt:     computed?.endDt     ?? null,
+        pickup_min: mainPickupMin,
+        start_dt:   mainStartDt,
+        end_dt:     mainEndDt,
       }),
       flight_no: form.flight_no || null, terminal: form.terminal || null, notes: form.notes || null,
       status: form.status,
