@@ -2169,8 +2169,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {/* ── Leg Selector (solo per gruppi multi-stop) ── */}
             {group && group.length > 1 && (
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '4px 0 2px' }}>
-                {group.map((leg, i) => {
-                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(66 + i - 1)}`
+                {[...group, ...extraLegs].map((leg, i) => {
+                  const isNew = extraLegs.some(e => e.id === leg.id)
+                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(65 + i)}${isNew ? ' ✦' : ''}`
                   const isActive = activeLeg?.id === leg.id
                   return (
                     <button
@@ -2189,9 +2190,51 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       }}
                     >
                       {label}
+                      {isActive && isNew && (
+                        <span
+                          onClick={e => {
+                            e.stopPropagation()
+                            setExtraLegs(prev => prev.filter(l => l.id !== leg.id))
+                            setActiveLeg(group[0])
+                          }}
+                          style={{ marginLeft: '6px', opacity: 0.6 }}
+                        >✕</span>
+                      )}
                     </button>
                   )
                 })}
+                {group.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const baseId = baseTripId(initial.trip_id)
+                      const usedLetters = group.map(g => {
+                        const suf = g.trip_id.slice(baseId.length)
+                        return suf.length === 1 && /^[A-Z]$/.test(suf) ? suf : null
+                      }).filter(Boolean)
+                      let nextLetter = 'B'
+                      for (const l of 'BCDEFGHIJKLMNOPQRSTUVWXYZ') {
+                        if (!usedLetters.includes(l)) { nextLetter = l; break }
+                      }
+                      const newLeg = {
+                        id: `new_${Date.now()}`,
+                        trip_id: baseId + nextLetter,
+                        pickup_id: '', dropoff_id: '',
+                        existing: false, isNew: true,
+                      }
+                      setExtraLegs(prev => [...prev, newLeg])
+                      setActiveLeg(newLeg)
+                    }}
+                    style={{
+                      padding: '4px 12px', borderRadius: '99px',
+                      fontSize: '11px', background: 'transparent',
+                      color: '#534AB7', border: '0.5px solid #534AB7',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + Add Leg
+                  </button>
+                )}
               </div>
             )}
 
