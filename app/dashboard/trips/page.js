@@ -1890,6 +1890,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       )
     : []
 
+  const activeLegAssignedPax = activeLeg?.isNew
+    ? newLegPax
+    : assignedPax.filter(p => p.trip_row_id === activeLeg?.id)
+
   const regularCrew  = availableCrew.filter(c => !c.no_transport_needed)
   const ntnCrew      = availableCrew.filter(c =>  c.no_transport_needed)
   const freeCount    = regularCrew.filter(c => !busyMap[c.id]).length
@@ -2146,38 +2150,18 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {/* ── Passengers ── */}
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                Passengers ({assignedPax.length}{initial?.capacity ? `/${initial.capacity}` : ''})
+                Passengers ({activeLegAssignedPax.length}{initial?.capacity ? `/${initial.capacity}` : ''})
               </div>
 
               {paxLoading ? (
                 <div style={{ padding: '10px', color: '#94a3b8', fontSize: '12px', textAlign: 'center' }}>{t.loadingPax}</div>
               ) : (
                 <>
-                  {/* PAX selezionati per nuova leg (pre-save) */}
-                  {activeLeg?.isNew && newLegPax.length > 0 && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#7c3aed', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                        ✦ Leg B — selezionati ({newLegPax.length})
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        {newLegPax.map(c => (
-                          <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: '#f3e8ff', border: '1px solid #d8b4fe', borderRadius: '6px', fontSize: '12px' }}>
-                            <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
-                            <button type="button" onClick={() => {
-                              setNewLegPax(prev => prev.filter(x => x.id !== c.id))
-                              setAvailableCrew(prev => [...prev, c].sort((a, b) => (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name)))
-                            }} style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '1px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700' }}>×</button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* ASSIGNED */}
-                  {assignedPax.length > 0 && (
+                  {activeLegAssignedPax.length > 0 && (
                     <div style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                        {t.assignedSection} ({assignedPax.length})
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: activeLeg?.isNew ? '#7c3aed' : '#15803d', letterSpacing: '0.05em', marginBottom: '5px' }}>
+                        {activeLeg?.isNew ? `✦ Leg B — selezionati` : t.assignedSection} ({activeLegAssignedPax.length})
                       </div>
 
                       {/* ── MULTI: raggruppa pax per leg con sub-header ── */}
@@ -2230,7 +2214,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       ) : (
                         /* ── SINGLE trip: lista flat con hotel badge ── */
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                          {assignedPax.map(c => (
+                          {activeLegAssignedPax.map(c => (
                             <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', minWidth: 0 }}>
                                 <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
