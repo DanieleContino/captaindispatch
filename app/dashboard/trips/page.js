@@ -79,7 +79,7 @@ const TRIP_COLS = [
   { key: 'trip',      label: 'TRIP',       width: '130px' },
   { key: 'vehicle',   label: 'VEHICLE',    width: '180px' },
   { key: 'route',     label: 'ROUTE',      width: '210px' },
-  { key: 'pax',       label: 'PASSENGERS', width: '160px' },
+  { key: 'pax',       label: 'PASSENGERS', width: '220px' },
   { key: 'pax_count', label: 'PAX',        width: '70px'  },
 ]
 
@@ -322,7 +322,7 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
             return (
               <div key={r.id || ri} style={{ fontSize: '10px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '16.5px', marginBottom: ri < group.length - 1 ? '4px' : 0 }}>
                 {legPax.length > 0
-                  ? legPax.map(fmtPax).join(', ')
+                  ? legPax.map(fmtPax).join(' · ')
                   : <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
                 }
               </div>
@@ -330,14 +330,9 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
           })
         ) : paxNames.length > 0 ? (
           <>
-            {paxNames.slice(0, 4).map((name, i) => (
-              <div key={i} style={{ fontSize: '10px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
-                {fmtPax(name)}
-              </div>
-            ))}
-            {paxNames.length > 4 && (
-              <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic', marginTop: '1px' }}>+{paxNames.length - 4} more</div>
-            )}
+            <div style={{ fontSize: '10px', color: '#374151', lineHeight: 1.5 }}>
+              {paxNames.map(fmtPax).join(' · ')}
+            </div>
           </>
         ) : (
           <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic' }}>{i18n.noPaxAssigned}</div>
