@@ -1905,8 +1905,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {((group && group.length > 1) || extraLegs.length > 0) && (
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '4px 0 2px' }}>
                 {[...(group || []), ...extraLegs].map((leg, i) => {
-                  const isNew = !leg.existing && leg.isNew !== false && !(group || []).find(g => g.id === leg.id)
-                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(65 + i)}${isNew ? ' (new)' : ''}`
+                  const isNew = !leg.existing && !(group || []).find(g => g.id === leg.id)
+                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(65 + i)}${isNew ? ' ✦' : ''}`
                   const isActive = activeLeg?.id === leg.id
                   return (
                     <button
@@ -1945,8 +1945,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                   <button
                     type="button"
                     onClick={() => {
-                      const newLeg = { id: Date.now(), pickup_id: '', dropoff_id: '', existing: false, isNew: true }
-                      setExtraLegs([...extraLegs, newLeg])
+                      const newLeg = {
+                        id: Date.now(), pickup_id: '', dropoff_id: '',
+                        existing: false, isNew: true
+                      }
+                      setExtraLegs(prev => [...prev, newLeg])
                       setActiveLeg(newLeg)
                     }}
                     style={{
