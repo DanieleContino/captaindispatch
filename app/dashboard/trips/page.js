@@ -1902,7 +1902,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
 
             {/* ── Leg Selector (solo per gruppi multi-stop) ── */}
-            {(
+            {open && (
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '4px 0 2px' }}>
                 {[...(group || []), ...extraLegs].map((leg, i) => {
                   const isNew = !leg.existing && !(group || []).find(g => g.id === leg.id)
