@@ -2023,54 +2023,6 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               </select>
             </div>
 
-            {/* ── Extra Legs — mostra quando ci sono leg nuovi non ancora salvati ── */}
-            {extraLegs.length > 0 && (<div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '2px' }}>Route Legs</div>
-
-              {/* Leg A — read-only */}
-              <div style={{ fontSize: '12px', color: '#64748b', padding: '5px 8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px' }}>
-                <span style={{ fontWeight: '800', color: '#0f172a', marginRight: '6px', fontFamily: 'monospace' }}>Leg A</span>
-                {locShortEdit(form.pickup_id) || '–'} → {locShortEdit(form.dropoff_id) || '–'}
-              </div>
-
-              {/* Extra legs */}
-              {extraLegs.map((leg, i) => (
-                <div key={leg.id} style={{ display: 'flex', flexDirection: 'column', gap: '5px', padding: '8px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>Leg {String.fromCharCode(66 + i)}</span>
-                    <button type="button" onClick={() => {
-                      if (leg.existing) setToDelete(prev => [...prev, leg.id])
-                      setExtraLegs(extraLegs.filter(l => l.id !== leg.id))
-                    }}
-                      style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '2px 7px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', lineHeight: 1 }}>✕</button>
-                  </div>
-                  <select value={leg.pickup_id}
-                    onChange={e => setExtraLegs(extraLegs.map(l => l.id === leg.id ? { ...l, pickup_id: e.target.value } : l))}
-                    style={{ ...inp, fontSize: '12px' }}>
-                    <option value="">Select pickup…</option>
-                    <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
-                    <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
-                  </select>
-                  <select value={leg.dropoff_id}
-                    onChange={e => setExtraLegs(extraLegs.map(l => l.id === leg.id ? { ...l, dropoff_id: e.target.value } : l))}
-                    style={{ ...inp, fontSize: '12px' }}>
-                    <option value="">Select dropoff…</option>
-                    <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
-                    <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
-                  </select>
-                </div>
-              ))}
-
-              {/* + Add stop */}
-              {extraLegs.length < 3 && (
-                <button type="button"
-                  onClick={() => setExtraLegs([...extraLegs, { id: Date.now(), pickup_id: '', dropoff_id: '' }])}
-                  style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #94a3b8', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                  + Add stop
-                </button>
-              )}
-            </div>)}
-
             {/* Vehicle + availability badge */}
             <div>
               <label style={lbl}>Vehicle</label>
