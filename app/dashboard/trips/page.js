@@ -2167,9 +2167,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
 
             {/* ── Leg Selector (solo per gruppi multi-stop) ── */}
-            {group && group.length > 1 && (
+            {open && (
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '4px 0 2px' }}>
-                {[...group, ...extraLegs].map((leg, i) => {
+                {[...(group || [initial].filter(Boolean)), ...extraLegs].map((leg, i) => {
                   const isNew = extraLegs.some(e => e.id === leg.id)
                   const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(65 + i)}${isNew ? ' ✦' : ''}`
                   const isActive = activeLeg?.id === leg.id
