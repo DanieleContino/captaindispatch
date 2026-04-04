@@ -1680,16 +1680,19 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     const reqId = ++loadPaxReqRef.current
     setPaxLoading(true)
     const tc = getClass(effectivePickup, effectiveDropoff)
+    // Per leg nuovi: groupIds vuoti per trip_passengers (nessun pax ancora assegnato)
+    // ma existingGroupIds serve per escludere da availableCrew i pax già nel gruppo
     const groupIds = isNewLeg ? [] : ((group && group.length > 1) ? group.map(g => g.id) : [tripId])
+    const existingGroupIds = group ? group.map(g => g.id).filter(Boolean) : (tripId ? [tripId] : [])
     const legHotelDropoff = effectiveDropoff
     const legHotelPickup  = effectivePickup
 
     // Run all three queries in parallel
     const [paxRes, crewRes, dayTripsRes] = await Promise.all([
-      groupIds.length > 0
+      existingGroupIds.length > 0
         ? supabase.from('trip_passengers')
             .select('crew_id, trip_row_id, crew!inner(id,full_name,department,no_transport_needed,hotel_id)')
-            .in('trip_row_id', groupIds)
+            .in('trip_row_id', existingGroupIds)
         : Promise.resolve({ data: [] }),
 
       (() => {
@@ -1714,7 +1717,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
     const assigned    = (paxRes.data || []).map(p => ({ ...p.crew, trip_row_id: p.trip_row_id }))
     const assignedIds = new Set(assigned.map(c => c.id))
-    setAssignedPax(assigned)
+    // Per leg nuovi: non mostrare i pax del gruppo come "assegnati" (non appartengono a questa leg)
+    // ma usarli solo per escluderli da availableCrew
+    setAssignedPax(isNewLeg ? [] : assigned)
 
     // Build busy map: crewId → conflicting trip_id
     const dayTrips   = dayTripsRes.data || []
