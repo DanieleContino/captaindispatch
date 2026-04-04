@@ -796,6 +796,7 @@ export default function CrewPage() {
       const extraData = sessionStorage.getItem('crewAddNewData')
       sessionStorage.removeItem('crewAddNewData')
       const extra = extraData ? JSON.parse(extraData) : {}
+      console.log('[crewAddNew] extra data:', extra)
       setAddNewRawName(raw)
       setAddNewBanner({ rawName: raw, fullName, ...extra })
     }
@@ -1017,6 +1018,7 @@ export default function CrewPage() {
                 arrival_date:   addNewBanner.arrival_date   || '',
                 departure_date: addNewBanner.departure_date || '',
               })
+              console.log('[crewAddNew] setET:', { full_name: addNewBanner.fullName, hotel_id: addNewBanner.hotel_id, arrival_date: addNewBanner.arrival_date })
               setSO(true)
             }}
             style={{ padding: '7px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}>
