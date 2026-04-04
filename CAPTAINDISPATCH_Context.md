@@ -1,5 +1,35 @@
-# CAPTAINDISPATCH — Context S12 (Cline)
+# CAPTAINDISPATCH — Context S13 (Cline)
 ## Updated: 4 April 2026
+
+---
+
+## WHAT CHANGED IN SESSION S13
+
+### EditTripSidebar — "Add Leg" crew list fix attempts (commits 0ba1f93 → 4240a2d) — `app/dashboard/trips/page.js`
+
+#### Problema
+Quando si apre un trip esistente nella `EditTripSidebar`, si preme "+ Add Leg" e si seleziona Pickup + Dropoff sul nuovo leg, la sezione Passengers non mostra alcun crew disponibile.
+
+#### Fix applicati (parziali — BUG ANCORA APERTO)
+
+1. **commit 0ba1f93** — `onChange` Pickup e Dropoff: aggiunto `setExtraLegs(prev => prev.map(...))` per sincronizzare `extraLegs` quando `activeLeg?.isNew` è true. **PROBLEMA**: il replace era finito su `TripSidebar` (prima nel file) invece di `EditTripSidebar` → il Pickup di EditTripSidebar non veniva sincronizzato.
+
+2. **commit ff0d751** — `loadPaxData`: quando `isNewLeg === true`, la terza promise del `Promise.all` (query day trips) ora usa `Promise.resolve({ data: [] })` invece di `supabase.from('trips')...not('id','in','()')` (stringa vuota = PostgREST error = Promise.all reject = crew non caricata).
+
+3. **commit 4240a2d** — Applica correttamente `setExtraLegs` pickup_id al select Pickup dentro `EditTripSidebar` (usando `{/* Pickup / Dropoff */}` come contesto univoco per `replace_in_file`).
+
+#### Stato attuale del codice
+- `EditTripSidebar` Pickup onChange: ✅ sync a `extraLegs`
+- `EditTripSidebar` Dropoff onChange: ✅ sync a `extraLegs`
+- `loadPaxData` dayTrips query per `isNewLeg`: ✅ skippata (no crash)
+- Il `useEffect` che triggera `loadPaxData` sulle dep `extraLegs.find(...)?.pickup_id` e `...?.dropoff_id`: ✅ presente
+- **ANCORA NON FUNZIONA** — la crew non appare dopo il fix. Il bug potrebbe essere in un'altra parte del flusso non ancora identificata. Non invertire i fix sopra.
+
+#### Prossimi passi per il debug
+- Verificare se `loadPaxData` viene effettivamente chiamata dopo il cambio di pickup/dropoff (aggiungere `console.log` temporanei)
+- Verificare se `crewRes.data` contiene risultati (il filtro per `hotel_id` + `travel_status` potrebbe essere troppo restrittivo per i new legs)
+- Verificare se il `useEffect` dipendente da `extraLegs.find(...)?.pickup_id` scatta correttamente (React batching potrebbe non triggerare il re-run se le due `setState` avvengono nello stesso frame)
+- Considerare approccio alternativo: usare `form.pickup_id` e `form.dropoff_id` direttamente come dipendenze del `useEffect` invece di leggere da `extraLegs`
 
 ---
 
@@ -215,6 +245,8 @@ CREATE TABLE travel_movements (
 2. **ArrivalsDeparturesChart** — Verify key={PRODUCTION_ID} fix is working correctly.
 
 3. **DayStrip toggle activator** (hub-coverage) — Clicking a day in the DayStrip should activate it (set `activeStripDate`, show amber banner, reload content for that date). Visual changes (orange day button, amber banner) were implemented in commit db8b567 but user reports the feature does not work — content does not change when a strip day is clicked. Suspect: `useEffect([user, effectiveDate, loadData])` may not fire because derived value `activeStripDate ?? date` is not a state variable itself. Fix: move `effectiveDate` into `useMemo` or directly inline `activeStripDate ?? date` inside the `useEffect` callback.
+
+4. **EditTripSidebar — Add Leg: crew list vuota** (trips/page.js, S13) — Quando si seleziona Pickup + Dropoff su un new leg (creato con "+ Add Leg"), la sezione Passengers non mostra alcun crew disponibile. Fix applicati (0ba1f93, ff0d751, 4240a2d) non hanno risolto. Stato codice: Pickup/Dropoff onChange in `EditTripSidebar` sincronizzano `extraLegs`, `loadPaxData` non crasha più. Bug potrebbe essere nel `useEffect` dep array (React batching non triggerando il re-run), oppure nel filtro crew (`hotel_id` + `travel_status` troppo restrittivo). Approccio alternativo da investigare: usare `form.pickup_id`/`form.dropoff_id` direttamente come dep del `useEffect` invece di leggere da `extraLegs`.
 
 ---
 
