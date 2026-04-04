@@ -1,5 +1,28 @@
-# CAPTAINDISPATCH — Context S13 (Cline)
+# CAPTAINDISPATCH — Context S14 (Cline)
 ## Updated: 4 April 2026
+
+---
+
+## WHAT CHANGED IN SESSION S14
+
+### EditTripSidebar — Add Leg: pax selezionabili e trip diventa multi (commits b0c5d1d → 61ad85b) — `app/dashboard/trips/page.js`
+
+#### Bug risolti
+
+**Bug A — pax non selezionabili nel nuovo leg** (continuazione S13)
+- Root cause: `addPax()` tentava `INSERT trip_passengers` con `trip_row_id = activeLeg.id` (intero `Date.now()`, non UUID) → FK violation silenziosa → `setAssignedPax` mai chiamato → crew non aggiungibile.
+- Fix: branch `activeLeg?.isNew` che skippa il DB insert e salva la selezione localmente in `extraLegs[leg].pendingPax`. I pax vengono scritti nel DB solo al save (dopo `INSERT trips` per il nuovo leg).
+- Anche `removePax` gestisce la rimozione locale per i new leg (`isNewLegPax = extraLegs.some(l => l.isNew === true && l.id === crew.trip_row_id)`).
+
+**Bug B — albergo di Leg A sovrascritto da Leg B**
+- Root cause: `handleSubmit` usava `form.pickup_id/dropoff_id` (che appartengono al nuovo Leg B, impostati dall'utente) per fare `UPDATE trips SET pickup_id=form.pickup_id WHERE id=initial.id` → sovrascriveva la rotta di Leg A.
+- Fix: quando `activeLeg?.isNew`, `mainPickupId/mainDropoffId` e tutti i campi di timing vengono letti da `initial` (valori originali di Leg A). Il form è usato solo per i campi condivisi (vehicle, notes, status, date).
+
+#### Stato attuale ✅ RISOLTO
+- "+ Add Leg" in EditTripSidebar: la crew disponibile appare correttamente in base a pickup/dropoff del nuovo leg
+- I pax selezionati nel nuovo leg vengono salvati nel DB al click "Save Changes"
+- Leg A non viene modificato quando si configura Leg B
+- Il trip diventa correttamente MULTI (Leg A + Leg B) al salvataggio
 
 ---
 
@@ -246,7 +269,7 @@ CREATE TABLE travel_movements (
 
 3. **DayStrip toggle activator** (hub-coverage) — Clicking a day in the DayStrip should activate it (set `activeStripDate`, show amber banner, reload content for that date). Visual changes (orange day button, amber banner) were implemented in commit db8b567 but user reports the feature does not work — content does not change when a strip day is clicked. Suspect: `useEffect([user, effectiveDate, loadData])` may not fire because derived value `activeStripDate ?? date` is not a state variable itself. Fix: move `effectiveDate` into `useMemo` or directly inline `activeStripDate ?? date` inside the `useEffect` callback.
 
-4. **EditTripSidebar — Add Leg: crew list vuota** (trips/page.js, S13) — Quando si seleziona Pickup + Dropoff su un new leg (creato con "+ Add Leg"), la sezione Passengers non mostra alcun crew disponibile. Fix applicati (0ba1f93, ff0d751, 4240a2d) non hanno risolto. Stato codice: Pickup/Dropoff onChange in `EditTripSidebar` sincronizzano `extraLegs`, `loadPaxData` non crasha più. Bug potrebbe essere nel `useEffect` dep array (React batching non triggerando il re-run), oppure nel filtro crew (`hotel_id` + `travel_status` troppo restrittivo). Approccio alternativo da investigare: usare `form.pickup_id`/`form.dropoff_id` direttamente come dep del `useEffect` invece di leggere da `extraLegs`.
+4. ~~**EditTripSidebar — Add Leg: crew list vuota**~~ — ✅ RISOLTO in S14 (vedi sopra).
 
 ---
 
