@@ -1510,6 +1510,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const [crewLookupResults, setCrewLookupResults] = useState([])
   const [crewInfoCrew,      setCrewInfoCrew]      = useState(null)
 
+  // Race-condition guard per loadPaxData
+  const loadPaxReqRef = useRef(0)
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   // Initialize form when opening a new trip row
@@ -1627,14 +1630,15 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   // ── Load pax data ─────────────────────────────────────────
   async function loadPaxData(trip) {
     if (!PRODUCTION_ID || !trip?.id) return
+    const reqId = ++loadPaxReqRef.current
     setPaxLoading(true)
     const tc = getClass(trip.pickup_id, trip.dropoff_id)
-    // Per multi-stop: carica pax da tutti i leg del gruppo
+    // Pax assegnati: carica da TUTTI i leg del gruppo
     const groupIds = (group && group.length > 1) ? group.map(g => g.id) : [trip.id]
-    // Per multi-stop Hub: raccogli tutti gli hotel di tutti i leg (ARRIVAL→dropoff, DEP→pickup)
-    const allGroupLegs  = (group && group.length > 1) ? group : [trip]
-    const allDropoffIds = [...new Set(allGroupLegs.map(g => g.dropoff_id).filter(Boolean))]
-    const allPickupIds  = [...new Set(allGroupLegs.map(g => g.pickup_id).filter(Boolean))]
+    // Available crew: usa SOLO l'hotel del leg attivo (non tutti i leg)
+    // — così cambiando tab Leg A/B/C il dropdown si aggiorna al crew di quell'hotel
+    const legHotelDropoff = trip.dropoff_id || ''
+    const legHotelPickup  = trip.pickup_id  || ''
 
     // Run all three queries in parallel
     const [paxRes, crewRes, dayTripsRes] = await Promise.all([
@@ -1645,10 +1649,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       (() => {
         let q = supabase.from('crew').select('id,full_name,department,no_transport_needed,hotel_id')
           .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
-        // Per MULTI-stop: usa .in() per coprire tutti gli hotel del gruppo
-        if (tc === 'ARRIVAL')        q = q.in('hotel_id', allDropoffIds).eq('travel_status', 'IN')
-        else if (tc === 'DEPARTURE') q = q.in('hotel_id', allPickupIds).eq('travel_status', 'OUT')
-        else                         q = q.in('hotel_id', allPickupIds).eq('travel_status', 'PRESENT')
+        // Filtra per l'hotel del leg corrente — cambia quando si switcha tab
+        if (tc === 'ARRIVAL')        q = q.eq('hotel_id', legHotelDropoff).eq('travel_status', 'IN')
+        else if (tc === 'DEPARTURE') q = q.eq('hotel_id', legHotelPickup).eq('travel_status', 'OUT')
+        else                         q = q.eq('hotel_id', legHotelPickup).eq('travel_status', 'PRESENT')
         return q.order('department').order('full_name')
       })(),
 
@@ -1658,6 +1662,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         .not('id', 'in', `(${groupIds.join(',')})`)
         .not('start_dt', 'is', null),
     ])
+
+    // Ignora risultati stale (se loadPaxData è stata richiamata di nuovo nel frattempo)
+    if (reqId !== loadPaxReqRef.current) return
 
     const assigned    = (paxRes.data || []).map(p => ({ ...p.crew, trip_row_id: p.trip_row_id }))
     const assignedIds = new Set(assigned.map(c => c.id))
