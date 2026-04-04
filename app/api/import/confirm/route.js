@@ -339,6 +339,7 @@ async function processAccommodation(supabase, productionId, updateRows, newLocat
     if (hotel_id)          updateFields.hotel_id       = hotel_id
     if (r.arrival_date)    updateFields.arrival_date   = r.arrival_date
     if (r.departure_date)  updateFields.departure_date = r.departure_date
+    if (r.arrival_date && r.departure_date) updateFields.hotel_status = 'CONFIRMED'
 
     if (Object.keys(updateFields).length === 0) {
       console.log(`[confirm/accommodation] SKIP ${r.existingId}: no new values to set (hotel_name=${r.hotel_name}, arrival=${r.arrival_date}, departure=${r.departure_date})`)
