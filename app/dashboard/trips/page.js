@@ -1344,6 +1344,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   // Repopulate form when user switches leg tab (activeLeg changes after initial open)
   useEffect(() => {
     if (!open || !activeLeg) return
+    if (activeLeg.isNew) {
+      setForm(f => ({ ...f, pickup_id: '', dropoff_id: '' }))
+      return
+    }
     const arrStr  = activeLeg.arr_time ? activeLeg.arr_time.slice(0, 5) : ''
     const callStr = (activeLeg.transfer_class === 'STANDARD' && activeLeg.call_min !== null)
       ? minToHHMM(activeLeg.call_min) : ''
@@ -1898,10 +1902,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
 
             {/* ── Leg Selector (solo per gruppi multi-stop) ── */}
-            {group && group.length > 1 && (
+            {((group && group.length > 1) || extraLegs.length > 0) && (
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '4px 0 2px' }}>
-                {group.map((leg, i) => {
-                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(66 + i - 1)}`
+                {[...(group || []), ...extraLegs].map((leg, i) => {
+                  const isNew = !leg.existing && leg.isNew !== false && !(group || []).find(g => g.id === leg.id)
+                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(65 + i)}${isNew ? ' (new)' : ''}`
                   const isActive = activeLeg?.id === leg.id
                   return (
                     <button
@@ -1916,13 +1921,44 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                         background: isActive ? '#534AB7' : 'transparent',
                         color: isActive ? '#fff' : '#888',
                         border: isActive ? '0.5px solid #534AB7' : '0.5px solid #d0d0d0',
-                        cursor: 'pointer',
+                      cursor: 'pointer',
                       }}
                     >
                       {label}
+                      {isActive && i > 0 && (
+                        <span
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (leg.existing) setToDelete(prev => [...prev, leg.id])
+                            else setExtraLegs(prev => prev.filter(l => l.id !== leg.id))
+                            setActiveLeg((group || [])[0] ?? initial)
+                          }}
+                          style={{ marginLeft: '6px', opacity: 0.6 }}
+                        >
+                          ✕
+                        </span>
+                      )}
                     </button>
                   )
                 })}
+                {(group || []).length + extraLegs.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newLeg = { id: Date.now(), pickup_id: '', dropoff_id: '', existing: false, isNew: true }
+                      setExtraLegs([...extraLegs, newLeg])
+                      setActiveLeg(newLeg)
+                    }}
+                    style={{
+                      padding: '4px 12px', borderRadius: '99px',
+                      fontSize: '11px', background: 'transparent',
+                      color: '#534AB7', border: '0.5px solid #534AB7',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + Add stop
+                  </button>
+                )}
               </div>
             )}
 
@@ -1978,8 +2014,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               </select>
             </div>
 
-            {/* ── Extra Legs (multi-stop UI) — solo per trip singoli; per multi il switcher sopra sostituisce questa UI ── */}
-            {(!group || group.length <= 1) && <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* ── Extra Legs — mostra quando ci sono leg nuovi non ancora salvati ── */}
+            {extraLegs.length > 0 && (<div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '2px' }}>Route Legs</div>
 
               {/* Leg A — read-only */}
@@ -2024,7 +2060,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                   + Add stop
                 </button>
               )}
-            </div>}
+            </div>)}
 
             {/* Vehicle + availability badge */}
             <div>
