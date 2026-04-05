@@ -3,10 +3,11 @@
 
 ---
 
-## NEXT SESSION: S35 — S34-E (ultimo task) + open bugs
+## NEXT SESSION: S35 — open bugs
 
-### S34-E ancora da fare:
-> Vedi sezione S34 sotto per dettagli.
+### S34 completata interamente (A–E) ✅
+> S34-E completata in sessione S35 (commit `5b67e47`).
+> Tutti e 5 i task di S34 sono chiusi. Prossima priorità: bug aperti (vedi sezione OPEN BUGS).
 
 ---
 
@@ -56,10 +57,10 @@ Il filtro pax usa `arrival_date`/`departure_date` invece di `travel_status`.
   - `.eq('travel_status','PRESENT')` → `.or('on_location.eq.true,and(arrival_date.lte.${isoToday()},departure_date.gte.${isoToday()})')`
   - `runRocket` eligible: `c.travel_status === 'PRESENT'` → `(c.on_location === true || (c.arrival_date && c.departure_date))`
 
-#### S34-E · Tooltip debug sidebar — aggiornare testo
+#### ✅ S34-E · Tooltip debug sidebar — aggiornare testo (commit `5b67e47`)
 - **File**: `app/dashboard/trips/page.js`
-- **Scope**: 3 stringhe testo nel debug panel pax: `"status=IN"`, `"status=OUT"`, `"status=PRESENT"`
-- **A**: `"arrival_date=date"`, `"departure_date=date"`, `"arrival<=date<=departure"`
+- **Scope**: 3 stringhe testo nel debug panel pax
+- **Fatto**: `"status=IN"` → `"arrival_date=date"`, `"status=OUT"` → `"departure_date=date"`, `"status=PRESENT"` → `"arrival<=date<=departure"`
 
 ### Regola operativa S34
 > Ogni task = 1 commit separato. Ordine: A → B → C → D → E.
