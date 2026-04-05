@@ -16,20 +16,22 @@ Il filtro pax deve usare `arrival_date`/`departure_date` invece di `travel_statu
 
 ### Le 5 task (una per sessione/commit, max 1 file ciascuna)
 
-#### S34-A · `TripSidebar` CREATE — filtro pax date-based
+#### ✅ S34-A · `TripSidebar` CREATE — filtro pax date-based (commit `3a80138`)
 - **File**: `app/dashboard/trips/page.js`
-- **Scope**: `useEffect` "Available crew" (~righe 559-563)
-- **Da**: `eq('travel_status','IN')` / `eq('travel_status','OUT')` / `eq('travel_status','PRESENT')`
-- **A**:
+- **Scope**: `useEffect` "Available crew" — 3 righe + dipendenza `form.date`
+- **Fatto**:
   - ARRIVAL: `.eq('hotel_id', form.dropoff_id).eq('arrival_date', form.date)`
   - DEPARTURE: `.eq('hotel_id', form.pickup_id).eq('departure_date', form.date)`
-  - STANDARD: `.eq('hotel_id', form.pickup_id).lte('arrival_date', form.date).gte('departure_date', form.date)` + `.or('on_location.eq.true')` come fallback per crew permanente
-- Mantenere `hotel_status=CONFIRMED`
+  - STANDARD: `.or('and(hotel_id.eq.${pickup},arrival_date.lte.${date},departure_date.gte.${date}),on_location.eq.true')`
+  - Aggiunto `form.date` alle dipendenze del `useEffect`
 
-#### S34-B · `EditTripSidebar` `loadPaxData` — allineare fallback
+#### ✅ S34-B · `EditTripSidebar` `loadPaxData` — differenziare per transfer class (commit `07c9889`)
 - **File**: `app/dashboard/trips/page.js`
-- **Scope**: funzione `loadPaxData` nella `EditTripSidebar` (branch non-`crew_stays`)
-- **Cambiamento**: rimuovere `travel_status` dal ramo fallback, allineare alla logica date-based come S34-A
+- **Scope**: query `crewRes` dentro `loadPaxData` — da STANDARD universale a 3-branch
+- **Fatto**: la query `crew_stays` ora differenzia ARRIVAL/DEPARTURE/STANDARD:
+  - ARRIVAL: `.eq('hotel_id', legHotelDropoff).eq('arrival_date', tripDate)`
+  - DEPARTURE: `.eq('hotel_id', legHotelPickup).eq('departure_date', tripDate)`
+  - STANDARD: `.eq('hotel_id', legHotelPickup).lte('arrival_date').gte('departure_date')`
 
 #### S34-C · `hub-coverage/page.js` — query crew by date
 - **File**: `app/dashboard/hub-coverage/page.js`
