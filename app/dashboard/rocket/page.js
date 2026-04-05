@@ -194,8 +194,8 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
   }
   const eligible = crew.filter(c =>
     !excludedCrewIds.has(c.id) && c.hotel_id &&
-    c.travel_status === 'PRESENT' && c.hotel_status === 'CONFIRMED' &&
-    !c.no_transport_needed
+    (c.on_location === true || (c.arrival_date && c.departure_date)) &&
+    c.hotel_status === 'CONFIRMED' && !c.no_transport_needed
   )
   const groupMap = {}
   for (const c of eligible) {
@@ -1185,8 +1185,9 @@ export default function RocketPage() {
     if (!PRODUCTION_ID) return
     setLoading(true)
     const [cR, vR, lR, rR] = await Promise.all([
-      supabase.from('crew').select('id,full_name,department,hotel_id,travel_status,hotel_status,no_transport_needed,on_location')
-        .eq('production_id', PRODUCTION_ID).eq('travel_status', 'PRESENT').eq('hotel_status', 'CONFIRMED')
+      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
+        .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
+        .or(`on_location.eq.true,and(arrival_date.lte.${isoToday()},departure_date.gte.${isoToday()})`)
         .eq('no_transport_needed', false)
         .order('department').order('full_name'),
       supabase.from('vehicles').select('id,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active')
