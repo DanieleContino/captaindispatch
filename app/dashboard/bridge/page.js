@@ -308,9 +308,39 @@ function TravelDiscrepanciesWidget({ productionId }) {
                       </span>
                     )}
                     {item.travel_date_conflict && (
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
-                        📅 Date: rooming {item.rooming_date} vs travel {item.travel_date}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
+                          📅 Rooming List → <strong>{item.rooming_date}</strong> · Travel Calendar → <strong>{item.travel_date}</strong>
+                        </span>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={async () => {
+                              if (!item.crew_id || !item.rooming_date) return
+                              // Aggiorna travel_movements con la data del rooming
+                              await supabase.from('travel_movements')
+                                .update({ travel_date: item.rooming_date, travel_date_conflict: false })
+                                .eq('id', item.id)
+                              await resolve(item.id)
+                            }}
+                            style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                            ✓ Use Rooming ({item.rooming_date})
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!item.crew_id || !item.travel_date) return
+                              // Aggiorna crew arrival/departure con la data del Travel Calendar
+                              const field = item.direction === 'IN' ? 'arrival_date' : 'departure_date'
+                              await supabase.from('crew')
+                                .update({ [field]: item.travel_date })
+                                .eq('id', item.crew_id)
+                                .eq('production_id', productionId)
+                              await resolve(item.id)
+                            }}
+                            style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                            ✓ Use Calendar ({item.travel_date})
+                          </button>
+                        </div>
+                      </div>
                     )}
                     {item.hotel_conflict && (() => {
                       const roomingHotel = locations.find(l => l.id === item.rooming_hotel_id)?.name || item.rooming_hotel_id || '?'
