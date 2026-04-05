@@ -256,7 +256,7 @@ function TravelDiscrepanciesWidget({ productionId }) {
     if (!productionId) return
     supabase
       .from('travel_movements')
-      .select('id, crew_id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, travel_type, from_location, from_time, to_location, to_time, travel_number, crew:crew_id(full_name, hotel_id, department, role)')
+      .select('id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, travel_type, from_location, from_time, to_location, to_time, travel_number, crew:crew_id(full_name, hotel_id, department, role)')
       .eq('production_id', productionId)
       .eq('discrepancy_resolved', false)
       .or('travel_date_conflict.eq.true,hotel_conflict.eq.true,match_status.eq.unmatched')
@@ -314,47 +314,11 @@ function TravelDiscrepanciesWidget({ productionId }) {
                     )}
                     {item.hotel_conflict && (() => {
                       const roomingHotel = locations.find(l => l.id === item.rooming_hotel_id)?.name || item.rooming_hotel_id || '?'
-                      const travelHotel  = locations.find(l => l.id === item.hotel_id)?.name || item.hotel_raw || '?'
+                      const travelHotel  = item.hotel_raw || '?'
                       return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
-                            🏨 Hotel conflict: rooming → <strong>{roomingHotel}</strong> vs travel → <strong>{travelHotel}</strong>
-                          </span>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={async () => {
-                                if (!item.crew_id || !item.rooming_hotel_id) return
-                                await supabase.from('crew')
-                                  .update({ hotel_id: item.rooming_hotel_id })
-                                  .eq('id', item.crew_id)
-                                  .eq('production_id', productionId)
-                                await supabase.from('crew_stays')
-                                  .update({ hotel_id: item.rooming_hotel_id })
-                                  .eq('crew_id', item.crew_id)
-                                  .eq('production_id', productionId)
-                                await resolve(item.id)
-                              }}
-                              style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
-                              ✓ Use Rooming ({roomingHotel.split(' ')[0]})
-                            </button>
-                            <button
-                              onClick={async () => {
-                                if (!item.crew_id || !item.hotel_id) return
-                                await supabase.from('crew')
-                                  .update({ hotel_id: item.hotel_id })
-                                  .eq('id', item.crew_id)
-                                  .eq('production_id', productionId)
-                                await supabase.from('crew_stays')
-                                  .update({ hotel_id: item.hotel_id })
-                                  .eq('crew_id', item.crew_id)
-                                  .eq('production_id', productionId)
-                                await resolve(item.id)
-                              }}
-                              style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
-                              ✓ Use Travel ({travelHotel.split(' ')[0]})
-                            </button>
-                          </div>
-                        </div>
+                        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
+                          🏨 Hotel conflict: rooming → <strong>{roomingHotel}</strong> vs travel → <strong>{travelHotel}</strong>
+                        </span>
                       )
                     })()}
                   </div>
