@@ -1708,7 +1708,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
       (() => {
         // S34-B: date-based filter (arrival_date / departure_date) instead of travel_status
-        const tripDate = trip?.date || isoToday()
+        // S35 fix: for new legs trip.date is undefined — use form.date (the trip's actual date)
+        const tripDate = isNewLeg ? (form.date || isoToday()) : (trip?.date || isoToday())
         let q = supabase.from('crew_stays')
           .select('crew_id, departure_date, crew!inner(id, full_name, department, no_transport_needed, hotel_id, hotel_status)')
           .eq('production_id', PRODUCTION_ID)
