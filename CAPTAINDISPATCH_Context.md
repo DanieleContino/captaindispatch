@@ -1,5 +1,38 @@
-# CAPTAINDISPATCH — Context S14 (Cline)
-## Updated: 4 April 2026
+# CAPTAINDISPATCH — Context S15 (Cline)
+## Updated: 5 April 2026
+
+---
+
+## WHAT CHANGED IN SESSION S15
+
+### Multi-stay cross-check: `processTravelRows` usa `crew_stays` (commit `0eee410`) — `app/api/import/parse/route.js`
+
+**Problema**: `processTravelRows` calcolava `travel_date_conflict` e `rooming_date` leggendo solo `crew.arrival_date`/`departure_date` (campo singolo). Per persone con soggiorni multipli (multi-stay), il secondo viaggio veniva segnalato come falso positivo.
+
+**Fix**:
+- Aggiunta query `crew_stays` al `Promise.all` esistente: `supabase.from('crew_stays').select('crew_id, hotel_id, arrival_date, departure_date').eq('production_id', productionId)`
+- Nuovo branch `if (personStays.length > 0)`:
+  - `travel_date_conflict = !coveringStay` — falso positivo solo se NESSUNA stay copre la travel_date
+  - `rooming_date` dalla stay più vicina alla travel_date
+  - `hotel_conflict`: vero solo se hotel del travel non corrisponde ad ALCUNA stay
+  - `rooming_hotel_id` / `rooming_date` dalla stay più vicina
+- Fallback ai campi diretti `crew.arrival_date`/`departure_date` se la persona non ha stays
+
+---
+
+### Bridge — `TravelDiscrepanciesWidget` live re-check vs `crew_stays` (commit `9fe75fc`) — `app/dashboard/bridge/page.js`
+
+**Problema**: I valori `travel_date_conflict`, `rooming_date`, `rooming_hotel_id` in `travel_movements` erano calcolati all'import e salvati staticamente. Record già in DB avevano ancora i vecchi valori (falsi positivi).
+
+**Fix**:
+- `useEffect` carica `travel_movements` + `locations` + `crew_stays` in parallelo (live)
+- Re-evalua ogni item con stays reali prima di `setItems`:
+  - Se `travel_date_conflict=true` ma una stay copre la travel_date → **falso positivo**: rimosso dall'UI + marcato `discrepancy_resolved=true` nel DB (background silenzioso)
+  - Se `hotel_conflict=true` ma una stay ha l'hotel corretto → stesso trattamento
+- `item._personStays` — stays arricchite sull'item per uso nel render
+- `liveRoomingDate` — calcolata runtime dalla stay più vicina (sovrascrive valore stale)
+- Badge "(N stays)" mostrato quando la persona ha più di una stay
+- **"Use Calendar" button** — aggiorna la `crew_stay` più vicina alla travel_date (`.eq('arrival_date', closestStay.arrival_date)`), non più `crew.arrival_date`/`departure_date`
 
 ---
 
@@ -263,13 +296,15 @@ CREATE TABLE travel_movements (
 
 ## OPEN BUGS TO FIX
 
-1. **addNewBanner in crew page** — Banner does not appear when navigating from Bridge TravelDiscrepanciesWidget with ?addNew= URL param. useSearchParams() with Suspense causes Vercel build failure. Solution: use sessionStorage to pass the name instead of URL params.
+1. **⚠️ DA VERIFICARE — TravelDiscrepanciesWidget badge "(2 stays)"**: quando un item mostra badge "(2 stays)", significa che la persona HA 2 stays in DB ma la `travel_date` non è coperta da nessuna (range non sovrapposto = conflitto reale). Verificare che le opzioni di risoluzione siano corrette e comprensibili. Considerare se mostrare le date delle stays nell'UI per aiutare il coordinatore a scegliere quale stay aggiornare.
 
-2. **ArrivalsDeparturesChart** — Verify key={PRODUCTION_ID} fix is working correctly.
+2. **addNewBanner in crew page** — Banner does not appear when navigating from Bridge TravelDiscrepanciesWidget with ?addNew= URL param. useSearchParams() with Suspense causes Vercel build failure. Solution: use sessionStorage to pass the name instead of URL params.
 
-3. **DayStrip toggle activator** (hub-coverage) — Clicking a day in the DayStrip should activate it (set `activeStripDate`, show amber banner, reload content for that date). Visual changes (orange day button, amber banner) were implemented in commit db8b567 but user reports the feature does not work — content does not change when a strip day is clicked. Suspect: `useEffect([user, effectiveDate, loadData])` may not fire because derived value `activeStripDate ?? date` is not a state variable itself. Fix: move `effectiveDate` into `useMemo` or directly inline `activeStripDate ?? date` inside the `useEffect` callback.
+3. **ArrivalsDeparturesChart** — Verify key={PRODUCTION_ID} fix is working correctly.
 
-4. ~~**EditTripSidebar — Add Leg: crew list vuota**~~ — ✅ RISOLTO in S14 (vedi sopra).
+4. **DayStrip toggle activator** (hub-coverage) — Clicking a day in the DayStrip should activate it (set `activeStripDate`, show amber banner, reload content for that date). Visual changes (orange day button, amber banner) were implemented in commit db8b567 but user reports the feature does not work — content does not change when a strip day is clicked. Suspect: `useEffect([user, effectiveDate, loadData])` may not fire because derived value `activeStripDate ?? date` is not a state variable itself. Fix: move `effectiveDate` into `useMemo` or directly inline `activeStripDate ?? date` inside the `useEffect` callback.
+
+5. ~~**EditTripSidebar — Add Leg: crew list vuota**~~ — ✅ RISOLTO in S14 (vedi sopra).
 
 ---
 
