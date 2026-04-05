@@ -952,10 +952,11 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
 }
 
 async function processTravelRows(rawRows, supabase, productionId) {
-  const [{ data: existingCrew }, { data: hubs }, { data: locations }] = await Promise.all([
+  const [{ data: existingCrew }, { data: hubs }, { data: locations }, { data: allStays }] = await Promise.all([
     supabase.from('crew').select('id, full_name, arrival_date, departure_date, hotel_id').eq('production_id', productionId),
     supabase.from('locations').select('id, name').eq('production_id', productionId).eq('is_hub', true),
     supabase.from('locations').select('id, name').eq('production_id', productionId),
+    supabase.from('crew_stays').select('crew_id, hotel_id, arrival_date, departure_date').eq('production_id', productionId),
   ])
 
   const newHotels = []
@@ -1045,10 +1046,43 @@ async function processTravelRows(rawRows, supabase, productionId) {
     let rooming_hotel_id = null
 
     if (match) {
-      rooming_hotel_id = match.hotel_id || null
-      rooming_date = direction === 'IN' ? (match.arrival_date || null) : (match.departure_date || null)
-      if (rooming_date && raw.travel_date && rooming_date !== raw.travel_date) travel_date_conflict = true
-      if (hotel_id && rooming_hotel_id && hotel_id !== rooming_hotel_id) hotel_conflict = true
+      // Cerca stays della persona
+      const personStays = (allStays || []).filter(s => s.crew_id === match.id)
+
+      if (personStays.length > 0) {
+        // Verifica se travel_date è coperta da qualsiasi stay
+        const travelDate = raw.travel_date
+        const coveringStay = personStays.find(s =>
+          s.arrival_date && s.departure_date &&
+          travelDate >= s.arrival_date && travelDate <= s.departure_date
+        )
+        // Se nessuna stay copre la data → conflitto
+        travel_date_conflict = !coveringStay
+
+        // rooming_date = data della stay più vicina alla travel_date
+        const closestStay = personStays.reduce((best, s) => {
+          if (!best) return s
+          const d1 = Math.abs(new Date(s.arrival_date) - new Date(travelDate))
+          const d2 = Math.abs(new Date(best.arrival_date) - new Date(travelDate))
+          return d1 < d2 ? s : best
+        }, null)
+        rooming_date = direction === 'IN'
+          ? (closestStay?.arrival_date || match.arrival_date || null)
+          : (closestStay?.departure_date || match.departure_date || null)
+
+        // hotel_conflict: verifica se hotel del travel corrisponde a qualsiasi stay
+        if (hotel_id) {
+          const matchingHotelStay = personStays.find(s => s.hotel_id === hotel_id)
+          hotel_conflict = !matchingHotelStay
+          rooming_hotel_id = closestStay?.hotel_id || match.hotel_id || null
+        }
+      } else {
+        // Nessuna stay → usa i campi diretti su crew (fallback)
+        rooming_hotel_id = match.hotel_id || null
+        rooming_date = direction === 'IN' ? (match.arrival_date || null) : (match.departure_date || null)
+        if (rooming_date && raw.travel_date && rooming_date !== raw.travel_date) travel_date_conflict = true
+        if (hotel_id && rooming_hotel_id && hotel_id !== rooming_hotel_id) hotel_conflict = true
+      }
     }
 
     return {
