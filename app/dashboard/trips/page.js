@@ -1584,19 +1584,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
     loadPaxData(leg)
 
-    if (PRODUCTION_ID && initial.trip_id) {
-      const baseId = baseTripId(initial.trip_id)
-      supabase.from('trips').select('id,trip_id,pickup_id,dropoff_id')
-        .eq('production_id', PRODUCTION_ID).like('trip_id', `${baseId}%`)
-        .neq('trip_id', initial.trip_id).order('trip_id', { ascending: true })
-        .then(({ data }) => {
-          if (data && data.length > 0) setExtraLegs(data.map(row => ({
-            id: row.id, trip_id: row.trip_id,
-            pickup_id: row.pickup_id || '', dropoff_id: row.dropoff_id || '',
-            existing: true, _origPickup: row.pickup_id || '', _origDropoff: row.dropoff_id || '',
-          })))
-        })
-    }
+    // NOTE: NON caricare i sibling esistenti in extraLegs — sono già in `group` (prop dal parent).
+    // Caricarli causerebbe: (1) tab duplicate nel leg selector, (2) doppia attivazione al click,
+    // (3) trip creato con lettera sbagliata in handleSubmit (suffixes[i] parte da 'B' ignorando group).
+    // extraLegs contiene SOLO i nuovi leg aggiunti via "+ Add Leg" (non ancora salvati in DB).
   }, [open, initial?.id])
 
   // Reload pax when group grows OR when active leg switches
@@ -2049,7 +2040,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         if (!leg.pickup_id || !leg.dropoff_id) continue   // skip silenzioso
         if (leg.existing && leg.pickup_id === leg._origPickup && leg.dropoff_id === leg._origDropoff) continue
 
-        const newTripId = leg.existing ? leg.trip_id : baseId + suffixes[i]
+        // Usa sempre leg.trip_id (impostato correttamente dal "+ Add Leg" onClick che calcola
+        // la prossima lettera disponibile tenendo conto di group). NON usare suffixes[i] perché
+        // l'indice i parte da 0 anche quando group ha già sibling (es. i=0 → 'B' anche se T001B esiste già).
+        const newTripId = leg.trip_id
 
         // 1. Cerca duration_min nella tabella routes
         let legDurMin = null
