@@ -254,21 +254,89 @@ function TravelDiscrepanciesWidget({ productionId }) {
 
   useEffect(() => {
     if (!productionId) return
-    supabase
-      .from('travel_movements')
-      .select('id, crew_id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, travel_type, from_location, from_time, to_location, to_time, travel_number, crew:crew_id(full_name, hotel_id, department, role)')
-      .eq('production_id', productionId)
-      .eq('discrepancy_resolved', false)
-      .or('travel_date_conflict.eq.true,hotel_conflict.eq.true,match_status.eq.unmatched')
-      .order('travel_date', { ascending: true })
-      .limit(50)
-      .then(({ data }) => setItems(data || []))
 
-    supabase
-      .from('locations')
-      .select('id, name')
-      .eq('production_id', productionId)
-      .then(({ data }) => setLocations(data || []))
+    Promise.all([
+      supabase
+        .from('travel_movements')
+        .select('id, crew_id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, travel_type, from_location, from_time, to_location, to_time, travel_number, crew:crew_id(full_name, hotel_id, department, role)')
+        .eq('production_id', productionId)
+        .eq('discrepancy_resolved', false)
+        .or('travel_date_conflict.eq.true,hotel_conflict.eq.true,match_status.eq.unmatched')
+        .order('travel_date', { ascending: true })
+        .limit(50),
+      supabase
+        .from('locations')
+        .select('id, name')
+        .eq('production_id', productionId),
+    ]).then(async ([{ data: rawItems }, { data: locs }]) => {
+      setLocations(locs || [])
+
+      const items = rawItems || []
+
+      // Collect crew_ids for items with pre-computed conflicts
+      const conflictCrewIds = [...new Set(
+        items
+          .filter(i => i.crew_id && (i.travel_date_conflict || i.hotel_conflict))
+          .map(i => i.crew_id)
+      )]
+
+      // Load crew_stays live for these crew members
+      let staysMap = {}
+      if (conflictCrewIds.length > 0) {
+        const { data: stays } = await supabase
+          .from('crew_stays')
+          .select('crew_id, hotel_id, arrival_date, departure_date')
+          .in('crew_id', conflictCrewIds)
+          .eq('production_id', productionId)
+        for (const s of (stays || [])) {
+          if (!staysMap[s.crew_id]) staysMap[s.crew_id] = []
+          staysMap[s.crew_id].push(s)
+        }
+      }
+
+      // Re-evaluate conflicts against real crew_stays — filter out false positives
+      const toAutoResolve = []
+      const validItems = items.filter(item => {
+        if (!item.crew_id) return true  // unmatched — keep
+        const personStays = staysMap[item.crew_id] || []
+        if (personStays.length === 0) return true  // no stays → keep as-is
+
+        if (item.travel_date_conflict) {
+          const coveringStay = personStays.find(s =>
+            s.arrival_date && s.departure_date &&
+            item.travel_date >= s.arrival_date && item.travel_date <= s.departure_date
+          )
+          if (coveringStay) {
+            // False positive: travel_date covered by a real stay → auto-resolve silently
+            toAutoResolve.push(item.id)
+            return false
+          }
+          item._personStays = personStays  // enrich for UI
+        }
+
+        if (item.hotel_conflict) {
+          const matchingHotelStay = personStays.find(s => s.hotel_id === item.hotel_id)
+          if (matchingHotelStay) {
+            // Travel hotel matches at least one stay → not a real conflict
+            toAutoResolve.push(item.id)
+            return false
+          }
+          item._personStays = personStays
+        }
+
+        return true
+      })
+
+      // Silently mark false positives as resolved in DB
+      if (toAutoResolve.length > 0) {
+        supabase.from('travel_movements')
+          .update({ discrepancy_resolved: true, discrepancy_note: 'auto-resolved: covered by crew_stay' })
+          .in('id', toAutoResolve)
+          .then(() => {})
+      }
+
+      setItems(validItems)
+    })
   }, [productionId])
 
   async function resolve(id) {
@@ -291,6 +359,22 @@ function TravelDiscrepanciesWidget({ productionId }) {
       <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
         {items.map(item => {
           const name = item.crew?.full_name || item.full_name_raw
+
+          // Compute live rooming_date from real stays (overrides stale pre-computed value)
+          const liveRoomingDate = (() => {
+            const stays = item._personStays
+            if (!stays || stays.length === 0) return item.rooming_date
+            const closestStay = stays.reduce((best, s) => {
+              if (!best) return s
+              const d1 = Math.abs(new Date(s.arrival_date) - new Date(item.travel_date))
+              const d2 = Math.abs(new Date(best.arrival_date) - new Date(item.travel_date))
+              return d1 < d2 ? s : best
+            }, null)
+            return item.direction === 'IN'
+              ? (closestStay?.arrival_date || item.rooming_date)
+              : (closestStay?.departure_date || item.rooming_date)
+          })()
+
           return (
             <div key={item.id} id={`discrepancy-${item.id}`} style={{ padding: '12px 20px', borderBottom: '1px solid #fef9c3', background: item.id === highlightId ? '#fef9c3' : 'transparent', transition: 'background 1s ease' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -310,30 +394,52 @@ function TravelDiscrepanciesWidget({ productionId }) {
                     {item.travel_date_conflict && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
-                          📅 Rooming List → <strong>{item.rooming_date}</strong> · Travel Calendar → <strong>{item.travel_date}</strong>
+                          📅 Rooming List → <strong>{liveRoomingDate}</strong> · Travel Calendar → <strong>{item.travel_date}</strong>
+                          {item._personStays?.length > 1 && (
+                            <span style={{ marginLeft: '6px', fontWeight: '600', color: '#92400e', fontSize: '10px' }}>
+                              ({item._personStays.length} stays)
+                            </span>
+                          )}
                         </span>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button
                             onClick={async () => {
-                              if (!item.crew_id || !item.rooming_date) return
-                              // Aggiorna travel_movements con la data del rooming
+                              if (!item.crew_id || !liveRoomingDate) return
                               await supabase.from('travel_movements')
-                                .update({ travel_date: item.rooming_date, travel_date_conflict: false })
+                                .update({ travel_date: liveRoomingDate, travel_date_conflict: false })
                                 .eq('id', item.id)
                               await resolve(item.id)
                             }}
                             style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
-                            ✓ Use Rooming ({item.rooming_date})
+                            ✓ Use Rooming ({liveRoomingDate})
                           </button>
                           <button
                             onClick={async () => {
                               if (!item.crew_id || !item.travel_date) return
-                              // Aggiorna crew arrival/departure con la data del Travel Calendar
                               const field = item.direction === 'IN' ? 'arrival_date' : 'departure_date'
-                              await supabase.from('crew')
-                                .update({ [field]: item.travel_date })
-                                .eq('id', item.crew_id)
-                                .eq('production_id', productionId)
+                              const personStays = item._personStays || []
+                              if (personStays.length > 0) {
+                                // Aggiorna la crew_stay più vicina alla travel_date
+                                const closestStay = personStays.reduce((best, s) => {
+                                  if (!best) return s
+                                  const d1 = Math.abs(new Date(s.arrival_date) - new Date(item.travel_date))
+                                  const d2 = Math.abs(new Date(best.arrival_date) - new Date(item.travel_date))
+                                  return d1 < d2 ? s : best
+                                }, null)
+                                if (closestStay) {
+                                  await supabase.from('crew_stays')
+                                    .update({ [field]: item.travel_date })
+                                    .eq('crew_id', item.crew_id)
+                                    .eq('arrival_date', closestStay.arrival_date)
+                                    .eq('production_id', productionId)
+                                }
+                              } else {
+                                // Nessuna stay → aggiorna crew direttamente
+                                await supabase.from('crew')
+                                  .update({ [field]: item.travel_date })
+                                  .eq('id', item.crew_id)
+                                  .eq('production_id', productionId)
+                              }
                               await resolve(item.id)
                             }}
                             style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
