@@ -1107,6 +1107,20 @@ function SuggestionsHint({ suggestions, weekday, locMap, onApply, onDismiss }) {
   )
 }
 
+// ─── Crew ineligibility helper (S37) ─────────────────────────
+/**
+ * Returns the reason a crew member cannot be assigned to a trip, or null if eligible.
+ * 'NTN'    — no_transport_needed = true
+ * 'ABSENT' — not on_location AND outside arrival/departure date range for runDate
+ */
+function getCrewIneligibleReason(c, runDate) {
+  if (c.no_transport_needed) return 'NTN'
+  const present = c.on_location === true ||
+    (c.arrival_date && c.departure_date && c.arrival_date <= runDate && c.departure_date >= runDate)
+  if (!present) return 'ABSENT'
+  return null
+}
+
 // ─── Main Page ─────────────────────────────────────────────────
 export default function RocketPage() {
   const router = useRouter()
@@ -1187,8 +1201,6 @@ export default function RocketPage() {
     const [cR, vR, lR, rR] = await Promise.all([
       supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
         .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
-        .or(`on_location.eq.true,and(arrival_date.lte.${isoToday()},departure_date.gte.${isoToday()})`)
-        .eq('no_transport_needed', false)
         .order('department').order('full_name'),
       supabase.from('vehicles').select('id,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active')
         .eq('production_id', PRODUCTION_ID).eq('active', true).order('vehicle_type').order('id'),
@@ -1197,11 +1209,6 @@ export default function RocketPage() {
     ])
     const crewData = cR.data || []
     setAllCrew(crewData)
-    // S29-T3: pre-escludi automaticamente i crew con on_location === false (remoti)
-    const remoteCrewIds = crewData.filter(c => c.on_location === false).map(c => c.id)
-    if (remoteCrewIds.length > 0) {
-      setExcludedCrewIds(prev => new Set([...prev, ...remoteCrewIds]))
-    }
     setVehicles(vR.data || [])
     setLocations(lR.data || [])
     const rm = {}
@@ -1245,21 +1252,22 @@ export default function RocketPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, date, loading])
 
-  const locMap           = Object.fromEntries((locations || []).map(l => [l.id, l.name]))
-  const globalCallMin    = hhmmToMin(globalCallTime) ?? 420
-  const eligibleCrew     = allCrew.filter(c => c.hotel_id)
-  const selectedCrew     = eligibleCrew.filter(c => !excludedCrewIds.has(c.id))
-  const activeVehicles   = vehicles.filter(v => v.active)
-  const includedVehicles = activeVehicles.filter(v => !excludedVehicleIds.has(v.id))
-  const departments      = [...new Set(eligibleCrew.map(c => c.department).filter(Boolean))].sort()
-  const remoteEligibleCount = eligibleCrew.filter(c => c.on_location === false).length
+  const locMap             = Object.fromEntries((locations || []).map(l => [l.id, l.name]))
+  const globalCallMin      = hhmmToMin(globalCallTime) ?? 420
+  const allCrewWithHotel   = allCrew.filter(c => c.hotel_id)
+  const eligibleCrew       = allCrewWithHotel.filter(c => !getCrewIneligibleReason(c, date))
+  const selectedCrew       = eligibleCrew.filter(c => !excludedCrewIds.has(c.id))
+  const activeVehicles     = vehicles.filter(v => v.active)
+  const includedVehicles   = activeVehicles.filter(v => !excludedVehicleIds.has(v.id))
+  const departments        = [...new Set(allCrewWithHotel.map(c => c.department).filter(Boolean))].sort()
+  const ineligibleCount    = allCrewWithHotel.filter(c => !!getCrewIneligibleReason(c, date)).length
 
   const searchLower = crewSearch.toLowerCase().trim()
-  const filteredEligible = searchLower
-    ? eligibleCrew.filter(c => c.full_name.toLowerCase().includes(searchLower) || (c.department || '').toLowerCase().includes(searchLower))
-    : eligibleCrew
+  const filteredAllCrew = searchLower
+    ? allCrewWithHotel.filter(c => c.full_name.toLowerCase().includes(searchLower) || (c.department || '').toLowerCase().includes(searchLower))
+    : allCrewWithHotel
   const crewByDept = {}
-  for (const c of filteredEligible) {
+  for (const c of filteredAllCrew) {
     const key = c.department || '__nodept__'
     if (!crewByDept[key]) crewByDept[key] = []
     crewByDept[key].push(c)
@@ -1771,20 +1779,19 @@ export default function RocketPage() {
                         {crewSearch && <button onClick={() => setCrewSearch('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#94a3b8', lineHeight: 1, padding: 0 }}>×</button>}
                       </div>
                       {crewSearch && (
-                        <div style={{ marginTop: '6px', fontSize: '11px', color: filteredEligible.length === 0 ? '#dc2626' : '#2563eb', fontWeight: '600' }}>
-                          {filteredEligible.length === 0 ? t.rocketNoCrewFound : `${filteredEligible.length} match${filteredEligible.length !== 1 ? 'es' : ''}`}
+                        <div style={{ marginTop: '6px', fontSize: '11px', color: filteredAllCrew.length === 0 ? '#dc2626' : '#2563eb', fontWeight: '600' }}>
+                          {filteredAllCrew.length === 0 ? t.rocketNoCrewFound : `${filteredAllCrew.length} match${filteredAllCrew.length !== 1 ? 'es' : ''}`}
                         </div>
                       )}
-                      {/* S29-T3: Banner crew remoti pre-esclusi */}
-                      {remoteEligibleCount > 0 && (
+                      {ineligibleCount > 0 && (
                         <div style={{ marginTop: '8px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '3px solid #94a3b8', borderRadius: '7px', fontSize: '11px', color: '#64748b', lineHeight: 1.5 }}>
-                          🏠 <strong style={{ color: '#374151' }}>{remoteEligibleCount} crew marcati come Remoti</strong> — pre-esclusi. Puoi includerli manualmente.
+                          👤 <strong style={{ color: '#374151' }}>{ineligibleCount} crew</strong> non assegnabili (<span style={{ color: '#dc2626', fontWeight: '700' }}>🚫 NTN</span> o <span style={{ color: '#64748b', fontWeight: '700' }}>🏠 Assenti</span>) — visibili in lista.
                         </div>
                       )}
                     </div>
 
                     <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 280px)', minHeight: '300px' }}>
-                      {eligibleCrew.length === 0 ? (
+                      {allCrewWithHotel.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
                           <div style={{ fontSize: '32px', marginBottom: '8px' }}>👤</div>
                           <div style={{ fontWeight: '600', marginBottom: '4px' }}>{t.rocketNoEligibleCrew}</div>
@@ -1803,7 +1810,8 @@ export default function RocketPage() {
                         const deptCfg   = deptKey !== '__nodept__' ? (deptDestOverrides[deptKey] || {}) : {}
                         const deptEffDest = deptCfg.destId ?? destId
                         const deptEffCall = deptCfg.callMin ?? globalCallMin
-                        const selectedInDept = deptCrew.filter(c => !excludedCrewIds.has(c.id)).length
+                        const eligibleInDept  = deptCrew.filter(c => !getCrewIneligibleReason(c, date)).length
+                        const selectedInDept  = deptCrew.filter(c => !excludedCrewIds.has(c.id) && !getCrewIneligibleReason(c, date)).length
                         // TASK 7: hasOvr now includes service type
                         const hasOvr = deptCfg.destId != null || (deptCfg.callMin != null && deptCfg.callMin !== globalCallMin) || deptCfg.serviceType != null
                         return (
@@ -1812,7 +1820,7 @@ export default function RocketPage() {
                               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', cursor: 'pointer', background: hasOvr ? '#fdfbff' : '#f8fafc', userSelect: 'none' }}>
                               <span style={{ fontSize: '11px', color: '#94a3b8', flexShrink: 0, transition: 'transform 0.15s', transform: expanded ? 'rotate(90deg)' : 'none' }}>▶</span>
                               <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: bgC, color: txC, flexShrink: 0 }}>{deptLabel}</span>
-                              <span style={{ fontSize: '12px', color: '#374151', fontWeight: '600', flexShrink: 0 }}>{selectedInDept}/{deptCrew.length}</span>
+                              <span style={{ fontSize: '12px', color: '#374151', fontWeight: '600', flexShrink: 0 }}>{selectedInDept}/{eligibleInDept}</span>
                               {/* TASK 7: show service type override in accordion summary */}
                               <span style={{ fontSize: '11px', color: hasOvr ? '#7c3aed' : '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 → {locMap[deptEffDest] || deptEffDest || '?'} · {minToHHMM(deptEffCall)}{deptCfg.serviceType ? ` · ${deptCfg.serviceType}` : ''}
@@ -1823,6 +1831,24 @@ export default function RocketPage() {
                                 style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '5px', padding: '2px 6px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b', flexShrink: 0 }}>✗</button>
                             </div>
                             {expanded && deptCrew.map(c => {
+                              const ineligibleReason = getCrewIneligibleReason(c, date)
+                              // ── Ineligible crew: greyed-out, no checkbox, no click ──
+                              if (ineligibleReason) {
+                                return (
+                                  <div key={c.id}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px 8px 50px', borderTop: '1px solid #f8fafc', background: '#f8fafc', opacity: 0.38, cursor: 'default', userSelect: 'none' }}>
+                                    <span style={{ flex: 1, fontSize: '13px', fontWeight: '600', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.full_name}</span>
+                                    {ineligibleReason === 'NTN' && (
+                                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#dc2626', background: '#fee2e2', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fecaca', flexShrink: 0, whiteSpace: 'nowrap' }}>🚫 NTN</span>
+                                    )}
+                                    {ineligibleReason === 'ABSENT' && (
+                                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', border: '1px solid #e2e8f0', flexShrink: 0, whiteSpace: 'nowrap' }}>🏠 Absent</span>
+                                    )}
+                                    <span style={{ fontSize: '10px', color: '#cbd5e1', flexShrink: 0, maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locMap[c.hotel_id] || c.hotel_id || '—'}</span>
+                                  </div>
+                                )
+                              }
+                              // ── Eligible crew: interactive as before ──
                               const excluded    = excludedCrewIds.has(c.id)
                               const crewOvr     = crewCallOverrides[c.id]
                               const displayCall = crewOvr ?? deptEffCall
