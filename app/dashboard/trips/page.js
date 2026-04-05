@@ -1707,19 +1707,18 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         : Promise.resolve({ data: [] }),
 
       (() => {
-        // Filtra crew tramite crew_stays per la data del trip
-        // invece di travel_status — supporta multi-stay
+        // S34-B: date-based filter (arrival_date / departure_date) instead of travel_status
         const tripDate = trip?.date || isoToday()
-        const hotelId  = tc === 'ARRIVAL' ? legHotelDropoff : legHotelPickup
-        return supabase.from('crew_stays')
+        let q = supabase.from('crew_stays')
           .select('crew_id, departure_date, crew!inner(id, full_name, department, no_transport_needed, hotel_id, hotel_status)')
           .eq('production_id', PRODUCTION_ID)
-          .eq('hotel_id', hotelId)
-          .lte('arrival_date', tripDate)
-          .gte('departure_date', tripDate)
           .eq('crew.hotel_status', 'CONFIRMED')
           .order('crew.department')
           .order('crew.full_name')
+        if (tc === 'ARRIVAL')        q = q.eq('hotel_id', legHotelDropoff).eq('arrival_date', tripDate)
+        else if (tc === 'DEPARTURE') q = q.eq('hotel_id', legHotelPickup).eq('departure_date', tripDate)
+        else                         q = q.eq('hotel_id', legHotelPickup).lte('arrival_date', tripDate).gte('departure_date', tripDate)
+        return q
       })(),
 
       isNewLeg
