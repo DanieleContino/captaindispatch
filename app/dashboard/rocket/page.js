@@ -1115,8 +1115,14 @@ function SuggestionsHint({ suggestions, weekday, locMap, onApply, onDismiss }) {
  */
 function getCrewIneligibleReason(c, runDate) {
   if (c.no_transport_needed) return 'NTN'
-  const present = c.on_location === true ||
-    (c.arrival_date && c.departure_date && c.arrival_date <= runDate && c.departure_date >= runDate)
+  // Se le date sono impostate, usarle sempre (on_location è un badge visivo, non un gate).
+  // on_location viene usato solo come fallback quando non ci sono date.
+  let present
+  if (c.arrival_date && c.departure_date) {
+    present = c.arrival_date <= runDate && c.departure_date >= runDate
+  } else {
+    present = c.on_location === true
+  }
   if (!present) return 'ABSENT'
   return null
 }
