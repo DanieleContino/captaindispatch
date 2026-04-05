@@ -317,7 +317,7 @@ function TravelDiscrepanciesWidget({ productionId }) {
                       const travelHotel  = item.hotel_raw || '?'
                       return (
                         <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
-                          🏨 Hotel conflict: rooming → <strong>{roomingHotel}</strong> vs travel → <strong>{travelHotel}</strong>
+                          🏨 Hotel conflict: rooming → <strong>{roomingHotel}</strong> vs calendar → <strong>{travelHotel}</strong>
                         </span>
                       )
                     })()}
