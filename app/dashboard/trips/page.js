@@ -558,9 +558,9 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     if (!PRODUCTION_ID || !form.pickup_id || !form.dropoff_id) return () => { cancelled = true }
     let q = supabase.from('crew').select('id,full_name,department')
       .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
-    if (transferClass === 'ARRIVAL')        q = q.eq('hotel_id', form.dropoff_id).eq('travel_status', 'IN')
-    else if (transferClass === 'DEPARTURE') q = q.eq('hotel_id', form.pickup_id).eq('travel_status', 'OUT')
-    else                                    q = q.eq('hotel_id', form.pickup_id).eq('travel_status', 'PRESENT')
+    if (transferClass === 'ARRIVAL')        q = q.eq('hotel_id', form.dropoff_id).eq('arrival_date', form.date)
+    else if (transferClass === 'DEPARTURE') q = q.eq('hotel_id', form.pickup_id).eq('departure_date', form.date)
+    else                                    q = q.or(`and(hotel_id.eq.${form.pickup_id},arrival_date.lte.${form.date},departure_date.gte.${form.date}),on_location.eq.true`)
     q.order('department').order('full_name').then(({ data }) => {
       if (cancelled) return
       if (data) {
@@ -572,7 +572,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       }
     })
     return () => { cancelled = true }
-  }, [form.pickup_id, form.dropoff_id, transferClass])
+  }, [form.pickup_id, form.dropoff_id, form.date, transferClass])
 
   // Crew Lookup (ricerca su tutto il crew della produzione, min 2 chars)
   useEffect(() => {
