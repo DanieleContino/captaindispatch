@@ -23,7 +23,7 @@ function timeStrToMin(str) {
   const m = str.match(/^(\d{1,2}):(\d{2})/)
   return m ? +m[1] * 60 + +m[2] : null
 }
-function isoToday() { return new Date().toISOString().split('T')[0] }
+function isoToday() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }) }
 function isoAdd(d, n) {
   const dt = new Date(d + 'T12:00:00Z')
   dt.setUTCDate(dt.getUTCDate() + n)
