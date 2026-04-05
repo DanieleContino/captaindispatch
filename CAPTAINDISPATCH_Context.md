@@ -1,9 +1,32 @@
-# CAPTAINDISPATCH — Context S35 (Cline)
+# CAPTAINDISPATCH — Context S36 (Cline)
 ## Updated: 6 April 2026
 
 ---
 
-## NEXT SESSION: S35 — open bugs
+## NEXT SESSION: S37 — open bugs
+
+### S36 completata ✅ (2 fix: S36-A + S36-B)
+> **S36-A**: `EditTripSidebar` "+ Add Leg" — tab duplicate nel leg selector.
+> Root cause: il `useEffect` di inizializzazione caricava i sibling del trip da DB in `extraLegs`, ma quei sibling erano già presenti nel prop `group` passato dal parent. Il tab bar renderizzava `[...group, ...extraLegs]` → T001B appariva due volte con lo stesso `id`, causando doppia evidenziazione al click su qualsiasi tab.
+> Fix: rimosso il blocco DB load in `extraLegs` all'open. `extraLegs` contiene **solo** i nuovi leg aggiunti via "+ Add Leg" (non ancora in DB).
+> Commit: `65413c9` — `fix(trips): EditTripSidebar + Add Leg — remove duplicate extraLegs load, fix trip_id on save (S36)`
+>
+> **S36-B**: `handleSubmit` salvava il nuovo leg con lettera sbagliata.
+> Root cause: `baseId + suffixes[i]` usava `i=0 → 'B'` indipendentemente dai sibling già esistenti in `group` (es. con group=[T001, T001B], il nuovo leg T001C veniva salvato come T001B).
+> Fix: usato `leg.trip_id` (già calcolato correttamente nel "+ Add Leg" onClick che conta i letters usate in `group`).
+>
+> **Regola aggiunta**: `extraLegs` in `EditTripSidebar` deve contenere SOLO i nuovi leg aggiunti via UI (non ancora in DB). I sibling esistenti sono gestiti esclusivamente dal prop `group`. NON caricare i sibling da DB in `extraLegs` all'open.
+
+### S35 completata ✅ (2 fix: S35 + S35-B)
+> **S35**: fix regressione S34-B — `tripDate` per new leg usava `isoToday()` invece di `form.date`.
+> Commit: `524dd4c` — `fix(trips): use form.date in loadPaxData for new legs (S35)`
+>
+> **S35-B (root cause reale)**: `.eq('crew.hotel_status', 'CONFIRMED')` e `.order('crew.department').order('crew.full_name')` sulla query `crew_stays` causavano **400 Bad Request** da PostgREST perché sono filtri/ordinamenti su embedded resource non supportati da questa istanza Supabase. La query falliva silenziosamente → `crewRes.data = null` → lista pax SEMPRE vuota, per tutti i leg (nuovi e esistenti).
+> Fix: rimossi entrambi dalla chain PostgREST, applicati client-side dopo il risultato.
+> Commit: `c2bf2c0` — `fix(trips): remove PostgREST embedded filter, apply hotel_status+sort client-side (S35-B)`
+> File modificato: `app/dashboard/trips/page.js` — ~10 righe in `loadPaxData`.
+>
+> **Regola aggiunta**: NON usare `.eq('joined_table.column', value)` o `.order('joined_table.column')` su query Supabase con `!inner` join — causa 400. Filtrare/ordinare sempre client-side dopo il fetch.
 
 ### S34 completata interamente (A–E) ✅
 > S34-E completata in sessione S35 (commit `5b67e47`).
