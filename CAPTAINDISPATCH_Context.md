@@ -1,5 +1,75 @@
-# CAPTAINDISPATCH — Context S15 (Cline)
-## Updated: 5 April 2026
+# CAPTAINDISPATCH — Context S34 (Cline)
+## Updated: 6 April 2026
+
+---
+
+## NEXT SESSION: S34 — Decoupling `travel_status` dalla selezione pax
+
+### Obiettivo
+Separare `travel_status` (badge visivo) dalla logica di selezione dei passeggeri nei trip.
+Il filtro pax deve usare `arrival_date`/`departure_date` invece di `travel_status`.
+**Motivazione**: pianificazione trip in anticipo senza blocchi, robustezza multi-stay.
+
+### Principio
+> `travel_status` rimane come badge visivo su scan/bridge/crew/hub-coverage.
+> NON viene più usato come gate funzionale per filtrare i pax nei trip.
+
+### Le 5 task (una per sessione/commit, max 1 file ciascuna)
+
+#### S34-A · `TripSidebar` CREATE — filtro pax date-based
+- **File**: `app/dashboard/trips/page.js`
+- **Scope**: `useEffect` "Available crew" (~righe 559-563)
+- **Da**: `eq('travel_status','IN')` / `eq('travel_status','OUT')` / `eq('travel_status','PRESENT')`
+- **A**:
+  - ARRIVAL: `.eq('hotel_id', form.dropoff_id).eq('arrival_date', form.date)`
+  - DEPARTURE: `.eq('hotel_id', form.pickup_id).eq('departure_date', form.date)`
+  - STANDARD: `.eq('hotel_id', form.pickup_id).lte('arrival_date', form.date).gte('departure_date', form.date)` + `.or('on_location.eq.true')` come fallback per crew permanente
+- Mantenere `hotel_status=CONFIRMED`
+
+#### S34-B · `EditTripSidebar` `loadPaxData` — allineare fallback
+- **File**: `app/dashboard/trips/page.js`
+- **Scope**: funzione `loadPaxData` nella `EditTripSidebar` (branch non-`crew_stays`)
+- **Cambiamento**: rimuovere `travel_status` dal ramo fallback, allineare alla logica date-based come S34-A
+
+#### S34-C · `hub-coverage/page.js` — query crew by date
+- **File**: `app/dashboard/hub-coverage/page.js`
+- **Scope**: query crew che carica "Expected at hub" (attualmente usa `travel_status IN/OUT`)
+- **Da**: `.eq('travel_status','IN')` / `.eq('travel_status','OUT')`
+- **A**: `.eq('arrival_date', date)` / `.eq('departure_date', date)`
+
+#### S34-D · `rocket/page.js` — eligibility filter
+- **File**: `app/dashboard/rocket/page.js`
+- **Scope**: filtro `travel_status === 'PRESENT'` per navetta shuttle
+- **A**: `on_location === true` oppure `arrival_date <= today AND departure_date >= today` come criterio principale
+
+#### S34-E · Tooltip debug sidebar — aggiornare testo
+- **File**: `app/dashboard/trips/page.js`
+- **Scope**: 3 stringhe testo nel debug panel pax: `"status=IN"`, `"status=OUT"`, `"status=PRESENT"`
+- **A**: `"arrival_date=date"`, `"departure_date=date"`, `"arrival<=date<=departure"`
+
+### Regola operativa S34
+> Ogni task = 1 commit separato. Ordine: A → B → C → D → E.
+> Non fare più di una task per sessione. Max ~20 righe modificate per commit.
+
+---
+
+## WHAT CHANGED IN SESSION S33
+
+### Captain Bridge Upgrade — `app/dashboard/bridge/page.js`
+
+**Componenti aggiunti** sopra il tab bar esistente (Pending Users / Invite Codes):
+1. **`EasyAccessShortcuts`** — barra link rapidi verso tutte le pagine dashboard
+2. **`NotificationsPanel`** — alert unread dalla nuova tabella `notifications`
+3. **`TomorrowPanel`** — crew in arrivo/partenza domani da `crew.arrival_date`/`departure_date` + link "Launch Rocket for tomorrow"
+4. **`ArrivalsDeparturesChart`** — grafico Recharts 30 giorni (arrivi/partenze), con highlight today/tomorrow
+5. **`MiniWidgets`** — 3 box: Fleet count, Crew status (PRESENT/IN/OUT), Crew confirmed
+6. **`ActivityLog`** — ultimi 50 log dalla tabella `activity_log`
+
+**Nuove tabelle DB** (migrate-s33-bridge-upgrade.sql):
+- `notifications` (id, production_id, type, message, read, created_at)
+- `activity_log` (id, production_id, user_id, action_type, description, created_at)
+
+**Badge navbar**: `useBridgeBadge()` hook in `lib/navbar.js` — badge rosso pulsante se ci sono notifications non lette.
 
 ---
 
