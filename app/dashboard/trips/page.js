@@ -1709,13 +1709,15 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       (() => {
         // S34-B: date-based filter (arrival_date / departure_date) instead of travel_status
         // S35 fix: for new legs trip.date is undefined — use form.date (the trip's actual date)
-        const tripDate = isNewLeg ? (form.date || isoToday()) : (trip?.date || isoToday())
+        // S35-B fix: use local timezone date (not UTC) to avoid day-shift at midnight
+        const localToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+        const tripDate = isNewLeg ? (form.date || localToday()) : (trip?.date || localToday())
         let q = supabase.from('crew_stays')
           .select('crew_id, departure_date, crew!inner(id, full_name, department, no_transport_needed, hotel_id, hotel_status)')
           .eq('production_id', PRODUCTION_ID)
-          .eq('crew.hotel_status', 'CONFIRMED')
-          .order('crew.department')
-          .order('crew.full_name')
+        // NOTE: DO NOT use .eq('crew.hotel_status', 'CONFIRMED') — PostgREST embedded resource
+        // filters cause 400 Bad Request on this Supabase instance. Filter client-side instead.
+        // NOTE: DO NOT use .order('crew.department').order('crew.full_name') for same reason.
         if (tc === 'ARRIVAL')        q = q.eq('hotel_id', legHotelDropoff).eq('arrival_date', tripDate)
         else if (tc === 'DEPARTURE') q = q.eq('hotel_id', legHotelPickup).eq('departure_date', tripDate)
         else                         q = q.eq('hotel_id', legHotelPickup).lte('arrival_date', tripDate).gte('departure_date', tripDate)
@@ -1758,10 +1760,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     }
     setBusyMap(bMap)
     const today = isoToday()
-    const crewFromStays = (crewRes.data || []).map(s => ({
-      ...s.crew,
-      _checkoutToday: s.departure_date === today,
-    }))
+    // S35-B: filter hotel_status and sort client-side (PostgREST embedded resource filters → 400)
+    const crewFromStays = (crewRes.data || [])
+      .filter(s => s.crew?.hotel_status === 'CONFIRMED')
+      .map(s => ({ ...s.crew, _checkoutToday: s.departure_date === today }))
+      .sort((a, b) => (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name))
     setAvailableCrew(crewFromStays.filter(c => !assignedIds.has(c.id)))
     setPaxLoading(false)
   }
