@@ -183,7 +183,7 @@ function hintKey(s, weekday) {
 // TASK 7: added globalServiceType param; effectiveServiceType per crew/group;
 // group key now includes service type so trips with different service types
 // are correctly separated even if they share the same hotel/dest/callMin.
-function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, globalServiceType, deptDestOverrides, crewCallOverrides, excludedCrewIds, excludedVehicleIds }) {
+function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, globalServiceType, deptDestOverrides, crewCallOverrides, excludedCrewIds, excludedVehicleIds, runDate }) {
   function getEffective(c) {
     const deptCfg = (c.department && deptDestOverrides[c.department]) || {}
     return {
@@ -194,7 +194,7 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
   }
   const eligible = crew.filter(c =>
     !excludedCrewIds.has(c.id) && c.hotel_id &&
-    (c.on_location === true || (c.arrival_date && c.departure_date)) &&
+    (c.on_location === true || (c.arrival_date && c.arrival_date <= runDate && c.departure_date && c.departure_date >= runDate)) &&
     c.hotel_status === 'CONFIRMED' && !c.no_transport_needed
   )
   const groupMap = {}
@@ -1343,7 +1343,7 @@ export default function RocketPage() {
   // TASK 7: pass globalServiceType so runRocket can compute effectiveServiceType per group
   function handleLaunch() {
     if (!destId || selectedCrew.length === 0 || includedVehicles.length === 0) return
-    const result = runRocket({ crew: allCrew, vehicles, routeMap, globalDestId: destId, globalCallMin, globalServiceType: serviceType, deptDestOverrides, crewCallOverrides, excludedCrewIds, excludedVehicleIds })
+    const result = runRocket({ crew: allCrew, vehicles, routeMap, globalDestId: destId, globalCallMin, globalServiceType: serviceType, deptDestOverrides, crewCallOverrides, excludedCrewIds, excludedVehicleIds, runDate: date })
     const enriched = enrichSuggestions(result.suggestions, result.draftTrips, routeMap, locMap)
     setDraftTrips(result.draftTrips)
     setSuggestions(enriched)
