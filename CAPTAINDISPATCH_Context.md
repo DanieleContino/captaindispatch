@@ -1,20 +1,27 @@
-# CAPTAINDISPATCH — Context S34 (Cline)
+# CAPTAINDISPATCH — Context S35 (Cline)
 ## Updated: 6 April 2026
 
 ---
 
-## NEXT SESSION: S34 — Decoupling `travel_status` dalla selezione pax
+## NEXT SESSION: S35 — S34-E (ultimo task) + open bugs
 
-### Obiettivo
+### S34-E ancora da fare:
+> Vedi sezione S34 sotto per dettagli.
+
+---
+
+## WHAT CHANGED IN SESSION S34
+
+### Obiettivo S34 (COMPLETATO A–D, manca solo E)
 Separare `travel_status` (badge visivo) dalla logica di selezione dei passeggeri nei trip.
-Il filtro pax deve usare `arrival_date`/`departure_date` invece di `travel_status`.
+Il filtro pax usa `arrival_date`/`departure_date` invece di `travel_status`.
 **Motivazione**: pianificazione trip in anticipo senza blocchi, robustezza multi-stay.
 
 ### Principio
 > `travel_status` rimane come badge visivo su scan/bridge/crew/hub-coverage.
 > NON viene più usato come gate funzionale per filtrare i pax nei trip.
 
-### Le 5 task (una per sessione/commit, max 1 file ciascuna)
+### Le 5 task S34
 
 #### ✅ S34-A · `TripSidebar` CREATE — filtro pax date-based (commit `3a80138`)
 - **File**: `app/dashboard/trips/page.js`
@@ -33,16 +40,21 @@ Il filtro pax deve usare `arrival_date`/`departure_date` invece di `travel_statu
   - DEPARTURE: `.eq('hotel_id', legHotelPickup).eq('departure_date', tripDate)`
   - STANDARD: `.eq('hotel_id', legHotelPickup).lte('arrival_date').gte('departure_date')`
 
-#### S34-C · `hub-coverage/page.js` — query crew by date
+#### ✅ S34-C · `hub-coverage/page.js` — query crew by date (commit `2b4b02e`)
 - **File**: `app/dashboard/hub-coverage/page.js`
-- **Scope**: query crew che carica "Expected at hub" (attualmente usa `travel_status IN/OUT`)
-- **Da**: `.eq('travel_status','IN')` / `.eq('travel_status','OUT')`
-- **A**: `.eq('arrival_date', date)` / `.eq('departure_date', date)`
+- **Scope**: commento in cima + `assignTS` nelle callback `onAssign`
+- **Fatto**:
+  - Commento aggiornato: rimossa menzione `travel_status IN/OUT`
+  - `assignTS: c.travel_status` → `c.arrival_date === date ? 'IN' : 'OUT'` (x2)
+  - Query crew già usava `.or('arrival_date.eq.${d},departure_date.eq.${d}')` — invariata
 
-#### S34-D · `rocket/page.js` — eligibility filter
+#### ✅ S34-D · `rocket/page.js` — eligibility filter (commit `082bc75`)
 - **File**: `app/dashboard/rocket/page.js`
-- **Scope**: filtro `travel_status === 'PRESENT'` per navetta shuttle
-- **A**: `on_location === true` oppure `arrival_date <= today AND departure_date >= today` come criterio principale
+- **Scope**: `loadData` DB query + `runRocket` eligible filter
+- **Fatto**:
+  - SELECT: rimosso `travel_status`, aggiunto `arrival_date,departure_date`
+  - `.eq('travel_status','PRESENT')` → `.or('on_location.eq.true,and(arrival_date.lte.${isoToday()},departure_date.gte.${isoToday()})')`
+  - `runRocket` eligible: `c.travel_status === 'PRESENT'` → `(c.on_location === true || (c.arrival_date && c.departure_date))`
 
 #### S34-E · Tooltip debug sidebar — aggiornare testo
 - **File**: `app/dashboard/trips/page.js`
