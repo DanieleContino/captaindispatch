@@ -192,11 +192,15 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
       effectiveServiceType: deptCfg.serviceType ?? globalServiceType,
     }
   }
-  const eligible = crew.filter(c =>
-    !excludedCrewIds.has(c.id) && c.hotel_id &&
-    (c.on_location === true || (c.arrival_date && c.arrival_date <= runDate && c.departure_date && c.departure_date >= runDate)) &&
-    c.hotel_status === 'CONFIRMED' && !c.no_transport_needed
-  )
+  const eligible = crew.filter(c => {
+    if (excludedCrewIds.has(c.id) || !c.hotel_id) return false
+    if (c.hotel_status !== 'CONFIRMED' || c.no_transport_needed) return false
+    // Stessa logica date-first di getCrewIneligibleReason
+    if (c.arrival_date && c.departure_date) {
+      return c.arrival_date <= runDate && c.departure_date >= runDate
+    }
+    return c.on_location === true
+  })
   const groupMap = {}
   for (const c of eligible) {
     const { effectiveDest, effectiveCallMin, effectiveServiceType } = getEffective(c)
