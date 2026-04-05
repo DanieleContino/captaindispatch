@@ -7,8 +7,8 @@
  *  ✅ COVERED   — hanno almeno un trip ARRIVAL/DEPARTURE assegnato
  *  ❌ MISSING   — non hanno nessun transfer quella data
  *
- * "Expected" = crew con travel_status IN e arrival_date=date
- *              OPPURE travel_status OUT e departure_date=date
+ * "Expected" = crew con arrival_date=date (ARRIVAL)
+ *              OPPURE departure_date=date (DEPARTURE)
  *
  * Pulsante + Assign → stesso pattern assignCtx di pax-coverage → trips/page.js
  */
@@ -707,7 +707,7 @@ export default function HubCoveragePage() {
                         assignCrewId:   c.id,
                         assignCrewName: c.full_name,
                         assignHotelId:  c.hotel_id || '',
-                        assignTS:       c.travel_status,   // 'IN' o 'OUT'
+                        assignTS:       c.arrival_date === date ? 'IN' : 'OUT',
                         assignDate:     date,
                       })
                       router.push('/dashboard/trips?' + params.toString())
@@ -751,7 +751,7 @@ export default function HubCoveragePage() {
                         assignCrewId:   c.id,
                         assignCrewName: c.full_name,
                         assignHotelId:  c.hotel_id || '',
-                        assignTS:       c.travel_status,
+                        assignTS:       c.arrival_date === date ? 'IN' : 'OUT',
                         assignDate:     date,
                       })
                       router.push('/dashboard/trips?' + params.toString())
