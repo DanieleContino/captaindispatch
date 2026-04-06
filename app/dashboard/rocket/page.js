@@ -500,19 +500,21 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
 
   return (
     <div style={{ background: 'white', border: `1.5px solid ${isUnassigned ? '#fecaca' : isMixed ? '#fde68a' : '#e2e8f0'}`, borderRadius: '13px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-      <div onClick={() => setOpen(o => !o)} style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: isUnassigned ? '#fef2f2' : isMixed ? '#fffbeb' : '#fafafa', borderBottom: open ? '1px solid #f1f5f9' : 'none' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          <span style={{ fontSize: '20px', flexShrink: 0 }}>{icon}</span>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+      <div onClick={() => setOpen(o => !o)} style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', background: isUnassigned ? '#fef2f2' : isMixed ? '#fffbeb' : '#fafafa', borderBottom: open ? '1px solid #f1f5f9' : 'none' }}>
+        {/* LEFT: icon + vehicle id + badges + subtitle */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: '1 1 0', minWidth: 0, overflow: 'hidden' }}>
+          <span style={{ fontSize: '20px', flexShrink: 0, marginTop: '1px' }}>{icon}</span>
+          <div style={{ minWidth: 0, flex: '1 1 0', overflow: 'hidden' }}>
+            {/* Vehicle ID + badges row — wraps if needed */}
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '2px' }}>
               {isUnassigned
                 ? <span style={{ fontWeight: '900', fontSize: '13px', color: '#b91c1c' }}>{t.rocketNoVehicleRow}</span>
-                : <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '15px', color: '#0f172a' }}>{trip.vehicleId}</span>
+                : <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '15px', color: '#0f172a', flexShrink: 0 }}>{trip.vehicleId}</span>
               }
-              {isMultiPickup && <span style={{ fontSize: '9px', fontWeight: '800', color: '#d97706', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fde68a' }}>🔀 MULTI-PKP</span>}
-              {isMultiDropoff && <span style={{ fontSize: '9px', fontWeight: '800', color: '#7c3aed', background: '#fdf4ff', padding: '1px 5px', borderRadius: '4px', border: '1px solid #c4b5fd' }}>🔀 MULTI-DRP</span>}
+              {isMultiPickup && <span style={{ fontSize: '9px', fontWeight: '800', color: '#d97706', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fde68a', flexShrink: 0 }}>🔀 MULTI-PKP</span>}
+              {isMultiDropoff && <span style={{ fontSize: '9px', fontWeight: '800', color: '#7c3aed', background: '#fdf4ff', padding: '1px 5px', borderRadius: '4px', border: '1px solid #c4b5fd', flexShrink: 0 }}>🔀 MULTI-DRP</span>}
               {/* TASK 7: service type override badge in card header */}
-              {hasServiceTypeOverride && <span style={{ fontSize: '9px', fontWeight: '800', color: '#7c3aed', background: '#fdf4ff', padding: '1px 5px', borderRadius: '4px', border: '1px solid #c4b5fd' }}>📋 {trip.serviceType}</span>}
+              {hasServiceTypeOverride && <span style={{ fontSize: '9px', fontWeight: '800', color: '#7c3aed', background: '#fdf4ff', padding: '1px 5px', borderRadius: '4px', border: '1px solid #c4b5fd', flexShrink: 0 }}>📋 {trip.serviceType}</span>}
             </div>
             {/* TASK 2: subtitle — driver + vehicle type only; timing moved to dedicated chips */}
             <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -522,11 +524,12 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+        {/* RIGHT: duration chip + arrival chip + pax count + chevron — never compressed */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, marginTop: '1px' }}>
           {/* TASK 2: duration + arrival chips — always visible, even when card is collapsed */}
           {!isUnassigned && totalDurationMin != null && (
             <span style={{ fontSize: '11px', color: '#374151', fontWeight: '700', background: '#f1f5f9', padding: '2px 7px', borderRadius: '5px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
-              ⏱ {totalDurationMin} min
+              ⏱ {totalDurationMin}m
             </span>
           )}
           {!isUnassigned && (
@@ -534,10 +537,10 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
               arr. {minToHHMM(trip.callMin)}
             </span>
           )}
-          <span style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '12px', fontWeight: '800', background: paxBg, color: paxColor, border: `1px solid ${paxColor}20` }}>
-            {pax}/{capSug}{capMax > capSug && <span style={{ color: '#94a3b8', fontWeight: '600' }}> (max {capMax})</span>}
+          <span style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '12px', fontWeight: '800', background: paxBg, color: paxColor, border: `1px solid ${paxColor}20`, whiteSpace: 'nowrap' }}>
+            {pax}/{capSug}{capMax > capSug && <span style={{ color: '#94a3b8', fontWeight: '600' }}> ({capMax})</span>}
           </span>
-          <span style={{ color: '#94a3b8', fontSize: '11px', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+          <span style={{ color: '#94a3b8', fontSize: '11px', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▼</span>
         </div>
       </div>
       {open && (
