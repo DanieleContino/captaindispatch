@@ -20,12 +20,8 @@ function fmtDate(d) {
 export default function Dashboard() {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
-  const [user,       setUser]       = useState(null)
-  const [departures, setDepartures] = useState([])   // crew in partenza domani
-  const [arrivals,   setArrivals]   = useState([])   // crew in arrivo domani
-  const [remoteCrew, setRemoteCrew] = useState([])   // crew non in set oggi
+  const [user, setUser] = useState(null)
   const router = useRouter()
-  const tomorrow = isoTomorrow()
 
   const CARDS = [
     { emoji: '🚦', title: 'Fleet Monitor',          desc: t.fleetMonitorDesc,    href: '/dashboard/fleet',        accent: '#f59e0b', bg: '#fffbeb' },
@@ -44,28 +40,6 @@ export default function Dashboard() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { router.push('/login'); return }
       setUser(user)
-      if (!PRODUCTION_ID) return
-      // Alert partenze e arrivi domani
-      Promise.all([
-        supabase.from('crew').select('id,full_name,department')
-          .eq('production_id', PRODUCTION_ID)
-          .eq('hotel_status', 'CONFIRMED')
-          .eq('departure_date', tomorrow)
-          .order('full_name').limit(20),
-        supabase.from('crew').select('id,full_name,department')
-          .eq('production_id', PRODUCTION_ID)
-          .eq('hotel_status', 'CONFIRMED')
-          .eq('arrival_date', tomorrow)
-          .order('full_name').limit(20),
-        supabase.from('crew').select('id,full_name,department')
-          .eq('production_id', PRODUCTION_ID)
-          .eq('on_location', false)
-          .order('full_name').limit(20),
-      ]).then(([dR, aR, rR]) => {
-        setDepartures(dR.data || [])
-        setArrivals(aR.data || [])
-        setRemoteCrew(rR.data || [])
-      })
     })
   }, [])
 
@@ -94,69 +68,6 @@ export default function Dashboard() {
       </div>
 
       <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px' }}>
-
-        {/* ── Banner partenze/arrivi domani + remote ── */}
-        {(departures.length > 0 || arrivals.length > 0 || remoteCrew.length > 0) && (
-          <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {departures.length > 0 && (
-              <div style={{ background: '#fff7ed', border: '1px solid #fdba74', borderLeft: '4px solid #ea580c', borderRadius: '10px', padding: '12px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '16px' }}>🛫</span>
-                  <span style={{ fontWeight: '800', fontSize: '13px', color: '#c2410c' }}>
-                    {departures.length} {t.departuresTomorrow} — {fmtDate(tomorrow)}
-                  </span>
-                  <a href="/dashboard/hub-coverage" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#c2410c', textDecoration: 'none', background: '#fed7aa', padding: '2px 8px', borderRadius: '6px' }}>
-                    Hub Coverage →
-                  </a>
-                </div>
-                <div style={{ fontSize: '11px', color: '#92400e', lineHeight: 1.6 }}>
-                  {departures.map((c, i) => (
-                    <span key={c.id}>
-                      {c.full_name}
-                      <span style={{ color: '#fdba74', fontSize: '10px' }}> {c.department}</span>
-                      {i < departures.length - 1 && <span style={{ color: '#fdba74', margin: '0 6px' }}>·</span>}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {arrivals.length > 0 && (
-              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderLeft: '4px solid #16a34a', borderRadius: '10px', padding: '12px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '16px' }}>🛬</span>
-                  <span style={{ fontWeight: '800', fontSize: '13px', color: '#15803d' }}>
-                    {arrivals.length} {t.arrivalsTomorrow} — {fmtDate(tomorrow)}
-                  </span>
-                  <a href="/dashboard/hub-coverage" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#15803d', textDecoration: 'none', background: '#bbf7d0', padding: '2px 8px', borderRadius: '6px' }}>
-                    Hub Coverage →
-                  </a>
-                </div>
-                <div style={{ fontSize: '11px', color: '#166534', lineHeight: 1.6 }}>
-                  {arrivals.map((c, i) => (
-                    <span key={c.id}>
-                      {c.full_name}
-                      <span style={{ color: '#86efac', fontSize: '10px' }}> {c.department}</span>
-                      {i < arrivals.length - 1 && <span style={{ color: '#86efac', margin: '0 6px' }}>·</span>}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {remoteCrew.length > 0 && (
-              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderLeft: '4px solid #d97706', borderRadius: '10px', padding: '12px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '16px' }}>🏠</span>
-                  <span style={{ fontWeight: '800', fontSize: '13px', color: '#92400e' }}>
-                    {remoteCrew.length} crew remot{remoteCrew.length === 1 ? 'o' : 'i'} oggi — non inclusi in Rocket e Coverage
-                  </span>
-                  <a href="/dashboard/crew?remote=1" style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', color: '#92400e', textDecoration: 'none', background: '#fde68a', padding: '2px 8px', borderRadius: '6px' }}>
-                    Crew List →
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ── Cards grid ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
