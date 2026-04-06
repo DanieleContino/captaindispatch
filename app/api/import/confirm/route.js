@@ -371,9 +371,14 @@ async function processAccommodation(supabase, productionId, updateRows, newLocat
 
     // Calcola travel_status
     let travel_status
-    if (activeStay.arrival_date <= today && today <= activeStay.departure_date) travel_status = 'PRESENT'
-    else if (activeStay.arrival_date > today)                                    travel_status = 'IN'
-    else                                                                          travel_status = 'OUT'
+    // arrival_date < oggi → già arrivato, PRESENT
+    // arrival_date = oggi → arriva oggi (potrebbe avere un volo nel pomeriggio), IN
+    //                       il cron arrival-status o il crew-page load la aggiornerà dopo
+    // arrival_date > oggi → IN
+    // departure_date < oggi → OUT
+    if (today > activeStay.departure_date)                                                  travel_status = 'OUT'
+    else if (activeStay.arrival_date < today && today <= activeStay.departure_date)         travel_status = 'PRESENT'
+    else                                                                                     travel_status = 'IN'
 
     const updateFields = {
       hotel_id:       activeStay.hotel_id,

@@ -838,21 +838,31 @@ export default function CrewPage() {
     ])
     // Auto-aggiorna travel_status basato su arrival_date / departure_date
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
-    const toUpdate = (vData || []).filter(c => {
-      if (!c.arrival_date && !c.departure_date) return false
-      let expected
-      if (c.departure_date && today > c.departure_date)                          expected = 'OUT'
-      else if (c.arrival_date && today >= c.arrival_date)                        expected = 'PRESENT'
-      else if (c.arrival_date && today < c.arrival_date)                         expected = 'IN'
-      else return false
-      return expected && c.travel_status !== expected
-    }).map(c => {
-      let expected
-      if (c.departure_date && today > c.departure_date)       expected = 'OUT'
-      else if (c.arrival_date && today >= c.arrival_date)     expected = 'PRESENT'
-      else                                                     expected = 'IN'
-      return { id: c.id, travel_status: expected }
-    })
+
+    // crew_ids che hanno un travel_movement IN oggi (es. volo nel pomeriggio).
+    // Per loro NON switchare a PRESENT: il cron arrival-status lo farà dopo il trip ARRIVAL.
+    // Chi NON ha movimenti di viaggio oggi ma arrival_date=oggi → check-in hotel → PRESENT.
+    const hasInMovementToday = new Set(
+      (travelData || [])
+        .filter(tm => tm.travel_date === today && tm.direction === 'IN')
+        .map(tm => tm.crew_id)
+    )
+
+    function expectedStatus(c) {
+      if (c.departure_date && today > c.departure_date)                    return 'OUT'
+      if (c.arrival_date   && today > c.arrival_date)                      return 'PRESENT'
+      if (c.arrival_date   && today === c.arrival_date) {
+        // Arriva oggi: PRESENT solo se non ha un volo/treno IN oggi
+        return hasInMovementToday.has(c.id) ? null : 'PRESENT'
+      }
+      if (c.arrival_date   && today < c.arrival_date)                      return 'IN'
+      return null
+    }
+
+    const toUpdate = (vData || [])
+      .map(c => ({ c, exp: expectedStatus(c) }))
+      .filter(({ c, exp }) => exp !== null && c.travel_status !== exp)
+      .map(({ c, exp }) => ({ id: c.id, travel_status: exp }))
 
     for (const u of toUpdate) {
       await supabase.from('crew').update({ travel_status: u.travel_status }).eq('id', u.id).eq('production_id', PRODUCTION_ID)
