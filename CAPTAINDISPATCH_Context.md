@@ -1,9 +1,37 @@
-# CAPTAINDISPATCH — Context S37 (Cline)
+# CAPTAINDISPATCH — Context S38 (Cline)
 ## Updated: 6 April 2026
 
 ---
 
-## NEXT SESSION: S38 — open bugs
+## NEXT SESSION: S39 — open bugs
+
+### S38 completata ✅ (Trips — pickup_time manual override)
+
+> **S38**: Aggiunto campo **Pickup Time (override — optional)** sia in `TripSidebar` (CREATE) che in `EditTripSidebar` (EDIT).
+>
+> **Cosa fa**: permette al coordinatore di forzare manualmente l'orario di pickup sovrascrivendo il calcolo automatico (`call - duration`). Quando valorizzato, il campo si colora in ambra con badge `⚡ Pickup time overridden — automatic calculation ignored` e bottone `✕ clear`.
+>
+> **Campi form aggiornati**:
+> - `EMPTY` (TripSidebar): aggiunto `pickup_time: ''`
+> - `EDIT_EMPTY` (EditTripSidebar): aggiunto `pickup_time: ''`
+>
+> **UI**: campo `<input type="time">` sotto il grid Duration/Arrival-Time, con bordo ambra e sfondo giallo pallido quando valorizzato.
+>
+> **Logic handleSubmit TripSidebar**:
+> ```js
+> pickup_min: form.pickup_time ? timeStrToMin(form.pickup_time) : (computed?.pickupMin ?? null),
+> start_dt: // calcolato da pickup_time se presente, altrimenti computed?.startDt
+> end_dt:   // calcolato da pickup_time + durMin se presenti, altrimenti computed?.endDt
+> ```
+>
+> **Logic handleSubmit EditTripSidebar** (solo `!isMulti` — i MULTI usano compute-chain):
+> ```js
+> pickup_min: form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin,
+> start_dt / end_dt: // stesso override pattern con form.date per costruire ISO string
+> ```
+>
+> Commit: `83b1d27` — `feat(trips): pickup_time manual override in TripSidebar + EditTripSidebar`
+> File: `app/dashboard/trips/page.js` (+55/-8)
 
 ### S37 completata ✅ (Rocket — crew ineligibili + date-first eligibility)
 
