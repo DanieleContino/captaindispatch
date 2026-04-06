@@ -353,7 +353,7 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
 }
 
 // ─── CrewInfoModal ────────────────────────────────────────────
-function CrewInfoModal({ crew, productionId, locations, onClose }) {
+function CrewInfoModal({ crew, productionId, locations, onClose, overlayRight = 0 }) {
   const [details,   setDetails]   = useState(null)
   const [movements, setMovements] = useState([])
   const [loading,   setLoading]   = useState(true)
@@ -388,7 +388,7 @@ function CrewInfoModal({ crew, productionId, locations, onClose }) {
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,35,64,0.5)' }} />
+      <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, right: overlayRight, zIndex: 200, background: 'rgba(15,35,64,0.5)' }} />
       <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 201, width: 'calc(100% - 40px)', maxWidth: '480px', background: 'white', borderRadius: '14px', boxShadow: '0 8px 40px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
         <div style={{ background: '#0f2340', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -1531,7 +1531,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         </form>
       </div>
       {crewInfoCrew && (
-        <CrewInfoModal crew={crewInfoCrew} productionId={PRODUCTION_ID} locations={locations} onClose={() => setCrewInfoCrew(null)} />
+        <CrewInfoModal crew={crewInfoCrew} productionId={PRODUCTION_ID} locations={locations} onClose={() => setCrewInfoCrew(null)} overlayRight={SIDEBAR_W} />
       )}
     </>
   )
@@ -2839,7 +2839,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         </form>
       </div>
       {crewInfoCrew && (
-        <CrewInfoModal crew={crewInfoCrew} productionId={PRODUCTION_ID} locations={locations} onClose={() => setCrewInfoCrew(null)} />
+        <CrewInfoModal crew={crewInfoCrew} productionId={PRODUCTION_ID} locations={locations} onClose={() => setCrewInfoCrew(null)} overlayRight={SIDEBAR_W} />
       )}
     </>
   )
