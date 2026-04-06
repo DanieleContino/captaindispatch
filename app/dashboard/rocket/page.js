@@ -554,6 +554,111 @@ function MoveCrewModal({ crewMember, currentTripKey, trips, locMap, onMove, onCl
   )
 }
 
+// ─── Add Vehicle Modal (Step 2) ──────────────────────────────
+function AddVehicleModal({ vehicles, locations, routeMap, locMap, defaultDestId, defaultCallTime, draftTrips, onAdd, onClose }) {
+  const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌' }
+  const [selVehicleId, setSelVehicleId] = useState('')
+  const [selPickupId,  setSelPickupId]  = useState('')
+  const [selDropoffId, setSelDropoffId] = useState(defaultDestId || '')
+  const [callTime,     setCallTime]     = useState(defaultCallTime || '07:00')
+
+  const usedVehicleIds = new Set(draftTrips.filter(t => t.vehicleId).map(t => t.vehicleId))
+  const canAdd = !!selVehicleId && !!selDropoffId
+
+  useEffect(() => {
+    const h = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onClose])
+
+  function handleAdd() {
+    if (!canAdd) return
+    const v = vehicles.find(x => x.id === selVehicleId)
+    if (!v) return
+    const callM = hhmmToMin(callTime) ?? 420
+    const dur   = (selPickupId && routeMap[`${selPickupId}||${selDropoffId}`]) ?? 30
+    onAdd({
+      vehicleId:   v.id,
+      vehicle:     v,
+      hotelId:     selPickupId || null,
+      destId:      selDropoffId,
+      callMin:     callM,
+      pickupMin:   callM - dur,
+      durationMin: dur,
+    })
+    onClose()
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: 'white', borderRadius: '16px', padding: '22px', width: '460px', maxWidth: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.2)' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+          <div style={{ fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>➕ Add Vehicle</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', color: '#94a3b8', cursor: 'pointer', lineHeight: 1, padding: '0 0 0 8px' }}>×</button>
+        </div>
+
+        {/* Vehicle selector */}
+        <div style={{ marginBottom: '14px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>Vehicle</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '200px', overflowY: 'auto', paddingRight: '2px' }}>
+            {vehicles.map(v => {
+              const alreadyIn = usedVehicleIds.has(v.id)
+              const selected  = selVehicleId === v.id
+              const cap = v.pax_suggested || v.capacity || '?'
+              return (
+                <div key={v.id} onClick={() => setSelVehicleId(v.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '9px', border: `2px solid ${selected ? '#2563eb' : '#e2e8f0'}`, background: selected ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'all 0.1s' }}>
+                  <span style={{ fontSize: '16px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '13px', color: '#0f172a', minWidth: '60px' }}>{v.id}</span>
+                  <span style={{ fontSize: '12px', color: '#64748b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {v.driver_name || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No driver</span>}
+                  </span>
+                  <span style={{ fontSize: '10px', color: '#1d4ed8', background: '#eff6ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', flexShrink: 0 }}>{cap} pax</span>
+                  {alreadyIn && <span style={{ fontSize: '9px', fontWeight: '800', color: '#d97706', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fde68a', flexShrink: 0 }}>in run</span>}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Pickup */}
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '5px' }}>
+            Pickup (Hotel) <span style={{ fontWeight: '400', textTransform: 'none', fontSize: '10px', color: '#94a3b8' }}>— optional</span>
+          </div>
+          <LocSelect value={selPickupId} onChange={e => setSelPickupId(e.target.value)} locations={locations}
+            placeholder="— Leave empty —" style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e2e8f0' }} />
+        </div>
+
+        {/* Dropoff */}
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '5px' }}>Dropoff (Destination)</div>
+          <LocSelect value={selDropoffId} onChange={e => setSelDropoffId(e.target.value)} locations={locations}
+            placeholder="— Select —" style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${!selDropoffId ? '#fca5a5' : '#e2e8f0'}` }} />
+        </div>
+
+        {/* Call Time */}
+        <div style={{ marginBottom: '18px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '5px' }}>Call Time</div>
+          <input type="time" value={callTime} onChange={e => setCallTime(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '16px', fontWeight: '900', boxSizing: 'border-box', textAlign: 'center', color: '#0f172a', background: '#fffbeb' }} />
+        </div>
+
+        {/* Buttons */}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: '9px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Cancel</button>
+          <button onClick={handleAdd} disabled={!canAdd}
+            style={{ flex: 2, padding: '10px', borderRadius: '9px', border: 'none', background: canAdd ? '#2563eb' : '#e2e8f0', color: canAdd ? 'white' : '#94a3b8', cursor: canAdd ? 'pointer' : 'default', fontSize: '13px', fontWeight: '800' }}>
+            ➕ Add to Preview
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Trip Card (Step 2) ───────────────────────────────────────
 // TASK 7: added globalServiceType prop — shows a badge when trip's service
 // type differs from the global default.
@@ -1317,7 +1422,8 @@ export default function RocketPage() {
 
   const [draftTrips,  setDraftTrips]  = useState([])
   const [suggestions, setSuggestions] = useState([])
-  const [moveTarget,  setMoveTarget]  = useState(null)
+  const [moveTarget,          setMoveTarget]          = useState(null)
+  const [showAddVehicleModal, setShowAddVehicleModal] = useState(false)
   const [createdCount, setCreatedCount] = useState(0)
   const [createError,  setCreateError]  = useState(null)
 
@@ -1536,6 +1642,23 @@ export default function RocketPage() {
       }
       return next
     })
+  }
+
+  // S44: Add a vehicle manually in Step 2 preview
+  function handleAddVehicle({ vehicleId, vehicle, hotelId, destId: addDestId, callMin, pickupMin, durationMin }) {
+    setDraftTrips(prev => [...prev, {
+      key:         `e${Date.now()}`,
+      vehicleId,
+      vehicle,
+      hotelId:     hotelId || null,
+      destId:      addDestId,
+      callMin,
+      pickupMin,
+      durationMin,
+      serviceType,
+      crewList:    [],
+      isManuallyAdded: true,
+    }])
   }
 
   async function handleConfirm() {
@@ -2113,6 +2236,10 @@ export default function RocketPage() {
                   <span style={{ fontSize: '12px', color: '#64748b', marginLeft: 'auto' }}>
                     {uniqueDestIds.length === 1 ? <>Destination: <strong style={{ color: '#0f172a' }}>{destLabel}</strong></> : <strong style={{ color: '#7c3aed' }}>{destLabel}</strong>}
                   </span>
+                  <button onClick={() => setShowAddVehicleModal(true)}
+                    style={{ flexShrink: 0, padding: '5px 12px', borderRadius: '7px', border: '1.5px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                    ➕ Add Vehicle
+                  </button>
                 </div>
 
                 {draftTrips.length === 0 ? (
@@ -2133,6 +2260,19 @@ export default function RocketPage() {
                 {moveTarget && (
                   <MoveCrewModal crewMember={moveTarget.crew} currentTripKey={moveTarget.tripKey}
                     trips={draftTrips} locMap={locMap} onMove={handleMoveCrew} onClose={() => setMoveTarget(null)} />
+                )}
+                {showAddVehicleModal && (
+                  <AddVehicleModal
+                    vehicles={vehicles}
+                    locations={locations}
+                    routeMap={routeMap}
+                    locMap={locMap}
+                    defaultDestId={destId}
+                    defaultCallTime={globalCallTime}
+                    draftTrips={draftTrips}
+                    onAdd={handleAddVehicle}
+                    onClose={() => setShowAddVehicleModal(false)}
+                  />
                 )}
               </div>
             )}
