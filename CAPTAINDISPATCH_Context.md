@@ -1,9 +1,38 @@
-# CAPTAINDISPATCH — Context S36 (Cline)
+# CAPTAINDISPATCH — Context S37 (Cline)
 ## Updated: 6 April 2026
 
 ---
 
-## NEXT SESSION: S37 — open bugs
+## NEXT SESSION: S38 — open bugs
+
+### S37 completata ✅ (Rocket — crew ineligibili + date-first eligibility)
+
+> **S37-A**: Rocket Step 1 — crew NTN e assenti visibili ma greyed-out.
+> La query `loadData` ora carica **tutti** i crew CONFIRMED (rimosso il filtro `.or('on_location...')`).
+> La funzione `getCrewIneligibleReason(c, runDate)` classifica ogni crew:
+>   - `'NTN'` se `no_transport_needed = true`
+>   - `'ABSENT'` se fuori range `arrival_date`/`departure_date` (o nessuna data + `on_location ≠ true`)
+>   - `null` = eligible
+> I crew ineligibili appaiono in lista con opacity 0.38, nessun checkbox, badge `🚫 NTN` o `🏠 Absent`.
+> Commit: `10612ce` — `feat(rocket): show ineligible crew (NTN/Absent) greyed-out with icons in Step 1 (S37)`
+>
+> **S37-B**: Fix root cause — `on_location = true` non deve sovrascrivere `arrival_date` futuro.
+> Root cause: `getCrewIneligibleReason` usava `on_location === true` come OR cortocircuitante → crew con `on_location=true` ma `arrival_date` nel futuro venivano considerati presenti.
+> Fix: **date-first** — se `arrival_date` + `departure_date` sono impostati, si usano **sempre** le date; `on_location` è solo un fallback per chi non ha date.
+> Commit: `af6e548` — `fix(rocket): date-first eligibility check — on_location no longer overrides future arrival_date (S37)`
+>
+> **S37-C**: Stesso fix applicato a `runRocket()` (Step 2 usava ancora la vecchia logica con `on_location || date range`).
+> Commit: `42d383c` — `fix(rocket): align runRocket eligible filter to date-first logic (S37)`
+>
+> **Regola aggiunta**: In Rocket, l'eligibilità di un crew si calcola con **date-first**:
+> ```js
+> if (c.arrival_date && c.departure_date) {
+>   present = c.arrival_date <= runDate && c.departure_date >= runDate
+> } else {
+>   present = c.on_location === true  // fallback
+> }
+> ```
+> `on_location` è un badge visivo, NON un gate funzionale. La stessa logica vale sia in Step 1 (`getCrewIneligibleReason`) sia in `runRocket()`.
 
 ### S36 completata ✅ (2 fix: S36-A + S36-B)
 > **S36-A**: `EditTripSidebar` "+ Add Leg" — tab duplicate nel leg selector.
