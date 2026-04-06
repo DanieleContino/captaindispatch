@@ -609,7 +609,7 @@ function AddVehicleModal({ vehicles, locations, routeMap, locMap, defaultDestId,
               const cap = v.pax_suggested || v.capacity || '?'
               return (
                 <div key={v.id} onClick={() => setSelVehicleId(v.id)}
-                  style={{ borderRadius: '9px', border: `2px solid ${selected ? '#2563eb' : '#e2e8f0'}`, background: selected ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'all 0.1s', overflow: 'hidden' }}>
+                  style={{ flexShrink: 0, borderRadius: '9px', border: `2px solid ${selected ? '#2563eb' : '#e2e8f0'}`, background: selected ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'all 0.1s', overflow: 'hidden' }}>
                   {/* Row 1: main info */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px' }}>
                     <span style={{ fontSize: '16px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
