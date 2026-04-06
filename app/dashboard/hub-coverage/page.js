@@ -21,7 +21,12 @@ import { useT } from '../../../lib/i18n'
 
 import { getProductionId } from '../../../lib/production'
 
-function isoToday() { return new Date().toISOString().split('T')[0] }
+function isoToday() {
+  const d = new Date()
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0')
+}
 function isoAdd(d, n) {
   const dt = new Date(d + 'T12:00:00Z'); dt.setUTCDate(dt.getUTCDate() + n)
   return dt.toISOString().split('T')[0]
