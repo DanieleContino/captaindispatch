@@ -180,6 +180,36 @@ function hintKey(s, weekday) {
 }
 
 // ─── 🚀 Rocket Algorithm v2 ───────────────────────────────────
+// S43: Vehicle preference scoring helpers
+function getMajorityDept(groupCrew) {
+  const counts = {}
+  for (const c of groupCrew) {
+    if (c.department) counts[c.department] = (counts[c.department] || 0) + 1
+  }
+  let best = null, bestN = 0
+  for (const [dept, n] of Object.entries(counts)) {
+    if (n > bestN) { best = dept; bestN = n }
+  }
+  return best
+}
+function pickBestVehicle(pool, groupCrew) {
+  if (!pool.length) return null
+  const dominantDept = getMajorityDept(groupCrew)
+  const crewIdSet = new Set(groupCrew.map(c => c.id))
+  let bestIdx = 0, bestScore = -Infinity
+  for (let i = 0; i < pool.length; i++) {
+    const v = pool[i]
+    const cap = v.pax_suggested || v.capacity || 6
+    let score = cap
+    if (dominantDept && v.preferred_dept === dominantDept) score += 100
+    if (Array.isArray(v.preferred_crew_ids)) {
+      score += v.preferred_crew_ids.filter(id => crewIdSet.has(id)).length * 20
+    }
+    if (score > bestScore) { bestScore = score; bestIdx = i }
+  }
+  return pool.splice(bestIdx, 1)[0]
+}
+
 // TASK 7: added globalServiceType param; effectiveServiceType per crew/group;
 // group key now includes service type so trips with different service types
 // are correctly separated even if they share the same hotel/dest/callMin.
@@ -235,7 +265,7 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
           crewList: remaining.map(c => ({ ...c, _effectiveDest: g.destId })) })
         remaining = []; break
       }
-      const v = pool.shift()
+      const v = pickBestVehicle(pool, remaining)
       const capSug = v.pax_suggested || v.capacity || 6
       const capMax = Math.max(capSug, v.pax_max || capSug)
       const toAssign = remaining.splice(0, capSug)
@@ -626,6 +656,27 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
               </>
             )}
           </div>
+          {/* S43: Vehicle preferences row */}
+          {!isUnassigned && (trip.vehicle?.preferred_dept || trip.vehicle?.preferred_crew_ids?.length > 0) && (() => {
+            const prefCrewMatches = Array.isArray(trip.vehicle.preferred_crew_ids)
+              ? trip.vehicle.preferred_crew_ids.filter(id => trip.crewList.some(c => c.id === id)).length
+              : 0
+            const [prefBg, prefTx] = trip.vehicle.preferred_dept ? deptColor(trip.vehicle.preferred_dept) : ['#f1f5f9', '#64748b']
+            return (
+              <div style={{ padding: '6px 14px', background: '#fffbeb', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                <span style={{ flexShrink: 0 }}>⭐</span>
+                <span style={{ fontWeight: '700', color: '#92400e', flexShrink: 0 }}>Pref:</span>
+                {trip.vehicle.preferred_dept && (
+                  <span style={{ padding: '1px 6px', borderRadius: '4px', fontWeight: '700', fontSize: '10px', background: prefBg, color: prefTx, flexShrink: 0 }}>
+                    {trip.vehicle.preferred_dept}
+                  </span>
+                )}
+                {prefCrewMatches > 0 && (
+                  <span style={{ color: '#b45309', fontWeight: '600' }}>· {prefCrewMatches} crew pref</span>
+                )}
+              </div>
+            )
+          })()}
           {/* Crew list */}
           {pax === 0 ? (
             <div style={{ padding: '12px 14px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center' }}>{t.rocketNoPassengers}</div>
@@ -642,7 +693,12 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
                         {(c.full_name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.full_name}
+                          {Array.isArray(trip.vehicle?.preferred_crew_ids) && trip.vehicle.preferred_crew_ids.includes(c.id) && (
+                            <span style={{ color: '#d97706', marginLeft: '4px', fontSize: '11px' }} title="Preferred crew for this vehicle">★</span>
+                          )}
+                        </div>
                         <div style={{ fontSize: '10px', color: '#94a3b8' }}>
                           {c.department || '—'}
                           {destMismatch && <span style={{ color: '#7c3aed', marginLeft: '4px' }}>→ {locMap[cDest] || cDest}</span>}
@@ -1239,7 +1295,7 @@ export default function RocketPage() {
       supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
         .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
         .order('department').order('full_name'),
-      supabase.from('vehicles').select('id,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active')
+      supabase.from('vehicles').select('id,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active,preferred_dept,preferred_crew_ids')
         .eq('production_id', PRODUCTION_ID).eq('active', true).order('vehicle_type').order('id'),
       supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('name'),
       supabase.from('routes').select('from_id,to_id,duration_min').eq('production_id', PRODUCTION_ID),
