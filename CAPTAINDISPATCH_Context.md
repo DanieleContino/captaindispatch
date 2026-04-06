@@ -1,34 +1,62 @@
-# CAPTAINDISPATCH — Context S43 (Cline)
+# CAPTAINDISPATCH — Context S44 (Cline)
 ## Updated: 6 April 2026
 
 ---
 
-## NEXT SESSION: S43 — Rocket vehicle preferences
+## NEXT SESSION: S44
 
-### S43 — PIANIFICATA (da implementare)
+### S43 completata ✅ (Rocket — Vehicle Preferences + Two-Pass Assignment)
 
-> **Obiettivo**: In Rocket, i veicoli con preferenze di dipartimento o crew specifiche devono essere assegnati prioritariamente ai gruppi corrispondenti.
->
-> **Algoritmo `runRocket` — nuova funzione `pickBestVehicle(pool, groupCrew)`**:
-> - Calcola il dipartimento dominante del gruppo (`getMajorityDept`)
-> - Calcola `crewIdSet` dal gruppo
-> - Score per ogni veicolo in pool:
->   - `+100` se `v.preferred_dept === dominantDept`
->   - `+20 × N` dove N = numero di `v.preferred_crew_ids` che sono nel gruppo
->   - `+capacity` come tiebreaker (mantiene preferenza per veicoli grandi)
-> - Sostituisce `pool.shift()` con `pool.splice(bestIdx, 1)`
->
-> **UI `TripCard` — sezione preferenze**:
-> - Nel TripCard espanso (sopra crew list): riga `⭐ Pref: [DEPT] · N crew pref` se il veicolo ha preferenze
-> - Nella crew list: badge `★` accanto ai nomi crew che matchano `preferred_crew_ids`
->
-> **File da modificare**: `app/dashboard/rocket/page.js` only. Nessuna modifica DB/API.
->
-> **Scoring example**:
-> ```
-> VAN-01 preferred_dept=PRODUCERS → gruppo CAMERA: score = 6 (capacity only)
-> VAN-01 preferred_dept=PRODUCERS → gruppo PRODUCERS: score = 106 (100 + 6 capacity)
-> ```
+> **Obiettivo**: In Rocket, i veicoli con `preferred_dept` o `preferred_crew_ids` vengono assegnati prioritariamente ai gruppi/crew corrispondenti, garantendo che il van HMU non vada mai a crew di altri dipartimenti se esiste un gruppo HMU.
+
+#### DB migration — `scripts/migrate-vehicle-preferences.sql` (commit `18e2b5e`)
+```sql
+ALTER TABLE vehicles
+  ADD COLUMN IF NOT EXISTS preferred_dept      text,
+  ADD COLUMN IF NOT EXISTS preferred_crew_ids  uuid[] DEFAULT '{}';
+```
+Query SELECT in `loadData` aggiornata: `preferred_dept,preferred_crew_ids` inclusi nel fetch veicoli.
+
+#### Algoritmo — `app/dashboard/rocket/page.js` (commits `18e2b5e` → `ad5ff87` → `b4898e4`)
+
+**`getMajorityDept(groupCrew)`**: restituisce il dept più frequente nel gruppo.
+
+**`pickBestVehicle(pool, groupCrew)`**: sostituisce `pool.shift()`. Assegna score a ogni veicolo:
+- `+capacity` (tiebreaker)
+- `+100` se `v.preferred_dept === dominantDept`
+- `+20 × N` per ogni `preferred_crew_ids[i]` presente nel gruppo
+Usa `pool.splice(bestIdx, 1)` per estrarre il veicolo migliore in qualsiasi posizione del pool.
+
+**Two-pass preferred assignment v3 (S43 bug fix)** — `runRocket()`:
+
+1. **`groupDepts`** — raccoglie **TUTTI** i dept presenti in qualsiasi crew di qualsiasi gruppo (non solo la maggioranza). Garantisce che anche un dept minoritario (es. 2 HMU su 6 crew) attivi la riserva.
+
+2. **Pool partitioning**: i veicoli con `preferred_dept` che esiste in `groupDepts` vanno in `preferredPools[dept]`. Gli altri in `normalPool`.
+
+3. **`vehiclePreferredDepts`** — Set dei dept con almeno un veicolo riservato.
+
+4. **Re-sort gruppi**: gruppi che contengono almeno 1 crew di un dept preferito vengono processati **prima** degli altri (stesso tier per dimensione), così non possono essere "rubati" da gruppi più grandi senza preferenze.
+
+5. **`getNextVehicle(groupCrew)`** — priorità:
+   - 🥇 Itera su ogni crew del gruppo: se `c.department` ha un `preferredPool` → usa quello
+   - 🥈 `normalPool`
+   - 🥉 Qualsiasi `preferredPool` rimasto (last resort cross-dept)
+
+**Fallback**: se non esiste nessun crew del dept preferito nella run → il veicolo va in `normalPool` e viene assegnato normalmente.
+
+#### UI — `TripCard`
+- Riga `⭐ Pref: [DEPT_BADGE] · N crew pref` sopra la crew list (sfondo ambra `#fffbeb`)
+- Badge `★` inline accanto ai nomi crew che matchano `preferred_crew_ids`
+
+#### Commits
+| Hash | Descrizione |
+|---|---|
+| `18e2b5e` | S43: Migration SQL + `pickBestVehicle` + UI TripCard |
+| `ad5ff87` | S43 v2: Two-pass — `preferredPools` riservato per dept |
+| `b4898e4` | S43 v3: Any-dept match + gruppi preferred ordinati prima |
+
+#### Regola aggiunta
+> In `runRocket`, i veicoli con `preferred_dept` vengono partizionati PRIMA del loop principale. `getNextVehicle()` controlla ogni crew (non solo la maggioranza) per trovare il pool corretto. I gruppi con crew preferred vengono sempre processati prima degli altri.
 
 ### S42 completata ✅ (Vehicles — auto-suggest ID + DB rename)
 
