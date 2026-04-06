@@ -1,9 +1,35 @@
-# CAPTAINDISPATCH — Context S38 (Cline)
+# CAPTAINDISPATCH — Context S39 (Cline)
 ## Updated: 6 April 2026
 
 ---
 
-## NEXT SESSION: S39 — open bugs
+## NEXT SESSION: S40 — open bugs
+
+### S39 completata ✅ (Trips — CrewInfoModal: pulsante "i" + overlay non blocca sidebar)
+
+> **S39**: Migliorata l'accessibilità al `CrewInfoModal` in `app/dashboard/trips/page.js`.
+>
+> **Feature A — Pulsante "i" nel banner Assigning (TripsPageInner)**
+> - Aggiunto stato `showAssignInfo` in `TripsPageInner`
+> - Pulsante circolare `i` accanto al nome crew nel banner giallo → apre `CrewInfoModal`
+> - `CrewInfoModal` renderizzato nel JSX di `TripsPageInner` con `{showAssignInfo && assignCtx && ...}`
+> - Commit: `3133bd5`
+>
+> **Feature B — Pulsante "i" nell'header della TripSidebar**
+> - Aggiunto pulsante `i` (cerchio 16px, border ambra) accanto a 👤 nome crew nel dark header
+> - Click → `setCrewInfoCrew({ id: assignCtx.id, full_name: assignCtx.name })`
+> - Commit: `604f89d`
+>
+> **Feature C — Overlay non copre la sidebar + chiude solo con X**
+> - Aggiunto prop `overlayRight = 0` a `CrewInfoModal`
+> - Overlay: `right: overlayRight` invece di `inset: 0` — si ferma prima della sidebar
+> - Rimosso `onClick={onClose}` dall'overlay (il modal chiude SOLO con il pulsante ✕)
+> - `TripSidebar`: passa `overlayRight={SIDEBAR_W}` → sidebar rimane interattiva col modal aperto
+> - `EditTripSidebar`: idem
+> - `TripsPageInner` (banner): `overlayRight` non passato → default 0 (copre tutto)
+> - Commit: `6e87659`
+>
+> File: `app/dashboard/trips/page.js`
 
 ### S38 completata ✅ (Trips — pickup_time manual override)
 
