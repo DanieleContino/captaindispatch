@@ -481,7 +481,7 @@ function CrewInfoModal({ crew, productionId, locations, onClose }) {
 function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
-  const EMPTY = { trip_id: '', date: defaultDate, pickup_id: '', dropoff_id: '', vehicle_id: '', service_type_id: '', arr_time: '', call_time: '', flight_no: '', terminal: '', notes: '', duration_min: '' }
+  const EMPTY = { trip_id: '', date: defaultDate, pickup_id: '', dropoff_id: '', vehicle_id: '', service_type_id: '', arr_time: '', call_time: '', pickup_time: '', flight_no: '', terminal: '', notes: '', duration_min: '' }
   const [form,           setForm]           = useState(EMPTY)
   const [saving,         setSaving]         = useState(false)
   const [error,          setError]          = useState(null)
@@ -609,9 +609,19 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       duration_min: durMin,
       arr_time:   form.arr_time ? form.arr_time + ':00' : null,
       call_min:   computed?.callMin   ?? null,
-      pickup_min: computed?.pickupMin ?? null,
-      start_dt:   computed?.startDt   ?? null,
-      end_dt:     computed?.endDt     ?? null,
+      pickup_min: form.pickup_time ? timeStrToMin(form.pickup_time) : (computed?.pickupMin ?? null),
+      start_dt:   (() => {
+        const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : computed?.pickupMin
+        if (pm === null || pm === undefined) return computed?.startDt ?? null
+        const [y, mo, dd] = form.date.split('-').map(Number)
+        return new Date(y, mo - 1, dd, Math.floor(pm / 60), pm % 60, 0, 0).toISOString()
+      })(),
+      end_dt:     (() => {
+        const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : computed?.pickupMin
+        if (pm === null || pm === undefined || !durMin) return computed?.endDt ?? null
+        const [y, mo, dd] = form.date.split('-').map(Number)
+        return new Date(new Date(y, mo - 1, dd, Math.floor(pm / 60), pm % 60, 0, 0).getTime() + durMin * 60000).toISOString()
+      })(),
       flight_no: form.flight_no || null, terminal: form.terminal || null, notes: form.notes || null,
       status: 'PLANNED', pax_count: 0,
     }
@@ -1344,6 +1354,19 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                 <input type="number" value={form.duration_min} onChange={e => set('duration_min', e.target.value)} style={{ ...inp, fontVariantNumeric: 'tabular-nums' }} placeholder="auto" min="1" max="240" />
               </div>
             </div>
+            <div>
+              <label style={lbl}>Pickup Time <span style={{ fontWeight: '400', color: '#cbd5e1' }}>(override — optional)</span></label>
+              <input type="time"
+                value={form.pickup_time}
+                onChange={e => set('pickup_time', e.target.value)}
+                style={{ ...inp, fontSize: '17px', fontWeight: '800', textAlign: 'center', fontVariantNumeric: 'tabular-nums', borderColor: form.pickup_time ? '#f59e0b' : '#e2e8f0', background: form.pickup_time ? '#fffbeb' : 'white' }} />
+              {form.pickup_time && (
+                <div style={{ fontSize: '10px', color: '#92400e', fontWeight: '700', marginTop: '3px' }}>
+                  ⚡ Pickup time overridden — automatic calculation ignored
+                  <button type="button" onClick={() => set('pickup_time', '')} style={{ marginLeft: '8px', background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '10px', fontWeight: '800' }}>✕ clear</button>
+                </div>
+              )}
+            </div>
 
             {computed && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '6px' }}>
@@ -1515,7 +1538,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const PRODUCTION_ID = getProductionId()
   const EDIT_EMPTY = {
     date: '', pickup_id: '', dropoff_id: '', vehicle_id: '',
-    service_type_id: '', arr_time: '', call_time: '',
+    service_type_id: '', arr_time: '', call_time: '', pickup_time: '',
     duration_min: '', flight_no: '', terminal: '', notes: '', status: 'PLANNED',
   }
   const [form,       setForm]       = useState(EDIT_EMPTY)
@@ -1908,9 +1931,20 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       call_min:   mainCallMin,
       // MULTI: pickup_min/start_dt/end_dt sono gestiti da compute-chain — non sovrascrivere con valori naïve
       ...(!isMulti && {
-        pickup_min: mainPickupMin,
-        start_dt:   mainStartDt,
-        end_dt:     mainEndDt,
+        pickup_min: form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin,
+        start_dt:   (() => {
+          const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin
+          if (pm === null || pm === undefined) return mainStartDt
+          const [y, mo, dd] = form.date.split('-').map(Number)
+          return new Date(y, mo - 1, dd, Math.floor(pm / 60), pm % 60, 0, 0).toISOString()
+        })(),
+        end_dt:     (() => {
+          const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin
+          const dur = mainDurMin
+          if (pm === null || pm === undefined || !dur) return mainEndDt
+          const [y, mo, dd] = form.date.split('-').map(Number)
+          return new Date(new Date(y, mo - 1, dd, Math.floor(pm / 60), pm % 60, 0, 0).getTime() + dur * 60000).toISOString()
+        })(),
       }),
       flight_no: form.flight_no || null, terminal: form.terminal || null, notes: form.notes || null,
       status: form.status,
@@ -2469,6 +2503,19 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                 <label style={lbl}>Duration (min) {durLoading && '…'}</label>
                 <input type="number" value={form.duration_min} onChange={e => set('duration_min', e.target.value)} style={{ ...inp, fontVariantNumeric: 'tabular-nums' }} placeholder="auto" min="1" max="240" />
               </div>
+            </div>
+            <div>
+              <label style={lbl}>Pickup Time <span style={{ fontWeight: '400', color: '#cbd5e1' }}>(override — optional)</span></label>
+              <input type="time"
+                value={form.pickup_time}
+                onChange={e => set('pickup_time', e.target.value)}
+                style={{ ...inp, fontSize: '17px', fontWeight: '800', textAlign: 'center', fontVariantNumeric: 'tabular-nums', borderColor: form.pickup_time ? '#f59e0b' : '#e2e8f0', background: form.pickup_time ? '#fffbeb' : 'white' }} />
+              {form.pickup_time && (
+                <div style={{ fontSize: '10px', color: '#92400e', fontWeight: '700', marginTop: '3px' }}>
+                  ⚡ Pickup time overridden — automatic calculation ignored
+                  <button type="button" onClick={() => set('pickup_time', '')} style={{ marginLeft: '8px', background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '10px', fontWeight: '800' }}>✕ clear</button>
+                </div>
+              )}
             </div>
 
             {/* Times preview — per MULTI trips, PICKUP e START vengono dal DB (compute-chain) */}
