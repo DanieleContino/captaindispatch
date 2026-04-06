@@ -1,9 +1,33 @@
-# CAPTAINDISPATCH — Context S39 (Cline)
+# CAPTAINDISPATCH — Context S40 (Cline)
 ## Updated: 6 April 2026
 
 ---
 
-## NEXT SESSION: S40 — open bugs
+## NEXT SESSION: S41 — open bugs
+
+### S40 completata ✅ (Rocket — TripCard layout fix: multi-pickup visuale)
+
+> **S40**: Fix layout dell'header `TripCard` in Rocket fase 2 (Preview) quando il trip diventa multi-pickup o multi-dropoff.
+>
+> **Problema**: Nella fase 2 di Rocket, spostando passeggeri da trip diversi, quando un trip diventava MULTI-PKP/MULTI-DRP:
+> 1. I badge (`🔀 MULTI-PKP`, `🔀 MULTI-DRP`, `📋 serviceType`) si sovrapponevano ai chip a destra (`⏱`, `arr. HH:MM`, pax count) — badge troncati (es. `MULTI-PK` invece di `MULTI-PKP`)
+> 2. Nel breakdown aperto, le righe multi-pickup mostravano solo `→ Masseria Torre Maizza...` senza il nome dell'hotel di partenza (compresso a 0px da `flex:1 + overflow:hidden`)
+>
+> **Fix A — Header right side a 2 righe** (commit `8490bdf`):
+> - Lato destro ora usa `flexDirection: 'column'` invece di una singola riga
+> - Row 1: `⏱30m  arr. 07:00`
+> - Row 2: `4/8  ▼`
+> - `flexShrink: 0` garantisce che il lato destro non venga mai compresso
+> - Left side: `flex: '1 1 0'` + `overflow: 'hidden'` propagato correttamente + badge row con `flexWrap: 'wrap'`
+>
+> **Fix B — Breakdown multi-pickup a 2 righe per hotel** (commit `38b862f`):
+> - Ogni hotel nel breakdown è ora un mini-card con sfondo `#f8fafc` e bordo `#e2e8f0`
+> - **Row 1**: `🏨 Nome Hotel` — sempre visibile, `overflow:hidden` + `textOverflow:ellipsis` solo se il nome è davvero lungo
+> - **Row 2**: `→ Destinazione  🕐 HH:MM  N pax` — destinazione con `flex:1` + ellipsis, orario e pax sempre visibili
+> - Stesso layout applicato al breakdown multi-dropoff
+>
+> File: `app/dashboard/rocket/page.js`
+> Commits: `8490bdf`, `38b862f`
 
 ### S39 completata ✅ (Trips — CrewInfoModal: pulsante "i" + overlay non blocca sidebar)
 
