@@ -44,8 +44,20 @@ const DEPT_COLOR = {
   SECURITY:   { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
 }
 
+// ─── Helper: suggerisce il prossimo ID per un tipo veicolo ────
+function suggestId(type, vehicles) {
+  const prefix = type + '-'
+  const nums = (vehicles || [])
+    .map(v => v.id)
+    .filter(id => id && id.toUpperCase().startsWith(prefix))
+    .map(id => parseInt(id.slice(prefix.length), 10))
+    .filter(n => !isNaN(n))
+  const max = nums.length > 0 ? Math.max(...nums) : 0
+  return prefix + String(max + 1).padStart(2, '0')
+}
+
 // ─── Sidebar ──────────────────────────────────────────────────
-function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [] }) {
+function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [], vehicles = [] }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', driver_crew_id: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [] }
@@ -57,14 +69,17 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
   const [crewSearch, setCrewSearch]     = useState('')
   const [driverSearch, setDriverSearch] = useState('')
   const [showDriverSugg, setShowDriverSugg] = useState(false)
+  const [idManuallyEdited, setIdManuallyEdited] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setError(null); setCd(false); setCrewSearch(''); setDriverSearch(''); setShowDriverSugg(false)
     if (mode === 'edit' && initial) {
       setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []), license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', driver_crew_id: initial.driver_crew_id || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, in_transport: initial.in_transport !== false, available_from: initial.available_from || '', available_to: initial.available_to || '', preferred_dept: initial.preferred_dept || '', preferred_crew_ids: Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [] })
+      setIdManuallyEdited(false)
     } else {
-      setForm({ ...EMPTY })
+      setForm({ ...EMPTY, id: suggestId('VAN', vehicles) })
+      setIdManuallyEdited(false)
     }
   }, [open, mode, initial])
 
@@ -154,7 +169,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
             {/* Vehicle ID */}
             <div style={fld}>
               <label style={lbl}>Vehicle ID</label>
-              <input value={form.id} onChange={e => set('id', e.target.value.toUpperCase())}
+              <input value={form.id} onChange={e => { setIdManuallyEdited(true); set('id', e.target.value.toUpperCase()) }}
                 style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em', background: mode === 'edit' ? '#f8fafc' : 'white' }}
                 placeholder="VAN-01 / BUS-20 / CAR-05" required readOnly={mode === 'edit'} />
               <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>{t.vehicleIdHint}</div>
@@ -167,7 +182,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                 {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(type => {
                   const c = TYPE_COLOR[type]; const active = form.vehicle_type === type
                   return (
-                    <button key={type} type="button" onClick={() => set('vehicle_type', type)}
+                    <button key={type} type="button" onClick={() => { set('vehicle_type', type); if (mode === 'new' && !idManuallyEdited) set('id', suggestId(type, vehicles)) }}
                       style={{ flex: 1, minWidth: '60px', padding: '6px 2px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                       <span style={{ fontSize: '18px' }}>{TYPE_ICON[type]}</span>
                       <span>{type}</span>
@@ -848,7 +863,7 @@ export default function VehiclesPage() {
         )}
       </div>
 
-<VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} />
+<VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
 
       <ImportModal
         open={importOpen}
