@@ -251,16 +251,30 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
     b.list.length !== a.list.length ? b.list.length - a.list.length : a.callMin - b.callMin
   )
 
-  // ── S43 v2: Two-pass vehicle partitioning ──────────────────
-  // Identify which dept labels appear as majority in at least one group
-  const groupDepts = new Set(groups.map(g => getMajorityDept(g.list)).filter(Boolean))
+  // ── S43 v3: Two-pass vehicle partitioning (any-dept match) ─
+  // Collect ALL dept labels that appear in ANY crew member of ANY group
+  // (not just the majority dept). This ensures that even a minority preferred
+  // dept (e.g., 2 HMU in a group of 6) triggers the reservation.
+  const groupDepts = new Set()
+  for (const g of groups) {
+    for (const c of g.list) {
+      if (c.department) groupDepts.add(c.department)
+    }
+  }
+
+  // Build full pool first (needed for vehiclePreferredDepts calculation)
+  const fullPool = [...vehicles]
+    .filter(v => v.active && !excludedVehicleIds.has(v.id))
+    .sort((a, b) => (b.pax_suggested || b.capacity || 0) - (a.pax_suggested || a.capacity || 0))
+
+  // Identify which preferred depts actually have a reserved vehicle in this run
+  const vehiclePreferredDepts = new Set(
+    fullPool.filter(v => v.preferred_dept && groupDepts.has(v.preferred_dept)).map(v => v.preferred_dept)
+  )
 
   // Split eligible vehicles into preferred pools (per dept) and normal pool
   const preferredPools = {} // { dept: Vehicle[] }
   const normalPool     = [] // vehicles without a dept preference match
-  const fullPool = [...vehicles]
-    .filter(v => v.active && !excludedVehicleIds.has(v.id))
-    .sort((a, b) => (b.pax_suggested || b.capacity || 0) - (a.pax_suggested || a.capacity || 0))
   for (const v of fullPool) {
     if (v.preferred_dept && groupDepts.has(v.preferred_dept)) {
       ;(preferredPools[v.preferred_dept] = preferredPools[v.preferred_dept] || []).push(v)
@@ -269,16 +283,30 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
     }
   }
 
+  // Re-sort groups: groups containing preferred-dept crew go FIRST (within same size tier)
+  // so they get their reserved vehicle before non-preferred groups of equal size.
+  groups.sort((a, b) => {
+    const aHasPref = a.list.some(c => c.department && vehiclePreferredDepts.has(c.department))
+    const bHasPref = b.list.some(c => c.department && vehiclePreferredDepts.has(c.department))
+    if (aHasPref !== bHasPref) return bHasPref ? 1 : -1 // preferred groups first
+    return b.list.length !== a.list.length ? b.list.length - a.list.length : a.callMin - b.callMin
+  })
+
   /**
    * Pick the next vehicle for a group, respecting preferred pools.
-   * Priority: 1) preferred pool matching majority dept
+   * Priority: 1) preferred pool matching ANY dept present in this group
    *           2) normal pool
    *           3) any remaining preferred pool (cross-dept last resort)
+   *
+   * Using "any dept" (not majority) ensures that even minority preferred
+   * crew (e.g., 1 HMU in a group of 6) trigger the correct reserved pool.
    */
   function getNextVehicle(groupCrew) {
-    const majority = getMajorityDept(groupCrew)
-    if (majority && preferredPools[majority]?.length) {
-      return pickBestVehicle(preferredPools[majority], groupCrew)
+    // Check if ANY crew member's dept has a preferred pool
+    for (const c of groupCrew) {
+      if (c.department && preferredPools[c.department]?.length) {
+        return pickBestVehicle(preferredPools[c.department], groupCrew)
+      }
     }
     if (normalPool.length) {
       return pickBestVehicle(normalPool, groupCrew)
