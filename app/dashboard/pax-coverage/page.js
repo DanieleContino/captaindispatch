@@ -104,8 +104,8 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
           </div>
           <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div style={{ fontSize: '13px', color: '#0f172a' }}>🏨 <strong>{hotelName}</strong></div>
-            {details?.arrival_date   && <div style={{ fontSize: '12px', color: '#64748b' }}>🛬 Check-in: <strong>{fmtDateShort(details.arrival_date)}</strong></div>}
-            {details?.departure_date && <div style={{ fontSize: '12px', color: '#64748b' }}>🛫 Check-out: <strong>{fmtDateShort(details.departure_date)}</strong></div>}
+            {details?.arrival_date   && <div style={{ fontSize: '12px', color: '#64748b' }}>🏨 Check-in: <strong>{fmtDateShort(details.arrival_date)}</strong></div>}
+            {details?.departure_date && <div style={{ fontSize: '12px', color: '#64748b' }}>🏁 Check-out: <strong>{fmtDateShort(details.departure_date)}</strong></div>}
           </div>
           <div>
             <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>✈️ Travel Movements</div>
