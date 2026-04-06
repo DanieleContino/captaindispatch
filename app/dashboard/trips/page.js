@@ -1061,7 +1061,12 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
               {multiMode ? `🔀 Multi-trip` : t.newTrip}
             </div>
-            {assignCtx && <div style={{ fontSize: '11px', color: '#fbbf24', fontWeight: '700', marginTop: '2px' }}>👤 {assignCtx.name}</div>}
+            {assignCtx && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#fbbf24', fontWeight: '700', marginTop: '2px' }}>
+                <span>👤 {assignCtx.name}</span>
+                <button type="button" onClick={() => setCrewInfoCrew({ id: assignCtx.id, full_name: assignCtx.name })} style={{ background: 'none', border: '1px solid rgba(251,191,36,0.5)', borderRadius: '50%', width: '16px', height: '16px', cursor: 'pointer', fontSize: '9px', color: '#fbbf24', fontWeight: '800', padding: 0, lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>i</button>
+              </div>
+            )}
             {multiMode && savedLegs.length > 0 && (
               <div style={{ fontSize: '11px', color: '#86efac', fontWeight: '700', marginTop: '2px' }}>
                 {savedLegs.length} leg{savedLegs.length > 1 ? 's' : ''} salvati · {form.trip_id}–{getLegTripId(savedLegs.length - 1)}
