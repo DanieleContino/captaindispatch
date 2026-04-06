@@ -2861,6 +2861,7 @@ function TripsPageInner() {
   const [filterStatus,  setFilterStatus]  = useState('ALL')
   const [filterVehicle, setFilterVehicle] = useState('ALL')
   const [assignCtx,     setAssignCtx]     = useState(null)
+  const [showAssignInfo, setShowAssignInfo] = useState(false)
 
   const anySidebarOpen = newTripOpen || !!editTripRow
 
@@ -3055,6 +3056,7 @@ function TripsPageInner() {
           <span style={{ fontSize: '14px' }}>👤</span>
           <span style={{ fontWeight: '800', color: '#92400e' }}>{t.assigningLabel}</span>
           <span style={{ fontWeight: '700', color: '#0f172a' }}>{assignCtx.name}</span>
+          <button onClick={() => setShowAssignInfo(true)} style={{ background: 'none', border: '1px solid #fde68a', borderRadius: '50%', width: '18px', height: '18px', cursor: 'pointer', fontSize: '10px', color: '#92400e', fontWeight: '800', padding: 0, lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>i</button>
           <span style={{ color: '#d97706' }}>·</span>
           <span style={{ color: '#92400e' }}>Status: <strong>{assignCtx.ts}</strong></span>
           {suggestedBaseIds.size > 0
@@ -3118,6 +3120,16 @@ function TripsPageInner() {
           </div>
         )}
       </div>
+
+      {/* ── Assign crew info modal ── */}
+      {showAssignInfo && assignCtx && (
+        <CrewInfoModal
+          crew={{ id: assignCtx.id, full_name: assignCtx.name }}
+          productionId={PRODUCTION_ID}
+          locations={locsList}
+          onClose={() => setShowAssignInfo(false)}
+        />
+      )}
 
       {/* ── CREATE sidebar ── */}
       <TripSidebar
