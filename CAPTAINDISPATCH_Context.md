@@ -1,9 +1,62 @@
 # CAPTAINDISPATCH — Context S44 (Cline)
-## Updated: 6 April 2026
+## Updated: 7 April 2026
 
 ---
 
 ## NEXT SESSION: S44
+
+### Hotfix completato ✅ — travel_status: arrival_date=oggi NON switcha PRESENT prematuramente (7 Apr 2026)
+
+> **Problema**: persone con `arrival_date = oggi` e volo nel pomeriggio venivano switchate a `PRESENT` al caricamento della pagina Crew, prima che il loro volo atterrasse.
+
+#### Causa
+Due punti del codice usavano `arrival_date <= today` (o `>=`) per calcolare il travel_status:
+1. `app/dashboard/crew/page.js` — auto-update al caricamento pagina Crew
+2. `app/api/import/confirm/route.js` — calcolo travel_status iniziale all'import accommodation
+
+#### Fix — commits `931ac4b` + `742d811`
+
+**`app/dashboard/crew/page.js`** — `loadCrew()` — nuova logica `expectedStatus(c)`:
+```js
+const hasInMovementToday = new Set(
+  travelData.filter(tm => tm.travel_date === today && tm.direction === 'IN').map(tm => tm.crew_id)
+)
+
+function expectedStatus(c) {
+  if (today > c.departure_date)       return 'OUT'
+  if (today > c.arrival_date)         return 'PRESENT'       // arrivato ieri o prima
+  if (today === c.arrival_date) {
+    return hasInMovementToday.has(c.id) ? 'IN' : 'PRESENT'   // volo oggi→IN, hotel-only→PRESENT
+  }
+  if (today < c.arrival_date)         return 'IN'
+  return null
+}
+```
+- Usa `travelData` già caricato (zero query extra)
+- **Retroattivo**: se qualcuno era già a PRESENT per errore → viene riportato a IN
+- Cron `arrival-status` (ogni 5 min) gestisce la transizione IN→PRESENT dopo il trip ARRIVAL
+
+**`app/api/import/confirm/route.js`** — `processAccommodation()`:
+```js
+// Prima (bug): arrival_date <= today → PRESENT
+// Dopo (fix):
+if (today > activeStay.departure_date)                                    travel_status = 'OUT'
+else if (activeStay.arrival_date < today && today <= activeStay.departure_date) travel_status = 'PRESENT'
+else                                                                       travel_status = 'IN'
+```
+- `arrival_date = oggi` → `IN` all'import (crew page correggerà a PRESENT se hotel-only)
+
+#### Regola finale travel_status
+| Condizione | Status |
+|---|---|
+| `arrival_date < oggi` | PRESENT |
+| `arrival_date = oggi` + volo IN oggi | IN (cron gestisce) |
+| `arrival_date = oggi` + nessun volo | PRESENT (hotel check-in) |
+| `arrival_date > oggi` | IN |
+| `departure_date = oggi` | PRESENT (lavora fino a sera) |
+| `departure_date < oggi` | OUT |
+
+---
 
 ### S43 completata ✅ (Rocket — Vehicle Preferences + Two-Pass Assignment)
 
