@@ -48,19 +48,21 @@ const DEPT_COLOR = {
 function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [] }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
-  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [] }
+  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', driver_crew_id: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [] }
   const [form, setForm]           = useState(EMPTY)
   const [saving, setSaving]       = useState(false)
   const [deleting, setDel]        = useState(false)
   const [confirmDel, setCd]       = useState(false)
   const [error, setError]         = useState(null)
   const [crewSearch, setCrewSearch]     = useState('')
+  const [driverSearch, setDriverSearch] = useState('')
+  const [showDriverSugg, setShowDriverSugg] = useState(false)
 
   useEffect(() => {
     if (!open) return
-    setError(null); setCd(false); setCrewSearch('')
+    setError(null); setCd(false); setCrewSearch(''); setDriverSearch(''); setShowDriverSugg(false)
     if (mode === 'edit' && initial) {
-      setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []), license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, in_transport: initial.in_transport !== false, available_from: initial.available_from || '', available_to: initial.available_to || '', preferred_dept: initial.preferred_dept || '', preferred_crew_ids: Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [] })
+      setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []), license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', driver_crew_id: initial.driver_crew_id || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, in_transport: initial.in_transport !== false, available_from: initial.available_from || '', available_to: initial.available_to || '', preferred_dept: initial.preferred_dept || '', preferred_crew_ids: Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [] })
     } else {
       setForm({ ...EMPTY })
     }
@@ -82,6 +84,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
       pax_suggested:      form.pax_suggested !== '' ? parseInt(form.pax_suggested) : null,
       pax_max:            form.pax_max       !== '' ? parseInt(form.pax_max)       : null,
       driver_name:        form.driver_name.trim() || null,
+      driver_crew_id:     form.driver_crew_id || null,
       sign_code:          form.sign_code.trim() || null,
       unit_default:       form.unit_default.trim() || null,
       active:             form.active,
@@ -100,6 +103,10 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
     }
     setSaving(false)
     if (err) { setError(err.message); return }
+    // Se un crew è stato assegnato come driver, lo marchiamo automaticamente come NTN
+    if (form.driver_crew_id) {
+      await supabase.from('crew').update({ no_transport_needed: true }).eq('id', form.driver_crew_id).eq('production_id', PRODUCTION_ID)
+    }
     onSaved()
   }
 
@@ -224,10 +231,69 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
               </div>
             </div>
 
-            {/* Driver */}
+            {/* Driver — autocomplete crew o testo libero */}
             <div style={fld}>
               <label style={lbl}>{t.driverLabel}</label>
-              <input value={form.driver_name} onChange={e => set('driver_name', e.target.value)} style={inp} placeholder="Mario Rossi" />
+              {form.driver_crew_id ? (
+                /* Crew collegato — chip verde */
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: '1px solid #86efac', borderRadius: '8px', background: '#f0fdf4' }}>
+                  <span style={{ fontSize: '14px' }}>🔗</span>
+                  <span style={{ flex: 1, fontSize: '13px', fontWeight: '700', color: '#15803d' }}>{form.driver_name}</span>
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '999px', padding: '1px 7px' }}>🚐 NTN</span>
+                  <button type="button"
+                    onClick={() => setForm(f => ({ ...f, driver_crew_id: '', driver_name: '' }))}
+                    title="Scollega crew"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '14px', lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>✕</button>
+                </div>
+              ) : (
+                /* Testo libero + suggerimenti crew */
+                <div style={{ position: 'relative' }}>
+                  <input
+                    value={form.driver_name}
+                    onChange={e => {
+                      set('driver_name', e.target.value)
+                      setDriverSearch(e.target.value)
+                      setShowDriverSugg(e.target.value.length > 0)
+                    }}
+                    onFocus={() => { if (form.driver_name && !form.driver_crew_id) setShowDriverSugg(true) }}
+                    onBlur={() => setTimeout(() => setShowDriverSugg(false), 160)}
+                    style={inp}
+                    placeholder="Mario Rossi — o cerca crew…"
+                    autoComplete="off"
+                  />
+                  {showDriverSugg && (() => {
+                    const q = (driverSearch || form.driver_name || '').toLowerCase()
+                    const matches = crewList.filter(c => q && (c.full_name || '').toLowerCase().includes(q)).slice(0, 6)
+                    if (matches.length === 0) return null
+                    return (
+                      <div style={{ position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 200, overflow: 'hidden' }}>
+                        <div style={{ padding: '4px 8px', fontSize: '9px', fontWeight: '800', color: '#94a3b8', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          🔗 Collega crew come driver
+                        </div>
+                        {matches.map(cm => (
+                          <div key={cm.id}
+                            onMouseDown={() => {
+                              setForm(f => ({ ...f, driver_name: cm.full_name, driver_crew_id: cm.id }))
+                              setShowDriverSugg(false)
+                            }}
+                            style={{ padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }}
+                            onMouseOver={e => e.currentTarget.style.background = '#f0fdf4'}
+                            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <span style={{ fontSize: '14px', flexShrink: 0 }}>🔗</span>
+                            <span style={{ flex: 1, fontWeight: '600', color: '#0f172a' }}>{cm.full_name}</span>
+                            {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0 }}>{cm.department}</span>}
+                            {cm.no_transport_needed && <span style={{ fontSize: '10px', color: '#6b7280', background: '#f1f5f9', padding: '1px 5px', borderRadius: '999px', border: '1px solid #e2e8f0', flexShrink: 0 }}>NTN</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+              <div style={{ fontSize: '9px', color: '#94a3b8', marginTop: '3px' }}>
+                {form.driver_crew_id ? '✅ Crew collegato — verrà marcato come NTN al salvataggio' : 'Digita per cercare un membro crew da collegare come driver'}
+              </div>
             </div>
 
             {/* Sign code */}
@@ -483,7 +549,12 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
           )}
         </div>
         <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#64748b', flexWrap: 'wrap' }}>
-          {v.driver_name && <span>👤 {v.driver_name}</span>}
+          {v.driver_name && (
+            <span style={v.driver_crew_id ? { color: '#15803d', fontWeight: '600' } : {}}>
+              {v.driver_crew_id ? '🔗' : '👤'} {v.driver_name}
+              {v.driver_crew_id && <span style={{ fontSize: '10px', color: '#15803d', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '999px', padding: '0 5px', marginLeft: '4px', fontWeight: '700' }}>NTN</span>}
+            </span>
+          )}
           {v.sign_code   && <span>🏷 {v.sign_code}</span>}
           {v.unit_default && <span>📋 {v.unit_default}</span>}
           {Array.isArray(v.preferred_crew_ids) && v.preferred_crew_ids.length > 0 && crewList.length > 0 && (
