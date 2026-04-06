@@ -1,9 +1,28 @@
-# CAPTAINDISPATCH — Context S40 (Cline)
+# CAPTAINDISPATCH — Context S41 (Cline)
 ## Updated: 6 April 2026
 
 ---
 
-## NEXT SESSION: S41 — open bugs
+## NEXT SESSION: S42 — open bugs
+
+### S41 completata ✅ (Vehicles — driver crew link + auto NTN)
+
+> **S41**: Aggiunta la possibilità di collegare un membro del crew come autista di un veicolo nella pagina Vehicles. Quando assegnato, il crew viene automaticamente marcato come NTN (no_transport_needed = true) al salvataggio → scompare da Rocket, pax-coverage e trips senza modifiche a nessun'altra pagina.
+>
+> **DB migration** (`scripts/migrate-vehicle-driver-crew.sql`):
+> ```sql
+> ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS driver_crew_id TEXT;
+> ```
+>
+> **UI — `app/dashboard/vehicles/page.js`**:
+> - Campo Driver ora è un **autocomplete ibrido**: mentre si digita il nome appare un dropdown con i crew corrispondenti (header "🔗 Collega crew come driver")
+> - Selezionando un crew → il campo si trasforma in un chip verde: `🔗 Mario Rossi · 🚐 NTN` con ✕ per scollegare
+> - Al salvataggio: se `driver_crew_id` è impostato → `supabase.from('crew').update({ no_transport_needed: true })`
+> - Lista veicoli (VehicleRow): driver collegato mostra `🔗 Nome` in verde con badge `NTN`; driver libero mostra `👤 Nome`
+> - Se si scollega il driver, `driver_crew_id` → null; NTN sul crew rimane (gestito manualmente dalla pagina Crew)
+>
+> Commit: `50c33af` — `S36: Vehicle driver crew link — autocomplete + auto NTN`
+> File: `app/dashboard/vehicles/page.js` (+89/-6), `scripts/migrate-vehicle-driver-crew.sql` (nuovo)
 
 ### S40 completata ✅ (Rocket — TripCard layout fix: multi-pickup visuale)
 
