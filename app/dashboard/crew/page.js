@@ -852,8 +852,9 @@ export default function CrewPage() {
       if (c.departure_date && today > c.departure_date)                    return 'OUT'
       if (c.arrival_date   && today > c.arrival_date)                      return 'PRESENT'
       if (c.arrival_date   && today === c.arrival_date) {
-        // Arriva oggi: PRESENT solo se non ha un volo/treno IN oggi
-        return hasInMovementToday.has(c.id) ? null : 'PRESENT'
+        // Arriva oggi con volo/treno IN → deve essere IN (anche se già switchato a PRESENT per errore)
+        // Arriva oggi senza volo (check-in hotel diretto) → PRESENT
+        return hasInMovementToday.has(c.id) ? 'IN' : 'PRESENT'
       }
       if (c.arrival_date   && today < c.arrival_date)                      return 'IN'
       return null
