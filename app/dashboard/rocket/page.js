@@ -213,6 +213,14 @@ function pickBestVehicle(pool, groupCrew) {
 // TASK 7: added globalServiceType param; effectiveServiceType per crew/group;
 // group key now includes service type so trips with different service types
 // are correctly separated even if they share the same hotel/dest/callMin.
+//
+// S43 v2 (two-pass preferred assignment):
+// Vehicles with preferred_dept are partitioned into a per-dept pool BEFORE
+// the main loop. When processing a group whose majority dept matches a
+// preferred pool, that pool is tried first → the preferred vehicle is
+// guaranteed to serve its dept (not stolen by a larger unrelated group).
+// Fallback order: preferred pool → normal pool → any remaining preferred
+// pool (cross-dept, last resort).
 function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, globalServiceType, deptDestOverrides, crewCallOverrides, excludedCrewIds, excludedVehicleIds, runDate }) {
   function getEffective(c) {
     const deptCfg = (c.department && deptDestOverrides[c.department]) || {}
@@ -242,9 +250,46 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
   const groups = Object.values(groupMap).sort((a, b) =>
     b.list.length !== a.list.length ? b.list.length - a.list.length : a.callMin - b.callMin
   )
-  const pool = [...vehicles]
+
+  // ── S43 v2: Two-pass vehicle partitioning ──────────────────
+  // Identify which dept labels appear as majority in at least one group
+  const groupDepts = new Set(groups.map(g => getMajorityDept(g.list)).filter(Boolean))
+
+  // Split eligible vehicles into preferred pools (per dept) and normal pool
+  const preferredPools = {} // { dept: Vehicle[] }
+  const normalPool     = [] // vehicles without a dept preference match
+  const fullPool = [...vehicles]
     .filter(v => v.active && !excludedVehicleIds.has(v.id))
     .sort((a, b) => (b.pax_suggested || b.capacity || 0) - (a.pax_suggested || a.capacity || 0))
+  for (const v of fullPool) {
+    if (v.preferred_dept && groupDepts.has(v.preferred_dept)) {
+      ;(preferredPools[v.preferred_dept] = preferredPools[v.preferred_dept] || []).push(v)
+    } else {
+      normalPool.push(v)
+    }
+  }
+
+  /**
+   * Pick the next vehicle for a group, respecting preferred pools.
+   * Priority: 1) preferred pool matching majority dept
+   *           2) normal pool
+   *           3) any remaining preferred pool (cross-dept last resort)
+   */
+  function getNextVehicle(groupCrew) {
+    const majority = getMajorityDept(groupCrew)
+    if (majority && preferredPools[majority]?.length) {
+      return pickBestVehicle(preferredPools[majority], groupCrew)
+    }
+    if (normalPool.length) {
+      return pickBestVehicle(normalPool, groupCrew)
+    }
+    // Last resort: use a preferred vehicle intended for another dept
+    for (const pool of Object.values(preferredPools)) {
+      if (pool.length) return pickBestVehicle(pool, groupCrew)
+    }
+    return null
+  }
+
   const draftTrips = [], suggestions = []
   let seq = 0
   for (const g of groups) {
@@ -255,7 +300,8 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
     )
     let remaining = [...sorted]
     while (remaining.length > 0) {
-      if (!pool.length) {
+      const v = getNextVehicle(remaining)
+      if (!v) {
         suggestions.push({ type: 'NO_VEHICLE', hotelId: g.hotelId, destId: g.destId, callMin: g.callMin,
           crew: remaining.map(c => c.full_name) })
         // Phantom trip so unassigned crew appear in Step 2 and can be moved to real vehicles
@@ -265,7 +311,6 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
           crewList: remaining.map(c => ({ ...c, _effectiveDest: g.destId })) })
         remaining = []; break
       }
-      const v = pickBestVehicle(pool, remaining)
       const capSug = v.pax_suggested || v.capacity || 6
       const capMax = Math.max(capSug, v.pax_max || capSug)
       const toAssign = remaining.splice(0, capSug)
