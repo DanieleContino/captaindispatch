@@ -1,9 +1,50 @@
-# CAPTAINDISPATCH — Context S41 (Cline)
+# CAPTAINDISPATCH — Context S43 (Cline)
 ## Updated: 6 April 2026
 
 ---
 
-## NEXT SESSION: S42 — open bugs
+## NEXT SESSION: S43 — Rocket vehicle preferences
+
+### S43 — PIANIFICATA (da implementare)
+
+> **Obiettivo**: In Rocket, i veicoli con preferenze di dipartimento o crew specifiche devono essere assegnati prioritariamente ai gruppi corrispondenti.
+>
+> **Algoritmo `runRocket` — nuova funzione `pickBestVehicle(pool, groupCrew)`**:
+> - Calcola il dipartimento dominante del gruppo (`getMajorityDept`)
+> - Calcola `crewIdSet` dal gruppo
+> - Score per ogni veicolo in pool:
+>   - `+100` se `v.preferred_dept === dominantDept`
+>   - `+20 × N` dove N = numero di `v.preferred_crew_ids` che sono nel gruppo
+>   - `+capacity` come tiebreaker (mantiene preferenza per veicoli grandi)
+> - Sostituisce `pool.shift()` con `pool.splice(bestIdx, 1)`
+>
+> **UI `TripCard` — sezione preferenze**:
+> - Nel TripCard espanso (sopra crew list): riga `⭐ Pref: [DEPT] · N crew pref` se il veicolo ha preferenze
+> - Nella crew list: badge `★` accanto ai nomi crew che matchano `preferred_crew_ids`
+>
+> **File da modificare**: `app/dashboard/rocket/page.js` only. Nessuna modifica DB/API.
+>
+> **Scoring example**:
+> ```
+> VAN-01 preferred_dept=PRODUCERS → gruppo CAMERA: score = 6 (capacity only)
+> VAN-01 preferred_dept=PRODUCERS → gruppo PRODUCERS: score = 106 (100 + 6 capacity)
+> ```
+
+### S42 completata ✅ (Vehicles — auto-suggest ID + DB rename)
+
+> **S42-A**: Campo Vehicle ID nella sidebar "New Vehicle" ora si pre-popola automaticamente in base alla tipologia selezionata.
+> - Helper `suggestId(type, vehicles)`: conta i veicoli con lo stesso prefisso tipo → `CARGO-01`, `VAN-03`, etc.
+> - `useEffect` che ricalcola l'ID suggerito ogni volta che `form.vehicle_type` cambia (solo se `!idManuallyEdited`)
+> - `idManuallyEdited = true` quando l'utente digita manualmente nel campo ID → il cambio tipo non sovrascrive più
+> - In Edit mode il campo rimane `readOnly` come prima
+> - Commit: `5ebff23` — `feat(vehicles): auto-suggest Vehicle ID from type — VAN-01, CAR-02, etc. (S42)`
+> - File: `app/dashboard/vehicles/page.js` (+20/-5)
+>
+> **S42-B**: Rinominati veicoli con vecchia nomenclatura in DB tramite SQL script su Supabase.
+> - Veicoli con `vehicle_type = CARGO/PICKUP/TRUCK` ma `id LIKE 'VAN-%'` rinominati in `CARGO-01`, `PICKUP-01`, `TRUCK-01`, etc.
+> - Script usa INSERT+UPDATE trips+DELETE (safe con FK attive, senza ON UPDATE CASCADE)
+> - Cascade automatico su `trips.vehicle_id`
+> - Eseguito direttamente in Supabase SQL Editor (no migration file)
 
 ### S41 completata ✅ (Vehicles — driver crew link + auto NTN)
 
