@@ -524,23 +524,28 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
             </div>
           </div>
         </div>
-        {/* RIGHT: duration chip + arrival chip + pax count + chevron — never compressed */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, marginTop: '1px' }}>
-          {/* TASK 2: duration + arrival chips — always visible, even when card is collapsed */}
-          {!isUnassigned && totalDurationMin != null && (
-            <span style={{ fontSize: '11px', color: '#374151', fontWeight: '700', background: '#f1f5f9', padding: '2px 7px', borderRadius: '5px', border: '1px solid #e2e8f0', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
-              ⏱ {totalDurationMin}m
-            </span>
-          )}
+        {/* RIGHT: stacked 2-row layout — narrower footprint, no overlap with badges */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0, marginTop: '1px' }}>
+          {/* Row 1: arrival chip (+ duration inline) */}
           {!isUnassigned && (
-            <span style={{ fontSize: '11px', color: '#065f46', fontWeight: '800', background: '#dcfce7', padding: '2px 7px', borderRadius: '5px', border: '1px solid #86efac', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
-              arr. {minToHHMM(trip.callMin)}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {totalDurationMin != null && (
+                <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                  ⏱{totalDurationMin}m
+                </span>
+              )}
+              <span style={{ fontSize: '11px', color: '#065f46', fontWeight: '800', background: '#dcfce7', padding: '2px 7px', borderRadius: '5px', border: '1px solid #86efac', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+                arr. {minToHHMM(trip.callMin)}
+              </span>
+            </div>
           )}
-          <span style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '12px', fontWeight: '800', background: paxBg, color: paxColor, border: `1px solid ${paxColor}20`, whiteSpace: 'nowrap' }}>
-            {pax}/{capSug}{capMax > capSug && <span style={{ color: '#94a3b8', fontWeight: '600' }}> ({capMax})</span>}
-          </span>
-          <span style={{ color: '#94a3b8', fontSize: '11px', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▼</span>
+          {/* Row 2: pax badge + chevron */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: paxBg, color: paxColor, border: `1px solid ${paxColor}20`, whiteSpace: 'nowrap' }}>
+              {pax}/{capSug}{capMax > capSug && <span style={{ color: '#94a3b8', fontWeight: '600' }}> ({capMax})</span>}
+            </span>
+            <span style={{ color: '#94a3b8', fontSize: '11px', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▼</span>
+          </div>
         </div>
       </div>
       {open && (
@@ -571,31 +576,50 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
                 <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '5px', fontStyle: 'italic' }}>
                   {t.rocketAutoSplit} · {t.rocketAllArrive} {minToHHMM(trip.callMin)}
                 </div>
-                {/* Multi-pickup breakdown — pickup calcolati in cascata */}
+                {/* Multi-pickup breakdown — 2 rows per hotel: name on top, dest+time below */}
                 {isMultiPickup && pickupHotels.map(hId => {
                   const hCrew   = trip.crewList.filter(c => c.hotel_id === hId)
                   const hDest   = hCrew[0]?._effectiveDest || trip.destId
                   const hDur    = (routeMap && routeMap[`${hId}||${hDest}`]) ?? 30
                   // Usa pickup cascade se disponibile, altrimenti fallback parallelo
                   const hPk     = cascadePickups[hId] ?? (trip.callMin - hDur)
+                  const hotelName = locMap[hId] || hId
+                  const destName  = locMap[hDest] || hDest
                   return (
-                    <div key={hId} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', marginBottom: '3px' }}>
-                      <span style={{ color: '#64748b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locMap[hId] || hId}</span>
-                      <span style={{ color: '#94a3b8' }}>→ {locMap[hDest] || hDest}</span>
-                      <span style={{ color: '#374151', fontWeight: '700', whiteSpace: 'nowrap' }}>🕐 {minToHHMM(hPk)} · {hCrew.length} pax</span>
+                    <div key={hId} style={{ marginBottom: '6px', padding: '5px 8px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                      {/* Row 1: hotel (origin) — always fully visible */}
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
+                        🏨 {hotelName}
+                      </div>
+                      {/* Row 2: → dest + pickup time + pax count */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px' }}>
+                        <span style={{ color: '#94a3b8', flexShrink: 0 }}>→</span>
+                        <span style={{ color: '#64748b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{destName}</span>
+                        <span style={{ color: '#374151', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>🕐 {minToHHMM(hPk)}</span>
+                        <span style={{ color: '#2563eb', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>{hCrew.length} pax</span>
+                      </div>
                     </div>
                   )
                 })}
-                {/* Multi-dropoff breakdown (single pickup) */}
+                {/* Multi-dropoff breakdown (single pickup) — 2 rows per dest */}
                 {isMultiDropoff && !isMultiPickup && dropoffDests.map(dId => {
                   const dCrew = trip.crewList.filter(c => (c._effectiveDest || trip.destId) === dId)
                   const dDur  = (routeMap && routeMap[`${trip.hotelId}||${dId}`]) ?? 30
+                  const hotelName = locMap[trip.hotelId] || trip.hotelId
+                  const destName  = locMap[dId] || dId
                   return (
-                    <div key={dId} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', marginBottom: '3px' }}>
-                      <span style={{ color: '#64748b' }}>{locMap[trip.hotelId] || trip.hotelId}</span>
-                      <span style={{ color: '#94a3b8' }}>→</span>
-                      <span style={{ color: '#0f172a', fontWeight: '700', flex: 1 }}>{locMap[dId] || dId}</span>
-                      <span style={{ color: '#374151', fontWeight: '700', whiteSpace: 'nowrap' }}>⏱ {dDur}min · {dCrew.length} pax</span>
+                    <div key={dId} style={{ marginBottom: '6px', padding: '5px 8px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                      {/* Row 1: hotel (origin) */}
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
+                        🏨 {hotelName}
+                      </div>
+                      {/* Row 2: → dest + duration + pax count */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px' }}>
+                        <span style={{ color: '#94a3b8', flexShrink: 0 }}>→</span>
+                        <span style={{ color: '#0f172a', fontWeight: '600', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{destName}</span>
+                        <span style={{ color: '#374151', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>⏱ {dDur}m</span>
+                        <span style={{ color: '#2563eb', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>{dCrew.length} pax</span>
+                      </div>
                     </div>
                   )
                 })}
