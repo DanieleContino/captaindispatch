@@ -609,14 +609,36 @@ function AddVehicleModal({ vehicles, locations, routeMap, locMap, defaultDestId,
               const cap = v.pax_suggested || v.capacity || '?'
               return (
                 <div key={v.id} onClick={() => setSelVehicleId(v.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '9px', border: `2px solid ${selected ? '#2563eb' : '#e2e8f0'}`, background: selected ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'all 0.1s' }}>
-                  <span style={{ fontSize: '16px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '13px', color: '#0f172a', minWidth: '60px' }}>{v.id}</span>
-                  <span style={{ fontSize: '12px', color: '#64748b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {v.driver_name || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No driver</span>}
-                  </span>
-                  <span style={{ fontSize: '10px', color: '#1d4ed8', background: '#eff6ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', flexShrink: 0 }}>{cap} pax</span>
-                  {alreadyIn && <span style={{ fontSize: '9px', fontWeight: '800', color: '#d97706', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fde68a', flexShrink: 0 }}>in run</span>}
+                  style={{ borderRadius: '9px', border: `2px solid ${selected ? '#2563eb' : '#e2e8f0'}`, background: selected ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'all 0.1s', overflow: 'hidden' }}>
+                  {/* Row 1: main info */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px' }}>
+                    <span style={{ fontSize: '16px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '13px', color: '#0f172a', minWidth: '60px' }}>{v.id}</span>
+                    <span style={{ fontSize: '12px', color: '#64748b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {v.driver_name || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No driver</span>}
+                    </span>
+                    <span style={{ fontSize: '10px', color: '#1d4ed8', background: '#eff6ff', padding: '1px 5px', borderRadius: '4px', fontWeight: '700', flexShrink: 0 }}>{cap} pax</span>
+                    {alreadyIn && <span style={{ fontSize: '9px', fontWeight: '800', color: '#d97706', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fde68a', flexShrink: 0 }}>in run</span>}
+                  </div>
+                  {/* Row 2: preferences (only when set) */}
+                  {(v.preferred_dept || v.preferred_crew_ids?.length > 0) && (() => {
+                    const [prefBg, prefTx] = v.preferred_dept ? deptColor(v.preferred_dept) : ['#f1f5f9', '#64748b']
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 12px 7px 38px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '9px', color: '#b45309', fontWeight: '800', flexShrink: 0 }}>⭐ Pref:</span>
+                        {v.preferred_dept && (
+                          <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: prefBg, color: prefTx, flexShrink: 0 }}>
+                            {v.preferred_dept}
+                          </span>
+                        )}
+                        {v.preferred_crew_ids?.length > 0 && (
+                          <span style={{ fontSize: '9px', color: '#92400e', fontWeight: '700', flexShrink: 0 }}>
+                            ★ {v.preferred_crew_ids.length} crew pref
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })}
