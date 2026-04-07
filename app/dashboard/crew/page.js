@@ -251,6 +251,501 @@ function ContactPopover({ crewId, email, phone, onSaved }) {
   )
 }
 
+// ─── Accommodation Accordion ────────────────────────────────
+function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
+  const PRODUCTION_ID = getProductionId()
+  const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [stays, setStays] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addForm, setAddForm] = useState({ hotel_id: '', arrival_date: '', departure_date: '' })
+  const [saving, setSaving] = useState(false)
+  const [editId, setEditId] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [confirmDelId, setConfirmDelId] = useState(null)
+
+  async function load() {
+    setLoading(true)
+    const { data } = await supabase
+      .from('crew_stays')
+      .select('id, hotel_id, arrival_date, departure_date')
+      .eq('crew_id', crewId)
+      .eq('production_id', PRODUCTION_ID)
+      .order('arrival_date', { ascending: true })
+    setStays(data || [])
+    setLoading(false)
+    setLoaded(true)
+  }
+
+  function toggle() {
+    const next = !open
+    setOpen(next)
+    if (next && !loaded) load()
+  }
+
+  async function syncCrewDates(newStays) {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+    const active = newStays.find(s => s.arrival_date <= today && s.departure_date >= today)
+      || newStays.find(s => s.arrival_date > today)
+      || newStays[newStays.length - 1]
+    if (active) {
+      await supabase.from('crew').update({
+        hotel_id:       active.hotel_id || null,
+        arrival_date:   active.arrival_date || null,
+        departure_date: active.departure_date || null,
+      }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+      onCrewDatesUpdated && onCrewDatesUpdated(active)
+    }
+  }
+
+  async function handleAdd() {
+    if (!addForm.arrival_date || !addForm.departure_date) return
+    setSaving(true)
+    const { data, error } = await supabase
+      .from('crew_stays')
+      .insert({
+        production_id:  PRODUCTION_ID,
+        crew_id:        crewId,
+        hotel_id:       addForm.hotel_id || null,
+        arrival_date:   addForm.arrival_date,
+        departure_date: addForm.departure_date,
+      })
+      .select('id, hotel_id, arrival_date, departure_date')
+      .single()
+    setSaving(false)
+    if (error) return
+    const newStays = [...stays, data].sort((a, b) => a.arrival_date.localeCompare(b.arrival_date))
+    setStays(newStays)
+    setAddOpen(false)
+    setAddForm({ hotel_id: '', arrival_date: '', departure_date: '' })
+    await syncCrewDates(newStays)
+  }
+
+  async function handleEditSave(id) {
+    setSaving(true)
+    const { error } = await supabase
+      .from('crew_stays')
+      .update({
+        hotel_id:       editForm.hotel_id || null,
+        arrival_date:   editForm.arrival_date,
+        departure_date: editForm.departure_date,
+      })
+      .eq('id', id)
+    setSaving(false)
+    if (error) return
+    const newStays = stays
+      .map(s => s.id === id ? { ...s, ...editForm } : s)
+      .sort((a, b) => a.arrival_date.localeCompare(b.arrival_date))
+    setStays(newStays)
+    setEditId(null)
+    await syncCrewDates(newStays)
+  }
+
+  async function handleDelete(id) {
+    if (confirmDelId !== id) { setConfirmDelId(id); return }
+    setSaving(true)
+    await supabase.from('crew_stays').delete().eq('id', id)
+    setSaving(false)
+    const newStays = stays.filter(s => s.id !== id)
+    setStays(newStays)
+    setConfirmDelId(null)
+    if (newStays.length > 0) await syncCrewDates(newStays)
+  }
+
+  const inp = { width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '700', color: '#15803d', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }
+  const hotelLocations = locations.filter(l => !l.is_hub)
+
+  function StayForm({ form, setF, onSave, onCancel, saveLabel }) {
+    return (
+      <div style={{ background: 'white', border: '1px dashed #86efac', borderRadius: '7px', padding: '8px 10px', marginBottom: '6px' }}>
+        <div style={{ marginBottom: '6px' }}>
+          <label style={lbl}>Hotel</label>
+          <select value={form.hotel_id || ''} onChange={e => setF(f => ({ ...f, hotel_id: e.target.value }))} style={inp}>
+            <option value="">– No hotel –</option>
+            {hotelLocations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+          <div>
+            <label style={lbl}>Check-in</label>
+            <input type="date" value={form.arrival_date || ''} onChange={e => setF(f => ({ ...f, arrival_date: e.target.value }))} style={inp} />
+          </div>
+          <div>
+            <label style={lbl}>Check-out</label>
+            <input type="date" value={form.departure_date || ''} onChange={e => setF(f => ({ ...f, departure_date: e.target.value }))} style={inp} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button type="button" onClick={onCancel}
+            style={{ flex: 1, padding: '4px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
+            Cancel
+          </button>
+          <button type="button" onClick={onSave} disabled={saving || !form.arrival_date || !form.departure_date}
+            style={{ flex: 2, padding: '4px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : '#15803d', color: 'white', fontSize: '11px', cursor: saving ? 'default' : 'pointer', fontWeight: '700' }}>
+            {saving ? 'Saving…' : saveLabel}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <button type="button" onClick={toggle}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: open ? '8px 8px 0 0' : '8px', border: '1px solid #e2e8f0', background: open ? '#f0fdf4' : '#f8fafc', cursor: 'pointer', transition: 'background 0.15s' }}>
+        <span style={{ fontSize: '12px', fontWeight: '700', color: open ? '#15803d' : '#374151' }}>
+          🏨 Accommodation — Stays
+          {stays.length > 0 && (
+            <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: '700', color: '#16a34a', background: '#dcfce7', padding: '1px 6px', borderRadius: '999px', border: '1px solid #86efac' }}>✓ {stays.length} stay{stays.length > 1 ? 's' : ''}</span>
+          )}
+        </span>
+        <span style={{ fontSize: '12px', color: '#94a3b8', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{ border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', background: '#f0fdf4', padding: '10px 12px 8px' }}>
+          {loading ? (
+            <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', padding: '8px' }}>Loading…</div>
+          ) : (
+            <>
+              {stays.length === 0 && !addOpen && (
+                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontStyle: 'italic' }}>No stays recorded</div>
+              )}
+
+              {stays.map(s => {
+                const hotel = locations.find(l => l.id === s.hotel_id)
+                if (editId === s.id) {
+                  return (
+                    <div key={s.id}>
+                      <StayForm
+                        form={editForm}
+                        setF={setEditForm}
+                        onSave={() => handleEditSave(s.id)}
+                        onCancel={() => setEditId(null)}
+                        saveLabel="✓ Save Stay"
+                      />
+                    </div>
+                  )
+                }
+                const depToday    = isToday(s.departure_date)
+                const depTomorrow = isTomorrow(s.departure_date)
+                return (
+                  <div key={s.id} style={{ background: 'white', border: '1px solid #bbf7d0', borderRadius: '7px', padding: '7px 10px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, fontSize: '12px' }}>
+                      <span style={{ fontWeight: '700', color: '#0f172a' }}>🏨 {hotel?.name || s.hotel_id || '–'}</span>
+                      <span style={{ color: '#64748b', marginLeft: '8px' }}>arr {fmtDate(s.arrival_date)}</span>
+                      <span style={{ marginLeft: '6px', color: depToday || depTomorrow ? '#dc2626' : '#64748b', fontWeight: depToday || depTomorrow ? '700' : '400' }}>dep {fmtDate(s.departure_date)}</span>
+                    </div>
+                    <button type="button"
+                      onClick={() => { setEditId(s.id); setEditForm({ hotel_id: s.hotel_id || '', arrival_date: s.arrival_date, departure_date: s.departure_date }) }}
+                      style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#15803d', flexShrink: 0 }}>
+                      ✎
+                    </button>
+                    {confirmDelId === s.id ? (
+                      <div style={{ display: 'flex', gap: '3px' }}>
+                        <button type="button" onClick={() => setConfirmDelId(null)}
+                          style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '5px', padding: '3px 6px', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>✕</button>
+                        <button type="button" onClick={() => handleDelete(s.id)} disabled={saving}
+                          style={{ background: '#dc2626', border: 'none', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: 'white', fontWeight: '700' }}>⚠ Del</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setConfirmDelId(s.id)}
+                        style={{ background: '#fff1f2', border: '1px solid #fecaca', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#dc2626', flexShrink: 0 }}>🗑</button>
+                    )}
+                  </div>
+                )
+              })}
+
+              {addOpen ? (
+                <StayForm
+                  form={addForm}
+                  setF={setAddForm}
+                  onSave={handleAdd}
+                  onCancel={() => { setAddOpen(false); setAddForm({ hotel_id: '', arrival_date: '', departure_date: '' }) }}
+                  saveLabel="+ Add Stay"
+                />
+              ) : (
+                <button type="button" onClick={() => setAddOpen(true)}
+                  style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #86efac', background: 'transparent', color: '#16a34a', fontSize: '11px', fontWeight: '700', cursor: 'pointer', marginTop: stays.length > 0 ? '4px' : '0' }}>
+                  + Add Stay
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Travel Accordion ────────────────────────────────────────
+function TravelAccordion({ crewId }) {
+  const PRODUCTION_ID = getProductionId()
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+  const EMPTY_MOV = { travel_date: '', direction: 'IN', travel_type: 'FLIGHT', travel_number: '', from_location: '', from_time: '', to_location: '', to_time: '', needs_transport: false }
+  const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [movements, setMovements] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addForm, setAddForm] = useState(EMPTY_MOV)
+  const [saving, setSaving] = useState(false)
+  const [editId, setEditId] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [confirmDelId, setConfirmDelId] = useState(null)
+
+  async function load() {
+    setLoading(true)
+    const { data } = await supabase
+      .from('travel_movements')
+      .select('id, travel_date, direction, travel_type, travel_number, from_location, from_time, to_location, to_time, needs_transport')
+      .eq('crew_id', crewId)
+      .eq('production_id', PRODUCTION_ID)
+      .order('travel_date', { ascending: true })
+    setMovements(data || [])
+    setLoading(false)
+    setLoaded(true)
+  }
+
+  function toggle() {
+    const next = !open
+    setOpen(next)
+    if (next && !loaded) load()
+  }
+
+  async function handleAdd() {
+    if (!addForm.travel_date) return
+    setSaving(true)
+    const { data, error } = await supabase
+      .from('travel_movements')
+      .insert({
+        production_id:  PRODUCTION_ID,
+        crew_id:        crewId,
+        travel_date:    addForm.travel_date,
+        direction:      addForm.direction,
+        travel_type:    addForm.travel_type,
+        travel_number:  addForm.travel_number.trim() || null,
+        from_location:  addForm.from_location.trim() || null,
+        from_time:      addForm.from_time || null,
+        to_location:    addForm.to_location.trim() || null,
+        to_time:        addForm.to_time || null,
+        needs_transport: addForm.needs_transport,
+        match_status:   'matched',
+      })
+      .select('id, travel_date, direction, travel_type, travel_number, from_location, from_time, to_location, to_time, needs_transport')
+      .single()
+    setSaving(false)
+    if (error) return
+    setMovements(prev => [...prev, data].sort((a, b) => a.travel_date.localeCompare(b.travel_date)))
+    setAddOpen(false)
+    setAddForm(EMPTY_MOV)
+  }
+
+  async function handleEditSave(id) {
+    setSaving(true)
+    const { error } = await supabase
+      .from('travel_movements')
+      .update({
+        travel_date:    editForm.travel_date,
+        direction:      editForm.direction,
+        travel_type:    editForm.travel_type,
+        travel_number:  (editForm.travel_number || '').trim() || null,
+        from_location:  (editForm.from_location || '').trim() || null,
+        from_time:      editForm.from_time || null,
+        to_location:    (editForm.to_location || '').trim() || null,
+        to_time:        editForm.to_time || null,
+        needs_transport: editForm.needs_transport,
+      })
+      .eq('id', id)
+    setSaving(false)
+    if (error) return
+    setMovements(prev =>
+      prev.map(m => m.id === id ? { ...m, ...editForm } : m)
+        .sort((a, b) => a.travel_date.localeCompare(b.travel_date))
+    )
+    setEditId(null)
+  }
+
+  async function handleDelete(id) {
+    if (confirmDelId !== id) { setConfirmDelId(id); return }
+    setSaving(true)
+    await supabase.from('travel_movements').delete().eq('id', id)
+    setSaving(false)
+    setMovements(prev => prev.filter(m => m.id !== id))
+    setConfirmDelId(null)
+  }
+
+  const inp = { width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '700', color: '#6d28d9', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }
+
+  function MovForm({ form, setF, onSave, onCancel, saveLabel }) {
+    const dirBg = form.direction === 'IN' ? '#f0fdf4' : '#fff7ed'
+    return (
+      <div style={{ background: 'white', border: '1px dashed #c4b5fd', borderRadius: '7px', padding: '8px 10px', marginBottom: '6px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+          <div>
+            <label style={lbl}>Date</label>
+            <input type="date" value={form.travel_date || ''} onChange={e => setF(f => ({ ...f, travel_date: e.target.value }))} style={inp} />
+          </div>
+          <div>
+            <label style={lbl}>Direction</label>
+            <select value={form.direction || 'IN'} onChange={e => setF(f => ({ ...f, direction: e.target.value }))} style={{ ...inp, background: dirBg }}>
+              <option value="IN">↓ IN — Arrival</option>
+              <option value="OUT">↑ OUT — Departure</option>
+            </select>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+          <div>
+            <label style={lbl}>Type</label>
+            <select value={form.travel_type || 'FLIGHT'} onChange={e => setF(f => ({ ...f, travel_type: e.target.value }))} style={inp}>
+              <option value="FLIGHT">✈️ Flight</option>
+              <option value="TRAIN">🚂 Train</option>
+              <option value="GROUND">🚐 Ground</option>
+              <option value="OA">📋 OA</option>
+            </select>
+          </div>
+          <div>
+            <label style={lbl}>Number</label>
+            <input value={form.travel_number || ''} onChange={e => setF(f => ({ ...f, travel_number: e.target.value }))} style={inp} placeholder="FR1234" />
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '6px', marginBottom: '6px' }}>
+          <div>
+            <label style={lbl}>From</label>
+            <input value={form.from_location || ''} onChange={e => setF(f => ({ ...f, from_location: e.target.value }))} style={inp} placeholder="LHR" />
+          </div>
+          <div>
+            <label style={lbl}>Dep time</label>
+            <input type="time" value={form.from_time || ''} onChange={e => setF(f => ({ ...f, from_time: e.target.value }))} style={inp} />
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '6px', marginBottom: '6px' }}>
+          <div>
+            <label style={lbl}>To</label>
+            <input value={form.to_location || ''} onChange={e => setF(f => ({ ...f, to_location: e.target.value }))} style={inp} placeholder="BRI" />
+          </div>
+          <div>
+            <label style={lbl}>Arr time</label>
+            <input type="time" value={form.to_time || ''} onChange={e => setF(f => ({ ...f, to_time: e.target.value }))} style={inp} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <input type="checkbox" checked={!!form.needs_transport} onChange={e => setF(f => ({ ...f, needs_transport: e.target.checked }))} style={{ width: '14px', height: '14px', accentColor: '#2563eb', cursor: 'pointer' }} />
+          <span style={{ fontSize: '11px', color: '#374151', cursor: 'pointer' }}>🚐 Needs transport to/from hub</span>
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button type="button" onClick={onCancel}
+            style={{ flex: 1, padding: '4px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
+            Cancel
+          </button>
+          <button type="button" onClick={onSave} disabled={saving || !form.travel_date}
+            style={{ flex: 2, padding: '4px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : '#6d28d9', color: 'white', fontSize: '11px', cursor: saving ? 'default' : 'pointer', fontWeight: '700' }}>
+            {saving ? 'Saving…' : saveLabel}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <button type="button" onClick={toggle}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: open ? '8px 8px 0 0' : '8px', border: '1px solid #e2e8f0', background: open ? '#faf5ff' : '#f8fafc', cursor: 'pointer', transition: 'background 0.15s' }}>
+        <span style={{ fontSize: '12px', fontWeight: '700', color: open ? '#6d28d9' : '#374151' }}>
+          ✈️ Travel Movements
+          {movements.length > 0 && (
+            <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: '700', color: '#6d28d9', background: '#f3e8ff', padding: '1px 6px', borderRadius: '999px', border: '1px solid #c4b5fd' }}>✓ {movements.length}</span>
+          )}
+        </span>
+        <span style={{ fontSize: '12px', color: '#94a3b8', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{ border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', background: '#faf5ff', padding: '10px 12px 8px' }}>
+          {loading ? (
+            <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', padding: '8px' }}>Loading…</div>
+          ) : (
+            <>
+              {movements.length === 0 && !addOpen && (
+                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontStyle: 'italic' }}>No travel movements recorded</div>
+              )}
+
+              {movements.map(m => {
+                const icon = m.travel_type === 'FLIGHT' ? '✈️' : m.travel_type === 'TRAIN' ? '🚂' : '🚐'
+                const isIN = m.direction === 'IN'
+                const isPast = m.travel_date < today
+                if (editId === m.id) {
+                  return (
+                    <div key={m.id}>
+                      <MovForm
+                        form={editForm}
+                        setF={setEditForm}
+                        onSave={() => handleEditSave(m.id)}
+                        onCancel={() => setEditId(null)}
+                        saveLabel="✓ Save"
+                      />
+                    </div>
+                  )
+                }
+                return (
+                  <div key={m.id} style={{ background: isIN ? '#f0fdf4' : '#fff7ed', border: `1px solid ${isIN ? '#86efac' : '#fdba74'}`, borderRadius: '7px', padding: '6px 10px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', opacity: isPast ? 0.65 : 1 }}>
+                    <div style={{ flex: 1, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span>{icon}</span>
+                      <span style={{ fontWeight: '700', color: isIN ? '#15803d' : '#c2410c', fontSize: '11px' }}>{m.direction}</span>
+                      {m.travel_number && <span style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '11px', color: '#0f172a' }}>{m.travel_number}</span>}
+                      <span style={{ color: '#374151' }}>{m.from_location || '–'} → {m.to_location || '–'}</span>
+                      {isIN  && m.to_time   && <span style={{ color: '#64748b', fontSize: '11px' }}>arr {m.to_time}</span>}
+                      {!isIN && m.from_time && <span style={{ color: '#64748b', fontSize: '11px' }}>dep {m.from_time}</span>}
+                      <span style={{ color: '#94a3b8', fontSize: '11px' }}>{fmtDate(m.travel_date)}</span>
+                      {m.needs_transport && (
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 4px' }}>🚐</span>
+                      )}
+                    </div>
+                    <button type="button"
+                      onClick={() => { setEditId(m.id); setEditForm({ travel_date: m.travel_date, direction: m.direction, travel_type: m.travel_type, travel_number: m.travel_number || '', from_location: m.from_location || '', from_time: m.from_time || '', to_location: m.to_location || '', to_time: m.to_time || '', needs_transport: !!m.needs_transport }) }}
+                      style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#15803d', flexShrink: 0 }}>
+                      ✎
+                    </button>
+                    {confirmDelId === m.id ? (
+                      <div style={{ display: 'flex', gap: '3px' }}>
+                        <button type="button" onClick={() => setConfirmDelId(null)}
+                          style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '5px', padding: '3px 6px', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>✕</button>
+                        <button type="button" onClick={() => handleDelete(m.id)} disabled={saving}
+                          style={{ background: '#dc2626', border: 'none', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: 'white', fontWeight: '700' }}>⚠ Del</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setConfirmDelId(m.id)}
+                        style={{ background: '#fff1f2', border: '1px solid #fecaca', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#dc2626', flexShrink: 0 }}>🗑</button>
+                    )}
+                  </div>
+                )
+              })}
+
+              {addOpen ? (
+                <MovForm
+                  form={addForm}
+                  setF={setAddForm}
+                  onSave={handleAdd}
+                  onCancel={() => { setAddOpen(false); setAddForm(EMPTY_MOV) }}
+                  saveLabel="+ Add Movement"
+                />
+              ) : (
+                <button type="button" onClick={() => setAddOpen(true)}
+                  style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #c4b5fd', background: 'transparent', color: '#6d28d9', fontSize: '11px', fontWeight: '700', cursor: 'pointer', marginTop: movements.length > 0 ? '4px' : '0' }}>
+                  + Add Movement
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Crew card compatta ──────────────────────────────────────
 function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [] }) {
   const t = useT()
@@ -695,6 +1190,25 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                 </div>
               )}
             </div>
+
+            {/* Accommodation + Travel accordions (solo edit) */}
+            {mode === 'edit' && initial?.id && (
+              <>
+                <AccommodationAccordion
+                  crewId={initial.id}
+                  locations={locations}
+                  onCrewDatesUpdated={(active) => {
+                    setForm(f => ({
+                      ...f,
+                      hotel_id:       active.hotel_id || '',
+                      arrival_date:   active.arrival_date || '',
+                      departure_date: active.departure_date || '',
+                    }))
+                  }}
+                />
+                <TravelAccordion crewId={initial.id} />
+              </>
+            )}
 
             {/* Elimina (solo edit) */}
             {mode === 'edit' && (
