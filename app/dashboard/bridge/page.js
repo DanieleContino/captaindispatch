@@ -140,16 +140,29 @@ function DriveSyncWidget({ productionId, onPreview, refreshKey }) {
 
   useEffect(() => {
     if (!productionId) return
-    supabase
-      .from('drive_synced_files')
-      .select('id, file_id, file_name, last_modified, last_synced_at, import_mode')
-      .eq('production_id', productionId)
-      .then(({ data }) => {
-        const updated = (data || []).filter(f =>
-          !f.last_synced_at ||
-          (f.last_modified && f.last_synced_at && f.last_modified > f.last_synced_at)
-        )
-        setFiles(updated)
+    setLoading(true)
+
+    // Usa il nuovo endpoint che interroga Drive in tempo reale per confrontare
+    // il modifiedTime attuale con last_synced_at nel DB.
+    // L'approccio precedente (leggere solo il DB) non rilevava modifiche avvenute
+    // su Drive dopo l'ultima sync, perché last_modified nel DB era aggiornato
+    // solo alla sync successiva.
+    fetch(`/api/drive/check-updates?production_id=${encodeURIComponent(productionId)}`)
+      .then(res => {
+        if (!res.ok) {
+          // Se l'endpoint fallisce (es. provider_token scaduto), fallback silenzioso
+          console.warn('[DriveSyncWidget] check-updates error:', res.status)
+          return { files: [] }
+        }
+        return res.json()
+      })
+      .then(data => {
+        setFiles(data.files || [])
+        setLoading(false)
+      })
+      .catch(err => {
+        console.warn('[DriveSyncWidget] check-updates fetch failed:', err.message)
+        setFiles([])
         setLoading(false)
       })
   }, [productionId, refreshKey])
