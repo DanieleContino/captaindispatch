@@ -591,63 +591,63 @@ export default function PaxCoveragePage() {
       {/* Header */}
       <Navbar currentPath="/dashboard/pax-coverage" />
 
-      {/* Toolbar */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20, gap: '8px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '18px' }}>👥</span>
-          <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Pax Coverage</span>
-          <span style={{ color: '#cbd5e1' }}>·</span>
-          <button onClick={() => { const d = isoAdd(date, -1); setDate(d); setStripCenter(d) }} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>◀</button>
-          <input type="date" value={date} onChange={e => { setDate(e.target.value); setStripCenter(e.target.value) }}
-            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
-          <button onClick={() => { const d = isoAdd(date, 1); setDate(d); setStripCenter(d) }} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
-          <button onClick={() => { setDate(isoToday()); setStripCenter(isoToday()) }} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
-        </div>
+      {/* Toolbar Row 1 — titolo + navigazione data */}
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: '52px', zIndex: 21 }}>
+        <span style={{ fontSize: '18px' }}>👥</span>
+        <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Pax Coverage</span>
+        <span style={{ color: '#cbd5e1' }}>·</span>
+        <button onClick={() => { const d = isoAdd(date, -1); setDate(d); setStripCenter(d) }} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>◀</button>
+        <input type="date" value={date} onChange={e => { setDate(e.target.value); setStripCenter(e.target.value) }}
+          style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
+        <button onClick={() => { const d = isoAdd(date, 1); setDate(d); setStripCenter(d) }} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
+        <button onClick={() => { setDate(isoToday()); setStripCenter(isoToday()) }} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
+      </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          {/* Show only toggle */}
-          {['ALL', 'UNASSIGNED', 'ASSIGNED'].map(s => (
-            <button key={s} onClick={() => setSO(s)}
-              style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(showOnly === s ? (s === 'UNASSIGNED' ? { background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' } : s === 'ASSIGNED' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' } : { background: '#0f2340', color: 'white', borderColor: '#0f2340' }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
-              {s === 'ALL' ? `All (${regularCrew.length})` : s === 'UNASSIGNED' ? `❌ ${t.withoutTransfer} (${totalUnassigned})` : `✅ ${t.withTransfer} (${totalAssigned})`}
-            </button>
-          ))}
-          {/* Travel status filter */}
-          <div style={{ display: 'flex', gap: '3px' }}>
-            {['ALL', 'IN', 'PRESENT', 'OUT'].map(s => {
-              const active = filterTS === s; const c = TC[s]
-              return (
-                <button key={s} onClick={() => setFTS(s)}
-                  style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(active ? (s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: c.bg, color: c.color, borderColor: c.border }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
-                  {s}
-                </button>
-              )
-            })}
-          </div>
-          {/* Dept filter */}
-          {departments.length > 1 && (
-            <select value={filterDept} onChange={e => setFD(e.target.value)}
-              style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
-              <option value="ALL">{t.allDepts}</option>
-              {departments.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-          )}
-          {/* Hotel filter */}
-          {hotels.length > 1 && (
-            <select value={filterHotel} onChange={e => setFH(e.target.value)}
-              style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
-              <option value="ALL">{t.allHotels}</option>
-              {hotels.map(h => <option key={h} value={h}>{locsMap[h] || h}</option>)}
-            </select>
-          )}
-          <input type="text" placeholder={t.search} value={search} onChange={e => setSearch(e.target.value)}
-            style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '120px' }} />
-          <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
+      {/* Toolbar Row 2 — filtri */}
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', gap: '6px', position: 'sticky', top: '104px', zIndex: 20, flexWrap: 'nowrap', overflowX: 'auto' }}>
+        {/* Show only toggle */}
+        {['ALL', 'UNASSIGNED', 'ASSIGNED'].map(s => (
+          <button key={s} onClick={() => setSO(s)}
+            style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', whiteSpace: 'nowrap', flexShrink: 0, ...(showOnly === s ? (s === 'UNASSIGNED' ? { background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' } : s === 'ASSIGNED' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' } : { background: '#0f2340', color: 'white', borderColor: '#0f2340' }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+            {s === 'ALL' ? `All (${regularCrew.length})` : s === 'UNASSIGNED' ? `❌ ${t.withoutTransfer} (${totalUnassigned})` : `✅ ${t.withTransfer} (${totalAssigned})`}
+          </button>
+        ))}
+        <span style={{ color: '#e2e8f0', flexShrink: 0 }}>|</span>
+        {/* Travel status filter */}
+        <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+          {['ALL', 'IN', 'PRESENT', 'OUT'].map(s => {
+            const active = filterTS === s; const c = TC[s]
+            return (
+              <button key={s} onClick={() => setFTS(s)}
+                style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(active ? (s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: c.bg, color: c.color, borderColor: c.border }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                {s}
+              </button>
+            )
+          })}
         </div>
+        {/* Dept filter */}
+        {departments.length > 1 && (
+          <select value={filterDept} onChange={e => setFD(e.target.value)}
+            style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white', flexShrink: 0 }}>
+            <option value="ALL">{t.allDepts}</option>
+            {departments.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
+        {/* Hotel filter */}
+        {hotels.length > 1 && (
+          <select value={filterHotel} onChange={e => setFH(e.target.value)}
+            style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white', flexShrink: 0 }}>
+            <option value="ALL">{t.allHotels}</option>
+            {hotels.map(h => <option key={h} value={h}>{locsMap[h] || h}</option>)}
+          </select>
+        )}
+        <input type="text" placeholder={t.search} value={search} onChange={e => setSearch(e.target.value)}
+          style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '120px', flexShrink: 0 }} />
+        <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151', flexShrink: 0 }}>↻</button>
       </div>
 
       {/* ── Day Strip ── */}
-      <div style={{ position: 'sticky', top: '104px', zIndex: 19 }}>
+      <div style={{ position: 'sticky', top: '156px', zIndex: 19 }}>
         <DayStrip
           selectedDate={date}
           centerDate={stripCenter}
