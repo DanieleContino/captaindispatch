@@ -5,6 +5,41 @@
 
 ## NEXT SESSION: S45
 
+### Hotfix completato ✅ — AccommodationAccordion + TravelAccordion state accumulation (7 Apr 2026)
+
+> **Bug**: Ogni volta che si riapriva la edit sidebar per lo stesso crew member, le info di Travel e Accommodation si "accumulavano" — i dati della sessione precedente persistevano invece di ricaricare dal DB.
+
+#### Causa radice
+
+`CrewSidebar` rimane sempre montata nel DOM (usa `translateX` per nascondersi, non viene smontata). Quando si chiudeva la sidebar e si riapriva la edit per lo **stesso crew member**:
+- `key={initial.id}` era identico → React **non rimontava** i componenti accordion
+- `loaded=true` dalla sessione precedente → `load()` non veniva richiamato
+- Lo stato locale `stays`/`movements` accumulava i dati della sessione precedente
+
+#### Fix — commit `2ada19e`
+
+Aggiunto `editKey` counter in `CrewSidebar` che si incrementa ad ogni apertura della sidebar in edit mode. Usato come parte del `key` dei due accordion per forzare il remount:
+
+```js
+// In CrewSidebar
+const [editKey, setEditKey] = useState(0)
+
+useEffect(() => {
+  if (open && mode === 'edit' && initial?.id) {
+    setEditKey(k => k + 1)
+  }
+}, [open])
+```
+
+```jsx
+<AccommodationAccordion key={`acc-${initial.id}-${editKey}`} ... />
+<TravelAccordion key={`travel-${initial.id}-${editKey}`} ... />
+```
+
+**Perché i prefissi**: le due key erano entrambe `initial.id` (identiche tra siblings) → potenziale confusione React. Ora `acc-` e `travel-` le distinguono.
+
+---
+
 ### S44 completata ✅ — Accommodation & Travel edit nella CrewSidebar (7 Apr 2026)
 
 > **Feature**: nella `CrewSidebar` (solo edit mode), aggiunti 2 nuovi accordion a tendina identici per stile al "📞 Contact Info" esistente:
