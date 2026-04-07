@@ -290,6 +290,122 @@ function NTNRow({ member, locsMap }) {
   )
 }
 
+// ─── DayStrip ──────────────────────────────────────────────────
+function DayStrip({ selectedDate, centerDate, onSelectDay, onShiftCenter, productionId }) {
+  const [counts, setCounts] = useState({})
+
+  function getDays(center) {
+    const days = []
+    for (let i = -3; i <= 3; i++) {
+      const dt = new Date(center + 'T12:00:00Z')
+      dt.setUTCDate(dt.getUTCDate() + i)
+      days.push(dt.toISOString().split('T')[0])
+    }
+    return days
+  }
+
+  const days = getDays(centerDate)
+  const today = isoToday()
+
+  useEffect(() => {
+    if (!productionId) return
+    const from = days[0]
+    const to   = days[days.length - 1]
+    supabase
+      .from('travel_movements')
+      .select('travel_date, direction')
+      .eq('production_id', productionId)
+      .gte('travel_date', from)
+      .lte('travel_date', to)
+      .then(({ data }) => {
+        const c = {}
+        for (const row of data || []) {
+          const d = row.travel_date
+          if (!c[d]) c[d] = { IN: 0, OUT: 0 }
+          if (row.direction === 'IN')  c[d].IN++
+          if (row.direction === 'OUT') c[d].OUT++
+        }
+        setCounts(c)
+      })
+  }, [centerDate, productionId])
+
+  return (
+    <div style={{
+      background: 'white',
+      borderBottom: '1px solid #e2e8f0',
+      padding: '8px 24px',
+      display: 'flex',
+      gap: '4px',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflowX: 'auto',
+    }}>
+      <button
+        onClick={() => onShiftCenter(isoAdd(centerDate, -7))}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#94a3b8', padding: '4px 8px', flexShrink: 0 }}>
+        ◀
+      </button>
+
+      {days.map(d => {
+        const isSelected = d === selectedDate
+        const isToday    = d === today
+        const c          = counts[d] || {}
+        const hasData    = c.IN > 0 || c.OUT > 0
+        const dtObj      = new Date(d + 'T12:00:00Z')
+        const dayName    = dtObj.toLocaleDateString('en-GB', { weekday: 'short' })
+        const dayNum     = dtObj.getUTCDate()
+        const monthAbbr  = dtObj.toLocaleDateString('en-GB', { month: 'short' })
+
+        return (
+          <button
+            key={d}
+            onClick={() => onSelectDay(d)}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '2px',
+              padding: '6px 10px',
+              borderRadius: '10px',
+              border: isSelected ? '2px solid #0f2340' : '2px solid transparent',
+              background: isSelected ? '#0f2340'
+                        : isToday   ? '#eff6ff'
+                        : 'transparent',
+              cursor: 'pointer',
+              minWidth: '52px',
+              flexShrink: 0,
+              transition: 'all 0.15s',
+            }}>
+            <span style={{ fontSize: '10px', fontWeight: '700', color: isSelected ? '#fff' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {isToday && !isSelected ? '★' : dayName}
+            </span>
+            <span style={{ fontSize: '16px', fontWeight: '900', color: isSelected ? 'white' : isToday ? '#1d4ed8' : '#0f172a', lineHeight: 1 }}>
+              {dayNum}
+            </span>
+            <span style={{ fontSize: '9px', color: isSelected ? 'rgba(255,255,255,0.8)' : '#94a3b8' }}>
+              {monthAbbr}
+            </span>
+            {hasData ? (
+              <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
+                {c.IN  > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isSelected ? '#16a34a' : '#dcfce7', color: isSelected ? 'white' : '#15803d', padding: '1px 4px', borderRadius: '4px' }}>↓{c.IN}</span>}
+                {c.OUT > 0 && <span style={{ fontSize: '9px', fontWeight: '800', background: isSelected ? '#ea580c' : '#fff7ed', color: isSelected ? 'white' : '#c2410c', padding: '1px 4px', borderRadius: '4px' }}>↑{c.OUT}</span>}
+              </div>
+            ) : (
+              <div style={{ height: '16px' }} />
+            )}
+          </button>
+        )
+      })}
+
+      <button
+        onClick={() => onShiftCenter(isoAdd(centerDate, 7))}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#94a3b8', padding: '4px 8px', flexShrink: 0 }}>
+        ▶
+      </button>
+    </div>
+  )
+}
+
 // ─── Pagina principale ─────────────────────────────────────────
 // Remote Row component
 function RemoteRow({ member, locsMap }) {
@@ -326,9 +442,10 @@ export default function PaxCoveragePage() {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const router = useRouter()
-  const [user,    setUser]    = useState(null)
-  const [date,    setDate]    = useState(isoToday())
-  const [loading, setLoading] = useState(true)
+  const [user,        setUser]        = useState(null)
+  const [date,        setDate]        = useState(isoToday())
+  const [stripCenter, setStripCenter] = useState(isoToday())
+  const [loading,     setLoading]     = useState(true)
 
   // Raw data
   const [crew,     setCrew]     = useState([])
@@ -480,11 +597,11 @@ export default function PaxCoveragePage() {
           <span style={{ fontSize: '18px' }}>👥</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Pax Coverage</span>
           <span style={{ color: '#cbd5e1' }}>·</span>
-          <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>◀</button>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+          <button onClick={() => { const d = isoAdd(date, -1); setDate(d); setStripCenter(d) }} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>◀</button>
+          <input type="date" value={date} onChange={e => { setDate(e.target.value); setStripCenter(e.target.value) }}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
-          <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
-          <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
+          <button onClick={() => { const d = isoAdd(date, 1); setDate(d); setStripCenter(d) }} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>▶</button>
+          <button onClick={() => { setDate(isoToday()); setStripCenter(isoToday()) }} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -527,6 +644,17 @@ export default function PaxCoveragePage() {
             style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '120px' }} />
           <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
+      </div>
+
+      {/* ── Day Strip ── */}
+      <div style={{ position: 'sticky', top: '104px', zIndex: 19 }}>
+        <DayStrip
+          selectedDate={date}
+          centerDate={stripCenter}
+          onSelectDay={d => { setDate(d); setStripCenter(d) }}
+          onShiftCenter={setStripCenter}
+          productionId={PRODUCTION_ID}
+        />
       </div>
 
       {/* Content */}
