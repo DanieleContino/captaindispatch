@@ -3,7 +3,47 @@
 
 ---
 
-## NEXT SESSION: S44
+## NEXT SESSION: S45
+
+### S44 completata ✅ — Accommodation & Travel edit nella CrewSidebar (7 Apr 2026)
+
+> **Feature**: nella `CrewSidebar` (solo edit mode), aggiunti 2 nuovi accordion a tendina identici per stile al "📞 Contact Info" esistente:
+
+#### 🏨 Accordion Accommodation — Stays
+
+- Carica tutti i soggiorni dalla tabella `crew_stays` (lazy — solo alla prima apertura)
+- Lista ogni stay con hotel, check-in, check-out + badge "dep today/tomorrow" in rosso
+- **Add**: form inline con select hotel + date check-in/out → INSERT su `crew_stays`
+- **Edit** (✎): modifica inline → UPDATE su `crew_stays`
+- **Delete** (🗑 + conferma): DELETE su `crew_stays`
+- **Sync automatico** dopo ogni operazione: aggiorna `crew.hotel_id`, `crew.arrival_date`, `crew.departure_date` con la stay attiva (periodo che copre oggi, altrimenti la prossima futura)
+- `onCrewDatesUpdated` callback: aggiorna anche il form principale della sidebar in tempo reale
+
+#### ✈️ Accordion Travel Movements
+
+- Carica tutti i `travel_movements` per quel crew (lazy)
+- Lista ogni movement con icona tipo (✈️/🚂/🚐), badge IN (verde) / OUT (arancio), numero, rotta, orario, badge 🚐 se needs_transport
+- Movimenti passati (travel_date < oggi): opacità 0.65
+- **Add**: form inline completo — Date, Direction (IN/OUT), Type, Number, From + dep time, To + arr time, needs_transport checkbox
+- **Edit** (✎) + **Delete** (🗑 + conferma)
+
+#### Componenti aggiunti
+
+- `AccommodationAccordion({ crewId, locations, onCrewDatesUpdated })` — definito prima di `CrewCard`
+- `TravelAccordion({ crewId })` — definito prima di `CrewCard`
+- Iniettati in `CrewSidebar` dopo il Contact Info accordion, solo quando `mode === 'edit' && initial?.id`
+
+#### Commit
+
+| Hash | Descrizione |
+|---|---|
+| `6db9343` | `feat(crew): Accommodation & Travel accordions in CrewSidebar edit mode (S44)` |
+
+#### Regola aggiunta
+
+> I due nuovi accordion salvano immediatamente in DB (non aspettano "Save Changes"). Il pulsante "Save Changes" salva solo i campi principali del form (nome, dept, hotel, status, date, note). Quando `crew_stays` viene modificato, `crew.hotel_id/arrival_date/departure_date` viene sincronizzato automaticamente.
+
+---
 
 ### Hotfix completato ✅ — travel_status: arrival_date=oggi NON switcha PRESENT prematuramente (7 Apr 2026)
 
