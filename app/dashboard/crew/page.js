@@ -914,6 +914,15 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
   const [error, setError]   = useState(null)
   const [confirmDel, setConfirmDel] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
+  const [editKey, setEditKey] = useState(0)
+
+  // Incrementa editKey ogni volta che la sidebar si apre in modalità edit
+  // così AccommodationAccordion e TravelAccordion vengono rimontati freschi
+  useEffect(() => {
+    if (open && mode === 'edit' && initial?.id) {
+      setEditKey(k => k + 1)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -1195,6 +1204,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
             {mode === 'edit' && initial?.id && (
               <>
                 <AccommodationAccordion
+                  key={`acc-${initial.id}-${editKey}`}
                   crewId={initial.id}
                   locations={locations}
                   onCrewDatesUpdated={(active) => {
@@ -1206,7 +1216,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                     }))
                   }}
                 />
-                <TravelAccordion crewId={initial.id} />
+                <TravelAccordion key={`travel-${initial.id}-${editKey}`} crewId={initial.id} />
               </>
             )}
 
