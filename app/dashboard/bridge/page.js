@@ -273,7 +273,7 @@ function TravelDiscrepanciesWidget({ productionId }) {
         .from('travel_movements')
         .select('id, crew_id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, travel_type, from_location, from_time, to_location, to_time, travel_number, crew:crew_id(full_name, hotel_id, department, role)')
         .eq('production_id', productionId)
-        .eq('discrepancy_resolved', false)
+        .or('discrepancy_resolved.eq.false,discrepancy_resolved.is.null')
         .or('travel_date_conflict.eq.true,hotel_conflict.eq.true,match_status.eq.unmatched')
         .order('travel_date', { ascending: true })
         .limit(50),

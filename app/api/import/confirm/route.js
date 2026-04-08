@@ -466,8 +466,14 @@ async function processTravelConfirm(supabase, productionId, insertRows, errors) 
       hotel_conflict:       r.hotel_conflict || false,
       full_name_raw:        r.full_name_raw || null,
       match_status:         r.match_status || 'unmatched',
+      discrepancy_resolved: false,   // sempre false all'import — l'utente risolve dal Bridge
     })
   }
+
+  // Conta i conflitti reali da segnalare all'utente (da risolvere nel Bridge)
+  const conflicts = toInsert.filter(r =>
+    r.travel_date_conflict || r.hotel_conflict || r.match_status === 'unmatched'
+  ).length
 
   if (toInsert.length > 0) {
     const { data, error } = await supabase
@@ -478,7 +484,8 @@ async function processTravelConfirm(supabase, productionId, insertRows, errors) 
     else inserted = data?.length || 0
   }
 
-  return { inserted, updated: 0, skipped }
+  console.log(`[confirm/travel] inserted=${inserted} conflicts=${conflicts}`)
+  return { inserted, updated: 0, skipped, conflicts }
 }
 
 // ── POST handler ─────────────────────────────────────────────
@@ -502,10 +509,11 @@ export async function POST(req) {
     if (!mode)         return NextResponse.json({ error: 'mode è obbligatorio' }, { status: 400 })
     if (!productionId) return NextResponse.json({ error: 'productionId è obbligatorio' }, { status: 400 })
 
-    let inserted = 0
-    let updated  = 0
-    let skipped  = 0
-    const errors = []
+    let inserted  = 0
+    let updated   = 0
+    let skipped   = 0
+    let conflicts = 0   // solo per travel — conflitti da risolvere nel Bridge
+    const errors  = []
 
     // ── STEP 1: Inserisci nuove locations (hotel) ───────────
     const newLocationMap = await insertNewLocations(supabase, productionId, newLocations)
@@ -569,8 +577,9 @@ export async function POST(req) {
     // ── TRAVEL ──────────────────────────────────────────────
     else if (effectiveMode === 'travel') {
       const res = await processTravelConfirm(supabase, productionId, insertRows, errors)
-      inserted += res.inserted
-      skipped  += res.skipped
+      inserted  += res.inserted
+      skipped   += res.skipped
+      conflicts  = res.conflicts || 0
     }
 
     // ── CUSTOM ──────────────────────────────────────────────
@@ -578,7 +587,14 @@ export async function POST(req) {
     // (il flusso custom non ha una tabella target definita)
     // skipped già contato sopra; non facciamo insert/update
 
-    return NextResponse.json({ inserted, updated, skipped, errors })
+    // Includi conflicts nella response solo se > 0 (travel mode)
+    return NextResponse.json({
+      inserted,
+      updated,
+      skipped,
+      errors,
+      ...(conflicts > 0 ? { conflicts } : {}),
+    })
 
   } catch (e) {
     console.error('[import/confirm]', e)
