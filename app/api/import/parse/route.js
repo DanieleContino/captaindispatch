@@ -1206,12 +1206,20 @@ function parseTravelCalendarDIG(buffer) {
   for (const row of allRows) {
     if (!Array.isArray(row)) continue
 
-    // Data giorno
+    // Data giorno — aggiorna currentDate se cambia, ma NON saltare la riga
+    // (nelle versioni Drive il file può avere la data ripetuta in ogni cella della colonna A
+    //  invece di usare merged cells; saltare con `continue` farebbe perdere tutte le righe dati)
     const col0 = row[0]
     if (col0 instanceof Date && !isNaN(col0)) {
-      currentDate = col0.toISOString().split('T')[0]
-      lastPerson = null  // reset persona al cambio giorno
-      continue
+      const newDate = col0.toISOString().split('T')[0]
+      if (newDate !== currentDate) {
+        currentDate = newDate
+        lastPerson = null  // reset persona solo al cambio giorno
+      }
+      // NON continue — la riga viene processata normalmente:
+      // • col1 === 'position'         → gestita dal check sotto
+      // • col1 in SECTIONS            → section update sotto
+      // • col1 = role, col2 = name    → movement creato correttamente
     }
 
     // Sezione
@@ -1235,9 +1243,11 @@ function parseTravelCalendarDIG(buffer) {
     const col2 = row[2]
     const col2Str = col2 ? String(col2).trim() : ''
 
-    // Riga con nome → aggiorna lastPerson solo se col2 ha un nome valido (non vuoto)
-    if (col2Str && col2Str !== 'name' && col1Str) {
-      lastPerson = { name: col2Str, role: col1Str }
+    // Riga con nome → aggiorna lastPerson se col2 ha un nome valido
+    // Nota: col1Str può essere null (es. Palioura Fani senza ruolo) — in quel caso
+    // mantieni il ruolo del lastPerson precedente per le righe connessione che seguono
+    if (col2Str && col2Str !== 'name') {
+      lastPerson = { name: col2Str, role: col1Str || lastPerson?.role || null }
     }
 
     // Riga senza nome ma con dati volo → usa lastPerson (connessione)
