@@ -1,9 +1,42 @@
-# CAPTAINDISPATCH — Context S45 (Cline)
-## Updated: 7 April 2026
+# CAPTAINDISPATCH — Context S46 (Cline)
+## Updated: 8 April 2026
 
 ---
 
-## NEXT SESSION: S45
+## NEXT SESSION: S46
+
+### Hotfix completato ✅ — Travel discrepancies: widget Bridge non compariva + sync silenzioso (8 Apr 2026)
+
+> **Problema**: dopo l'import del Travel Calendar, il widget `TravelDiscrepanciesWidget` nel Bridge non mostrava nessuna variazione. Anche l'ImportModal non segnalava i conflitti rilevati.
+
+#### Causa radice
+
+**Bug 1 (principale — widget Bridge vuoto):**
+In `processTravelConfirm` (`app/api/import/confirm/route.js`), i `travel_movements` venivano inseriti **senza settare `discrepancy_resolved`**. La colonna nel DB aveva default `NULL`. Il widget usava:
+```js
+.eq('discrepancy_resolved', false)
+```
+In PostgreSQL `col = false` **non matcha NULL** → il widget restituiva sempre 0 righe.
+
+**Bug 2 (ImportModal non segnala conflitti):**
+`processTravelConfirm` ritornava solo `{ inserted, updated, skipped }` — nessun campo `conflicts`. L'utente non veniva avvisato dopo l'import che ci fossero variazioni da risolvere nel Bridge.
+
+#### Fix — commit `62b9316`
+
+**`app/api/import/confirm/route.js`**:
+- Aggiunto `discrepancy_resolved: false` al payload di insert in `processTravelConfirm`
+- Conteggio conflitti reali (`travel_date_conflict || hotel_conflict || match_status === 'unmatched'`) e ritorno nel campo `conflicts`
+- Response finale include `...(conflicts > 0 ? { conflicts } : {})`
+
+**`app/dashboard/bridge/page.js`** — `TravelDiscrepanciesWidget`:
+- Query cambiata da `.eq('discrepancy_resolved', false)` a `.or('discrepancy_resolved.eq.false,discrepancy_resolved.is.null')` come safety net per record già esistenti con NULL
+
+**`lib/ImportModal.js`** — fase `done`:
+- Se `result.conflicts > 0`, mostra banner giallo "⚠️ X variazioni rilevate nel Travel Calendar" con link diretto a `/dashboard/bridge`
+
+---
+
+## S45
 
 ### Hotfix completato ✅ — AccommodationAccordion + TravelAccordion state accumulation (7 Apr 2026)
 
