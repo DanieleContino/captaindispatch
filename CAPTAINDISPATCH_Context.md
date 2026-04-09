@@ -1,46 +1,153 @@
-# CAPTAINDISPATCH — Context S48 (Cline)
-## Updated: 9 April 2026 (S48-6 done — Rocket mobile)
+# CAPTAINDISPATCH — Context S49 (Cline)
+## Updated: 10 April 2026 (S49-1 completata — Trips mobile Timeline Card)
 
 ---
 
-## NEXT SESSION: S48 — Mobile Layout
+## NEXT SESSION: S49 — Mobile Perfect (iOS + Android)
 
 ### Obiettivo
-Rendere Captain Dispatch completamente usabile su smartphone (PWA). Interventi per sessione.
+S48 ha coperto le pagine principali. Rimangono ancora parti di pagina che escono fuori dallo schermo su mobile. S49 completa il lavoro con un approccio professionale: nessun elemento fuori schermo, layout armonioso, touch targets corretti su iPhone E Android/Samsung.
 
-### TASK S48-1 — Navbar Mobile (PRIORITÀ MASSIMA) · `lib/navbar.js`
-**Pattern: Hamburger + Drawer a schermo intero**
-- **Desktop** (≥ 768px): layout attuale invariato
-- **Mobile** (< 768px):
-  - Top bar: `[CAPTAIN Dispatch]` ← → `[🔔] [☰]`
-  - Click `☰` → overlay fullscreen con tutti i nav in lista verticale (NAV_ITEMS + NAV_SECONDARY) + lingua + sign out
-  - Badge Bridge rimane visibile nel drawer
-  - Usare `useIsMobile()` già presente in `lib/useIsMobile.js`
-  - `moreOpen` state già presente → riusarlo per il drawer mobile
-- **Regola**: non toccare il layout desktop (≥768px)
+### Principi tecnici S49 (cross-platform iOS + Android)
 
-### TASK S48-2 — Dashboard Home · `app/dashboard/page.js`
-- Grid `repeat(3, 1fr)` → `isMobile ? '1fr 1fr' : 'repeat(3, 1fr)'`
-- Hero padding: `isMobile ? '24px 16px 20px' : '40px 32px 32px'`
-- `maxWidth + padding`: mantenere `960px` desktop, `padding: 16px` mobile
+- **`100dvh`** (dynamic viewport height) con fallback `100vh` — Android Chrome nasconde/mostra la barra indirizzi
+- **`touch-action: manipulation`** su tutti i button mobile → elimina delay 300ms tap su Android Chrome
+- **`overscroll-behavior: contain`** sulle sidebar/scroll container → previene pull-to-refresh Android
+- **`env(safe-area-inset-*)`** già attivi — su Android default a 0px (safe)
+- **Touch targets** ≥ 36px min-height su mobile (Material Design + Apple HIG)
+- **`min-width: 0`** su tutti i flex children per shrink corretto
+- **NO larghezze fisse** su mobile — tutto `%` o `calc()` o `auto`
+- **Input date**: `appearance: none` + stile custom per uniformare iOS/Android
+- **sidebar `marginRight`**: 0 su mobile (sidebar è fullscreen 100vw → non spinge il content)
 
-### TASK S48-3 — Bridge MiniWidgets + TomorrowPanel · `app/dashboard/bridge/page.js`
-- `MiniWidgets`: `gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr'`
-- `TomorrowPanel` arrivals/departures: `gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'`
-- Aggiungere `useIsMobile` import
+### TASK S49-1 — Trips page — Timeline Card mobile · `app/dashboard/trips/page.js` (PRIORITÀ MASSIMA)
 
-### TASK S48-4 — Fleet page · `app/dashboard/fleet/page.js`
-- Toolbar: `padding: isMobile ? '8px 12px' : '12px 20px'`
-- Vehicle cards: adattare a flex-column su mobile
+**Problema**: tabella con 6 colonne fisse (~890px), nessun `useIsMobile`, `SIDEBAR_W=440` applicato anche su mobile
 
-### TASK S48-5 — CSS Globale · `app/globals.css`
-- Aggiungere safe-area insets per iPhone notch/home bar
-- Utility `overflow-x: auto` per tabelle complesse
+**Pattern scelto**: **Timeline Card** (stile Samsara/Google Calendar mobile)
+- Ogni gruppo trip → card con barra colorata sinistra (verde ARRIVAL, arancio DEP, blu STD)
+- Riga 1: orario grande bold a sinistra + veicolo a destra
+- Riga 2: transfer_class badge + status badge
+- Riga 3: rotta pickup → dropoff
+- Riga 4: passeggeri abbreviati + contatore
+- Tap → apre EditTripSidebar (fullscreen su mobile)
 
-### TASK S48-6 — Rocket page (incrementale) · `app/dashboard/rocket/page.js`
-- Step 1: controlli usabili su mobile (flex-column, font size)
-- Step 2: trip cards con scroll orizzontale se necessario
+**Toolbar mobile in 2 righe** (sticky):
+- Row 1 (top 52px): date nav ◀ date ▶ + Today + "+ New Trip" button
+- Row 2 (top 104px): filtri class (ALL/ARR/DEP/STD) + status (ALL/PLANNED/DONE) pill
 
+**Fix strutturali**:
+- `import { useIsMobile }` aggiunto
+- `marginRight: isMobile ? 0 : (anySidebarOpen ? SIDEBAR_W : 0)` per tutto il content
+- Assign banner: `flexWrap: 'wrap'`, semplificato su mobile
+- TableHeader nascosto su mobile (sostituito da card view)
+- "+ New Trip" FAB (Floating Action Button) in basso su mobile come alternativa al bottone toolbar
+
+### TASK S49-2 — Crew page refinements · `app/dashboard/crew/page.js`
+
+**Problemi**: body padding fisso, marginRight su mobile sbagliato, toolbar row 2 troppo affollata
+
+**Fix**:
+- Body container: `padding: isMobile ? '12px' : '24px'`
+- `marginRight: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)` — sidebar 100% width mobile
+- Toolbar Row 1 mobile: nascondo badge contatori minori, mostro solo titolo + "+" btn
+- Toolbar Row 2 mobile: Travel filter su riga propria, Hotel filter su riga propria
+- Search input: `width: isMobile ? '100%' : '180px'`
+
+### TASK S49-3 — Hub Coverage toolbar · `app/dashboard/hub-coverage/page.js`
+
+**Problema**: toolbar singola riga con tutto dentro → esplode su mobile
+
+**Fix**:
+- Toolbar split in 2 righe (stessa strategia pax-coverage):
+  - Row 1 (sticky top 52px): titolo + date nav + Today
+  - Row 2 (sticky top 104px): filtri pill + dept + hotel + search + refresh
+- Filter button labels abbreviati su mobile: `❌ Missing (12)` → `❌ 12` (o `Missing`)
+- `isMobile` già importato — usarlo nella toolbar
+
+### TASK S49-4 — Pax Coverage sticky fix · `app/dashboard/pax-coverage/page.js`
+
+**Problema**: `top: isMobile ? 'auto' : '104px'` — `'auto'` non è un valore valido per sticky, la toolbar Row 2 scorre via
+
+**Fix**:
+- `top: '104px'` fisso (Row 1 è sempre 52px su mobile con la navbar, Row 2 inizia a 104px)
+- Toolbar Row 2: pill buttons con `flexWrap: 'wrap'`, bottoni non overflow
+
+### TASK S49-5 — Bridge mobile polish · `app/dashboard/bridge/page.js`
+
+**Fix**:
+- Content container: `padding: isMobile ? '12px' : '24px'`
+- EasyAccessShortcuts: `display: grid; gridTemplateColumns: repeat(4, 1fr)` su mobile → 4 bottoni per riga (2 righe per 8 shortcuts)
+- ArrivalsDeparturesChart wrapper: `padding: isMobile ? '12px' : '20px'`
+- ActivityLog: voci compatte su mobile
+
+### TASK S49-6 — CSS globale utilities · `app/globals.css`
+
+**Aggiunte**:
+```css
+/* Dynamic viewport height — Android Chrome safe */
+.page-full-height { min-height: 100dvh; min-height: 100vh; }
+
+/* Touch target minimo + zero delay tap (Android) */
+@media (max-width: 767px) {
+  button, [role="button"], input[type="date"] {
+    touch-action: manipulation;
+  }
+}
+
+/* Scroll container safe (previene pull-to-refresh Android) */
+.scroll-safe {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+```
+
+### Stato tasks S49
+| # | Task | File | Status |
+|---|------|------|--------|
+| 1 | Trips Timeline Card mobile | `app/dashboard/trips/page.js` | ✅ DONE — commit `7a1fdb6` |
+| 2 | Crew page refinements | `app/dashboard/crew/page.js` | ⏳ TODO |
+| 3 | Hub Coverage toolbar 2-row | `app/dashboard/hub-coverage/page.js` | ⏳ TODO |
+| 4 | Pax Coverage sticky fix | `app/dashboard/pax-coverage/page.js` | ⏳ TODO |
+| 5 | Bridge mobile polish | `app/dashboard/bridge/page.js` | ⏳ TODO |
+| 6 | CSS globale utilities | `app/globals.css` | ⏳ TODO |
+
+---
+
+## WHAT CHANGED IN SESSION S49
+
+### S49-1 — Trips page Mobile (Timeline Card + Toolbar 2-row + FAB) ✅ — `app/dashboard/trips/page.js` — commit `7a1fdb6`
+
+**Problema**: tabella con 6 colonne fisse (~890px), nessun `useIsMobile`, `SIDEBAR_W=440` applicato anche su mobile.
+
+#### Componente `TripCardMobile` (nuovo)
+- Card con 4 righe ottimizzata per touch:
+  - **Row 1**: orario grande (`22px` bold) a sinistra + veicolo a destra
+  - **Row 2**: `trip_id` monospace + class badge + multi-stop badges + suggested `⭐ MATCH` + status badge
+  - **Row 3**: rotta `pickup → dropoff` con troncamento ellipsis
+  - **Row 4**: passeggeri abbreviati (max 4 + `+N altri`) + contatore pax colorato
+- `borderLeft: 4px solid cls.dot` (verde/arancio/blu per ARRIVAL/DEPARTURE/STANDARD)
+- `touchAction: 'manipulation'` su tutto il card
+
+#### Toolbar mobile in 2 righe sticky
+- **Row 1** (`top: 52px`, `zIndex: 22`): `◀ date-picker ▶ + Today` — tutti i button con `touchAction: 'manipulation'`
+- **Row 2** (`top: 104px`, `zIndex: 21`): filtri class `ALL/ARR/DEP/STD` + status `ALL/PLANNED/DONE` + clear `✕`
+- Separatore `|` (1px height:20px) tra class e status pill
+- Filtro veicolo e "+ New Trip" button: solo desktop
+
+#### Fix strutturali
+- `import { useIsMobile }` aggiunto
+- `marginRight: isMobile ? 0 : (anySidebarOpen ? SIDEBAR_W : 0)` per contenuto + banner + TableHeader
+- `TableHeader` nascosto su mobile (sostituito da card view)
+- Banner assign context: `flexWrap: 'wrap'` + `marginRight` condizionale
+- `paddingBottom: isMobile ? '80px' : 0` — spazio per il FAB
+- Sidebar `TripSidebar` e `EditTripSidebar`: `width: isMobile ? '100vw' : SIDEBAR_W + 'px'`, `transform` usa `100vw` su mobile
+- FAB `+` (56×56px, `borderRadius: 50%`, `position: fixed`, `bottom: 24px`, `right: 20px`): visibile su mobile solo quando nessuna sidebar è aperta
+
+---
+
+## WHAT CHANGED IN SESSION S48
+## (S48 tasks table preserved below for reference)
 ### Stato tasks S48
 | # | Task | File | Status |
 |---|------|------|--------|
