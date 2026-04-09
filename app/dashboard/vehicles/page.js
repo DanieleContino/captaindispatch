@@ -7,6 +7,7 @@ import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
 import { getProductionId } from '../../../lib/production'
+import { useIsMobile } from '../../../lib/useIsMobile'
 
 const SIDEBAR_W = 400
 
@@ -154,7 +155,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
   return (
     <>
       {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${SIDEBAR_W}px)`, transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100%' : `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
 
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
@@ -506,6 +507,7 @@ function fmtAvailDate(iso) {
 // ─── Row veicolo ──────────────────────────────────────────────
 function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = [] }) {
   const t = useT()
+  const isMobile = useIsMobile()
   const tc = TYPE_COLOR[v.vehicle_type] || TYPE_COLOR.VAN
   const icon = TYPE_ICON[v.vehicle_type] || '🚐'
   const [confirmDel, setConfirmDel] = useState(false)
@@ -526,7 +528,7 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
   }
 
   return (
-    <div style={{ background: selected ? '#eff6ff' : 'white', border: `1px solid ${selected ? '#bfdbfe' : '#e2e8f0'}`, borderLeft: `4px solid ${selected ? '#3b82f6' : v.active ? tc.border : '#e2e8f0'}`, borderRadius: '9px', padding: '12px 16px', display: 'grid', gridTemplateColumns: '20px 40px 1fr auto', alignItems: 'center', gap: '12px', opacity: v.active ? 1 : 0.55 }}>
+    <div style={{ background: selected ? '#eff6ff' : 'white', border: `1px solid ${selected ? '#bfdbfe' : '#e2e8f0'}`, borderLeft: `4px solid ${selected ? '#3b82f6' : v.active ? tc.border : '#e2e8f0'}`, borderRadius: '9px', padding: '12px 16px', display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : undefined, gridTemplateColumns: isMobile ? undefined : '20px 40px 1fr auto', alignItems: isMobile ? 'stretch' : 'center', gap: '8px', opacity: v.active ? 1 : 0.55 }}>
       {/* Checkbox */}
       <input
         type="checkbox"
@@ -581,8 +583,8 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
         </div>
       </div>
       {/* Azioni */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <button onClick={() => onEdit(v)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>✎ Edit</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', ...(isMobile ? { marginTop: '4px' } : {}) }}>
+        <button onClick={() => onEdit(v)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: isMobile ? '8px 16px' : '5px 12px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap', flex: isMobile ? 1 : undefined }}>✎ Edit</button>
         {!confirmDel ? (
           <button
             onClick={handleDelete}
