@@ -1,5 +1,5 @@
 # CAPTAINDISPATCH — Context S48 (Cline)
-## Updated: 9 April 2026 (S48-1 done)
+## Updated: 9 April 2026 (S48-2 done)
 
 ---
 
@@ -45,7 +45,7 @@ Rendere Captain Dispatch completamente usabile su smartphone (PWA). Interventi p
 | # | Task | File | Status |
 |---|------|------|--------|
 | 1 | Navbar hamburger drawer mobile | `lib/navbar.js` | ✅ DONE — commit `4927be2` |
-| 2 | Dashboard home grid 2col mobile | `app/dashboard/page.js` | ⏳ TODO |
+| 2 | Dashboard home grid 2col mobile | `app/dashboard/page.js` | ✅ DONE — commit `99422d7` |
 | 3 | Bridge MiniWidgets + TomorrowPanel | `app/dashboard/bridge/page.js` | ⏳ TODO |
 | 4 | Fleet page mobile | `app/dashboard/fleet/page.js` | ⏳ TODO |
 | 5 | CSS globale safe-area | `app/globals.css` | ⏳ TODO |
