@@ -1,9 +1,59 @@
-# CAPTAINDISPATCH — Context S47 (Cline)
-## Updated: 9 April 2026
+# CAPTAINDISPATCH — Context S48 (Cline)
+## Updated: 9 April 2026 (S48-1 done)
 
 ---
 
-## NEXT SESSION: S47
+## NEXT SESSION: S48 — Mobile Layout
+
+### Obiettivo
+Rendere Captain Dispatch completamente usabile su smartphone (PWA). Interventi per sessione.
+
+### TASK S48-1 — Navbar Mobile (PRIORITÀ MASSIMA) · `lib/navbar.js`
+**Pattern: Hamburger + Drawer a schermo intero**
+- **Desktop** (≥ 768px): layout attuale invariato
+- **Mobile** (< 768px):
+  - Top bar: `[CAPTAIN Dispatch]` ← → `[🔔] [☰]`
+  - Click `☰` → overlay fullscreen con tutti i nav in lista verticale (NAV_ITEMS + NAV_SECONDARY) + lingua + sign out
+  - Badge Bridge rimane visibile nel drawer
+  - Usare `useIsMobile()` già presente in `lib/useIsMobile.js`
+  - `moreOpen` state già presente → riusarlo per il drawer mobile
+- **Regola**: non toccare il layout desktop (≥768px)
+
+### TASK S48-2 — Dashboard Home · `app/dashboard/page.js`
+- Grid `repeat(3, 1fr)` → `isMobile ? '1fr 1fr' : 'repeat(3, 1fr)'`
+- Hero padding: `isMobile ? '24px 16px 20px' : '40px 32px 32px'`
+- `maxWidth + padding`: mantenere `960px` desktop, `padding: 16px` mobile
+
+### TASK S48-3 — Bridge MiniWidgets + TomorrowPanel · `app/dashboard/bridge/page.js`
+- `MiniWidgets`: `gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr'`
+- `TomorrowPanel` arrivals/departures: `gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'`
+- Aggiungere `useIsMobile` import
+
+### TASK S48-4 — Fleet page · `app/dashboard/fleet/page.js`
+- Toolbar: `padding: isMobile ? '8px 12px' : '12px 20px'`
+- Vehicle cards: adattare a flex-column su mobile
+
+### TASK S48-5 — CSS Globale · `app/globals.css`
+- Aggiungere safe-area insets per iPhone notch/home bar
+- Utility `overflow-x: auto` per tabelle complesse
+
+### TASK S48-6 — Rocket page (incrementale) · `app/dashboard/rocket/page.js`
+- Step 1: controlli usabili su mobile (flex-column, font size)
+- Step 2: trip cards con scroll orizzontale se necessario
+
+### Stato tasks S48
+| # | Task | File | Status |
+|---|------|------|--------|
+| 1 | Navbar hamburger drawer mobile | `lib/navbar.js` | ✅ DONE — commit `4927be2` |
+| 2 | Dashboard home grid 2col mobile | `app/dashboard/page.js` | ⏳ TODO |
+| 3 | Bridge MiniWidgets + TomorrowPanel | `app/dashboard/bridge/page.js` | ⏳ TODO |
+| 4 | Fleet page mobile | `app/dashboard/fleet/page.js` | ⏳ TODO |
+| 5 | CSS globale safe-area | `app/globals.css` | ⏳ TODO |
+| 6 | Rocket page (incrementale) | `app/dashboard/rocket/page.js` | ⏳ TODO |
+
+---
+
+## SESSION S47
 
 ### Hotfix completato ✅ — parseTravelCalendarDIG: righe dati con data in col0 saltate (8 Apr 2026)
 
