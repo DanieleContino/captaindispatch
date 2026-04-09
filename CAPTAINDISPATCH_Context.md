@@ -1,5 +1,5 @@
 # CAPTAINDISPATCH — Context S48 (Cline)
-## Updated: 9 April 2026 (S48-3 done)
+## Updated: 9 April 2026 (S48-6 done — Rocket mobile)
 
 ---
 
@@ -47,13 +47,22 @@ Rendere Captain Dispatch completamente usabile su smartphone (PWA). Interventi p
 | 1 | Navbar hamburger drawer mobile | `lib/navbar.js` | ✅ DONE — commit `4927be2` |
 | 2 | Dashboard home grid 2col mobile | `app/dashboard/page.js` | ✅ DONE — commit `99422d7` |
 | 3 | Bridge MiniWidgets + TomorrowPanel | `app/dashboard/bridge/page.js` | ✅ DONE — commit `e54074a` |
-| 4 | Fleet page mobile | `app/dashboard/fleet/page.js` | ⏳ TODO |
-| 5 | CSS globale safe-area | `app/globals.css` | ⏳ TODO |
-| 6 | Rocket page (incrementale) | `app/dashboard/rocket/page.js` | ⏳ TODO |
+| 4 | Fleet page mobile | `app/dashboard/vehicles/page.js` | ✅ DONE — commit `7a444d1` |
+| 5 | CSS globale safe-area | `app/globals.css` | ✅ DONE — commit `5e9e584` |
+| 6 | Rocket page (incrementale) | `app/dashboard/rocket/page.js` | ✅ DONE — commit `1c416c9` |
 
 ---
 
 ## WHAT CHANGED IN SESSION S48
+
+### S48-6 — Rocket page mobile layout ✅ — `app/dashboard/rocket/page.js` — commit `1c416c9`
+
+- **Step 1 grid**: `gridTemplateColumns: isMobile ? '1fr' : '5fr 8fr'` — colonne impilate su mobile (già fatto in S48 batch 1, confermato)
+- **Crew toolbar header**: `flexWrap: 'wrap', gap: '6px'` — titolo + pulsanti vanno a capo su schermi stretti
+- **Crew toolbar buttons div**: `flexWrap: 'wrap'` — i 5 pulsanti (✓ All, ✗ None, Reset Times, Expand All, Collapse) si adattano a riga multipla invece di uscire dal container
+- **Crew list maxHeight**: `isMobile ? '60vh' : 'calc(100vh - 280px)'` — evita scroll infinito su mobile
+- **Stats bar Step 2**: `padding: isMobile ? '8px 12px' : '10px 16px'`, `gap: isMobile ? '8px' : '20px'` — più compatto su mobile
+- **Trip cards grid Step 2**: `gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))'` — colonna singola su mobile invece di multi-colonna auto-fill
 
 ### S48-1 — Navbar Mobile Hamburger Drawer ✅ — `lib/navbar.js` — commit `4927be2`
 
@@ -74,6 +83,15 @@ Rendere Captain Dispatch completamente usabile su smartphone (PWA). Interventi p
 - Import aggiunto: `import { useIsMobile } from '../../../lib/useIsMobile'`
 - `MiniWidgets`: `const isMobile = useIsMobile()` + `gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr'` — i 3 widget Fleet/Crew/Hub si impilano verticalmente su mobile
 - `TomorrowPanel`: `const isMobile = useIsMobile()` + `gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'` — Arrivals e Departures passano da 2 colonne a 1 colonna su mobile
+
+### S48-4 — Fleet/Vehicles page mobile ✅ — `app/dashboard/vehicles/page.js` — commit `7a444d1`
+
+- `const isMobile = useIsMobile()` aggiunto in `VehiclesPage` (già importato ma mancava il hook nella pagina principale)
+- Toolbar Row 1: `padding: isMobile ? '8px 12px' : '10px 24px'`
+- Toolbar Row 2: `padding: isMobile ? '8px 12px' : '8px 24px'`
+- Body container: `padding: isMobile ? '12px 16px' : '24px'`
+- Sidebar margin-right: `!isMobile && sidebarOpen ? ${SIDEBAR_W}px : 'auto'` — su mobile la sidebar è fullscreen, non spinge il contenuto
+- Vehicle cards flex-column su mobile: già implementato in S41 (`VehicleRow` usa `isMobile` per `display: flex, flexDirection: column`)
 
 ---
 
