@@ -1,5 +1,5 @@
 # CAPTAINDISPATCH — Context S49 (Cline)
-## Updated: 10 April 2026 (S49-1 completata — Trips mobile Timeline Card)
+## Updated: 10 April 2026 (S49-2 completata — Crew page mobile refinements)
 
 ---
 
@@ -43,16 +43,16 @@ S48 ha coperto le pagine principali. Rimangono ancora parti di pagina che escono
 - TableHeader nascosto su mobile (sostituito da card view)
 - "+ New Trip" FAB (Floating Action Button) in basso su mobile come alternativa al bottone toolbar
 
-### TASK S49-2 — Crew page refinements · `app/dashboard/crew/page.js`
+### ✅ TASK S49-2 — Crew page refinements · `app/dashboard/crew/page.js` (DONE — commit 34abc64)
 
 **Problemi**: body padding fisso, marginRight su mobile sbagliato, toolbar row 2 troppo affollata
 
-**Fix**:
+**Fix applicati**:
+- `const isMobile = useIsMobile()` aggiunto in `CrewPage()`
 - Body container: `padding: isMobile ? '12px' : '24px'`
-- `marginRight: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 0)` — sidebar 100% width mobile
-- Toolbar Row 1 mobile: nascondo badge contatori minori, mostro solo titolo + "+" btn
-- Toolbar Row 2 mobile: Travel filter su riga propria, Hotel filter su riga propria
-- Search input: `width: isMobile ? '100%' : '180px'`
+- `marginRight: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 'auto')` — sidebar 100% width mobile
+- Toolbar Row 1 mobile: nascosti badge contatori (IN/PRES/OUT/NTN/Remote/dep tomorrow), testo counts, pulsante Import — rimangono solo `👤 Crew` + `↻` + `+ Add Crew`
+- Toolbar Row 2 mobile: `flexDirection: column`, `alignItems: stretch` — search `width: 100%`, travel filter su riga propria, hotel filter su riga propria, filter div con `flexWrap: 'wrap'`
 
 ### TASK S49-3 — Hub Coverage toolbar · `app/dashboard/hub-coverage/page.js`
 
@@ -106,7 +106,7 @@ S48 ha coperto le pagine principali. Rimangono ancora parti di pagina che escono
 | # | Task | File | Status |
 |---|------|------|--------|
 | 1 | Trips Timeline Card mobile | `app/dashboard/trips/page.js` | ✅ DONE — commit `7a1fdb6` |
-| 2 | Crew page refinements | `app/dashboard/crew/page.js` | ⏳ TODO |
+| 2 | Crew page refinements | `app/dashboard/crew/page.js` | ✅ DONE — commit `34abc64` |
 | 3 | Hub Coverage toolbar 2-row | `app/dashboard/hub-coverage/page.js` | ⏳ TODO |
 | 4 | Pax Coverage sticky fix | `app/dashboard/pax-coverage/page.js` | ⏳ TODO |
 | 5 | Bridge mobile polish | `app/dashboard/bridge/page.js` | ⏳ TODO |
@@ -115,6 +115,18 @@ S48 ha coperto le pagine principali. Rimangono ancora parti di pagina che escono
 ---
 
 ## WHAT CHANGED IN SESSION S49
+
+### S49-2 — Crew page Mobile refinements ✅ — `app/dashboard/crew/page.js` — commit `34abc64`
+
+- `const isMobile = useIsMobile()` aggiunto in `CrewPage()` (già importato ma mancava nella pagina principale)
+- **Body container**: `padding: isMobile ? '12px' : '24px'` + `marginRight: isMobile ? 0 : (sidebarOpen ? SIDEBAR_W : 'auto')` — sidebar fullscreen su mobile, nessun push laterale
+- **Toolbar Row 1 mobile**: nascosti badge contatori (IN/PRES/OUT/NTN/Remote/dep tomorrow), testo "total · confirmed" e pulsante "Import from file" — su mobile rimangono solo `👤 Crew` + `↻` + `+ Add Crew`
+- **Toolbar Row 2 mobile**: `flexDirection: column`, `alignItems: stretch` — ogni sezione filtri su riga propria
+  - Search input: `width: isMobile ? '100%' : '180px'` + `boxSizing: border-box`
+  - Travel filter div: `flexWrap: 'wrap'` (pill buttons si adattano su riga multipla)
+  - Hotel filter div: `flexWrap: 'wrap'`
+
+---
 
 ### S49-1 — Trips page Mobile (Timeline Card + Toolbar 2-row + FAB) ✅ — `app/dashboard/trips/page.js` — commit `7a1fdb6`
 
