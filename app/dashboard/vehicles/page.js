@@ -607,6 +607,7 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
 // ─── Pagina ───────────────────────────────────────────────────
 export default function VehiclesPage() {
   const t = useT()
+  const isMobile = useIsMobile()
   const PRODUCTION_ID = getProductionId()
   const router = useRouter()
   const [user,    setUser]   = useState(null)
@@ -742,7 +743,7 @@ export default function VehiclesPage() {
       {/* Toolbar */}
       <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: '52px', zIndex: 29 }}>
         {/* Riga 1 — titolo + contatori + azioni */}
-        <div style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
+        <div style={{ padding: isMobile ? '8px 12px' : '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
           <span style={{ fontSize: '18px' }}>🚐</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>{vhcs.length} totale · {counts.active} attivi</span>
@@ -763,7 +764,7 @@ export default function VehiclesPage() {
           </button>
         </div>
         {/* Riga 2 — filtri */}
-        <div style={{ padding: '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <input type="text" placeholder="Cerca ID, driver…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '150px', flexShrink: 0 }} />
           <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
@@ -789,7 +790,7 @@ export default function VehiclesPage() {
       </div>
 
       {/* Body */}
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px', transition: 'margin-right 0.25s', marginRight: sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px', transition: 'margin-right 0.25s', marginRight: !isMobile && sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
         {!PRODUCTION_ID && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>⚠ NEXT_PUBLIC_PRODUCTION_ID non impostato</div>}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
