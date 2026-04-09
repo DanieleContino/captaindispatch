@@ -29,3 +29,37 @@ body {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.7; transform: scale(1.15); }
 }
+
+/* ─── Safe-area insets (iPhone notch / Dynamic Island / home bar) ─────────── */
+/* viewport-fit=cover è attivo via layout.tsx → env() funziona in Safari PWA  */
+
+body {
+  /* Home bar iPhone: padding bottom per evitare che i pulsanti finiscano sotto */
+  padding-bottom: env(safe-area-inset-bottom);
+  /* Orientamento landscape: margini laterali per l'island/notch               */
+  padding-left:   env(safe-area-inset-left);
+  padding-right:  env(safe-area-inset-right);
+}
+
+/* Utility per la navbar fissa: aggiunge la safe-area in cima al padding già presente */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Utility per elementi ancorati in basso (FAB, bottom bar, ecc.) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ─── Tabelle complesse: scroll orizzontale su mobile ─────────────────────── */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* momentum scroll iOS */
+}
+
+/* Previene overflow orizzontale globale su mobile                              */
+@media (max-width: 767px) {
+  body {
+    overflow-x: hidden;
+  }
+}
