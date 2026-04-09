@@ -65,6 +65,7 @@ import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { useT } from '../../../lib/i18n'
+import { useIsMobile } from '../../../lib/useIsMobile'
 
 import { getProductionId } from '../../../lib/production'
 
@@ -1418,6 +1419,7 @@ function getCrewIneligibleReason(c, runDate) {
 export default function RocketPage() {
   const router = useRouter()
   const t = useT()
+  const isMobile = useIsMobile()
   const PRODUCTION_ID = getProductionId()
   const [user,    setUser]    = useState(null)
   const [loading, setLoading] = useState(true)
@@ -1779,7 +1781,7 @@ export default function RocketPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '22px' }}>🚀</span>
             <span style={{ fontWeight: '900', fontSize: '17px', color: '#0f172a' }}>Rocket</span>
-            <span style={{ fontWeight: '400', fontSize: '13px', color: '#94a3b8' }}>{t.rocketSubtitle}</span>
+            {!isMobile && <span style={{ fontWeight: '400', fontSize: '13px', color: '#94a3b8' }}>{t.rocketSubtitle}</span>}
             <div style={{ display: 'flex', gap: '3px', marginLeft: '8px' }}>
               {[1, 2, 3].map(n => {
                 const active = step === n, done = step > n
@@ -1822,7 +1824,7 @@ export default function RocketPage() {
       />
 
       {/* ── Body ── */}
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px 24px' }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '12px 16px' : '20px 24px' }}>
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
             ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> not set in .env.local
@@ -1864,7 +1866,7 @@ export default function RocketPage() {
                   )
                 })()}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '5fr 8fr', gap: '20px', alignItems: 'start' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '5fr 8fr', gap: '20px', alignItems: 'start' }}>
 
                   {/* LEFT COLUMN */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -2069,12 +2071,12 @@ export default function RocketPage() {
                   {/* RIGHT COLUMN — CREW */}
                   <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '13px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#fafafa' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
                         <div>
                           <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{t.rocketCrewLabel}</span>
                           <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>{selectedCrew.length} {t.rocketCrewSelected} / {eligibleCrew.length} {t.rocketCrewEligible}</span>
                         </div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           <button onClick={() => setExcludedCrewIds(new Set())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '700', color: '#1d4ed8' }}>✓ All</button>
                           <button onClick={() => setExcludedCrewIds(new Set(eligibleCrew.map(c => c.id)))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>✗ None</button>
                           <button onClick={() => setCrewCallOverrides({})} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>{t.rocketResetTimes}</button>
@@ -2101,7 +2103,7 @@ export default function RocketPage() {
                       )}
                     </div>
 
-                    <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 280px)', minHeight: '300px' }}>
+                    <div style={{ overflowY: 'auto', maxHeight: isMobile ? '60vh' : 'calc(100vh - 280px)', minHeight: '300px' }}>
                       {allCrewWithHotel.length === 0 ? (
                         <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
                           <div style={{ fontSize: '32px', marginBottom: '8px' }}>👤</div>
@@ -2248,7 +2250,7 @@ export default function RocketPage() {
                 )}
 
                 {/* Stats bar */}
-                <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 16px', marginBottom: '16px', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: isMobile ? '8px 12px' : '10px 16px', marginBottom: '16px', display: 'flex', gap: isMobile ? '8px' : '20px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>{t.rocketDraftPlan}</span>
                   <span style={{ fontSize: '12px', color: '#64748b' }}><strong style={{ color: '#0f172a' }}>{activeTrips}</strong> trip{activeTrips !== 1 ? 's' : ''}</span>
                   <span style={{ fontSize: '12px', color: '#64748b' }}><strong style={{ color: '#0f172a' }}>{totalPax}</strong> passengers</span>
@@ -2270,7 +2272,7 @@ export default function RocketPage() {
                     <div style={{ fontWeight: '700', marginBottom: '6px' }}>{t.rocketNoTrips}</div>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
                     {draftTrips.map(trip => (
                       <TripCard key={trip.key} trip={trip} locMap={locMap} routeMap={routeMap} allTrips={draftTrips}
                         onMoveCrew={(c, k) => setMoveTarget({ crew: c, tripKey: k })}
