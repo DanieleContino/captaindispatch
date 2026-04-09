@@ -44,6 +44,7 @@ const btnRed      = { ...btnPrimary, background: '#dc2626' }
 
 // ── Easy Access Shortcuts ─────────────────────────────────
 function EasyAccessShortcuts({ currentPath }) {
+  const isMobile = useIsMobile()
   const shortcuts = [
     { icon: '🚀', label: 'Rocket',         href: '/dashboard/rocket' },
     { icon: '🚐', label: 'Fleet',          href: '/dashboard/fleet' },
@@ -55,21 +56,34 @@ function EasyAccessShortcuts({ currentPath }) {
     { icon: '📋', label: 'Transport List', href: '/dashboard/lists' },
   ]
   return (
-    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(8, auto)',
+      gap: '6px',
+      marginBottom: '20px',
+    }}>
       {shortcuts.map(s => (
         <a key={s.href} href={s.href}
           style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '7px 14px', borderRadius: '8px', textDecoration: 'none',
-            fontSize: '12px', fontWeight: '700',
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: isMobile ? '2px' : '6px',
+            padding: isMobile ? '8px 4px' : '7px 14px',
+            borderRadius: '8px', textDecoration: 'none',
+            fontSize: isMobile ? '11px' : '12px', fontWeight: '700',
             border: '1px solid',
             background: currentPath === s.href ? '#0f2340' : 'white',
             color:      currentPath === s.href ? 'white'   : '#374151',
             borderColor: currentPath === s.href ? '#0f2340' : '#e2e8f0',
             transition: 'all 0.15s',
+            textAlign: 'center',
+            minWidth: 0,
+            touchAction: 'manipulation',
           }}>
-          <span>{s.icon}</span>
-          <span>{s.label}</span>
+          <span style={{ fontSize: isMobile ? '18px' : '14px' }}>{s.icon}</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{s.label}</span>
         </a>
       ))}
     </div>
@@ -680,6 +694,7 @@ function TomorrowPanel({ productionId }) {
 
 // ── Arrivals & Departures Chart ───────────────────────────
 function ArrivalsDeparturesChart({ productionId }) {
+  const isMobile = useIsMobile()
   const [chartData, setChartData] = useState([])
   const [loading,   setLoading]   = useState(true)
 
@@ -759,7 +774,7 @@ function ArrivalsDeparturesChart({ productionId }) {
   const hasData = chartData.some(d => d.arrivals > 0 || d.departures > 0)
 
   return (
-    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: '20px' }}>
+    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: isMobile ? '12px' : '16px 20px', marginBottom: '20px' }}>
       {/* Header + Legend */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f2340' }}>
@@ -1081,6 +1096,7 @@ function VehicleRentalWidget({ productionId }) {
 
 // ── Activity Log ─────────────────────────────────────────
 function ActivityLog({ productionId }) {
+  const isMobile = useIsMobile()
   const [logs,    setLogs]    = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -1121,14 +1137,14 @@ function ActivityLog({ productionId }) {
             const time = new Date(log.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
             const date = new Date(log.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
             return (
-              <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 20px', borderBottom: '1px solid #f8fafc' }}>
-                <span style={{ fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>{icon}</span>
+              <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: isMobile ? '6px 12px' : '8px 20px', borderBottom: '1px solid #f8fafc' }}>
+                <span style={{ fontSize: '13px', flexShrink: 0, marginTop: '1px' }}>{icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '12px', color: '#374151', fontWeight: '500' }}>{log.description}</div>
+                  <div style={{ fontSize: isMobile ? '11px' : '12px', color: '#374151', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isMobile ? 'nowrap' : 'normal' }}>{log.description}</div>
                 </div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0, textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0, textAlign: 'right', lineHeight: isMobile ? 1.3 : 1.5 }}>
                   <div>{time}</div>
-                  <div>{date}</div>
+                  {!isMobile && <div>{date}</div>}
                 </div>
               </div>
             )
@@ -1559,6 +1575,7 @@ function ImportSyncSection({ onOpenImport }) {
 // ── Main page ─────────────────────────────────────────────
 export default function BridgePage() {
   const router = useRouter()
+  const isMobile = useIsMobile()
   const [user,        setUser]        = useState(null)
   const [productions, setProductions] = useState([])
   const [isBridge,    setIsBridge]    = useState(false)
@@ -1628,7 +1645,7 @@ export default function BridgePage() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
       <Navbar currentPath="/dashboard/bridge" />
 
-      <div style={{ maxWidth: '920px', margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ maxWidth: '920px', margin: '0 auto', padding: isMobile ? '12px' : '32px 24px' }}>
 
         {/* ── Header ── */}
         <div style={{ marginBottom: '28px' }}>
