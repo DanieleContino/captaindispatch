@@ -63,3 +63,27 @@ body {
     overflow-x: hidden;
   }
 }
+
+/* ─── S49 Mobile utilities ──────────────────────────────────────────────────── */
+
+/* Dynamic viewport height — Android Chrome nasconde/mostra la barra indirizzi  */
+/* 100dvh si adatta dinamicamente; 100vh come fallback per browser più vecchi    */
+.page-full-height {
+  min-height: 100dvh;
+  min-height: 100vh; /* fallback */
+}
+
+/* Touch target minimo + zero delay tap su Android Chrome (elimina 300ms delay) */
+@media (max-width: 767px) {
+  button,
+  [role="button"],
+  input[type="date"] {
+    touch-action: manipulation;
+  }
+}
+
+/* Scroll container safe — previene pull-to-refresh Android su sidebar/panel    */
+.scroll-safe {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; /* momentum scroll iOS */
+}
