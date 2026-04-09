@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { getProductionId } from '../../lib/production'
 import { Navbar } from '../../lib/navbar'
 import { useT } from '../../lib/i18n'
+import { useIsMobile } from '../../lib/useIsMobile'
 
 // CARDS defined inside component to use t (i18n)
 
@@ -19,6 +20,7 @@ function fmtDate(d) {
 
 export default function Dashboard() {
   const t = useT()
+  const isMobile = useIsMobile()
   const PRODUCTION_ID = getProductionId()
   const [user, setUser] = useState(null)
   const router = useRouter()
@@ -56,7 +58,7 @@ export default function Dashboard() {
       <Navbar currentPath="/dashboard" />
 
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(135deg, #0f2340 0%, #1e3a5f 100%)', padding: '40px 32px 32px', textAlign: 'center' }}>
+      <div style={{ background: 'linear-gradient(135deg, #0f2340 0%, #1e3a5f 100%)', padding: isMobile ? '24px 16px 20px' : '40px 32px 32px', textAlign: 'center' }}>
         <div style={{ fontSize: '36px', marginBottom: '10px' }}>🎬</div>
         <h1 style={{ fontSize: '26px', fontWeight: '900', color: 'white', margin: '0 0 6px', letterSpacing: '-0.5px' }}>
           CAPTAIN Dispatch
@@ -67,10 +69,10 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '960px', margin: '0 auto', padding: isMobile ? '16px' : '24px' }}>
 
         {/* ── Cards grid ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '14px' }}>
           {CARDS.map((card) => (
             <div key={card.title}
               onClick={() => card.href && router.push(card.href)}
