@@ -8,6 +8,7 @@ import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
 import { normalizeDept } from '../../../lib/normalizeDept'
 import { getProductionId } from '../../../lib/production'
+import { useIsMobile } from '../../../lib/useIsMobile'
 
 const SIDEBAR_W = 400
 
@@ -749,6 +750,7 @@ function TravelAccordion({ crewId }) {
 // ─── Crew card compatta ──────────────────────────────────────
 function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [] }) {
   const t = useT()
+  const isMobile = useIsMobile()
   const tc = TC[member.travel_status] || TC.PRESENT
   const hc = HC[member.hotel_status]  || HC.PENDING
   const hotel = locations[member.hotel_id] || member.hotel_id || '–'
@@ -768,7 +770,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
   }
 
   return (
-    <div style={{ background: selected ? '#eff6ff' : (isRemote ? '#f8fafc' : 'white'), border: `1px solid ${selected ? '#bfdbfe' : (isRemote ? '#cbd5e1' : '#e2e8f0')}`, borderLeft: `4px solid ${selected ? '#3b82f6' : (isRemote ? '#94a3b8' : tc.border)}`, borderRadius: '10px', padding: '12px 14px', display: 'grid', gridTemplateColumns: '20px 1fr auto auto auto auto auto auto', gap: '12px', alignItems: 'center' }}>
+    <div style={{ background: selected ? '#eff6ff' : (isRemote ? '#f8fafc' : 'white'), border: `1px solid ${selected ? '#bfdbfe' : (isRemote ? '#cbd5e1' : '#e2e8f0')}`, borderLeft: `4px solid ${selected ? '#3b82f6' : (isRemote ? '#94a3b8' : tc.border)}`, borderRadius: '10px', padding: '12px 14px', display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : undefined, gridTemplateColumns: isMobile ? undefined : '20px 1fr auto auto auto auto auto auto', gap: '8px', alignItems: isMobile ? 'stretch' : 'center' }}>
 
       {/* Checkbox */}
       <input
@@ -1025,9 +1027,9 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
     <>
       {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
       <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: `${SIDEBAR_W}px`,
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100%' : `${SIDEBAR_W}px`,
         background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)',
-        zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${SIDEBAR_W}px)`,
+        zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
         display: 'flex', flexDirection: 'column',
       }}>
@@ -1582,7 +1584,7 @@ export default function CrewPage() {
       <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: `${52 + (addNewBanner ? 64 : 0)}px`, zIndex: 29 }}>
 
         {/* Riga 1 — titolo + contatori + azioni */}
-        <div style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
+        <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
           <span style={{ fontSize: '18px' }}>👤</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Crew</span>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>{counts.total} total · {counts.conf} confirmed</span>
@@ -1603,7 +1605,7 @@ export default function CrewPage() {
         </div>
 
         {/* Riga 2 — filtri */}
-        <div style={{ padding: '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <input type="text" placeholder="Search name, dept, ID…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px' }} />
           {/* Travel filter */}
