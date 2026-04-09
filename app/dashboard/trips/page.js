@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react'
 import { supabase } from '../../../lib/supabase'
+import { useIsMobile } from '../../../lib/useIsMobile'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
@@ -352,6 +353,72 @@ function TripRow({ group, locations, selected, onClick, isSuggested }) {
   )
 }
 
+// ─── TripCardMobile (Timeline Card — mobile) ─────────────────
+function TripCardMobile({ group, locations, selected, onClick, isSuggested }) {
+  const t   = group[0]
+  const cls = CLS[t.transfer_class] || CLS.STANDARD
+  const sts = STS[t.status] || STS.PLANNED
+  const pickupIds   = [...new Set(group.map(r => r.pickup_id).filter(Boolean))]
+  const dropoffIds  = [...new Set(group.map(r => r.dropoff_id).filter(Boolean))]
+  const isMultiPickup  = pickupIds.length > 1
+  const isMultiDropoff = dropoffIds.length > 1
+  const isMixed        = isMultiPickup || isMultiDropoff
+  const pickupLoc  = locations[t.pickup_id]  || t.pickup_id  || '–'
+  const dropoffLoc = isMultiDropoff
+    ? dropoffIds.map(id => (locations[id] || id || '').split(' ').slice(0, 2).join(' ')).join(' / ')
+    : (locations[t.dropoff_id] || t.dropoff_id || '–')
+  const callTime   = t.call_min   !== null ? minToHHMM(t.call_min)   : null
+  const pickupTime = t.pickup_min !== null ? minToHHMM(t.pickup_min) : callTime
+  const earliestPickupMin = isMixed
+    ? Math.min(...group.map(r => r.pickup_min ?? r.call_min ?? 9999).filter(n => n < 9999))
+    : null
+  const mainTime = isMixed
+    ? (earliestPickupMin < 9999 ? minToHHMM(earliestPickupMin) : callTime || '–')
+    : (callTime || pickupTime || '–')
+  const paxNames = isMixed
+    ? group.flatMap(r => r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : [])
+    : (t.passenger_list ? t.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : [])
+  const totalPax = isMixed ? group.reduce((s, r) => s + (r.pax_count || 0), 0) : (t.pax_count || 0)
+  const paxColor = (!t.pax_count || !t.capacity) ? '#64748b'
+    : t.pax_count >= t.capacity ? '#dc2626'
+    : t.pax_count >= t.capacity * 0.75 ? '#d97706' : '#16a34a'
+  return (
+    <div onClick={onClick} style={{ display: 'flex', flexDirection: 'column', padding: '12px 14px', marginBottom: '6px', marginLeft: '12px', marginRight: '12px', borderRadius: '10px', background: selected ? '#eff6ff' : isSuggested ? '#fffbeb' : 'white', borderLeft: `4px solid ${selected ? '#2563eb' : isSuggested ? '#f59e0b' : cls.dot}`, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', cursor: 'pointer', touchAction: 'manipulation' }}>
+      {/* Row 1: orario + veicolo */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+        <div style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px', lineHeight: 1 }}>{mainTime}</div>
+        <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151', flexShrink: 0 }}>
+          {t.vehicle_id ? `🚐 ${t.vehicle_id}` : <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontWeight: '400', fontSize: '11px' }}>no vehicle</span>}
+        </div>
+      </div>
+      {/* Row 2: trip_id + class badge + status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px', flexWrap: 'wrap' }}>
+        <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '900', color: '#1e3a5f' }}>{baseTripId(t.trip_id)}</span>
+        <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '9px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{t.transfer_class?.slice(0, 3) || 'STD'}</span>
+        {isMultiPickup  && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>🔀 PKP</span>}
+        {isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe' }}>🔀 DRP</span>}
+        {isSuggested    && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef9c3', color: '#92400e', border: '1px solid #fbbf24' }}>⭐ MATCH</span>}
+        <span style={{ padding: '2px 5px', borderRadius: '5px', fontSize: '9px', fontWeight: '700', background: sts.bg, color: sts.color, marginLeft: 'auto' }}>{t.status || 'PLANNED'}</span>
+      </div>
+      {/* Row 3: rotta pickup → dropoff */}
+      <div style={{ fontSize: '12px', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+        <span style={{ color: '#94a3b8', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '40%' }}>{pickupLoc.split(' ').slice(0, 2).join(' ')}</span>
+        <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
+        <span style={{ fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{dropoffLoc}</span>
+      </div>
+      {/* Row 4: passeggeri + contatore */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+        <span style={{ fontSize: '11px', color: '#64748b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {paxNames.length > 0
+            ? paxNames.slice(0, 4).map(fmtPax).join(' · ') + (paxNames.length > 4 ? ` +${paxNames.length - 4}` : '')
+            : <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>no pax assigned</span>}
+        </span>
+        <span style={{ fontSize: '11px', fontWeight: '800', color: paxColor, flexShrink: 0 }}>👥 {totalPax}{t.capacity ? `/${t.capacity}` : ''}</span>
+      </div>
+    </div>
+  )
+}
+
 // ─── CrewInfoModal ────────────────────────────────────────────
 function CrewInfoModal({ crew, productionId, locations, onClose, overlayRight = 0 }) {
   const [details,   setDetails]   = useState(null)
@@ -481,6 +548,7 @@ function CrewInfoModal({ crew, productionId, locations, onClose, overlayRight = 
 function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
+  const isMobile = useIsMobile()
   const EMPTY = { trip_id: '', date: defaultDate, pickup_id: '', dropoff_id: '', vehicle_id: '', service_type_id: '', arr_time: '', call_time: '', pickup_time: '', flight_no: '', terminal: '', notes: '', duration_min: '' }
   const [form,           setForm]           = useState(EMPTY)
   const [saving,         setSaving]         = useState(false)
@@ -1054,7 +1122,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   return (
     <>
       {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${SIDEBAR_W}px)`, transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: isMobile ? '100vw' : `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${isMobile ? '100vw' : SIDEBAR_W + 'px'})`, transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div>
@@ -1541,6 +1609,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTypes, onClose, onSaved, onPaxChanged }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
+  const isMobile = useIsMobile()
   const EDIT_EMPTY = {
     date: '', pickup_id: '', dropoff_id: '', vehicle_id: '',
     service_type_id: '', arr_time: '', call_time: '', pickup_time: '',
@@ -2268,7 +2337,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   return (
     <>
       {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${SIDEBAR_W}px)`, transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: isMobile ? '100vw' : `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${isMobile ? '100vw' : SIDEBAR_W + 'px'})`, transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
         <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1e3a5f', flexShrink: 0 }}>
@@ -2869,6 +2938,7 @@ function TripsPageInner() {
   const [showAssignInfo, setShowAssignInfo] = useState(false)
 
   const anySidebarOpen = newTripOpen || !!editTripRow
+  const isMobile = useIsMobile()
 
   // ── Read assign crew context from URL params (from pax-coverage → + Assign) ──
   useEffect(() => {
@@ -2988,8 +3058,38 @@ function TripsPageInner() {
       {/* ── Header ── */}
       <Navbar currentPath="/dashboard/trips" />
 
-      {/* ── Sub-toolbar ── */}
-      <PageHeader
+      {/* ── Mobile toolbar (2 righe sticky) ── */}
+      {isMobile && (
+        <>
+          <div style={{ position: 'sticky', top: '52px', zIndex: 22, background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+            <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1, touchAction: 'manipulation' }}>◀</button>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ flex: 1, minWidth: 0, border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
+            <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1, touchAction: 'manipulation' }}>▶</button>
+            <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8', touchAction: 'manipulation', whiteSpace: 'nowrap' }}>{t.today}</button>
+          </div>
+          <div style={{ position: 'sticky', top: '104px', zIndex: 21, background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 12px', display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {['ALL', 'ARR', 'DEP', 'STD'].map(s => {
+              const fullMap = { ARR: 'ARRIVAL', DEP: 'DEPARTURE', STD: 'STANDARD' }
+              const full = fullMap[s] || s
+              const active = filterClass === full || (s === 'ALL' && filterClass === 'ALL')
+              const c = CLS[full]
+              return <button key={s} onClick={() => setFilterClass(s === 'ALL' ? 'ALL' : full)} style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', touchAction: 'manipulation', ...(active ? (s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: c.bg, color: c.color, borderColor: c.border }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>{s}</button>
+            })}
+            <div style={{ width: '1px', height: '20px', background: '#e2e8f0', flexShrink: 0 }} />
+            {['ALL', 'PLANNED', 'DONE'].map(s => {
+              const active = filterStatus === s
+              const c = STS[s]
+              return <button key={s} onClick={() => setFilterStatus(s)} style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', touchAction: 'manipulation', ...(active ? (s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { ...c, borderColor: '#e2e8f0' }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>{s}</button>
+            })}
+            {(filterClass !== 'ALL' || filterStatus !== 'ALL') && (
+              <button onClick={() => { setFilterClass('ALL'); setFilterStatus('ALL') }} style={{ padding: '4px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', touchAction: 'manipulation' }}>✕</button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Sub-toolbar (desktop) ── */}
+      {!isMobile && <PageHeader
         left={
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>◀</button>
@@ -3053,11 +3153,11 @@ function TripsPageInner() {
             + New Trip
           </button>
         </div>}
-      />
+      />}
 
       {/* ── Assign crew context banner (fuori dal marginRight div) ── */}
       {assignCtx && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 18px', background: '#fffbeb', borderBottom: '2px solid #f59e0b', fontSize: '12px', transition: 'margin-right 0.25s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', padding: '8px 18px', background: '#fffbeb', borderBottom: '2px solid #f59e0b', fontSize: '12px', transition: 'margin-right 0.25s', marginRight: isMobile ? 0 : (anySidebarOpen ? `${SIDEBAR_W}px` : 0) }}>
           <span style={{ fontSize: '14px' }}>👤</span>
           <span style={{ fontWeight: '800', color: '#92400e' }}>{t.assigningLabel}</span>
           <span style={{ fontWeight: '700', color: '#0f172a' }}>{assignCtx.name}</span>
@@ -3073,7 +3173,7 @@ function TripsPageInner() {
       )}
 
       {/* ── Column header sticky — fuori dal marginRight div, con proprio marginRight ── */}
-      {trips.length > 0 && (
+      {!isMobile && trips.length > 0 && (
         <TableHeader
           columns={TRIP_COLS}
           style={{
@@ -3085,7 +3185,7 @@ function TripsPageInner() {
       )}
 
       {/* ── Contenuto ── */}
-      <div style={{ transition: 'margin-right 0.25s', marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0 }}>
+      <div style={{ transition: 'margin-right 0.25s', marginRight: isMobile ? 0 : (anySidebarOpen ? `${SIDEBAR_W}px` : 0), paddingBottom: isMobile ? '80px' : 0 }}>
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
@@ -3108,23 +3208,25 @@ function TripsPageInner() {
                 ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> not set in .env.local
               </div>
             )}
-            {grouped.map((group, i) => (
-              <TripRow
-                key={group[0].trip_id + i}
-                group={group}
-                locations={locsMap}
-                selected={!!editTripRow && baseTripId(editTripRow.trip_id) === baseTripId(group[0].trip_id)}
-                isSuggested={!!assignCtx && suggestedBaseIds.has(baseTripId(group[0].trip_id))}
-                onClick={() => {
-                  setEditTripRow(group[0])
-                  setEditTripGroup(group)
-                  setNewTripOpen(false)
-                }}
-              />
-            ))}
+            {grouped.map((group, i) => {
+              const key = group[0].trip_id + i
+              const props = {
+                group,
+                locations: locsMap,
+                selected: !!editTripRow && baseTripId(editTripRow.trip_id) === baseTripId(group[0].trip_id),
+                isSuggested: !!assignCtx && suggestedBaseIds.has(baseTripId(group[0].trip_id)),
+                onClick: () => { setEditTripRow(group[0]); setEditTripGroup(group); setNewTripOpen(false) },
+              }
+              return isMobile ? <TripCardMobile key={key} {...props} /> : <TripRow key={key} {...props} />
+            })}
           </div>
         )}
       </div>
+
+      {/* ── FAB mobile ── */}
+      {isMobile && !newTripOpen && !editTripRow && (
+        <button onClick={() => { setNewTripOpen(true); setEditTripRow(null) }} style={{ position: 'fixed', bottom: '24px', right: '20px', width: '56px', height: '56px', borderRadius: '50%', background: '#2563eb', color: 'white', border: 'none', cursor: 'pointer', fontSize: '24px', boxShadow: '0 4px 16px rgba(37,99,235,0.4)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation', lineHeight: 1 }}>+</button>
+      )}
 
       {/* ── Assign crew info modal ── */}
       {showAssignInfo && assignCtx && (
