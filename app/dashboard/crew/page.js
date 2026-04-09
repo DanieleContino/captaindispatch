@@ -1275,6 +1275,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
 // ─── Pagina principale ─────────────────────────────────────────
 export default function CrewPage() {
   const t = useT()
+  const isMobile = useIsMobile()
   const PRODUCTION_ID = getProductionId()
   const router = useRouter()
   const [user, setUser]         = useState(null)
@@ -1587,8 +1588,9 @@ export default function CrewPage() {
         <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
           <span style={{ fontSize: '18px' }}>👤</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Crew</span>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }}>{counts.total} total · {counts.conf} confirmed</span>
-          {/* Badge contatori */}
+          {!isMobile && <span style={{ fontSize: '12px', color: '#94a3b8' }}>{counts.total} total · {counts.conf} confirmed</span>}
+          {/* Badge contatori — solo desktop */}
+          {!isMobile && (
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {counts.in > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>{counts.in} IN</span>}
             {counts.present > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #93c5fd' }}>{counts.present} PRES</span>}
@@ -1597,19 +1599,20 @@ export default function CrewPage() {
             {counts.remote > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#475569', background: '#f1f5f9', border: '1px solid #94a3b8' }}>🏠 {counts.remote} Remote</span>}
             {counts.depTomorrow > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' }}>✈ {counts.depTomorrow} dep tomorrow</span>}
           </div>
+          )}
           <div style={{ flex: 1 }} />
           {/* Azioni */}
           <button onClick={loadCrew} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
-          <button onClick={() => setImportOpen(true)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151' }}>{t.importFromFile}</button>
+          {!isMobile && <button onClick={() => setImportOpen(true)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151' }}>{t.importFromFile}</button>}
           <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>{t.addCrew}</button>
         </div>
 
         {/* Riga 2 — filtri */}
-        <div style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <div style={{ padding: '8px 16px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: '6px', flexWrap: isMobile ? undefined : 'wrap' }}>
           <input type="text" placeholder="Search name, dept, ID…" value={search} onChange={e => setSearch(e.target.value)}
-            style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px' }} />
-          {/* Travel filter */}
-          <div style={{ display: 'flex', gap: '3px' }}>
+            style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: isMobile ? '100%' : '180px', boxSizing: 'border-box' }} />
+          {/* Travel filter — riga propria su mobile */}
+          <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
             {['ALL', 'IN', 'PRESENT', 'OUT'].map(s => {
               const active = filterTravel === s; const c = TC[s]
               return (
@@ -1628,8 +1631,8 @@ export default function CrewPage() {
               🏠 Remote
             </button>
           </div>
-          {/* Hotel filter */}
-          <div style={{ display: 'flex', gap: '3px' }}>
+          {/* Hotel filter — riga propria su mobile */}
+          <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
             {['ALL', 'CONFIRMED', 'PENDING', 'CHECKED_OUT'].map(s => {
               const active = filterHotel === s; const c = HC[s]
               return (
@@ -1659,7 +1662,7 @@ export default function CrewPage() {
       </div>
 
       {/* Body */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px', transition: 'margin-right 0.25s', marginRight: sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: isMobile ? '12px' : '24px', transition: 'margin-right 0.25s', marginRight: isMobile ? 0 : (sidebarOpen ? `${SIDEBAR_W}px` : 'auto') }}>
 
         {/* Alert partenze domani */}
         {counts.depTomorrow > 0 && (
