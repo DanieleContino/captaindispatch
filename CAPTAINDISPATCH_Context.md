@@ -1,9 +1,100 @@
-# CAPTAINDISPATCH — Context S46 (Cline)
-## Updated: 8 April 2026
+# CAPTAINDISPATCH — Context S47 (Cline)
+## Updated: 9 April 2026
 
 ---
 
-## NEXT SESSION: S46
+## NEXT SESSION: S47
+
+### Hotfix completato ✅ — parseTravelCalendarDIG: righe dati con data in col0 saltate (8 Apr 2026)
+
+> **Problema**: nel file Travel Calendar in formato Google Drive (non Excel locale), la data era ripetuta in ogni riga della colonna A invece di usare merged cells. Il parser faceva `continue` quando trovava una `Date` in col0 → perdeva **tutti** i movimenti di quelle righe, risultando in 0 movimenti importati.
+
+#### Causa radice
+
+```js
+// PRIMA (bug):
+if (col0 instanceof Date) {
+  currentDate = col0.toISOString().split('T')[0]
+  continue  // ← saltava la riga intera, perdendo il dato del movimento
+}
+```
+
+Il formato Google Drive ripete la data in ogni cella della colonna A (non usa merged cells come la versione Excel). Il `continue` causava perdita di tutti i movimenti.
+
+#### Fix — commit `f991017` (`app/api/import/parse/route.js`)
+
+```js
+// DOPO (fix):
+if (col0 instanceof Date && !isNaN(col0)) {
+  const newDate = col0.toISOString().split('T')[0]
+  if (newDate !== currentDate) {
+    currentDate = newDate
+    lastPerson = null  // reset persona solo al cambio giorno
+  }
+  // NON continue — la riga viene processata normalmente
+}
+```
+
+- `currentDate` viene aggiornato se la data è cambiata
+- `lastPerson` viene resettato solo al **cambio giorno** (non ad ogni riga con data)
+- La riga continua ad essere processata normalmente: col1=section, col1=role+col2=name, ecc.
+
+---
+
+### Feature completata ✅ — `/api/drive/check-updates`: Drive sync real-time (8 Apr 2026)
+
+> **Problema**: `DriveSyncWidget` leggeva solo il campo `last_modified` dal DB (aggiornato solo al momento della sync), quindi non rilevava modifiche fatte su Drive **dopo** l'ultima sync.
+
+#### Nuovo endpoint — `GET /api/drive/check-updates?production_id=XXX` — commit `a766ba4`
+
+**File**: `app/api/drive/check-updates/route.js` (nuovo)
+
+- Richiede `provider_token` dalla sessione (Google OAuth)
+- Per ogni file in `drive_synced_files`: interroga Drive API in tempo reale (`GET /drive/v3/files/{id}?fields=name,modifiedTime`)
+- **`hasUpdate = true`** se: `!last_synced_at` oppure `driveModifiedTime > last_synced_at`
+- Aggiorna `last_modified` + `file_name` nel DB se Drive ha un valore più recente (via service client)
+- Fallback silenzioso se Drive risponde 4xx: mostra il file solo se mai sincronizzato
+- Response: `{ files: Array<{ id, file_id, file_name, import_mode, last_synced_at, driveModifiedTime, hasUpdate }> }`
+
+**`DriveSyncWidget` (`app/dashboard/bridge/page.js`)**:
+- Ora chiama `/api/drive/check-updates` invece di leggere solo il DB
+- Fallback silenzioso se `provider_token` scaduto (ritorna `{ files: [] }`)
+
+---
+
+### Feature completata ✅ — pax-coverage: DayStrip + toolbar 2 righe (S45, 8 Apr 2026)
+
+> **Feature**: aggiunto DayStrip nella pagina Pax Coverage + toolbar spezzata in 2 righe sticky.
+
+#### Commits `94fb84b` + `6e5edcf` — `app/dashboard/pax-coverage/page.js`
+
+**Toolbar a 2 righe sticky**:
+- **Row 1** (`top: 52px`, `zIndex: 21`): titolo "👥 Pax Coverage" + navigazione data (◀ date-picker ▶ + Today)
+- **Row 2** (`top: 104px`, `zIndex: 20`): filtri (ALL/UNASSIGNED/ASSIGNED toggle, Travel Status, Dept, Hotel, Search, ↻)
+
+**DayStrip** (componente `DayStrip`):
+- Sticky a `top: 156px`, `zIndex: 19` — sotto le 2 righe toolbar
+- Mostra 7 giorni centrati su `stripCenter` (state separato da `date`)
+- Per ogni giorno: nome giorno abbreviato, numero, mese + badge `↓N` (IN verde) / `↑N` (OUT arancio) da `travel_movements`
+- Il giorno selezionato (`date`) ha sfondo `#0f2340` (dark blue)
+- Oggi non selezionato: sfondo `#eff6ff` + `★` al posto del nome giorno
+- Frecce ◀▶: spostano solo `stripCenter` (±7 giorni), **non** cambiano il contenuto
+- Click giorno: `setDate(d)` + `setStripCenter(d)` → aggiorna sia selezione che centro strip
+- Fetch `travel_movements` quando cambia `centerDate` (range 7gg), leggero e indipendente dal `loadData` principale
+
+**RemoteRow** (componente nuovo):
+- Crew con `on_location === false` → sezione "🏠 Remote Today" (amber border, `#fffbeb` bg)
+- Esclusi dalle statistiche di copertura (progress bar + contatori non li includono)
+- `remoteCrew = crew.filter(c => c.on_location === false)` — separato da NTN
+- `ntnCrew = crew.filter(c => c.no_transport_needed && c.on_location !== false)` — solo chi non è remote
+
+**Struttura sezioni pagina (ordine)**:
+1. ❌ WITHOUT TRANSFER (più urgenti)
+2. ✅ WITH TRANSFER
+3. 🚐 NTN / Self Drive
+4. 🏠 Remote Today (non conta per coverage)
+
+---
 
 ### Hotfix completato ✅ — Travel discrepancies: widget Bridge non compariva + sync silenzioso (8 Apr 2026)
 
