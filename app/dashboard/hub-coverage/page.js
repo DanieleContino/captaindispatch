@@ -618,79 +618,98 @@ export default function HubCoveragePage() {
 
       <Navbar currentPath="/dashboard/hub-coverage" />
 
-      {/* ── Toolbar ── */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: '52px', height: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: '52px', zIndex: 20, gap: '8px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '18px' }}>✈️</span>
-          <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Hub Coverage</span>
-          <span style={{ color: '#cbd5e1' }}>·</span>
-          <input type="date" value={date} onChange={e => { setDate(e.target.value); setStripCenter(e.target.value) }}
-            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
-          <button onClick={() => { setDate(isoToday()); setStripCenter(isoToday()) }}
-            style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>
-            {t.today}
-          </button>
-        </div>
+      {/* ── Toolbar Row 1: titolo + date nav ── */}
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: '52px', display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: '52px', zIndex: 21 }}>
+        <span style={{ fontSize: '18px' }}>✈️</span>
+        <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Hub Coverage</span>
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={() => { const nd = isoAdd(date, -1); setDate(nd); setStripCenter(nd) }}
+          style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', touchAction: 'manipulation' }}>
+          ◀
+        </button>
+        <input type="date" value={date} onChange={e => { setDate(e.target.value); setStripCenter(e.target.value) }}
+          style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
+        <button
+          onClick={() => { const nd = isoAdd(date, 1); setDate(nd); setStripCenter(nd) }}
+          style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', touchAction: 'manipulation' }}>
+          ▶
+        </button>
+        <button
+          onClick={() => { setDate(isoToday()); setStripCenter(isoToday()) }}
+          style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8', whiteSpace: 'nowrap', touchAction: 'manipulation' }}>
+          {t.today}
+        </button>
+      </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          {/* Show only toggle */}
-          {['ALL', 'MISSING', 'COVERED', 'NO_INFO'].map(s => (
-            <button key={s} onClick={() => setSO(s)}
-              style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(showOnly === s
-                ? (s === 'MISSING'  ? { background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }
-                  : s === 'COVERED' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
-                  : s === 'NO_INFO' ? { background: '#f8fafc', color: '#64748b', borderColor: '#cbd5e1' }
-                  : { background: '#0f2340', color: 'white', borderColor: '#0f2340' })
-                : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
-              {s === 'ALL'     ? `All (${crew.length})`
+      {/* ── Toolbar Row 2: filtri ── */}
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: '104px', zIndex: 20 }}>
+
+        {/* Show only toggle */}
+        {['ALL', 'MISSING', 'COVERED', 'NO_INFO'].map(s => (
+          <button key={s} onClick={() => setSO(s)}
+            style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', touchAction: 'manipulation', ...(showOnly === s
+              ? (s === 'MISSING'  ? { background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }
+                : s === 'COVERED' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
+                : s === 'NO_INFO' ? { background: '#f8fafc', color: '#64748b', borderColor: '#cbd5e1' }
+                : { background: '#0f2340', color: 'white', borderColor: '#0f2340' })
+              : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+            {isMobile
+              ? (s === 'ALL'     ? `All`
+                : s === 'MISSING' ? `❌ ${totalMissing}`
+                : s === 'COVERED' ? `✅ ${totalCovered}`
+                : `❓ ${totalNoInfo}`)
+              : (s === 'ALL'     ? `All (${crew.length})`
                 : s === 'MISSING' ? `❌ ${t.missingLabel} (${totalMissing})`
                 : s === 'COVERED' ? `✅ ${t.coveredLabel} (${totalCovered})`
-                : `❓ No Info (${totalNoInfo})`}
-            </button>
-          ))}
+                : `❓ No Info (${totalNoInfo})`)}
+          </button>
+        ))}
 
-          {/* Travel status filter (IN / OUT) */}
-          <div style={{ display: 'flex', gap: '3px' }}>
-            {['ALL', 'IN', 'OUT'].map(s => {
-              const active = filterTS === s
-              const c = TC[s]
-              return (
-                <button key={s} onClick={() => setFTS(s)}
-                  style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(active
-                    ? (s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: c.bg, color: c.color, borderColor: c.border })
-                    : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
-                  {s}
-                </button>
-              )
-            })}
-          </div>
+        {/* Separatore */}
+        <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
 
-          {/* Dept filter */}
-          {departments.length > 1 && (
-            <select value={filterDept} onChange={e => setFD(e.target.value)}
-              style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
-              <option value="ALL">{t.allDepts}</option>
-              {departments.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-          )}
-
-          {/* Hotel filter */}
-          {hotels.length > 1 && (
-            <select value={filterHotel} onChange={e => setFH(e.target.value)}
-              style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white' }}>
-              <option value="ALL">{t.allHotels}</option>
-              {hotels.map(h => <option key={h} value={h}>{locsMap[h] || h}</option>)}
-            </select>
-          )}
-
-          <input type="text" placeholder={t.search} value={search} onChange={e => setSearch(e.target.value)}
-            style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '120px' }} />
-          <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
+        {/* Travel status filter (IN / OUT) */}
+        <div style={{ display: 'flex', gap: '3px' }}>
+          {['ALL', 'IN', 'OUT'].map(s => {
+            const active = filterTS === s
+            const c = TC[s]
+            return (
+              <button key={s} onClick={() => setFTS(s)}
+                style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', border: '1px solid', touchAction: 'manipulation', ...(active
+                  ? (s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: c.bg, color: c.color, borderColor: c.border })
+                  : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                {s}
+              </button>
+            )
+          })}
         </div>
+
+        {/* Dept filter */}
+        {departments.length > 1 && (
+          <select value={filterDept} onChange={e => setFD(e.target.value)}
+            style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white', maxWidth: isMobile ? '110px' : 'none' }}>
+            <option value="ALL">{t.allDepts}</option>
+            {departments.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
+
+        {/* Hotel filter */}
+        {hotels.length > 1 && (
+          <select value={filterHotel} onChange={e => setFH(e.target.value)}
+            style={{ padding: '3px 8px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#374151', background: 'white', maxWidth: isMobile ? '110px' : 'none' }}>
+            <option value="ALL">{t.allHotels}</option>
+            {hotels.map(h => <option key={h} value={h}>{locsMap[h] || h}</option>)}
+          </select>
+        )}
+
+        <input type="text" placeholder={t.search} value={search} onChange={e => setSearch(e.target.value)}
+          style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: isMobile ? '90px' : '120px', minWidth: 0 }} />
+        <button onClick={() => loadData(date)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151', touchAction: 'manipulation' }}>↻</button>
       </div>
 
       {/* ── Day Strip ── */}
-      <div style={{ position: 'sticky', top: isMobile ? 'auto' : '104px', zIndex: 19 }}>
+      <div style={{ position: 'sticky', top: '156px', zIndex: 19 }}>
         <DayStrip
           selectedDate={date}
           centerDate={stripCenter}
@@ -701,7 +720,7 @@ export default function HubCoveragePage() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{ maxWidth: '980px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '980px', margin: '0 auto', padding: isMobile ? '12px' : '24px' }}>
 
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
