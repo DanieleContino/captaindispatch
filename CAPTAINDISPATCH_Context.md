@@ -1,5 +1,5 @@
 # CAPTAINDISPATCH — Context S48 (Cline)
-## Updated: 9 April 2026 (S48-2 done)
+## Updated: 9 April 2026 (S48-3 done)
 
 ---
 
@@ -46,10 +46,34 @@ Rendere Captain Dispatch completamente usabile su smartphone (PWA). Interventi p
 |---|------|------|--------|
 | 1 | Navbar hamburger drawer mobile | `lib/navbar.js` | ✅ DONE — commit `4927be2` |
 | 2 | Dashboard home grid 2col mobile | `app/dashboard/page.js` | ✅ DONE — commit `99422d7` |
-| 3 | Bridge MiniWidgets + TomorrowPanel | `app/dashboard/bridge/page.js` | ⏳ TODO |
+| 3 | Bridge MiniWidgets + TomorrowPanel | `app/dashboard/bridge/page.js` | ✅ DONE — commit `e54074a` |
 | 4 | Fleet page mobile | `app/dashboard/fleet/page.js` | ⏳ TODO |
 | 5 | CSS globale safe-area | `app/globals.css` | ⏳ TODO |
 | 6 | Rocket page (incrementale) | `app/dashboard/rocket/page.js` | ⏳ TODO |
+
+---
+
+## WHAT CHANGED IN SESSION S48
+
+### S48-1 — Navbar Mobile Hamburger Drawer ✅ — `lib/navbar.js` — commit `4927be2`
+
+- **Desktop** (≥768px): layout invariato
+- **Mobile** (<768px): top bar `[CAPTAIN Dispatch] ← → [🔔] [☰]`
+- Click `☰` → overlay fullscreen con tutti i nav in lista verticale (NAV_ITEMS + NAV_SECONDARY) + lingua + sign out
+- Badge Bridge rimane visibile nel drawer
+- Usato `useIsMobile()` da `lib/useIsMobile.js`
+
+### S48-2 — Dashboard Home Grid 2col Mobile ✅ — `app/dashboard/page.js` — commit `99422d7`
+
+- Grid card: `repeat(3, 1fr)` → `isMobile ? '1fr 1fr' : 'repeat(3, 1fr)'`
+- Hero padding: `isMobile ? '24px 16px 20px' : '40px 32px 32px'`
+- Container: `padding: 16px` su mobile, `960px` max desktop invariato
+
+### S48-3 — Bridge MiniWidgets + TomorrowPanel ✅ — `app/dashboard/bridge/page.js` — commit `e54074a`
+
+- Import aggiunto: `import { useIsMobile } from '../../../lib/useIsMobile'`
+- `MiniWidgets`: `const isMobile = useIsMobile()` + `gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr'` — i 3 widget Fleet/Crew/Hub si impilano verticalmente su mobile
+- `TomorrowPanel`: `const isMobile = useIsMobile()` + `gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr'` — Arrivals e Departures passano da 2 colonne a 1 colonna su mobile
 
 ---
 
