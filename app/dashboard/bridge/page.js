@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
 import { ImportModal } from '../../../lib/ImportModal'
+import { useIsMobile } from '../../../lib/useIsMobile'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Cell, ResponsiveContainer,
@@ -548,6 +549,7 @@ function TravelDiscrepanciesWidget({ productionId }) {
 
 // ── Tomorrow Panel ────────────────────────────────────────
 function TomorrowPanel({ productionId }) {
+  const isMobile = useIsMobile()
   const [arrivals,   setArrivals]   = useState([])
   const [departures, setDepartures] = useState([])
 
@@ -603,7 +605,7 @@ function TomorrowPanel({ productionId }) {
         </a>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
         {/* Arrivals */}
         <div>
           <div style={{ fontSize: '11px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
@@ -871,6 +873,7 @@ function ArrivalsDeparturesChart({ productionId }) {
 
 // ── Mini Widgets (Fleet / Pax / Hub) ─────────────────────
 function MiniWidgets({ productionId }) {
+  const isMobile = useIsMobile()
   const [vehicles, setVehicles] = useState([])
   const [crew,     setCrew]     = useState([])
 
@@ -895,7 +898,7 @@ function MiniWidgets({ productionId }) {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
 
       {/* Fleet Mini */}
       <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
