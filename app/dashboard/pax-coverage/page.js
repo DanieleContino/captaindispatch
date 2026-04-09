@@ -18,6 +18,7 @@ import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 
 import { getProductionId } from '../../../lib/production'
+import { useIsMobile } from '../../../lib/useIsMobile'
 
 function isoToday() {
   const d = new Date()
@@ -440,6 +441,7 @@ function RemoteRow({ member, locsMap }) {
 
 export default function PaxCoveragePage() {
   const t = useT()
+  const isMobile = useIsMobile()
   const PRODUCTION_ID = getProductionId()
   const router = useRouter()
   const [user,        setUser]        = useState(null)
@@ -592,7 +594,7 @@ export default function PaxCoveragePage() {
       <Navbar currentPath="/dashboard/pax-coverage" />
 
       {/* Toolbar Row 1 — titolo + navigazione data */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: '52px', zIndex: 21 }}>
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: '52px', height: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', position: 'sticky', top: '52px', zIndex: 21 }}>
         <span style={{ fontSize: '18px' }}>👥</span>
         <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Pax Coverage</span>
         <span style={{ color: '#cbd5e1' }}>·</span>
@@ -604,7 +606,7 @@ export default function PaxCoveragePage() {
       </div>
 
       {/* Toolbar Row 2 — filtri */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', height: '52px', display: 'flex', alignItems: 'center', gap: '6px', position: 'sticky', top: '104px', zIndex: 20, flexWrap: 'nowrap', overflowX: 'auto' }}>
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: '52px', height: 'auto', display: 'flex', alignItems: 'center', gap: '6px', position: 'sticky', top: isMobile ? 'auto' : '104px', zIndex: 20, flexWrap: 'wrap' }}>
         {/* Show only toggle */}
         {['ALL', 'UNASSIGNED', 'ASSIGNED'].map(s => (
           <button key={s} onClick={() => setSO(s)}
@@ -647,7 +649,7 @@ export default function PaxCoveragePage() {
       </div>
 
       {/* ── Day Strip ── */}
-      <div style={{ position: 'sticky', top: '156px', zIndex: 19 }}>
+      <div style={{ position: 'sticky', top: isMobile ? 'auto' : '156px', zIndex: 19 }}>
         <DayStrip
           selectedDate={date}
           centerDate={stripCenter}
