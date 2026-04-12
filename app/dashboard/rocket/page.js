@@ -1942,7 +1942,7 @@ export default function RocketPage() {
                                 )}
                               </div>
                               {/* Dest + Call Time row */}
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: '6px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '6px' }}>
                                 <LocSelect value={deptDestId} onChange={e => setDeptOverride(dept, 'destId', e.target.value)}
                                   locations={locations} placeholder="same as global"
                                   style={{ fontSize: '11px', border: `1px solid ${deptCfg.destId && deptCfg.destId !== destId ? '#c4b5fd' : '#e2e8f0'}`, background: deptCfg.destId && deptCfg.destId !== destId ? '#fdf4ff' : 'white' }} />
