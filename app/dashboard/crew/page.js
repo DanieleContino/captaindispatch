@@ -1355,7 +1355,7 @@ export default function CrewPage() {
         .from('travel_movements')
         .select('crew_id, travel_date, direction, from_location, from_time, to_location, to_time, travel_number, travel_type, needs_transport')
         .eq('production_id', PRODUCTION_ID)
-        .gte('travel_date', new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }))
+        .gte('travel_date', (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }) })())
         .order('travel_date', { ascending: true }),
       supabase
         .from('crew_stays')
