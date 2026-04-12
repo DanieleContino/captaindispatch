@@ -1,5 +1,44 @@
-# CAPTAINDISPATCH — Context S49 (Cline)
-## Updated: 10 April 2026 (S49-2 completata — Crew page mobile refinements)
+# CAPTAINDISPATCH — Context S50 (Cline)
+## Updated: 12 April 2026 (S50 — Hotfix: crew travelMap 7gg + Rocket time AM/PM)
+
+---
+
+## WHAT CHANGED IN SESSION S50 (12 April 2026)
+
+### Hotfix ✅ — Crew page: travelMap mostra movimenti ultimi 7 giorni — commit `d3fb741`
+
+**File**: `app/dashboard/crew/page.js` — `loadCrew()`
+
+**Problema**: la query `travel_movements` in `loadCrew` aveva `.gte('travel_date', today)` → caricava solo movimenti da oggi in poi. I movimenti passati (ieri, giorni precedenti) non apparivano nelle crew cards anche se erano presenti nel TravelAccordion della sidebar (che carica tutto senza filtri).
+
+**Fix**:
+```js
+// PRIMA (bug):
+.gte('travel_date', new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }))
+
+// DOPO (fix):
+.gte('travel_date', (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }) })())
+```
+- Finestra estesa a **oggi - 7 giorni** → le crew cards mostrano anche i movimenti recenti degli ultimi 7 giorni
+- Query rimane leggera (nessun full-scan storico)
+
+---
+
+### Hotfix ✅ — Rocket: campo orario Dept Destinations troncato (AM/PM) — commit `7f51eb0`
+
+**File**: `app/dashboard/rocket/page.js` — sezione "Dept Destinations"
+
+**Problema**: nella grid `gridTemplateColumns: '1fr 90px'`, il campo `input[type="time"]` era costretto in soli 90px. I browser/OS con formato 12h (Windows, macOS con locale en-US) mostrano `07:00 AM` → la "M" finale veniva tagliata visivamente.
+
+**Fix**: colonna time allargata da `90px` → `120px`:
+```js
+// PRIMA:
+gridTemplateColumns: '1fr 90px'
+
+// DOPO:
+gridTemplateColumns: '1fr 120px'
+```
+- 120px è sufficiente per tutti i formati (24h `07:00` e 12h `07:00 AM`) su tutti i browser
 
 ---
 
@@ -107,10 +146,10 @@ S48 ha coperto le pagine principali. Rimangono ancora parti di pagina che escono
 |---|------|------|--------|
 | 1 | Trips Timeline Card mobile | `app/dashboard/trips/page.js` | ✅ DONE — commit `7a1fdb6` |
 | 2 | Crew page refinements | `app/dashboard/crew/page.js` | ✅ DONE — commit `34abc64` |
-| 3 | Hub Coverage toolbar 2-row | `app/dashboard/hub-coverage/page.js` | ⏳ TODO |
-| 4 | Pax Coverage sticky fix | `app/dashboard/pax-coverage/page.js` | ⏳ TODO |
-| 5 | Bridge mobile polish | `app/dashboard/bridge/page.js` | ⏳ TODO |
-| 6 | CSS globale utilities | `app/globals.css` | ⏳ TODO |
+| 3 | Hub Coverage toolbar 2-row | `app/dashboard/hub-coverage/page.js` | ✅ DONE — commit `8df6f38` |
+| 4 | Pax Coverage sticky fix | `app/dashboard/pax-coverage/page.js` | ✅ DONE — commit `8455830` |
+| 5 | Bridge mobile polish | `app/dashboard/bridge/page.js` | ✅ DONE — commit `e1c965f` |
+| 6 | CSS globale utilities | `app/globals.css` | ✅ DONE — commit `19c87d4` |
 
 ---
 
