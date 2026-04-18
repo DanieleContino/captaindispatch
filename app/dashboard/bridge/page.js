@@ -42,6 +42,303 @@ const btnSecondary= { padding: '7px 14px', borderRadius: '8px', border: '1px sol
 const btnGreen    = { ...btnPrimary, background: '#16a34a' }
 const btnRed      = { ...btnPrimary, background: '#dc2626' }
 
+// ── Crew Duplicate Detection helpers ─────────────────────
+
+const CREW_MERGE_FIELDS = [
+  { key: 'full_name',      label: 'Full Name' },
+  { key: 'department',     label: 'Department' },
+  { key: 'email',          label: 'Email' },
+  { key: 'phone',          label: 'Phone' },
+  { key: 'hotel_id',       label: 'Hotel' },
+  { key: 'hotel_status',   label: 'Hotel Status' },
+  { key: 'travel_status',  label: 'Travel Status' },
+  { key: 'arrival_date',   label: 'Arrival Date' },
+  { key: 'departure_date', label: 'Departure Date' },
+  { key: 'notes',          label: 'Notes' },
+]
+
+function crewWords(name) {
+  return (name || '').toLowerCase().trim().replace(/\s+/g, ' ')
+    .split(' ').filter(w => w.length > 1)
+}
+
+function crewSimilarity(a, b) {
+  const wa = crewWords(a), wb = crewWords(b)
+  if (!wa.length || !wb.length) return 0
+  const [shorter, longer] = wa.length <= wb.length ? [wa, wb] : [wb, wa]
+  return shorter.filter(w => longer.includes(w)).length / shorter.length
+}
+
+function findDupGroups(crew) {
+  const merged = new Set()
+  const groups = []
+  for (let i = 0; i < crew.length; i++) {
+    if (merged.has(crew[i].id)) continue
+    const group = [crew[i]]
+    merged.add(crew[i].id)
+    for (let j = i + 1; j < crew.length; j++) {
+      if (merged.has(crew[j].id)) continue
+      if (crewSimilarity(crew[i].full_name, crew[j].full_name) >= 0.85) {
+        group.push(crew[j])
+        merged.add(crew[j].id)
+      }
+    }
+    if (group.length > 1) groups.push(group)
+  }
+  return groups
+}
+
+function defaultFieldChoices(selCrew) {
+  const choices = {}
+  CREW_MERGE_FIELDS.forEach(({ key }) => {
+    const withVal = selCrew.filter(c => c[key] != null && c[key] !== '')
+    choices[key] = withVal.length > 0 ? withVal[0].id : selCrew[0].id
+  })
+  return choices
+}
+
+// ── CrewDuplicatesWidget ──────────────────────────────────
+function CrewDuplicatesWidget({ productionId, locations }) {
+  const [dupeGroups, setDupeGroups] = useState([])
+  const [loading,    setLoading]    = useState(false)
+  const [checked,    setChecked]    = useState({})   // { groupIdx: Set<crewId> }
+  const [mergeCtx,   setMergeCtx]   = useState(null) // { group, selectedIds, selCrew }
+
+  // Merge panel state
+  const [primaryId,    setPrimaryId]    = useState(null)
+  const [fieldChoices, setFieldChoices] = useState({})
+  const [saving,       setSaving]       = useState(false)
+  const [mergeError,   setMergeError]   = useState(null)
+
+  const hotelLabel = id => locations?.find(l => l.id === id)?.name || id || '—'
+
+  const load = useCallback(async () => {
+    if (!productionId) return
+    setLoading(true)
+    const { data } = await supabase
+      .from('crew')
+      .select('id, full_name, department, hotel_id, hotel_status, travel_status, arrival_date, departure_date, email, phone, notes, created_at')
+      .eq('production_id', productionId)
+      .order('created_at', { ascending: true })
+    setLoading(false)
+    const crew = data || []
+    setDupeGroups(findDupGroups(crew))
+    setChecked({})
+  }, [productionId])
+
+  useEffect(() => { load() }, [load])
+
+  function toggleCheck(gi, crewId) {
+    setChecked(prev => {
+      const s = new Set(prev[gi] || [])
+      s.has(crewId) ? s.delete(crewId) : s.add(crewId)
+      return { ...prev, [gi]: s }
+    })
+  }
+
+  function openMerge(gi, group) {
+    const sel = checked[gi] || new Set()
+    const selCrew = group.filter(c => sel.has(c.id))
+    if (selCrew.length < 2) return
+    setPrimaryId(selCrew[0].id)
+    setFieldChoices(defaultFieldChoices(selCrew))
+    setMergeCtx({ group, selectedIds: [...sel], selCrew })
+    setMergeError(null)
+  }
+
+  async function handleMerge() {
+    if (!mergeCtx) return
+    const duplicate_ids = mergeCtx.selectedIds.filter(id => id !== primaryId)
+    if (!duplicate_ids.length) { setMergeError('Need at least 2 crew selected'); return }
+
+    const merged_data = {}
+    CREW_MERGE_FIELDS.forEach(({ key }) => {
+      const src = mergeCtx.selCrew.find(c => c.id === fieldChoices[key])
+      merged_data[key] = src?.[key] ?? null
+    })
+
+    setSaving(true); setMergeError(null)
+    try {
+      const res = await fetch('/api/crew/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          production_id: productionId,
+          primary_id: primaryId,
+          duplicate_ids,
+          merged_data,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setMergeError(json.error || 'Merge failed'); setSaving(false); return }
+      setSaving(false)
+      setMergeCtx(null)
+      load()
+    } catch (e) { setMergeError(e.message); setSaving(false) }
+  }
+
+  if (loading || dupeGroups.length === 0) return null
+
+  return (
+    <div style={{ ...card, borderLeft: '4px solid #f59e0b', marginBottom: '20px' }}>
+      {/* Header */}
+      <div style={hdr}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a' }}>⚠️ Possible Duplicate Crew</span>
+          <span style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', padding: '2px 8px', borderRadius: '999px', fontSize: '12px', fontWeight: '700' }}>
+            {dupeGroups.length} {dupeGroups.length === 1 ? 'group' : 'groups'}
+          </span>
+        </div>
+        <button onClick={load} style={{ ...btnSecondary, fontSize: '11px', padding: '5px 10px' }}>↻ Refresh</button>
+      </div>
+
+      {/* Groups list */}
+      <div style={{ paddingBottom: '8px' }}>
+        {dupeGroups.map((group, gi) => {
+          const sel = checked[gi] || new Set()
+          const sim = Math.round(crewSimilarity(group[0].full_name, group[1].full_name) * 100)
+          return (
+            <div key={gi} style={{ borderBottom: gi < dupeGroups.length - 1 ? '1px solid #f1f5f9' : 'none', padding: '12px 20px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', marginBottom: '8px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <span>Group {gi + 1}</span>
+                <span style={{ background: '#fef3c7', padding: '1px 6px', borderRadius: '4px' }}>{sim}% match</span>
+              </div>
+
+              {group.map(c => (
+                <label key={c.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '7px 8px', borderRadius: '6px', marginBottom: '4px', cursor: 'pointer', background: sel.has(c.id) ? '#fffbeb' : 'transparent', border: `1px solid ${sel.has(c.id) ? '#fde68a' : 'transparent'}` }}>
+                  <input type="checkbox" checked={sel.has(c.id)} onChange={() => toggleCheck(gi, c.id)} style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>{c.id}</span>
+                      {c.full_name}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {c.department    && <span>🏷️ {c.department}</span>}
+                      {c.hotel_id      && <span>🏨 {hotelLabel(c.hotel_id)}</span>}
+                      {c.travel_status && <span>✈️ {c.travel_status}</span>}
+                      {c.email         && <span>✉️ {c.email}</span>}
+                      {c.phone         && <span>📞 {c.phone}</span>}
+                    </div>
+                  </div>
+                </label>
+              ))}
+
+              <div style={{ textAlign: 'right', marginTop: '8px' }}>
+                <button
+                  onClick={() => openMerge(gi, group)}
+                  disabled={sel.size < 2}
+                  style={{ ...btnPrimary, background: sel.size < 2 ? '#94a3b8' : '#f59e0b', fontSize: '12px', padding: '6px 14px', cursor: sel.size < 2 ? 'not-allowed' : 'pointer' }}>
+                  🔀 Merge selected{sel.size >= 2 ? ` (${sel.size})` : ''}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* ── Merge Modal ────────────────────────────────── */}
+      {mergeCtx && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15,35,64,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'white', borderRadius: '16px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+
+            {/* Modal header */}
+            <div style={{ padding: '18px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'white', zIndex: 1 }}>
+              <div>
+                <div style={{ fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>🔀 Merge Crew Records</div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Choose primary record and field values to keep</div>
+              </div>
+              <button onClick={() => setMergeCtx(null)} style={{ border: 'none', background: 'transparent', fontSize: '20px', cursor: 'pointer', color: '#94a3b8', padding: '4px 8px' }}>✕</button>
+            </div>
+
+            <div style={{ padding: '20px 24px' }}>
+
+              {/* Primary selector */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ ...lbl, marginBottom: '8px' }}>Primary record (kept after merge)</div>
+                {mergeCtx.selCrew.map((c, idx) => (
+                  <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', marginBottom: '6px', cursor: 'pointer', border: `2px solid ${primaryId === c.id ? '#0f2340' : '#e2e8f0'}`, background: primaryId === c.id ? '#f0f4ff' : 'white' }}>
+                    <input type="radio" name="mergeP" value={c.id} checked={primaryId === c.id} onChange={() => setPrimaryId(c.id)} />
+                    <div>
+                      <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', marginRight: '6px' }}>{c.id}</span>
+                      <strong>{c.full_name}</strong>
+                      <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>{idx === 0 ? '(older · recommended)' : '(newer)'}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {/* Field comparison table */}
+              <div style={{ ...lbl, marginBottom: '10px' }}>Field comparison — select value to keep</div>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginBottom: '18px' }}>
+                {(() => {
+                  const rows = CREW_MERGE_FIELDS.map(({ key, label: fLabel }) => {
+                    const vals = mergeCtx.selCrew.map(c => ({ id: c.id, val: c[key] }))
+                    const uq = new Set(vals.map(v => String(v.val ?? '')))
+                    if (uq.size === 1) return null // identical or all-null → skip
+                    const cols = `90px ${mergeCtx.selCrew.map(() => '1fr').join(' ')} 56px`
+                    return (
+                      <div key={key} style={{ display: 'grid', gridTemplateColumns: cols, borderBottom: '1px solid #f1f5f9', alignItems: 'center', minHeight: '36px' }}>
+                        <div style={{ padding: '6px 10px', fontSize: '11px', fontWeight: '700', color: '#64748b', borderRight: '1px solid #f1f5f9' }}>{fLabel}</div>
+                        {vals.map(({ id, val }) => (
+                          <div key={id} style={{ padding: '6px 8px', fontSize: '12px', color: val ? '#0f172a' : '#94a3b8', fontStyle: val ? 'normal' : 'italic', borderRight: '1px solid #f1f5f9', wordBreak: 'break-word' }}>
+                            {key === 'hotel_id' ? hotelLabel(val) : (val || '—')}
+                          </div>
+                        ))}
+                        <div style={{ padding: '4px 8px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                          {vals.map(({ id }, i) => (
+                            <label key={id} style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                              <input type="radio" name={`fc-${key}`} value={id} checked={fieldChoices[key] === id} onChange={() => setFieldChoices(p => ({ ...p, [key]: id }))} />
+                              <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#64748b' }}>{i + 1}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }).filter(Boolean)
+
+                  return rows.length > 0 ? rows : (
+                    <div style={{ padding: '14px 16px', fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
+                      All fields are identical — no choices needed.
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Info box */}
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#1d4ed8' }}>
+                ℹ️ <strong>Travel movements</strong> and <strong>accommodation stays</strong> from all selected records will be reassigned to the primary record.
+              </div>
+
+              {/* Warning */}
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', marginBottom: '18px', fontSize: '12px', color: '#dc2626' }}>
+                ⚠️ <strong>Irreversible.</strong> These records will be deleted after merge:{' '}
+                {mergeCtx.selectedIds.filter(id => id !== primaryId).map((id, i) => (
+                  <span key={id}>{i > 0 && ', '}<code style={{ background: '#fee2e2', padding: '1px 4px', borderRadius: '3px', fontFamily: 'monospace' }}>{id}</code></span>
+                ))}
+              </div>
+
+              {mergeError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#dc2626' }}>
+                  ❌ {mergeError}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button onClick={() => setMergeCtx(null)} style={btnSecondary} disabled={saving}>Cancel</button>
+                <button onClick={handleMerge} disabled={saving} style={{ ...btnRed, opacity: saving ? 0.6 : 1 }}>
+                  {saving ? 'Merging…' : '⚠️ Confirm Merge'}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Easy Access Shortcuts ─────────────────────────────────
 function EasyAccessShortcuts({ currentPath }) {
   const isMobile = useIsMobile()
@@ -1661,6 +1958,7 @@ export default function BridgePage() {
         <NotificationsPanel productionId={PRODUCTION_ID} />
 <DriveSyncWidget productionId={PRODUCTION_ID} onPreview={setPreviewModal} refreshKey={driveRefreshKey} />
         <TravelDiscrepanciesWidget productionId={PRODUCTION_ID} />
+        <CrewDuplicatesWidget productionId={PRODUCTION_ID} locations={locations} />
         <TomorrowPanel productionId={PRODUCTION_ID} />
         <ArrivalsDeparturesChart key={PRODUCTION_ID} productionId={PRODUCTION_ID} />
         <MiniWidgets productionId={PRODUCTION_ID} />
