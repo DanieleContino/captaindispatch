@@ -96,191 +96,133 @@ function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor,
     data: { group },
   })
 
-  const mainTime = minToHHMM(group.pickup_min ?? group.call_min)
-  const callTime = minToHHMM(group.call_min)
-  const totalPax = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
-  const isMultiStop = group.rows.length > 1
-  const pickupLoc = locsMap[group.pickup_id]
-  const pickupName = typeof pickupLoc === 'object' ? pickupLoc.name : pickupLoc || group.pickup_id || '–'
+  const pickupTime = minToHHMM(group.pickup_min ?? group.call_min)
+  const callTime   = minToHHMM(group.call_min)
+  const showCall   = callTime && callTime !== pickupTime && callTime !== '–'
+  const totalPax   = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
 
-  // Determina se mostrare info volo (solo per ARRIVAL/DEPARTURE con dati disponibili)
+  // Passengers across all rows (multi-stop merged)
+  const allPax = group.rows.flatMap(r =>
+    r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
+  )
+
+  // Pickup / Dropoff: if multi-stop, show first leg's pickup and last leg's dropoff
+  const firstRow = group.rows[0]
+  const lastRow  = group.rows[group.rows.length - 1]
+  const pickupLoc  = locsMap[firstRow.pickup_id]
+  const pickupName = typeof pickupLoc === 'object' ? pickupLoc.name : pickupLoc || firstRow.pickup_id || '–'
+  const dropoffLoc  = locsMap[lastRow.dropoff_id]
+  const dropoffName = typeof dropoffLoc === 'object' ? dropoffLoc.name : dropoffLoc || lastRow.dropoff_id || '–'
+
+  // Flight info on dropoff side
   const transferClass = group.transfer_class
-  const showFlightInfo = (transferClass === 'ARRIVAL' || transferClass === 'DEPARTURE') && 
-                         (group.flight_no || group.arr_time)
-  
-  // Formatta orario arrivo volo (arr_time è in formato time HH:MM:SS)
+  const showFlight = (transferClass === 'ARRIVAL' || transferClass === 'DEPARTURE')
+                     && (group.flight_no || group.arr_time)
   const flightArrTime = group.arr_time ? group.arr_time.slice(0, 5) : null
 
-  // Info Hub/Terminal e Notes (solo per ARRIVAL/DEPARTURE)
-  const showHubInfo = transferClass === 'ARRIVAL' || transferClass === 'DEPARTURE'
-  const hubTerminal = group.terminal
-  const tripNotes = group.notes
-  const hasInfoBar = showHubInfo && (hubTerminal || tripNotes)
-
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} className="trip-row" style={{
-      opacity: isDragging ? 0.4 : 1,
-      cursor: 'grab',
-      display: 'grid',
-      gridTemplateColumns: '56px 50px 58px 110px 1fr 36px 36px',
-      gap: '0 6px',
-      alignItems: 'flex-start',
-      padding: '5px 6px',
-      borderBottom: '1px solid #e2e8f0',
-      borderLeft: `4px solid ${sectionColor}`,
-      background: 'white',
-      pageBreakInside: 'avoid',
-    }}>
-      <div style={{ fontWeight: '900', color: '#0f172a', fontVariantNumeric: 'tabular-nums', textAlign: 'center', fontSize: '13px', lineHeight: 1.2 }}>
-        {mainTime}
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className="trip-row"
+      style={{
+        opacity: isDragging ? 0.4 : 1,
+        cursor: 'grab',
+        display: 'grid',
+        gridTemplateColumns: '140px 130px 70px 1fr 160px 160px',
+        gap: '0 8px',
+        alignItems: 'flex-start',
+        padding: '8px 14px',
+        borderBottom: '1px solid #e2e8f0',
+        background: 'white',
+        pageBreakInside: 'avoid',
+        fontSize: '12px',
+        lineHeight: 1.4,
+        position: 'relative',
+      }}
+    >
+      {/* Vehicle */}
+      <div style={{ fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {group.vehicle_id || '—'}
       </div>
-      <div style={{ fontWeight: '700', color: '#64748b', fontVariantNumeric: 'tabular-nums', textAlign: 'center', fontSize: '11px', lineHeight: 1.2, paddingTop: '1px' }}>
-        {callTime}
-      </div>
-      <div style={{ fontWeight: '800', color: '#0f172a', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
-        {group.vehicle_id || '–'}
-      </div>
-      <div style={{ fontSize: '11px', color: '#1e293b', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-        {group.driver_name || '–'}
-      </div>
-      <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.4 }}>
-        {isMultiStop ? (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '2px' }}>
-              {/* Badge volo inline */}
-              {showFlightInfo && (
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '3px',
-                  background: transferClass === 'ARRIVAL' ? '#dbeafe' : '#fed7aa',
-                  color: transferClass === 'ARRIVAL' ? '#1e40af' : '#c2410c',
-                  padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', flexShrink: 0,
-                }}>
-                  <span>✈️</span>
-                  {group.flight_no && <span>{group.flight_no}</span>}
-                  {flightArrTime && <span>@{flightArrTime}</span>}
-                </span>
-              )}
-              {/* Terminal inline */}
-              {showHubInfo && hubTerminal && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '9px', color: '#475569', fontWeight: '600', flexShrink: 0 }}>
-                  <span style={{ fontSize: '8px' }}>📍</span>{hubTerminal}
-                </span>
-              )}
-              {/* Notes inline */}
-              {showHubInfo && tripNotes && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '9px', color: '#64748b', flexShrink: 0 }}>
-                  <span style={{ fontSize: '8px' }}>📝</span>{tripNotes}
-                </span>
-              )}
-              {(showFlightInfo || (showHubInfo && (hubTerminal || tripNotes))) && (
-                <span style={{ color: '#cbd5e1', fontSize: '9px' }}>|</span>
-              )}
-              <span style={{ background: '#ea580c', color: 'white', fontWeight: '900', fontSize: '9px', padding: '1px 5px', borderRadius: '4px', letterSpacing: '0.3px', flexShrink: 0 }}>
-                🔀 {group.rows.length}
-              </span>
-              {group.rows.map((row, i) => {
-                const fromLoc = locsMap[row.pickup_id]
-                const fromName = (typeof fromLoc === 'object' ? fromLoc.name : fromLoc || row.pickup_id || '–').split(' ').slice(0, 2).join(' ')
-                const toLoc = locsMap[row.dropoff_id]
-                const toName = (typeof toLoc === 'object' ? toLoc.name : toLoc || row.dropoff_id || '–').split(' ').slice(0, 2).join(' ')
-                const legTime  = minToHHMM(row.pickup_min)
-                return (
-                  <span key={row.id || i} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '10px', whiteSpace: 'nowrap' }}>
-                    {i > 0 && <span style={{ color: '#cbd5e1', margin: '0 2px' }}>|</span>}
-                    {legTime !== '–' && <span style={{ color: '#94a3b8', fontVariantNumeric: 'tabular-nums', fontWeight: '700' }}>{legTime}</span>}
-                    <span style={{ color: '#64748b' }}>{fromName}</span>
-                    <span style={{ color: '#94a3b8' }}>→</span>
-                    <span style={{ fontWeight: '800', color: '#0f172a' }}>{toName}</span>
-                    <span style={{ color: '#64748b' }}>({row.pax_count || 0})</span>
-                  </span>
-                )
-              })}
-            </div>
-            {(() => {
-              const byPickup = {}
-              for (const row of group.rows) {
-                const key = row.pickup_id || '__unknown__'
-                if (!byPickup[key]) byPickup[key] = { pickup_id: row.pickup_id, names: [] }
-                if (row.passenger_list) {
-                  byPickup[key].names.push(...row.passenger_list.split(',').map(s => s.trim()).filter(Boolean))
-                }
-              }
-              const pickupGroups = Object.values(byPickup).filter(g => g.names.length > 0)
-              if (!pickupGroups.length) return null
-              return pickupGroups.map(pg => {
-                const pgLoc = locsMap[pg.pickup_id]
-                const pgLocName = typeof pgLoc === 'object' ? pgLoc.name : pgLoc || pg.pickup_id || '?'
-                return (
-                  <div key={pg.pickup_id} style={{ display: 'flex', alignItems: 'baseline', gap: '4px', fontSize: '10px', marginTop: '1px', lineHeight: 1.3 }}>
-                    <span style={{ color: '#ea580c', fontWeight: '800', flexShrink: 0 }}>
-                      📍 {pgLocName.split(' ').slice(0, 3).join(' ')}:
-                    </span>
-                    <span style={{ color: '#475569', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {pg.names.map(n => formatCrewName(n)).join(' · ')}
-                    </span>
-                  </div>
-                )
-              })
-            })()}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            {/* Badge volo inline */}
-            {showFlightInfo && (
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: '3px',
-                background: transferClass === 'ARRIVAL' ? '#dbeafe' : '#fed7aa',
-                color: transferClass === 'ARRIVAL' ? '#1e40af' : '#c2410c',
-                padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', flexShrink: 0,
-              }}>
-                <span>✈️</span>
-                {group.flight_no && <span>{group.flight_no}</span>}
-                {flightArrTime && <span>@{flightArrTime}</span>}
-              </span>
-            )}
-            {/* Terminal inline */}
-            {showHubInfo && hubTerminal && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '9px', color: '#475569', fontWeight: '600', flexShrink: 0 }}>
-                <span style={{ fontSize: '8px' }}>📍</span>{hubTerminal}
-              </span>
-            )}
-            {/* Notes inline */}
-            {showHubInfo && tripNotes && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '9px', color: '#64748b', flexShrink: 0 }}>
-                <span style={{ fontSize: '8px' }}>📝</span>{tripNotes}
-              </span>
-            )}
-            {(showFlightInfo || (showHubInfo && (hubTerminal || tripNotes))) && (
-              <span style={{ color: '#cbd5e1', fontSize: '10px' }}>|</span>
-            )}
-            <span style={{ fontSize: '10px', color: '#64748b' }}>
-              <strong style={{ color: '#0f172a' }}>{pickupName}</strong>
-            </span>
-            <span style={{ color: '#94a3b8' }}>→</span>
-            <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '11px' }}>
-              {(() => {
-                const dropoffLoc = locsMap[group.rows[0]?.dropoff_id]
-                return typeof dropoffLoc === 'object' ? dropoffLoc.name : dropoffLoc || group.rows[0]?.dropoff_id || '–'
-              })()}
-            </span>
-            {group.rows[0]?.passenger_list && (
-              <>
-                <span style={{ color: '#cbd5e1', fontSize: '10px' }}>·</span>
-                <span style={{ fontSize: '10px', color: '#475569', fontWeight: '500' }}>
-                  {group.rows[0].passenger_list.split(',').map(s => formatCrewName(s.trim())).filter(Boolean).join(', ')}
-                </span>
-              </>
-            )}
+
+      {/* Driver + phone */}
+      <div style={{ overflow: 'hidden' }}>
+        <div style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {group.driver_name || '—'}
+        </div>
+        {group.rows[0]?.driver_phone && (
+          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+            {group.rows[0].driver_phone}
           </div>
         )}
       </div>
-      <div style={{ fontWeight: '800', color: '#0f172a', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
-        {totalPax}
+
+      {/* Time (pickup, with call below if different) */}
+      <div style={{ fontVariantNumeric: 'tabular-nums' }}>
+        <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '13px' }}>{pickupTime}</div>
+        {showCall && (
+          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+            call {callTime}
+          </div>
+        )}
       </div>
-      <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'center', lineHeight: 1.2, position: 'relative' }}>
-        {group.capacity || '–'}
+
+      {/* Passengers (with role) + (PAX/CAP) inline */}
+      <div style={{ minWidth: 0 }}>
+        {allPax.length > 0 ? (
+          <>
+            {allPax.map((p, i) => {
+              // p is "FullName (Role)" — extract role if present
+              const m = p.match(/^(.+?)\s*\(([^)]+)\)\s*$/)
+              const name = m ? m[1].trim() : p
+              const role = m ? m[2].trim() : null
+              const formatted = formatCrewName(name)
+              return (
+                <div key={i} style={{ fontSize: '11.5px', lineHeight: 1.45 }}>
+                  <span style={{ color: '#0f172a', fontWeight: '500' }}>{formatted}</span>
+                  {role && <span style={{ color: '#64748b' }}> · {role}</span>}
+                </div>
+              )
+            })}
+            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px', fontWeight: '500' }}>
+              ({totalPax}{group.capacity ? '/' + group.capacity : ''})
+            </div>
+          </>
+        ) : (
+          <span style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>no pax</span>
+        )}
+      </div>
+
+      {/* From */}
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {pickupName}
+        </div>
+        {pickupLoc && typeof pickupLoc === 'object' && pickupLoc.pickup_point && (
+          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {pickupLoc.pickup_point}
+          </div>
+        )}
+      </div>
+
+      {/* To + Move-to fallback */}
+      <div style={{ minWidth: 0, position: 'relative' }}>
+        <div style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {dropoffName}
+        </div>
+        {showFlight && (
+          <div style={{ fontSize: '10px', color: '#1d4ed8', marginTop: '2px', fontWeight: '600' }}>
+            {group.flight_no || ''}{group.flight_no && flightArrTime ? ' · ' : ''}{flightArrTime || ''}
+            {group.terminal && <span style={{ color: '#64748b' }}> · {group.terminal}</span>}
+          </div>
+        )}
+
+        {/* Move-to button (fallback for touch devices) */}
         <button
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation()
             const k = group.trip_id + '::' + (group.vehicle_id || 'none')
@@ -288,10 +230,10 @@ function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor,
           }}
           className="no-print"
           style={{
-            display: 'block', width: '100%', marginTop: '4px',
-            padding: '2px 4px', borderRadius: '4px',
+            marginTop: '4px',
+            padding: '2px 6px', borderRadius: '4px',
             border: '1px solid #e2e8f0', background: 'white',
-            fontSize: '9px', fontWeight: '700', color: '#64748b',
+            fontSize: '9px', fontWeight: '600', color: '#64748b',
             cursor: 'pointer',
           }}>
           Move to
@@ -311,7 +253,7 @@ function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor,
             }}>
               {sections.length === 0 ? (
                 <div style={{ padding: '6px 10px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
-                  No sections yet. Use &quot;Manage sections&quot; first.
+                  No sections yet. Use "Manage sections" first.
                 </div>
               ) : sections.map(s => (
                 <button
@@ -835,24 +777,24 @@ export default function ListsPage() {
             {/* Intestazione colonne */}
             <div className="col-header" style={{
               display: 'grid',
-              gridTemplateColumns: '56px 50px 58px 110px 1fr 36px 36px',
-              gap: '0 6px',
-              padding: '6px 6px',
+              gridTemplateColumns: '140px 130px 70px 1fr 160px 160px',
+              gap: '0 8px',
+              padding: '6px 14px',
               borderBottom: '2px solid #0f172a',
-              fontWeight: '800',
+              fontWeight: '700',
               fontSize: '10px',
               color: '#0f172a',
               background: '#f8fafc',
               letterSpacing: '0.5px',
+              textTransform: 'uppercase',
               pageBreakAfter: 'avoid',
             }}>
-              <div style={{ textAlign: 'center' }}>TIME</div>
-              <div style={{ textAlign: 'center' }}>CALL</div>
-              <div style={{ textAlign: 'center' }}>VEH.</div>
-              <div>DRIVER</div>
-              <div>ROUTE &amp; CREW</div>
-              <div style={{ textAlign: 'center' }}>PAX</div>
-              <div style={{ textAlign: 'center' }}>CAP</div>
+              <div>Vehicle</div>
+              <div>Driver</div>
+              <div>Time</div>
+              <div>Passengers</div>
+              <div>From</div>
+              <div>To</div>
             </div>
 
             {(() => {
