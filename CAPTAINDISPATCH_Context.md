@@ -1,5 +1,151 @@
-# CAPTAINDISPATCH — Context S50 (Cline)
-## Updated: 12 April 2026 (S50 — Hotfix: crew travelMap 7gg + Rocket time AM/PM)
+# CAPTAINDISPATCH — Context S53 (Cline)
+## Updated: 9 May 2026 (S53 — Settings page + Google Drive OAuth system)
+
+---
+
+## WHAT CHANGED IN SESSION S53 (9 May 2026)
+
+### Feature ✅ — `/dashboard/settings` page con Google Drive connect/disconnect — commit `dbf6f62`
+
+**File nuovi**:
+- `app/dashboard/settings/page.js` — pagina Settings (client component)
+- `app/api/google/status/route.js` — GET endpoint stato connessione Google Drive
+
+**`app/dashboard/settings/page.js`**:
+- Wrapped in `<Suspense>` (`SettingsPageWrapper` → `SettingsPage`) perché usa `useSearchParams()` (regola Next.js App Router)
+- Auth guard: redirect `/login` se non loggato
+- **Flash message**: legge `?google=connected` o `?google=error&reason=...` dai query params (settati da `/api/auth/google/callback`). Dopo averli letti, li rimuove con `window.history.replaceState` per evitare re-flash al refresh
+- **Card Google Drive**:
+  - Stato connesso: mostra `✅ Connesso`, `google_email`, `connected_at` formattata, `last_refresh_error` (se presente)
+  - Bottoni: `🔄 Riconnetti` (link `<a>` → `/api/auth/google/connect`) + `✕ Disconnetti` (POST `/api/auth/google/disconnect`)
+  - Stato non connesso: mostra `⚪ Non connesso` + warning schermata unverified app + bottone `🔗 Connetti Google Drive`
+- **Card Account**: mostra `user.email` dell'utente loggato (placeholder per funzionalità future)
+- Design: `Navbar` + `PageHeader`, palette `#0f2340/#f8fafc/#2563eb`, inline styles (pattern uguale a `/dashboard/locations`)
+
+**`app/api/google/status/route.js`**:
+- `GET /api/google/status`
+- Usa `@supabase/ssr` con cookie per autenticare l'utente corrente
+- Usa service-role client per leggere `user_google_tokens` (bypass RLS)
+- Response: `{ connected: false }` oppure `{ connected: true, google_email, connected_at, scope, last_refresh_error }`
+- `export const dynamic = 'force-dynamic'`
+
+### Feature ✅ — Navbar: Settings entry in NAV_SECONDARY — commit `ca18c2f`
+
+**File**: `lib/navbar.js`
+- Aggiunta voce `Settings` con path `/dashboard/settings` nel dropdown secondario della navbar
+
+---
+
+## WHAT CHANGED IN SESSION S52 (18 Apr – 9 May 2026)
+### Google OAuth per-user — sistema completo
+
+> **Obiettivo**: ogni utente CaptainDispatch può connettere il proprio Google Account. Il `refresh_token` viene cifrato a riposo in DB. Il sistema Drive usa il token dell'owner del file invece del `provider_token` della sessione (che scadeva dopo 1h).
+
+#### Nuova tabella DB: `user_google_tokens`
+```sql
+CREATE TABLE user_google_tokens (
+  user_id               UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  refresh_token_encrypted TEXT NOT NULL,  -- AES-256-GCM encrypted
+  scope                 TEXT,
+  google_email          TEXT,
+  connected_at          TIMESTAMPTZ DEFAULT now(),
+  last_refresh_error    TEXT,
+  last_refresh_error_at TIMESTAMPTZ
+);
+-- RLS: solo service-role può leggere/scrivere (nessuna policy per anon/authenticated)
+```
+
+#### Nuovi file
+
+**`lib/crypto.js`** — commit `5c60eb2`
+- Helper AES-256-GCM per cifrare/decifrare stringhe sensibili a riposo
+- `encrypt(plaintext)` → stringa `"iv:authTag:ciphertext"` (tutto hex)
+- `decrypt(payload)` → plaintext originale
+- Legge chiave da env var `GOOGLE_TOKEN_ENCRYPTION_KEY` (64 hex chars = 32 bytes)
+- Usato da: `app/api/auth/google/callback/route.js` (encrypt) e `lib/googleClient.js` (decrypt)
+
+**`lib/googleClient.js`** — commit `dda3b31`
+- `getGoogleOAuthClient(userId)` → `OAuth2Client` autenticato per l'utente dato
+  - Legge `refresh_token_encrypted` da `user_google_tokens` tramite service-role
+  - Decifra con `decrypt()` da `lib/crypto.js`
+  - Ritorna `google.auth.OAuth2` con `refresh_token` settato (auto-refresh access_token)
+  - Errori: `'NO_GOOGLE_TOKEN'`, `'TOKEN_DECRYPT_FAILED'`, `'GOOGLE_OAUTH_ENV_MISSING'`
+- `getDriveClient(userId)` → convenience wrapper che ritorna `drive_v3` client
+
+**`app/api/auth/google/connect/route.js`** — commit `1f669c1`
+- `GET /api/auth/google/connect`
+- Avvia il flow OAuth Google:
+  1. Verifica sessione Supabase (redirect `/login` se non loggato)
+  2. Genera CSRF state (32 bytes hex) → cookie `g_oauth_state` (HttpOnly, Secure, 10 min)
+  3. Costruisce URL Google con `access_type=offline`, `prompt=consent`, scope `drive.readonly + userinfo.email`
+  4. Redirect 303 → Google
+
+**`app/api/auth/google/callback/route.js`** — commit `8662ebb`
+- `GET /api/auth/google/callback?code=...&state=...`
+- Completa il flow OAuth:
+  1. Verifica CSRF state (cookie `g_oauth_state` == query param `state`)
+  2. Verifica sessione Supabase
+  3. Scambia `code` con Google → `access_token + refresh_token`
+  4. Se no `refresh_token` → error `no_refresh_token` (mitigato da `prompt=consent`)
+  5. Fetch email Google dell'utente (`oauth2.userinfo.get()`)
+  6. Cifra `refresh_token` con `encrypt()` da `lib/crypto.js`
+  7. Upsert in `user_google_tokens` (conflict: `user_id`)
+  8. Redirect → `/dashboard/settings?google=connected` o `?google=error&reason=...`
+- Cookie `g_oauth_state` viene cancellato alla fine (Max-Age=0)
+
+**`app/api/auth/google/disconnect/route.js`** — commit `72ef5f3`
+- `POST /api/auth/google/disconnect`
+- Disconnette Google Drive dell'utente corrente:
+  1. Verifica sessione Supabase
+  2. Carica `refresh_token_encrypted` da `user_google_tokens`
+  3. Best-effort revoke su `https://oauth2.googleapis.com/revoke` (non blocca se fallisce)
+  4. DELETE dalla tabella `user_google_tokens` (sempre, anche se revoke ha fallito)
+  5. Response: `{ ok: true, revoke_status: 'revoked'|'skipped'|'revoke_threw'|... }`
+
+#### Env vars richieste (nuove)
+| Variabile | Descrizione |
+|---|---|
+| `GOOGLE_OAUTH_CLIENT_ID` | OAuth 2.0 client ID da Google Cloud Console |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | OAuth 2.0 client secret |
+| `GOOGLE_OAUTH_REDIRECT_URI` | `https://captaindispatch.com/api/auth/google/callback` |
+| `GOOGLE_TOKEN_ENCRYPTION_KEY` | 64 hex chars (32 bytes) — `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+
+#### `app/api/drive/check-updates/route.js` — migrazione — commit `3674699`
+
+**Cambiamento principale**: rimosso uso di `provider_token` dalla sessione utente corrente (scadeva dopo 1h). Ora ogni file in `drive_synced_files` ha `owner_user_id` → il check-updates carica il client Drive dell'owner del file via `getGoogleOAuthClient(owner_user_id)`.
+
+- Cache per `owner_user_id`: un solo `OAuth2Client` per owner per request (lazy, `Map`)
+- File senza `owner_user_id`: skippati con `{ id, reason: 'no_owner_user_id' }`
+- Errori categorizzati: `owner_not_connected_to_drive`, `token_decrypt_failed`, `google_env_missing`
+- Response aggiornata: `{ files: [...], skipped: [{ id, reason }] }`
+
+---
+
+## WHAT CHANGED IN SESSION S51 (18 April 2026)
+
+### Feature ✅ — `CrewDuplicatesWidget` in Bridge — commit `efd8bd9`
+
+**File nuovi/modificati**:
+- `app/api/crew/merge/route.js` (nuovo)
+- `app/dashboard/bridge/page.js` (+298 righe)
+
+**`app/api/crew/merge/route.js`** — `POST /api/crew/merge`
+- Riceve `{ winner_id, loser_id, production_id }`
+- Verifica autenticazione Supabase
+- Operazioni atomiche (in ordine):
+  1. Ri-assegna `travel_movements.crew_id: loser → winner`
+  2. Ri-assegna `crew_stays.crew_id: loser → winner` (skip duplicati su `crew_id + arrival_date`)
+  3. Ri-assegna `trip_passengers.crew_id: loser → winner` (skip duplicati su `trip_row_id + crew_id`)
+  4. DELETE del crew `loser_id` dalla tabella `crew`
+- Response: `{ ok: true, merged: { travel_movements, stays, trips } }`
+
+**`CrewDuplicatesWidget`** (in `app/dashboard/bridge/page.js`):
+- Rileva crew con stesso `full_name` (case-insensitive, trim) nella stessa produzione
+- Raggruppa i duplicati in coppie: mostra dept, hotel, travel_status, date arrivo/partenza per ognuno
+- UI: card per ogni coppia con due colonne (A vs B) + bottoni `Keep A / Discard B` e `Keep B / Discard A`
+- Merge: chiama `POST /api/crew/merge` con `winner_id` e `loser_id`
+- Dopo merge: ricarica la lista duplicati
+- Posizionato come nuovo widget nel Bridge accanto agli altri widget esistenti
 
 ---
 
