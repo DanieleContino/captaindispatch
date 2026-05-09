@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
+import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
 import { SectionsManagerSidebar } from '../../../lib/SectionsManagerSidebar'
 
 // ─── Utility ──────────────────────────────────────────────────
@@ -89,6 +90,12 @@ function groupByTripId(tripRows) {
 
 // ─── Riga tabella trip ─────────────────────────────────────────
 function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign }) {
+  const dragId = 'trip::' + group.trip_id + '::' + (group.vehicle_id || 'none')
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: dragId,
+    data: { group },
+  })
+
   const mainTime = minToHHMM(group.pickup_min ?? group.call_min)
   const callTime = minToHHMM(group.call_min)
   const totalPax = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
@@ -111,7 +118,9 @@ function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor,
   const hasInfoBar = showHubInfo && (hubTerminal || tripNotes)
 
   return (
-    <div className="trip-row" style={{
+    <div ref={setNodeRef} {...attributes} {...listeners} className="trip-row" style={{
+      opacity: isDragging ? 0.4 : 1,
+      cursor: 'grab',
       display: 'grid',
       gridTemplateColumns: '56px 50px 58px 110px 1fr 36px 36px',
       gap: '0 6px',
@@ -515,6 +524,26 @@ function TransportListFooter() {
   )
 }
 
+// ─── Drop target wrapper for section headers ───────────────────
+function DropTargetWrapper({ sectionId, children }) {
+  const dropId = 'section::' + (sectionId || 'unassigned')
+  const { setNodeRef, isOver } = useDroppable({
+    id: dropId,
+    data: { sectionId },
+  })
+  return (
+    <div ref={setNodeRef} style={{
+      background: isOver ? '#dbeafe' : 'transparent',
+      outline: isOver ? '2px dashed #2563eb' : 'none',
+      outlineOffset: '-2px',
+      borderRadius: '4px',
+      transition: 'background 0.1s',
+    }}>
+      {children}
+    </div>
+  )
+}
+
 // ─── Pagina principale ─────────────────────────────────────────
 export default function ListsPage() {
   const router = useRouter()
@@ -529,6 +558,25 @@ export default function ListsPage() {
       const [sections, setSections] = useState([])
       const [assignments, setAssignments] = useState([])
       const [moveMenuOpenFor, setMoveMenuOpenFor] = useState(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  )
+  const [activeDrag, setActiveDrag] = useState(null)
+  function handleDragStart(event) {
+    setActiveDrag(event.active.data.current?.group || null)
+  }
+  function handleDragEnd(event) {
+    setActiveDrag(null)
+    const { active, over } = event
+    if (!over) return
+    const group = active.data.current?.group
+    const sectionId = over.data.current?.sectionId
+    if (!group) return
+    // sectionId can be null (Unassigned) or a uuid
+    assignGroupToSection(group, sectionId === undefined ? null : sectionId)
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -646,6 +694,7 @@ export default function ListsPage() {
 
         @media print {
           .no-print { display: none !important; }
+          [data-dnd-overlay] { display: none !important; }
           
           * { 
             -webkit-print-color-adjust: exact !important; 
@@ -775,6 +824,7 @@ export default function ListsPage() {
             <div style={{ color: '#64748b', fontSize: '15px', fontWeight: '600' }}>No trips for {fmtDateLong(date)}</div>
           </div>
         ) : (
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="print-card" style={{ background: 'white', borderRadius: '10px', padding: '16px 20px', border: '1px solid #e2e8f0' }}>
 
             {/* Intestazione colonne */}
@@ -826,17 +876,51 @@ export default function ListsPage() {
                 const color = sectionColors[colorIdx % sectionColors.length]
                 if (isSub) {
                   return (
-                    <div key={section.id}>
+                    <DropTargetWrapper key={section.id} sectionId={section.id}>
+                      <div>
+                        <div className="section-header" style={{
+                          fontSize: '10px', fontWeight: '700', color: '#374151',
+                          background: '#f1f5f9',
+                          padding: '4px 12px', marginTop: '4px',
+                          pageBreakAfter: 'avoid',
+                          borderLeft: `3px solid ${color}`,
+                        }}>
+                          {section.name}
+                          <span style={{ marginLeft: '6px', color: '#94a3b8', fontWeight: '500' }}>
+                            ({groups.length})
+                          </span>
+                        </div>
+                        {groups.map(group => (
+                          <TripTableRow
+                            key={group.trip_id + '::' + (group.vehicle_id || 'none')}
+                            group={group}
+                            locsMap={locsMap}
+                            sectionColor={color}
+                            sections={sections}
+                            moveMenuOpenFor={moveMenuOpenFor}
+                            setMoveMenuOpenFor={setMoveMenuOpenFor}
+                            onAssign={assignGroupToSection}
+                          />
+                        ))}
+                      </div>
+                    </DropTargetWrapper>
+                  )
+                }
+                return (
+                  <div key={section.id}>
+                    <DropTargetWrapper sectionId={section.id}>
                       <div className="section-header" style={{
-                        fontSize: '10px', fontWeight: '700', color: '#374151',
-                        background: '#f1f5f9',
-                        padding: '4px 12px', marginTop: '4px',
+                        fontSize: '11px', fontWeight: '800', color: 'white',
+                        background: color,
+                        padding: '5px 8px', marginTop: '8px',
                         pageBreakAfter: 'avoid',
-                        borderLeft: `3px solid ${color}`,
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
                       }}>
-                        {section.name}
-                        <span style={{ marginLeft: '6px', color: '#94a3b8', fontWeight: '500' }}>
-                          ({groups.length})
+                        <span>{section.name}</span>
+                        <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
+                          {groups.length}
                         </span>
                       </div>
                       {groups.map(group => (
@@ -851,37 +935,7 @@ export default function ListsPage() {
                           onAssign={assignGroupToSection}
                         />
                       ))}
-                    </div>
-                  )
-                }
-                return (
-                  <div key={section.id}>
-                    <div className="section-header" style={{
-                      fontSize: '11px', fontWeight: '800', color: 'white',
-                      background: color,
-                      padding: '5px 8px', marginTop: '8px',
-                      pageBreakAfter: 'avoid',
-                      display: 'flex', alignItems: 'center', gap: '8px',
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                    }}>
-                      <span>{section.name}</span>
-                      <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
-                        {groups.length}
-                      </span>
-                    </div>
-                    {groups.map(group => (
-                      <TripTableRow
-                        key={group.trip_id + '::' + (group.vehicle_id || 'none')}
-                        group={group}
-                        locsMap={locsMap}
-                        sectionColor={color}
-                        sections={sections}
-                        moveMenuOpenFor={moveMenuOpenFor}
-                        setMoveMenuOpenFor={setMoveMenuOpenFor}
-                        onAssign={assignGroupToSection}
-                      />
-                    ))}
+                    </DropTargetWrapper>
                     {(subsByParent[section.id] || []).map((sub, si) => renderSectionBlock(sub, true, colorIdx))}
                   </div>
                 )
@@ -893,7 +947,7 @@ export default function ListsPage() {
                     <>
                       {macros.map((m, mi) => renderSectionBlock(m, false, mi))}
                       {unassignedGroups.length > 0 && (
-                        <div>
+                        <DropTargetWrapper sectionId={null}>
                           <div className="section-header" style={{
                             fontSize: '11px', fontWeight: '800', color: '#64748b',
                             background: '#f1f5f9',
@@ -925,7 +979,7 @@ export default function ListsPage() {
                               onAssign={assignGroupToSection}
                             />
                           ))}
-                        </div>
+                        </DropTargetWrapper>
                       )}
                     </>
                   )}
@@ -934,6 +988,25 @@ export default function ListsPage() {
             })()}
 
           </div>
+          <DragOverlay>
+            {activeDrag ? (
+              <div style={{
+                background: 'white',
+                border: '2px solid #2563eb',
+                borderRadius: '6px',
+                padding: '6px 10px',
+                fontSize: '11px',
+                fontWeight: '700',
+                color: '#0f172a',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                cursor: 'grabbing',
+              }}>
+                {activeDrag.trip_id}
+                {activeDrag.vehicle_id && <span style={{ color: '#64748b', marginLeft: '6px' }}>· {activeDrag.vehicle_id}</span>}
+              </div>
+            ) : null}
+          </DragOverlay>
+          </DndContext>
         )}
 
         {/* ── Transport List Footer (nuovo layout) ── */}
