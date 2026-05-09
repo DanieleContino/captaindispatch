@@ -407,24 +407,27 @@ function TransportListHeader({ production, date }) {
             />
           )}
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: '700', color: textPrimary, marginBottom: '3px' }}>
-              {prod.name || 'Production'}
+            {/* EDIT 2.6 — DIG-style large uppercase title */}
+            <div style={{ fontSize: '20px', fontWeight: '700', color: textPrimary, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+              Transport list — {prod.name || 'Production'}
               <span style={{
                 display: 'inline-block',
-                fontSize: '7px',
+                fontSize: '8px',
                 background: '#fef2f2',
                 color: '#dc2626',
-                padding: '1px 5px',
+                padding: '2px 6px',
                 borderRadius: '3px',
-                marginLeft: '6px',
-                fontWeight: '800',
+                marginLeft: '8px',
+                fontWeight: '700',
                 letterSpacing: '0.05em',
+                verticalAlign: 'middle',
               }}>
                 CONFIDENTIAL
               </span>
             </div>
-            <div style={{ color: textSecondary, fontSize: '9px' }}>
-              Transport List · {dateDisplay} · Call: <strong style={{ color: textPrimary }}>{callTime}</strong>
+            {/* EDIT 2.7 — tighter secondary line */}
+            <div style={{ color: textSecondary, fontSize: '11px', marginTop: '2px' }}>
+              {dateDisplay} · Call: <strong style={{ color: textPrimary }}>{callTime}</strong>
             </div>
             {(setLabel !== '–' || basecampLabel !== '–') && (
               <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: `1px solid ${borderColor}`, fontSize: '9px', color: textSecondary }}>
@@ -690,7 +693,9 @@ export default function ListsPage() {
 
       {/* ══ STILI GLOBALI ══ */}
       <style>{`
-        .trip-row { font-size: 13px; }
+        .trip-row { font-size: 13px; font-family: 'Helvetica Neue', Arial, sans-serif; }
+        .print-card, .section-header, .col-header { font-family: 'Helvetica Neue', Arial, sans-serif; }
+        .print-wrap, .print-card { font-family: 'Helvetica Neue', Arial, sans-serif; }
 
         @media print {
           .no-print { display: none !important; }
@@ -868,26 +873,29 @@ export default function ListsPage() {
                 }
               }
 
-              // Color palette for section headers (by display_order index, cycling)
-              const sectionColors = ['#2563eb', '#16a34a', '#ea580c', '#7c3aed', '#0891b2', '#db2777']
+              // DIG-style: single neutral palette, no per-section color rotation
+              const SECTION_COLOR_BORDER = '#475569'
 
               function renderSectionBlock(section, isSub, colorIdx) {
                 const groups = groupsBySection[section.id] || []
-                const color = sectionColors[colorIdx % sectionColors.length]
+                const color = SECTION_COLOR_BORDER
                 if (isSub) {
                   return (
                     <DropTargetWrapper key={section.id} sectionId={section.id}>
                       <div>
+                        {/* EDIT 2.3 — DIG-style SUB section header: dark-grey */}
                         <div className="section-header" style={{
-                          fontSize: '10px', fontWeight: '700', color: '#374151',
-                          background: '#f1f5f9',
-                          padding: '4px 12px', marginTop: '4px',
+                          fontSize: '12px', fontWeight: '700', color: 'white',
+                          background: '#475569',
+                          padding: '5px 14px', marginTop: 0,
                           pageBreakAfter: 'avoid',
-                          borderLeft: `3px solid ${color}`,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          display: 'flex', alignItems: 'center', gap: '8px',
                         }}>
-                          {section.name}
-                          <span style={{ marginLeft: '6px', color: '#94a3b8', fontWeight: '500' }}>
-                            ({groups.length})
+                          <span>{section.name}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: '400', fontSize: '11px' }}>
+                            {groups.length}
                           </span>
                         </div>
                         {groups.map(group => (
@@ -909,17 +917,18 @@ export default function ListsPage() {
                 return (
                   <div key={section.id}>
                     <DropTargetWrapper sectionId={section.id}>
+                      {/* EDIT 2.4 — DIG-style MACRO section header: near-black */}
                       <div className="section-header" style={{
-                        fontSize: '11px', fontWeight: '800', color: 'white',
-                        background: color,
-                        padding: '5px 8px', marginTop: '8px',
+                        fontSize: '14px', fontWeight: '700', color: 'white',
+                        background: '#1e293b',
+                        padding: '7px 14px', marginTop: '12px',
                         pageBreakAfter: 'avoid',
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        letterSpacing: '0.04em',
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        letterSpacing: '0.08em',
                         textTransform: 'uppercase',
                       }}>
                         <span>{section.name}</span>
-                        <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
+                        <span style={{ background: 'rgba(255,255,255,0.18)', borderRadius: '3px', padding: '1px 7px', fontSize: '11px', fontWeight: '600' }}>
                           {groups.length}
                         </span>
                       </div>
@@ -948,13 +957,15 @@ export default function ListsPage() {
                       {macros.map((m, mi) => renderSectionBlock(m, false, mi))}
                       {unassignedGroups.length > 0 && (
                         <DropTargetWrapper sectionId={null}>
+                          {/* EDIT 2.5 — DIG-style UNASSIGNED header */}
                           <div className="section-header" style={{
-                            fontSize: '11px', fontWeight: '800', color: '#64748b',
-                            background: '#f1f5f9',
-                            padding: '5px 8px', marginTop: '12px',
+                            fontSize: '11px', fontWeight: '700', color: '#64748b',
+                            background: 'white',
+                            padding: '5px 14px', marginTop: '14px',
                             pageBreakAfter: 'avoid',
                             display: 'flex', alignItems: 'center', gap: '8px',
-                            letterSpacing: '0.04em',
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
                             border: '1px dashed #cbd5e1',
                           }}>
                             <span>UNASSIGNED</span>
