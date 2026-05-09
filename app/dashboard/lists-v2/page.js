@@ -88,7 +88,7 @@ function groupByTripId(tripRows) {
 }
 
 // ─── Riga tabella trip ─────────────────────────────────────────
-function TripTableRow({ group, locsMap, sectionColor }) {
+function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign }) {
   const mainTime = minToHHMM(group.pickup_min ?? group.call_min)
   const callTime = minToHHMM(group.call_min)
   const totalPax = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
@@ -268,8 +268,80 @@ function TripTableRow({ group, locsMap, sectionColor }) {
       <div style={{ fontWeight: '800', color: '#0f172a', textAlign: 'center', fontSize: '12px', lineHeight: 1.2 }}>
         {totalPax}
       </div>
-      <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'center', lineHeight: 1.2 }}>
+      <div style={{ fontSize: '11px', color: '#64748b', textAlign: 'center', lineHeight: 1.2, position: 'relative' }}>
         {group.capacity || '–'}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            const k = group.trip_id + '::' + (group.vehicle_id || 'none')
+            setMoveMenuOpenFor(moveMenuOpenFor === k ? null : k)
+          }}
+          className="no-print"
+          style={{
+            display: 'block', width: '100%', marginTop: '4px',
+            padding: '2px 4px', borderRadius: '4px',
+            border: '1px solid #e2e8f0', background: 'white',
+            fontSize: '9px', fontWeight: '700', color: '#64748b',
+            cursor: 'pointer',
+          }}>
+          Move to
+        </button>
+        {moveMenuOpenFor === (group.trip_id + '::' + (group.vehicle_id || 'none')) && (
+          <>
+            <div onClick={() => setMoveMenuOpenFor(null)}
+              className="no-print"
+              style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
+            <div className="no-print" style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: '2px',
+              background: 'white', border: '1px solid #cbd5e1',
+              borderRadius: '7px', padding: '4px',
+              minWidth: '180px', zIndex: 61,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              textAlign: 'left',
+            }}>
+              {sections.length === 0 ? (
+                <div style={{ padding: '6px 10px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                  No sections yet. Use &quot;Manage sections&quot; first.
+                </div>
+              ) : sections.map(s => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => onAssign(group, s.id)}
+                  style={{
+                    display: 'block', width: '100%',
+                    padding: '5px 10px', textAlign: 'left',
+                    background: 'transparent', border: 'none',
+                    fontSize: '12px',
+                    fontWeight: s.parent_id ? '500' : '700',
+                    color: '#0f172a',
+                    paddingLeft: s.parent_id ? '20px' : '10px',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  {s.parent_id ? s.name : s.name.toUpperCase()}
+                </button>
+              ))}
+              <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '4px', paddingTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => onAssign(group, null)}
+                  style={{
+                    display: 'block', width: '100%',
+                    padding: '5px 10px', textAlign: 'left',
+                    background: 'transparent', border: 'none',
+                    fontSize: '11px', color: '#dc2626', cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  Unassign
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -452,8 +524,11 @@ export default function ListsPage() {
   const [locsMap,    setLocsMap]    = useState({})
   const [loading,    setLoading]    = useState(true)
   const [production, setProduction] = useState(null)
-  const [prodId,     setProdId]     = useState('')
-  const [sectionsOpen, setSectionsOpen] = useState(false)
+      const [prodId,     setProdId]     = useState('')
+      const [sectionsOpen, setSectionsOpen] = useState(false)
+      const [sections, setSections] = useState([])
+      const [assignments, setAssignments] = useState([])
+      const [moveMenuOpenFor, setMoveMenuOpenFor] = useState(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -480,32 +555,83 @@ export default function ListsPage() {
     const id = getProductionId()
     if (!id) { setLoading(false); return }
     setLoading(true)
-    const [tR, lR, vR] = await Promise.all([
+    const [tR, lR, vR, sR, aR] = await Promise.all([
       supabase.from('trips').select('*')
         .eq('production_id', id).eq('date', d)
         .neq('status', 'CANCELLED')
         .order('pickup_min', { ascending: true, nullsLast: true }),
       supabase.from('locations').select('id,name,default_pickup_point').eq('production_id', id),
       supabase.from('vehicles').select('id').eq('production_id', id).eq('in_transport', true),
+      supabase.from('transport_list_sections').select('*')
+        .eq('production_id', id).eq('date', d)
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: true }),
+      supabase.from('transport_list_section_assignments').select('*')
+        .eq('production_id', id).eq('date', d),
     ])
-    // Filtra trip: escludi quelli assegnati a veicoli con in_transport=false (SD)
     const inTransportIds = new Set((vR.data || []).map(v => v.id))
     const trips = (tR.data || []).filter(t => !t.vehicle_id || inTransportIds.has(t.vehicle_id))
     setTrips(trips)
     if (lR.data) {
       const m = {}; lR.data.forEach(l => { m[l.id] = { name: l.name, pickup_point: l.default_pickup_point } }); setLocsMap(m)
     }
+    setSections(sR.data || [])
+    setAssignments(aR.data || [])
     setLoading(false)
   }, [])
 
+  // Build lookup: assignment by trip group key
+  const assignmentByKey = {}
+  for (const a of assignments) {
+    const key = a.base_trip_id + '::' + (a.vehicle_id || '__none__')
+    assignmentByKey[key] = a
+  }
+
+  // Group sections into MACRO/SUB hierarchy
+  const macros = sections.filter(s => !s.parent_id)
+  const subsByParent = sections.reduce((acc, s) => {
+    if (s.parent_id) {
+      if (!acc[s.parent_id]) acc[s.parent_id] = []
+      acc[s.parent_id].push(s)
+    }
+    return acc
+  }, {})
+
+  async function assignGroupToSection(group, sectionId) {
+    const id = getProductionId()
+    if (!id) return
+    const baseId = group.trip_id
+    const vehId  = group.vehicle_id || null
+    const key = baseId + '::' + (vehId || '__none__')
+    const existing = assignmentByKey[key]
+    if (sectionId === null) {
+      // Unassign
+      if (existing) {
+        await supabase.from('transport_list_section_assignments')
+          .delete().eq('id', existing.id)
+      }
+    } else if (existing) {
+      await supabase.from('transport_list_section_assignments')
+        .update({ section_id: sectionId })
+        .eq('id', existing.id)
+    } else {
+      await supabase.from('transport_list_section_assignments')
+        .insert({
+          production_id: id,
+          date,
+          base_trip_id: baseId,
+          vehicle_id: vehId,
+          section_id: sectionId,
+        })
+    }
+    setMoveMenuOpenFor(null)
+    loadData(date)
+  }
+
   useEffect(() => { if (user) loadData(date) }, [user, date, loadData])
 
-  const standard   = groupByTripId(trips.filter(t => t.transfer_class === 'STANDARD'))
-  const arrivals   = groupByTripId(trips.filter(t => t.transfer_class === 'ARRIVAL'))
-  const departures = groupByTripId(trips.filter(t => t.transfer_class === 'DEPARTURE'))
-
   const totalPax   = trips.reduce((s, t) => s + (t.pax_count || 0), 0)
-  const totalTrips = standard.length + arrivals.length + departures.length
+  const totalTrips = groupByTripId(trips).length
 
   if (!user) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
@@ -674,68 +800,138 @@ export default function ListsPage() {
               <div style={{ textAlign: 'center' }}>CAP</div>
             </div>
 
-            {/* ── STANDARD ── */}
-            {standard.length > 0 && (
-              <>
-                <div className="section-header" style={{
-                  fontSize: '11px', fontWeight: '800', color: 'white',
-                  background: '#2563eb',
-                  padding: '5px 8px', marginTop: '8px',
-                  pageBreakAfter: 'avoid',
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                }}>
-                  <span>🚌 TRANSPORT LIST</span>
-                  <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
-                    {standard.length} trip{standard.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                {standard.map(group => (
-                  <TripTableRow key={group.trip_id} group={group} locsMap={locsMap} sectionColor="#2563eb" />
-                ))}
-              </>
-            )}
+            {(() => {
+              // All grouped trips for this day
+              const allGroups = groupByTripId(trips)
 
-            {/* ── ARRIVALS ── */}
-            {arrivals.length > 0 && (
-              <>
-                <div className="section-header" style={{
-                  fontSize: '11px', fontWeight: '800', color: 'white',
-                  background: '#16a34a',
-                  padding: '5px 8px', marginTop: '10px',
-                  pageBreakAfter: 'avoid',
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                }}>
-                  <span>✈ 🛬 TRAVEL LIST — ARRIVALS</span>
-                  <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
-                    {arrivals.length} trip{arrivals.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                {arrivals.map(group => (
-                  <TripTableRow key={group.trip_id} group={group} locsMap={locsMap} sectionColor="#16a34a" />
-                ))}
-              </>
-            )}
+              // Build section -> groups map
+              const groupsBySection = {}
+              const unassignedGroups = []
+              for (const g of allGroups) {
+                const key = g.trip_id + '::' + (g.vehicle_id || '__none__')
+                const a = assignmentByKey[key]
+                if (a) {
+                  if (!groupsBySection[a.section_id]) groupsBySection[a.section_id] = []
+                  groupsBySection[a.section_id].push(g)
+                } else {
+                  unassignedGroups.push(g)
+                }
+              }
 
-            {/* ── DEPARTURES ── */}
-            {departures.length > 0 && (
-              <>
-                <div className="section-header" style={{
-                  fontSize: '11px', fontWeight: '800', color: 'white',
-                  background: '#ea580c',
-                  padding: '5px 8px', marginTop: '10px',
-                  pageBreakAfter: 'avoid',
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                }}>
-                  <span>✈ 🛫 TRAVEL LIST — DEPARTURES</span>
-                  <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
-                    {departures.length} trip{departures.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                {departures.map(group => (
-                  <TripTableRow key={group.trip_id} group={group} locsMap={locsMap} sectionColor="#ea580c" />
-                ))}
-              </>
-            )}
+              // Color palette for section headers (by display_order index, cycling)
+              const sectionColors = ['#2563eb', '#16a34a', '#ea580c', '#7c3aed', '#0891b2', '#db2777']
+
+              function renderSectionBlock(section, isSub, colorIdx) {
+                const groups = groupsBySection[section.id] || []
+                const color = sectionColors[colorIdx % sectionColors.length]
+                if (isSub) {
+                  return (
+                    <div key={section.id}>
+                      <div className="section-header" style={{
+                        fontSize: '10px', fontWeight: '700', color: '#374151',
+                        background: '#f1f5f9',
+                        padding: '4px 12px', marginTop: '4px',
+                        pageBreakAfter: 'avoid',
+                        borderLeft: `3px solid ${color}`,
+                      }}>
+                        {section.name}
+                        <span style={{ marginLeft: '6px', color: '#94a3b8', fontWeight: '500' }}>
+                          ({groups.length})
+                        </span>
+                      </div>
+                      {groups.map(group => (
+                        <TripTableRow
+                          key={group.trip_id + '::' + (group.vehicle_id || 'none')}
+                          group={group}
+                          locsMap={locsMap}
+                          sectionColor={color}
+                          sections={sections}
+                          moveMenuOpenFor={moveMenuOpenFor}
+                          setMoveMenuOpenFor={setMoveMenuOpenFor}
+                          onAssign={assignGroupToSection}
+                        />
+                      ))}
+                    </div>
+                  )
+                }
+                return (
+                  <div key={section.id}>
+                    <div className="section-header" style={{
+                      fontSize: '11px', fontWeight: '800', color: 'white',
+                      background: color,
+                      padding: '5px 8px', marginTop: '8px',
+                      pageBreakAfter: 'avoid',
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                    }}>
+                      <span>{section.name}</span>
+                      <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
+                        {groups.length}
+                      </span>
+                    </div>
+                    {groups.map(group => (
+                      <TripTableRow
+                        key={group.trip_id + '::' + (group.vehicle_id || 'none')}
+                        group={group}
+                        locsMap={locsMap}
+                        sectionColor={color}
+                        sections={sections}
+                        moveMenuOpenFor={moveMenuOpenFor}
+                        setMoveMenuOpenFor={setMoveMenuOpenFor}
+                        onAssign={assignGroupToSection}
+                      />
+                    ))}
+                    {(subsByParent[section.id] || []).map((sub, si) => renderSectionBlock(sub, true, colorIdx))}
+                  </div>
+                )
+              }
+
+              return (
+                <>
+                  {macros.length === 0 && unassignedGroups.length === 0 ? null : (
+                    <>
+                      {macros.map((m, mi) => renderSectionBlock(m, false, mi))}
+                      {unassignedGroups.length > 0 && (
+                        <div>
+                          <div className="section-header" style={{
+                            fontSize: '11px', fontWeight: '800', color: '#64748b',
+                            background: '#f1f5f9',
+                            padding: '5px 8px', marginTop: '12px',
+                            pageBreakAfter: 'avoid',
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            letterSpacing: '0.04em',
+                            border: '1px dashed #cbd5e1',
+                          }}>
+                            <span>UNASSIGNED</span>
+                            <span style={{ background: '#e2e8f0', borderRadius: '4px', padding: '0 6px', fontSize: '10px' }}>
+                              {unassignedGroups.length}
+                            </span>
+                            {macros.length === 0 && (
+                              <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#94a3b8', fontWeight: '500', textTransform: 'none', letterSpacing: 0 }}>
+                                Click &quot;Manage sections&quot; to organize
+                              </span>
+                            )}
+                          </div>
+                          {unassignedGroups.map(group => (
+                            <TripTableRow
+                              key={group.trip_id + '::' + (group.vehicle_id || 'none')}
+                              group={group}
+                              locsMap={locsMap}
+                              sectionColor="#cbd5e1"
+                              sections={sections}
+                              moveMenuOpenFor={moveMenuOpenFor}
+                              setMoveMenuOpenFor={setMoveMenuOpenFor}
+                              onAssign={assignGroupToSection}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )
+            })()}
 
           </div>
         )}
