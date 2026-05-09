@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
+import { SectionsManagerSidebar } from '../../../lib/SectionsManagerSidebar'
 
 // ─── Utility ──────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
@@ -452,6 +453,7 @@ export default function ListsPage() {
   const [loading,    setLoading]    = useState(true)
   const [production, setProduction] = useState(null)
   const [prodId,     setProdId]     = useState('')
+  const [sectionsOpen, setSectionsOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -609,10 +611,16 @@ export default function ListsPage() {
             {totalTrips} trips · {totalPax} pax
           </span>
           {production && (
-            <a href="/dashboard/settings/production"
-              style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', textDecoration: 'none', cursor: 'pointer' }}>
-              ⚙️ Edit Header
-            </a>
+            <>
+              <button onClick={() => setSectionsOpen(true)}
+                style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                Manage sections
+              </button>
+              <a href="/dashboard/settings/production"
+                style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', textDecoration: 'none', cursor: 'pointer' }}>
+                ⚙️ Edit Header
+              </a>
+            </>
           )}
           <button onClick={() => window.print()}
             style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 18px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -735,6 +743,11 @@ export default function ListsPage() {
         {/* ── Transport List Footer (nuovo layout) ── */}
         <TransportListFooter />
 
+      <SectionsManagerSidebar
+        open={sectionsOpen}
+        onClose={() => setSectionsOpen(false)}
+        date={date}
+      />
       </div>
     </div>
   )
