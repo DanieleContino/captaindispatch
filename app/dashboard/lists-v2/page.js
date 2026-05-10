@@ -613,6 +613,7 @@ export default function ListsPage() {
         .trip-row { font-size: 13px; font-family: 'Helvetica Neue', Arial, sans-serif; }
         .print-card, .section-header, .col-header { font-family: 'Helvetica Neue', Arial, sans-serif; }
         .print-wrap, .print-card { font-family: 'Helvetica Neue', Arial, sans-serif; }
+        .show-only-on-print { display: none; }
 
         @media print {
           .no-print { display: none !important; }
@@ -667,6 +668,14 @@ export default function ListsPage() {
             margin: 0 !important;
             width: 100% !important;
           }
+
+          /* EG-5 print refinements */
+          .no-print, [class*="no-print"] { display: none !important; }
+          .col-header { position: sticky; top: 0; }
+          .trip-row { break-inside: avoid; page-break-inside: avoid; }
+          .section-header { break-after: avoid; page-break-after: avoid; }
+          [data-eg-no-print="true"] { display: none !important; }
+          .show-only-on-print { display: block !important; }
         }
 
         @page {
@@ -713,26 +722,31 @@ export default function ListsPage() {
                 <button
                   onClick={applyCaptainPreset}
                   disabled={applyingPreset}
+                  className="no-print"
                   style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #2563eb', background: applyingPreset ? '#cbd5e1' : '#2563eb', color: 'white', fontSize: '12px', fontWeight: '700', cursor: applyingPreset ? 'default' : 'pointer' }}>
                   {applyingPreset ? 'Applying…' : 'Apply Captain Preset'}
                 </button>
               )}
               <button
                 onClick={() => setColumnsEditorOpen(true)}
+                className="no-print"
                 style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                 Columns editor
               </button>
               <button onClick={() => setSectionsOpen(true)}
+                className="no-print"
                 style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                 Manage sections
               </button>
               <a href="/dashboard/settings/production"
+                className="no-print"
                 style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', textDecoration: 'none', cursor: 'pointer' }}>
                 ⚙️ Edit Header
               </a>
             </>
           )}
           <button onClick={() => window.print()}
+            className="no-print"
             style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 18px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
             🖨 Print / PDF
           </button>
