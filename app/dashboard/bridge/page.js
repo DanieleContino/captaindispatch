@@ -97,6 +97,42 @@ function defaultFieldChoices(selCrew) {
   return choices
 }
 
+// ── ResultPreview (merge modal) ───────────────────────────
+function ResultPreview({ selCrew, fieldChoices, hotelLabel }) {
+  const [open, setOpen] = useState(true)
+  const getVal = (key) => {
+    const src = selCrew.find(c => c.id === fieldChoices[key])
+    return src?.[key] ?? null
+  }
+  return (
+    <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '16px', overflow: 'hidden' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151' }}>
+        <span>👁 Preview of merged record</span>
+        <span style={{ color: '#94a3b8', fontSize: '10px' }}>{open ? '▲ Hide' : '▼ Show'}</span>
+      </button>
+      {open && (
+        <div style={{ padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
+          {CREW_MERGE_FIELDS.map(({ key, label: fLabel }) => {
+            const val = getVal(key)
+            if (!val) return null
+            return (
+              <div key={key} style={{ fontSize: '12px', display: 'flex', gap: '4px', minWidth: 0 }}>
+                <span style={{ color: '#94a3b8', flexShrink: 0 }}>{fLabel}:</span>
+                <strong style={{ color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {key === 'hotel_id' ? hotelLabel(val) : String(val)}
+                </strong>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── CrewDuplicatesWidget ──────────────────────────────────
 function CrewDuplicatesWidget({ productionId, locations }) {
   const [dupeGroups, setDupeGroups] = useState([])
@@ -252,68 +288,124 @@ function CrewDuplicatesWidget({ productionId, locations }) {
 
             <div style={{ padding: '20px 24px' }}>
 
-              {/* Primary selector */}
+              {/* ── Step 1: Primary record selector ── */}
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ ...lbl, marginBottom: '8px' }}>Primary record (kept after merge)</div>
+                <div style={{ ...lbl, marginBottom: '8px' }}>1 — Choose the primary record (this one will be KEPT)</div>
                 {mergeCtx.selCrew.map((c, idx) => (
-                  <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', marginBottom: '6px', cursor: 'pointer', border: `2px solid ${primaryId === c.id ? '#0f2340' : '#e2e8f0'}`, background: primaryId === c.id ? '#f0f4ff' : 'white' }}>
-                    <input type="radio" name="mergeP" value={c.id} checked={primaryId === c.id} onChange={() => setPrimaryId(c.id)} />
-                    <div>
-                      <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', marginRight: '6px' }}>{c.id}</span>
-                      <strong>{c.full_name}</strong>
-                      <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>{idx === 0 ? '(older · recommended)' : '(newer)'}</span>
-                    </div>
-                  </label>
+                  <div key={c.id} style={{ marginBottom: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', border: `2px solid ${primaryId === c.id ? '#16a34a' : '#e2e8f0'}`, background: primaryId === c.id ? '#f0fdf4' : 'white' }}>
+                      <input type="radio" name="mergeP" value={c.id} checked={primaryId === c.id} onChange={() => setPrimaryId(c.id)} />
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', marginRight: '6px' }}>{c.id}</span>
+                        <strong>{c.full_name}</strong>
+                        <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>{idx === 0 ? '(older · recommended)' : '(newer)'}</span>
+                        {primaryId === c.id && <span style={{ marginLeft: '8px', fontSize: '11px', color: '#16a34a', fontWeight: '700' }}>✓ KEPT</span>}
+                      </div>
+                    </label>
+                    {/* "Use all values" shortcut */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrimaryId(c.id)
+                        const choices = {}
+                        CREW_MERGE_FIELDS.forEach(({ key }) => { choices[key] = c.id })
+                        setFieldChoices(choices)
+                      }}
+                      style={{ marginTop: '3px', marginLeft: '14px', fontSize: '11px', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', textDecoration: 'underline' }}>
+                      ← Use all values from this record
+                    </button>
+                  </div>
                 ))}
               </div>
 
-              {/* Field comparison table */}
-              <div style={{ ...lbl, marginBottom: '10px' }}>Field comparison — select value to keep</div>
+              {/* ── Step 2: Field comparison table ── */}
+              <div style={{ ...lbl, marginBottom: '8px' }}>2 — Click a value to keep it (green = selected)</div>
               <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginBottom: '18px' }}>
-                {(() => {
-                  const rows = CREW_MERGE_FIELDS.map(({ key, label: fLabel }) => {
-                    const vals = mergeCtx.selCrew.map(c => ({ id: c.id, val: c[key] }))
-                    const uq = new Set(vals.map(v => String(v.val ?? '')))
-                    if (uq.size === 1) return null // identical or all-null → skip
-                    const cols = `90px ${mergeCtx.selCrew.map(() => '1fr').join(' ')} 56px`
-                    return (
-                      <div key={key} style={{ display: 'grid', gridTemplateColumns: cols, borderBottom: '1px solid #f1f5f9', alignItems: 'center', minHeight: '36px' }}>
-                        <div style={{ padding: '6px 10px', fontSize: '11px', fontWeight: '700', color: '#64748b', borderRight: '1px solid #f1f5f9' }}>{fLabel}</div>
-                        {vals.map(({ id, val }) => (
-                          <div key={id} style={{ padding: '6px 8px', fontSize: '12px', color: val ? '#0f172a' : '#94a3b8', fontStyle: val ? 'normal' : 'italic', borderRight: '1px solid #f1f5f9', wordBreak: 'break-word' }}>
-                            {key === 'hotel_id' ? hotelLabel(val) : (val || '—')}
-                          </div>
-                        ))}
-                        <div style={{ padding: '4px 8px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-                          {vals.map(({ id }, i) => (
-                            <label key={id} style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
-                              <input type="radio" name={`fc-${key}`} value={id} checked={fieldChoices[key] === id} onChange={() => setFieldChoices(p => ({ ...p, [key]: id }))} />
-                              <span style={{ fontFamily: 'monospace', fontSize: '9px', color: '#64748b' }}>{i + 1}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  }).filter(Boolean)
 
-                  return rows.length > 0 ? rows : (
-                    <div style={{ padding: '14px 16px', fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
-                      All fields are identical — no choices needed.
+                {/* Table column headers */}
+                <div style={{ display: 'grid', gridTemplateColumns: `100px ${mergeCtx.selCrew.map(() => '1fr').join(' ')}`, background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <div style={{ padding: '7px 10px', fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Field</div>
+                  {mergeCtx.selCrew.map((c, idx) => (
+                    <div key={c.id} style={{ padding: '7px 10px', fontSize: '10px', fontWeight: '800', color: primaryId === c.id ? '#16a34a' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderLeft: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontFamily: 'monospace' }}>{c.id}</span>
+                      {primaryId === c.id && <span style={{ marginLeft: '4px' }}>✓</span>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Table rows */}
+                {CREW_MERGE_FIELDS.map(({ key, label: fLabel }) => {
+                  const vals = mergeCtx.selCrew.map(c => ({ id: c.id, val: c[key] }))
+                  const uq = new Set(vals.map(v => String(v.val ?? '')))
+                  const isIdentical = uq.size === 1
+
+                  return (
+                    <div key={key} style={{ display: 'grid', gridTemplateColumns: `100px ${mergeCtx.selCrew.map(() => '1fr').join(' ')}`, borderBottom: '1px solid #f1f5f9', alignItems: 'stretch', minHeight: '36px' }}>
+                      {/* Field label */}
+                      <div style={{ padding: '8px 10px', fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'flex', alignItems: 'center', background: isIdentical ? '#fafafa' : 'white' }}>
+                        {fLabel}
+                      </div>
+
+                      {isIdentical ? (
+                        /* Identical value — spans all value columns */
+                        <div style={{ gridColumn: `2 / span ${mergeCtx.selCrew.length}`, padding: '8px 10px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', background: '#fafafa', borderLeft: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ color: '#22c55e', fontSize: '12px' }}>✓</span>
+                          Same in both records:
+                          <strong style={{ color: '#475569', fontStyle: 'normal', marginLeft: '2px' }}>
+                            {key === 'hotel_id' ? hotelLabel(vals[0].val) : (vals[0].val || '—')}
+                          </strong>
+                        </div>
+                      ) : (
+                        /* Different values — clickable cells */
+                        vals.map(({ id, val }) => {
+                          const isSelected = fieldChoices[key] === id
+                          return (
+                            <div
+                              key={id}
+                              onClick={() => setFieldChoices(p => ({ ...p, [key]: id }))}
+                              style={{
+                                padding: '8px 10px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                borderLeft: '1px solid #f1f5f9',
+                                background: isSelected ? '#f0fdf4' : 'white',
+                                boxShadow: isSelected ? 'inset 3px 0 0 #16a34a' : 'none',
+                                color: val ? '#0f172a' : '#94a3b8',
+                                fontStyle: val ? 'normal' : 'italic',
+                                wordBreak: 'break-word',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'background 0.1s',
+                                userSelect: 'none',
+                              }}>
+                              {isSelected && <span style={{ color: '#16a34a', fontSize: '13px', flexShrink: 0 }}>✓</span>}
+                              {key === 'hotel_id' ? hotelLabel(val) : (val || '—')}
+                            </div>
+                          )
+                        })
+                      )}
                     </div>
                   )
-                })()}
+                })}
               </div>
 
+              {/* ── Result preview ── */}
+              <ResultPreview selCrew={mergeCtx.selCrew} fieldChoices={fieldChoices} hotelLabel={hotelLabel} />
+
               {/* Info box */}
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '12px', color: '#1d4ed8' }}>
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '12px', color: '#1d4ed8' }}>
                 ℹ️ <strong>Travel movements</strong> and <strong>accommodation stays</strong> from all selected records will be reassigned to the primary record.
               </div>
 
-              {/* Warning */}
+              {/* Warning — with real names, not IDs */}
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', marginBottom: '18px', fontSize: '12px', color: '#dc2626' }}>
-                ⚠️ <strong>Irreversible.</strong> These records will be deleted after merge:{' '}
-                {mergeCtx.selectedIds.filter(id => id !== primaryId).map((id, i) => (
-                  <span key={id}>{i > 0 && ', '}<code style={{ background: '#fee2e2', padding: '1px 4px', borderRadius: '3px', fontFamily: 'monospace' }}>{id}</code></span>
+                ⚠️ <strong>Irreversible.</strong>{' '}
+                {mergeCtx.selCrew.filter(c => c.id !== primaryId).length === 1 ? 'This record' : 'These records'} will be <strong>permanently deleted</strong>:{' '}
+                {mergeCtx.selCrew.filter(c => c.id !== primaryId).map((c, i) => (
+                  <span key={c.id}>{i > 0 && ', '}<strong>{c.full_name}</strong>{' '}
+                    <code style={{ background: '#fee2e2', padding: '1px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '10px' }}>({c.id})</code>
+                  </span>
                 ))}
               </div>
 
