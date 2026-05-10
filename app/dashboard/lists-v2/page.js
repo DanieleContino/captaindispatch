@@ -89,7 +89,7 @@ function groupByTripId(tripRows) {
 }
 
 // ─── Riga tabella trip ─────────────────────────────────────────
-function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign }) {
+function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign, paxByTripRow }) {
   const dragId = 'trip::' + group.trip_id + '::' + (group.vehicle_id || 'none')
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
@@ -101,10 +101,18 @@ function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor,
   const showCall   = callTime && callTime !== pickupTime && callTime !== '–'
   const totalPax   = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
 
-  // Passengers across all rows (multi-stop merged)
-  const allPax = group.rows.flatMap(r =>
-    r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
-  )
+  // Passengers across all rows (multi-stop merged), enriched with role from crew
+  const allPaxEnriched = group.rows.flatMap(r => {
+    const crewList = (paxByTripRow && paxByTripRow[r.id]) || []
+    if (crewList.length > 0) {
+      return crewList.map(c => ({ name: c.full_name, role: c.role || c.department || null }))
+    }
+    // Fallback: split passenger_list by comma if no crew rows found
+    if (r.passenger_list) {
+      return r.passenger_list.split(',').map(s => s.trim()).filter(Boolean).map(n => ({ name: n, role: null }))
+    }
+    return []
+  })
 
   // Pickup / Dropoff: if multi-stop, show first leg's pickup and last leg's dropoff
   const firstRow = group.rows[0]
@@ -171,21 +179,14 @@ function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor,
 
       {/* Passengers (with role) + (PAX/CAP) inline */}
       <div style={{ minWidth: 0 }}>
-        {allPax.length > 0 ? (
+        {allPaxEnriched.length > 0 ? (
           <>
-            {allPax.map((p, i) => {
-              // p is "FullName (Role)" — extract role if present
-              const m = p.match(/^(.+?)\s*\(([^)]+)\)\s*$/)
-              const name = m ? m[1].trim() : p
-              const role = m ? m[2].trim() : null
-              const formatted = formatCrewName(name)
-              return (
-                <div key={i} style={{ fontSize: '11.5px', lineHeight: 1.45 }}>
-                  <span style={{ color: '#0f172a', fontWeight: '500' }}>{formatted}</span>
-                  {role && <span style={{ color: '#64748b' }}> · {role}</span>}
-                </div>
-              )
-            })}
+            {allPaxEnriched.map((p, i) => (
+              <div key={i} style={{ fontSize: '11.5px', lineHeight: 1.45 }}>
+                <span style={{ color: '#0f172a', fontWeight: '500' }}>{formatCrewName(p.name)}</span>
+                {p.role && <span style={{ color: '#64748b' }}> · {p.role}</span>}
+              </div>
+            ))}
             <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px', fontWeight: '500' }}>
               ({totalPax}{group.capacity ? '/' + group.capacity : ''})
             </div>
@@ -503,6 +504,7 @@ export default function ListsPage() {
       const [sections, setSections] = useState([])
       const [assignments, setAssignments] = useState([])
       const [moveMenuOpenFor, setMoveMenuOpenFor] = useState(null)
+      const [paxByTripRow, setPaxByTripRow] = useState({})
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -563,13 +565,31 @@ export default function ListsPage() {
         .eq('production_id', id).eq('date', d),
     ])
     const inTransportIds = new Set((vR.data || []).map(v => v.id))
-    const trips = (tR.data || []).filter(t => !t.vehicle_id || inTransportIds.has(t.vehicle_id))
-    setTrips(trips)
+    const tripsFiltered = (tR.data || []).filter(t => !t.vehicle_id || inTransportIds.has(t.vehicle_id))
+    setTrips(tripsFiltered)
     if (lR.data) {
       const m = {}; lR.data.forEach(l => { m[l.id] = { name: l.name, pickup_point: l.default_pickup_point } }); setLocsMap(m)
     }
     setSections(sR.data || [])
     setAssignments(aR.data || [])
+
+    // Fetch trip_passengers + crew (role) for the day's trips
+    const tripIds = tripsFiltered.map(t => t.id)
+    if (tripIds.length > 0) {
+      const { data: paxData } = await supabase
+        .from('trip_passengers')
+        .select('trip_row_id, crew:crew_id(id, full_name, role, department)')
+        .in('trip_row_id', tripIds)
+      const map = {}
+      for (const p of (paxData || [])) {
+        if (!map[p.trip_row_id]) map[p.trip_row_id] = []
+        if (p.crew) map[p.trip_row_id].push(p.crew)
+      }
+      setPaxByTripRow(map)
+    } else {
+      setPaxByTripRow({})
+    }
+
     setLoading(false)
   }, [])
 
@@ -850,6 +870,7 @@ export default function ListsPage() {
                             moveMenuOpenFor={moveMenuOpenFor}
                             setMoveMenuOpenFor={setMoveMenuOpenFor}
                             onAssign={assignGroupToSection}
+                            paxByTripRow={paxByTripRow}
                           />
                         ))}
                       </div>
@@ -884,6 +905,7 @@ export default function ListsPage() {
                           moveMenuOpenFor={moveMenuOpenFor}
                           setMoveMenuOpenFor={setMoveMenuOpenFor}
                           onAssign={assignGroupToSection}
+                          paxByTripRow={paxByTripRow}
                         />
                       ))}
                     </DropTargetWrapper>
@@ -930,6 +952,7 @@ export default function ListsPage() {
                               moveMenuOpenFor={moveMenuOpenFor}
                               setMoveMenuOpenFor={setMoveMenuOpenFor}
                               onAssign={assignGroupToSection}
+                              paxByTripRow={paxByTripRow}
                             />
                           ))}
                         </DropTargetWrapper>
