@@ -91,14 +91,14 @@ function groupByTripId(tripRows) {
 }
 
 // ─── Riga tabella trip ─────────────────────────────────────────
-function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign, paxByTripRow, columnsConfig, gridTemplate }) {
+function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign, paxByTripRow, columnsConfig, gridTemplate, driverPhonesByName }) {
   const dragId = 'trip::' + group.trip_id + '::' + (group.vehicle_id || 'none')
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
     data: { group },
   })
 
-  const ctx = { locsMap, paxByTripRow }
+  const ctx = { locsMap, paxByTripRow, driverPhonesByName }
 
   return (
     <div
@@ -421,6 +421,7 @@ export default function ListsPage() {
       const [assignments, setAssignments] = useState([])
       const [moveMenuOpenFor, setMoveMenuOpenFor] = useState(null)
       const [paxByTripRow, setPaxByTripRow] = useState({})
+      const [driverPhonesByName, setDriverPhonesByName] = useState({})
       const [columnsConfig, setColumnsConfig] = useState([])
       const [applyingPreset, setApplyingPreset] = useState(false)
       const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
@@ -513,6 +514,17 @@ export default function ListsPage() {
     } else {
       setPaxByTripRow({})
     }
+
+    // Load driver phone lookup from crew table (matched by full_name)
+    const { data: crewData } = await supabase
+      .from('crew')
+      .select('full_name, phone')
+      .eq('production_id', id)
+    const phoneMap = {}
+    for (const c of (crewData || [])) {
+      if (c.full_name && c.phone) phoneMap[c.full_name] = c.phone
+    }
+    setDriverPhonesByName(phoneMap)
 
     setLoading(false)
   }, [])
@@ -857,6 +869,7 @@ export default function ListsPage() {
                             setMoveMenuOpenFor={setMoveMenuOpenFor}
                             onAssign={assignGroupToSection}
                             paxByTripRow={paxByTripRow}
+                            driverPhonesByName={driverPhonesByName}
                             columnsConfig={columnsConfig}
                             gridTemplate={gridTemplate}
                           />
@@ -894,6 +907,7 @@ export default function ListsPage() {
                           setMoveMenuOpenFor={setMoveMenuOpenFor}
                           onAssign={assignGroupToSection}
                           paxByTripRow={paxByTripRow}
+                          driverPhonesByName={driverPhonesByName}
                           columnsConfig={columnsConfig}
                           gridTemplate={gridTemplate}
                         />
@@ -943,6 +957,7 @@ export default function ListsPage() {
                               setMoveMenuOpenFor={setMoveMenuOpenFor}
                               onAssign={assignGroupToSection}
                               paxByTripRow={paxByTripRow}
+                              driverPhonesByName={driverPhonesByName}
                               columnsConfig={columnsConfig}
                               gridTemplate={gridTemplate}
                             />
