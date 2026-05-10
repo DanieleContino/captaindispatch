@@ -141,10 +141,21 @@ function CrewDuplicatesWidget({ productionId, locations }) {
   const [mergeCtx,   setMergeCtx]   = useState(null) // { group, selectedIds, selCrew }
 
   // Merge panel state
-  const [primaryId,    setPrimaryId]    = useState(null)
-  const [fieldChoices, setFieldChoices] = useState({})
-  const [saving,       setSaving]       = useState(false)
-  const [mergeError,   setMergeError]   = useState(null)
+  const [primaryId,       setPrimaryId]       = useState(null)
+  const [fieldChoices,    setFieldChoices]     = useState({})
+  const [multiStay,       setMultiStay]        = useState({}) // { arrival_date: bool, departure_date: bool }
+  const [saving,          setSaving]           = useState(false)
+  const [mergeError,      setMergeError]       = useState(null)
+  const [dismissedGroups, setDismissedGroups]  = useState(new Set())
+
+  // Load dismissed groups from localStorage
+  useEffect(() => {
+    if (!productionId) return
+    try {
+      const stored = JSON.parse(localStorage.getItem(`dismissed_dupes_${productionId}`) || '[]')
+      setDismissedGroups(new Set(stored))
+    } catch {}
+  }, [productionId])
 
   const hotelLabel = id => locations?.find(l => l.id === id)?.name || id || '—'
 
@@ -172,12 +183,20 @@ function CrewDuplicatesWidget({ productionId, locations }) {
     })
   }
 
+  function dismissGroup(group) {
+    const key = group.map(c => c.id).sort().join(',')
+    const newSet = new Set([...dismissedGroups, key])
+    setDismissedGroups(newSet)
+    try { localStorage.setItem(`dismissed_dupes_${productionId}`, JSON.stringify([...newSet])) } catch {}
+  }
+
   function openMerge(gi, group) {
     const sel = checked[gi] || new Set()
     const selCrew = group.filter(c => sel.has(c.id))
     if (selCrew.length < 2) return
     setPrimaryId(selCrew[0].id)
     setFieldChoices(defaultFieldChoices(selCrew))
+    setMultiStay({})
     setMergeCtx({ group, selectedIds: [...sel], selCrew })
     setMergeError(null)
   }
@@ -189,8 +208,14 @@ function CrewDuplicatesWidget({ productionId, locations }) {
 
     const merged_data = {}
     CREW_MERGE_FIELDS.forEach(({ key }) => {
-      const src = mergeCtx.selCrew.find(c => c.id === fieldChoices[key])
-      merged_data[key] = src?.[key] ?? null
+      if (multiStay[key]) {
+        // For multi-stay fields keep the primary record's existing value
+        const primary = mergeCtx.selCrew.find(c => c.id === primaryId)
+        merged_data[key] = primary?.[key] ?? null
+      } else {
+        const src = mergeCtx.selCrew.find(c => c.id === fieldChoices[key])
+        merged_data[key] = src?.[key] ?? null
+      }
     })
 
     setSaving(true); setMergeError(null)
@@ -198,15 +223,21 @@ function CrewDuplicatesWidget({ productionId, locations }) {
       const res = await fetch('/api/crew/merge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          production_id: productionId,
-          primary_id: primaryId,
-          duplicate_ids,
-          merged_data,
-        }),
+        body: JSON.stringify({ production_id: productionId, primary_id: primaryId, duplicate_ids, merged_data }),
       })
       const json = await res.json()
       if (!res.ok) { setMergeError(json.error || 'Merge failed'); setSaving(false); return }
+
+      // Multi-stay mode: create crew_stays for both date ranges
+      if (Object.values(multiStay).some(Boolean)) {
+        const staysToCreate = mergeCtx.selCrew
+          .filter(c => c.arrival_date || c.departure_date)
+          .map(c => ({ crew_id: primaryId, production_id: productionId, hotel_id: c.hotel_id || null, arrival_date: c.arrival_date || null, departure_date: c.departure_date || null }))
+        if (staysToCreate.length > 0) {
+          await supabase.from('crew_stays').upsert(staysToCreate, { ignoreDuplicates: true })
+        }
+      }
+
       setSaving(false)
       setMergeCtx(null)
       load()
@@ -230,7 +261,7 @@ function CrewDuplicatesWidget({ productionId, locations }) {
 
       {/* Groups list */}
       <div style={{ paddingBottom: '8px' }}>
-        {dupeGroups.map((group, gi) => {
+        {dupeGroups.filter(group => !dismissedGroups.has(group.map(c => c.id).sort().join(','))).map((group, gi) => {
           const sel = checked[gi] || new Set()
           const sim = Math.round(crewSimilarity(group[0].full_name, group[1].full_name) * 100)
           return (
@@ -259,7 +290,14 @@ function CrewDuplicatesWidget({ productionId, locations }) {
                 </label>
               ))}
 
-              <div style={{ textAlign: 'right', marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => dismissGroup(group)}
+                  style={{ fontSize: '11px', color: '#64748b', background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', padding: '4px 10px' }}
+                  title="This is the same person with different stay dates — not a real duplicate">
+                  ✕ Not a duplicate (multi-stay)
+                </button>
                 <button
                   onClick={() => openMerge(gi, group)}
                   disabled={sel.size < 2}
@@ -338,52 +376,40 @@ function CrewDuplicatesWidget({ productionId, locations }) {
                   const vals = mergeCtx.selCrew.map(c => ({ id: c.id, val: c[key] }))
                   const uq = new Set(vals.map(v => String(v.val ?? '')))
                   const isIdentical = uq.size === 1
-
+                  const isDateField = key === 'arrival_date' || key === 'departure_date'
                   return (
-                    <div key={key} style={{ display: 'grid', gridTemplateColumns: `100px ${mergeCtx.selCrew.map(() => '1fr').join(' ')}`, borderBottom: '1px solid #f1f5f9', alignItems: 'stretch', minHeight: '36px' }}>
-                      {/* Field label */}
-                      <div style={{ padding: '8px 10px', fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'flex', alignItems: 'center', background: isIdentical ? '#fafafa' : 'white' }}>
-                        {fLabel}
-                      </div>
-
-                      {isIdentical ? (
-                        /* Identical value — spans all value columns */
-                        <div style={{ gridColumn: `2 / span ${mergeCtx.selCrew.length}`, padding: '8px 10px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', background: '#fafafa', borderLeft: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <span style={{ color: '#22c55e', fontSize: '12px' }}>✓</span>
-                          Same in both records:
-                          <strong style={{ color: '#475569', fontStyle: 'normal', marginLeft: '2px' }}>
-                            {key === 'hotel_id' ? hotelLabel(vals[0].val) : (vals[0].val || '—')}
-                          </strong>
+                    <div key={key} style={{ display: 'contents' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: `100px ${mergeCtx.selCrew.map(() => '1fr').join(' ')}`, borderBottom: (isDateField && !isIdentical) ? 'none' : '1px solid #f1f5f9', alignItems: 'stretch', minHeight: '36px' }}>
+                        <div style={{ padding: '8px 10px', fontSize: '11px', fontWeight: '700', color: '#64748b', display: 'flex', alignItems: 'center', background: isIdentical ? '#fafafa' : 'white' }}>
+                          {fLabel}
                         </div>
-                      ) : (
-                        /* Different values — clickable cells */
-                        vals.map(({ id, val }) => {
-                          const isSelected = fieldChoices[key] === id
-                          return (
-                            <div
-                              key={id}
-                              onClick={() => setFieldChoices(p => ({ ...p, [key]: id }))}
-                              style={{
-                                padding: '8px 10px',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                borderLeft: '1px solid #f1f5f9',
-                                background: isSelected ? '#f0fdf4' : 'white',
-                                boxShadow: isSelected ? 'inset 3px 0 0 #16a34a' : 'none',
-                                color: val ? '#0f172a' : '#94a3b8',
-                                fontStyle: val ? 'normal' : 'italic',
-                                wordBreak: 'break-word',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                transition: 'background 0.1s',
-                                userSelect: 'none',
-                              }}>
-                              {isSelected && <span style={{ color: '#16a34a', fontSize: '13px', flexShrink: 0 }}>✓</span>}
-                              {key === 'hotel_id' ? hotelLabel(val) : (val || '—')}
-                            </div>
-                          )
-                        })
+                        {isIdentical ? (
+                          <div style={{ gridColumn: `2 / span ${mergeCtx.selCrew.length}`, padding: '8px 10px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', background: '#fafafa', borderLeft: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ color: '#22c55e', fontSize: '12px' }}>✓</span>
+                            Same in both records:
+                            <strong style={{ color: '#475569', fontStyle: 'normal', marginLeft: '2px' }}>
+                              {key === 'hotel_id' ? hotelLabel(vals[0].val) : (vals[0].val || '—')}
+                            </strong>
+                          </div>
+                        ) : (
+                          vals.map(({ id, val }) => {
+                            const isSelected = !multiStay[key] && fieldChoices[key] === id
+                            return (
+                              <div key={id}
+                                onClick={() => { setMultiStay(p => ({ ...p, [key]: false })); setFieldChoices(p => ({ ...p, [key]: id })) }}
+                                style={{ padding: '8px 10px', fontSize: '12px', cursor: 'pointer', borderLeft: '1px solid #f1f5f9', background: multiStay[key] ? '#faf5ff' : isSelected ? '#f0fdf4' : 'white', boxShadow: isSelected ? 'inset 3px 0 0 #16a34a' : 'none', opacity: multiStay[key] ? 0.5 : 1, color: val ? '#0f172a' : '#94a3b8', fontStyle: val ? 'normal' : 'italic', wordBreak: 'break-word', display: 'flex', alignItems: 'center', gap: '6px', transition: 'background 0.1s', userSelect: 'none' }}>
+                                {isSelected && <span style={{ color: '#16a34a', fontSize: '13px', flexShrink: 0 }}>✓</span>}
+                                {key === 'hotel_id' ? hotelLabel(val) : (val || '—')}
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                      {isDateField && !isIdentical && (
+                        <div onClick={() => setMultiStay(p => ({ ...p, [key]: !p[key] }))}
+                          style={{ padding: '5px 10px 5px 110px', fontSize: '11px', cursor: 'pointer', background: multiStay[key] ? '#f5f3ff' : '#fafafa', borderBottom: '1px solid #f1f5f9', color: multiStay[key] ? '#7c3aed' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', userSelect: 'none', boxShadow: multiStay[key] ? 'inset 3px 0 0 #7c3aed' : 'none' }}>
+                          {multiStay[key] ? '✓' : '○'} 📅 Keep both dates → creates 2 separate stays for this person
+                        </div>
                       )}
                     </div>
                   )
