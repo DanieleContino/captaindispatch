@@ -257,7 +257,19 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
             {dupeGroups.length} {dupeGroups.length === 1 ? 'group' : 'groups'}
           </span>
         </div>
-        <button onClick={load} style={{ ...btnSecondary, fontSize: '11px', padding: '5px 10px' }}>↻ Refresh</button>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {dismissedGroups.size > 0 && (
+            <button onClick={() => {
+              setDismissedGroups(new Set())
+              try { localStorage.removeItem(`dismissed_dupes_${productionId}`) } catch {}
+              load()
+            }} style={{ ...btnSecondary, fontSize: '11px', padding: '5px 10px', color: '#7c3aed', borderColor: '#c4b5fd' }}
+              title="Mostra i gruppi nascosti con 'Not a duplicate'">
+              ↺ Show dismissed ({dismissedGroups.size})
+            </button>
+          )}
+          <button onClick={load} style={{ ...btnSecondary, fontSize: '11px', padding: '5px 10px' }}>↻ Refresh</button>
+        </div>
       </div>
 
       {/* Groups list */}
