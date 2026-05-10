@@ -8,6 +8,7 @@ import { getProductionId } from '../../../lib/production'
 import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
 import { SectionsManagerSidebar } from '../../../lib/SectionsManagerSidebar'
 import { COLUMNS_CATALOG, CAPTAIN_PRESET } from '../../../lib/listColumnsCatalog'
+import { ColumnsEditorSidebar } from '../../../lib/ColumnsEditorSidebar'
 
 // ─── Utility ──────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
@@ -422,6 +423,7 @@ export default function ListsPage() {
       const [paxByTripRow, setPaxByTripRow] = useState({})
       const [columnsConfig, setColumnsConfig] = useState([])
       const [applyingPreset, setApplyingPreset] = useState(false)
+      const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -715,6 +717,11 @@ export default function ListsPage() {
                   {applyingPreset ? 'Applying…' : 'Apply Captain Preset'}
                 </button>
               )}
+              <button
+                onClick={() => setColumnsEditorOpen(true)}
+                style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                Columns editor
+              </button>
               <button onClick={() => setSectionsOpen(true)}
                 style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                 Manage sections
@@ -963,6 +970,11 @@ export default function ListsPage() {
         open={sectionsOpen}
         onClose={() => setSectionsOpen(false)}
         date={date}
+      />
+      <ColumnsEditorSidebar
+        open={columnsEditorOpen}
+        onClose={() => setColumnsEditorOpen(false)}
+        onChanged={() => loadData(date)}
       />
       </div>
     </div>
