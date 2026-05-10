@@ -7,6 +7,7 @@ import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
 import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
 import { SectionsManagerSidebar } from '../../../lib/SectionsManagerSidebar'
+import { COLUMNS_CATALOG, CAPTAIN_PRESET } from '../../../lib/listColumnsCatalog'
 
 // ─── Utility ──────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
@@ -89,44 +90,14 @@ function groupByTripId(tripRows) {
 }
 
 // ─── Riga tabella trip ─────────────────────────────────────────
-function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign, paxByTripRow }) {
+function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign, paxByTripRow, columnsConfig, gridTemplate }) {
   const dragId = 'trip::' + group.trip_id + '::' + (group.vehicle_id || 'none')
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
     data: { group },
   })
 
-  const pickupTime = minToHHMM(group.pickup_min ?? group.call_min)
-  const callTime   = minToHHMM(group.call_min)
-  const showCall   = callTime && callTime !== pickupTime && callTime !== '–'
-  const totalPax   = group.rows.reduce((s, r) => s + (r.pax_count || 0), 0)
-
-  // Passengers across all rows (multi-stop merged), enriched with role from crew
-  const allPaxEnriched = group.rows.flatMap(r => {
-    const crewList = (paxByTripRow && paxByTripRow[r.id]) || []
-    if (crewList.length > 0) {
-      return crewList.map(c => ({ name: c.full_name, role: c.role || c.department || null }))
-    }
-    // Fallback: split passenger_list by comma if no crew rows found
-    if (r.passenger_list) {
-      return r.passenger_list.split(',').map(s => s.trim()).filter(Boolean).map(n => ({ name: n, role: null }))
-    }
-    return []
-  })
-
-  // Pickup / Dropoff: if multi-stop, show first leg's pickup and last leg's dropoff
-  const firstRow = group.rows[0]
-  const lastRow  = group.rows[group.rows.length - 1]
-  const pickupLoc  = locsMap[firstRow.pickup_id]
-  const pickupName = typeof pickupLoc === 'object' ? pickupLoc.name : pickupLoc || firstRow.pickup_id || '–'
-  const dropoffLoc  = locsMap[lastRow.dropoff_id]
-  const dropoffName = typeof dropoffLoc === 'object' ? dropoffLoc.name : dropoffLoc || lastRow.dropoff_id || '–'
-
-  // Flight info on dropoff side
-  const transferClass = group.transfer_class
-  const showFlight = (transferClass === 'ARRIVAL' || transferClass === 'DEPARTURE')
-                     && (group.flight_no || group.arr_time)
-  const flightArrTime = group.arr_time ? group.arr_time.slice(0, 5) : null
+  const ctx = { locsMap, paxByTripRow }
 
   return (
     <div
@@ -138,7 +109,7 @@ function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor,
         opacity: isDragging ? 0.4 : 1,
         cursor: 'grab',
         display: 'grid',
-        gridTemplateColumns: '140px 130px 70px 1fr 160px 160px',
+        gridTemplateColumns: gridTemplate,
         gap: '0 8px',
         alignItems: 'flex-start',
         padding: '8px 14px',
@@ -150,151 +121,95 @@ function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor,
         position: 'relative',
       }}
     >
-      {/* Vehicle */}
-      <div style={{ fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {group.vehicle_id || '—'}
-      </div>
-
-      {/* Driver + phone */}
-      <div style={{ overflow: 'hidden' }}>
-        <div style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {group.driver_name || '—'}
-        </div>
-        {group.rows[0]?.driver_phone && (
-          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
-            {group.rows[0].driver_phone}
-          </div>
-        )}
-      </div>
-
-      {/* Time (pickup, with call below if different) */}
-      <div style={{ fontVariantNumeric: 'tabular-nums' }}>
-        <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '13px' }}>{pickupTime}</div>
-        {showCall && (
-          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
-            call {callTime}
-          </div>
-        )}
-      </div>
-
-      {/* Passengers (with role) + (PAX/CAP) inline */}
-      <div style={{ minWidth: 0 }}>
-        {allPaxEnriched.length > 0 ? (
-          <>
-            {allPaxEnriched.map((p, i) => (
-              <div key={i} style={{ fontSize: '11.5px', lineHeight: 1.45 }}>
-                <span style={{ color: '#0f172a', fontWeight: '500' }}>{formatCrewName(p.name)}</span>
-                {p.role && <span style={{ color: '#64748b' }}> · {p.role}</span>}
-              </div>
-            ))}
-            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px', fontWeight: '500' }}>
-              ({totalPax}{group.capacity ? '/' + group.capacity : ''})
-            </div>
-          </>
-        ) : (
-          <span style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>no pax</span>
-        )}
-      </div>
-
-      {/* From */}
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {pickupName}
-        </div>
-        {pickupLoc && typeof pickupLoc === 'object' && pickupLoc.pickup_point && (
-          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {pickupLoc.pickup_point}
-          </div>
-        )}
-      </div>
-
-      {/* To + Move-to fallback */}
-      <div style={{ minWidth: 0, position: 'relative' }}>
-        <div style={{ fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {dropoffName}
-        </div>
-        {showFlight && (
-          <div style={{ fontSize: '10px', color: '#1d4ed8', marginTop: '2px', fontWeight: '600' }}>
-            {group.flight_no || ''}{group.flight_no && flightArrTime ? ' · ' : ''}{flightArrTime || ''}
-            {group.terminal && <span style={{ color: '#64748b' }}> · {group.terminal}</span>}
-          </div>
-        )}
-
-        {/* Move-to button (fallback for touch devices) */}
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation()
-            const k = group.trip_id + '::' + (group.vehicle_id || 'none')
-            setMoveMenuOpenFor(moveMenuOpenFor === k ? null : k)
-          }}
-          className="no-print"
-          style={{
-            marginTop: '4px',
-            padding: '2px 6px', borderRadius: '4px',
-            border: '1px solid #e2e8f0', background: 'white',
-            fontSize: '9px', fontWeight: '600', color: '#64748b',
-            cursor: 'pointer',
-          }}>
-          Move to
-        </button>
-        {moveMenuOpenFor === (group.trip_id + '::' + (group.vehicle_id || 'none')) && (
-          <>
-            <div onClick={() => setMoveMenuOpenFor(null)}
-              className="no-print"
-              style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
-            <div className="no-print" style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: '2px',
-              background: 'white', border: '1px solid #cbd5e1',
-              borderRadius: '7px', padding: '4px',
-              minWidth: '180px', zIndex: 61,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              textAlign: 'left',
-            }}>
-              {sections.length === 0 ? (
-                <div style={{ padding: '6px 10px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
-                  No sections yet. Use "Manage sections" first.
-                </div>
-              ) : sections.map(s => (
+      {columnsConfig.map((col, i) => {
+        const def = COLUMNS_CATALOG[col.source_field]
+        const content = def ? def.render(group, ctx) : (
+          <span style={{ color: '#dc2626', fontSize: 10 }}>?{col.source_field}</span>
+        )
+        const isLast = i === columnsConfig.length - 1
+        return (
+          <div key={col.id} style={{ minWidth: 0, position: isLast ? 'relative' : 'static' }}>
+            {content}
+            {isLast && (
+              <>
                 <button
-                  key={s.id}
                   type="button"
-                  onClick={() => onAssign(group, s.id)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const k = group.trip_id + '::' + (group.vehicle_id || 'none')
+                    setMoveMenuOpenFor(moveMenuOpenFor === k ? null : k)
+                  }}
+                  className="no-print"
                   style={{
-                    display: 'block', width: '100%',
-                    padding: '5px 10px', textAlign: 'left',
-                    background: 'transparent', border: 'none',
-                    fontSize: '12px',
-                    fontWeight: s.parent_id ? '500' : '700',
-                    color: '#0f172a',
-                    paddingLeft: s.parent_id ? '20px' : '10px',
+                    marginTop: '4px',
+                    padding: '2px 6px', borderRadius: '4px',
+                    border: '1px solid #e2e8f0', background: 'white',
+                    fontSize: '9px', fontWeight: '600', color: '#64748b',
                     cursor: 'pointer',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  {s.parent_id ? s.name : s.name.toUpperCase()}
+                  }}>
+                  Move to
                 </button>
-              ))}
-              <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '4px', paddingTop: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => onAssign(group, null)}
-                  style={{
-                    display: 'block', width: '100%',
-                    padding: '5px 10px', textAlign: 'left',
-                    background: 'transparent', border: 'none',
-                    fontSize: '11px', color: '#dc2626', cursor: 'pointer',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  Unassign
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+                {moveMenuOpenFor === (group.trip_id + '::' + (group.vehicle_id || 'none')) && (
+                  <>
+                    <div onClick={() => setMoveMenuOpenFor(null)}
+                      className="no-print"
+                      style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
+                    <div className="no-print" style={{
+                      position: 'absolute', top: '100%', right: 0, marginTop: '2px',
+                      background: 'white', border: '1px solid #cbd5e1',
+                      borderRadius: '7px', padding: '4px',
+                      minWidth: '180px', zIndex: 61,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      textAlign: 'left',
+                    }}>
+                      {sections.length === 0 ? (
+                        <div style={{ padding: '6px 10px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                          No sections yet. Use "Manage sections" first.
+                        </div>
+                      ) : sections.map(s => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => onAssign(group, s.id)}
+                          style={{
+                            display: 'block', width: '100%',
+                            padding: '5px 10px', textAlign: 'left',
+                            background: 'transparent', border: 'none',
+                            fontSize: '12px',
+                            fontWeight: s.parent_id ? '500' : '700',
+                            color: '#0f172a',
+                            paddingLeft: s.parent_id ? '20px' : '10px',
+                            cursor: 'pointer',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          {s.parent_id ? s.name : s.name.toUpperCase()}
+                        </button>
+                      ))}
+                      <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '4px', paddingTop: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => onAssign(group, null)}
+                          style={{
+                            display: 'block', width: '100%',
+                            padding: '5px 10px', textAlign: 'left',
+                            background: 'transparent', border: 'none',
+                            fontSize: '11px', color: '#dc2626', cursor: 'pointer',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          Unassign
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -505,6 +420,8 @@ export default function ListsPage() {
       const [assignments, setAssignments] = useState([])
       const [moveMenuOpenFor, setMoveMenuOpenFor] = useState(null)
       const [paxByTripRow, setPaxByTripRow] = useState({})
+      const [columnsConfig, setColumnsConfig] = useState([])
+      const [applyingPreset, setApplyingPreset] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -550,7 +467,7 @@ export default function ListsPage() {
     const id = getProductionId()
     if (!id) { setLoading(false); return }
     setLoading(true)
-    const [tR, lR, vR, sR, aR] = await Promise.all([
+    const [tR, lR, vR, sR, aR, cR] = await Promise.all([
       supabase.from('trips').select('*')
         .eq('production_id', id).eq('date', d)
         .neq('status', 'CANCELLED')
@@ -563,6 +480,10 @@ export default function ListsPage() {
         .order('created_at', { ascending: true }),
       supabase.from('transport_list_section_assignments').select('*')
         .eq('production_id', id).eq('date', d),
+      supabase.from('transport_list_columns').select('*')
+        .eq('production_id', id)
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: true }),
     ])
     const inTransportIds = new Set((vR.data || []).map(v => v.id))
     const tripsFiltered = (tR.data || []).filter(t => !t.vehicle_id || inTransportIds.has(t.vehicle_id))
@@ -572,6 +493,7 @@ export default function ListsPage() {
     }
     setSections(sR.data || [])
     setAssignments(aR.data || [])
+    setColumnsConfig(cR.data || [])
 
     // Fetch trip_passengers + crew (role) for the day's trips
     const tripIds = tripsFiltered.map(t => t.id)
@@ -645,6 +567,37 @@ export default function ListsPage() {
 
   const totalPax   = trips.reduce((s, t) => s + (t.pax_count || 0), 0)
   const totalTrips = groupByTripId(trips).length
+
+  const gridTemplate = columnsConfig.length > 0
+    ? columnsConfig.map(c => c.width || '110px').join(' ')
+    : '1fr'
+
+  async function applyCaptainPreset() {
+    const id = getProductionId()
+    if (!id || applyingPreset) return
+    setApplyingPreset(true)
+    try {
+      if (columnsConfig.length > 0) {
+        const ok = confirm('This production already has ' + columnsConfig.length + ' columns. Apply Captain Preset will REPLACE them. Continue?')
+        if (!ok) { setApplyingPreset(false); return }
+        const { error: delErr } = await supabase
+          .from('transport_list_columns')
+          .delete()
+          .eq('production_id', id)
+        if (delErr) throw delErr
+      }
+      const rows = CAPTAIN_PRESET.map(p => ({ ...p, production_id: id }))
+      const { error: insErr } = await supabase
+        .from('transport_list_columns')
+        .insert(rows)
+      if (insErr) throw insErr
+      await loadData(date)
+    } catch (e) {
+      alert('Failed to apply Captain Preset: ' + (e.message || 'unknown error'))
+    } finally {
+      setApplyingPreset(false)
+    }
+  }
 
   if (!user) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
@@ -754,6 +707,14 @@ export default function ListsPage() {
           </span>
           {production && (
             <>
+              {columnsConfig.length === 0 && (
+                <button
+                  onClick={applyCaptainPreset}
+                  disabled={applyingPreset}
+                  style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #2563eb', background: applyingPreset ? '#cbd5e1' : '#2563eb', color: 'white', fontSize: '12px', fontWeight: '700', cursor: applyingPreset ? 'default' : 'pointer' }}>
+                  {applyingPreset ? 'Applying…' : 'Apply Captain Preset'}
+                </button>
+              )}
               <button onClick={() => setSectionsOpen(true)}
                 style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                 Manage sections
@@ -795,9 +756,15 @@ export default function ListsPage() {
           <div className="print-card" style={{ background: 'white', borderRadius: '10px', padding: '16px 20px', border: '1px solid #e2e8f0' }}>
 
             {/* Intestazione colonne */}
+            {columnsConfig.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', border: '1px dashed #cbd5e1', borderRadius: '8px', background: '#f8fafc' }}>
+                <div style={{ fontWeight: '700', color: '#64748b', marginBottom: '6px' }}>No columns configured</div>
+                <div>Click <strong>Apply Captain Preset</strong> in the toolbar to populate the default 6 columns.</div>
+              </div>
+            ) : (
             <div className="col-header" style={{
               display: 'grid',
-              gridTemplateColumns: '140px 130px 70px 1fr 160px 160px',
+              gridTemplateColumns: gridTemplate,
               gap: '0 8px',
               padding: '6px 14px',
               borderBottom: '2px solid #0f172a',
@@ -809,13 +776,11 @@ export default function ListsPage() {
               textTransform: 'uppercase',
               pageBreakAfter: 'avoid',
             }}>
-              <div>Vehicle</div>
-              <div>Driver</div>
-              <div>Time</div>
-              <div>Passengers</div>
-              <div>From</div>
-              <div>To</div>
+              {columnsConfig.map(c => (
+                <div key={c.id}>{c.header_label}</div>
+              ))}
             </div>
+            )}
 
             {(() => {
               // All grouped trips for this day
@@ -860,7 +825,7 @@ export default function ListsPage() {
                             {groups.length}
                           </span>
                         </div>
-                        {groups.map(group => (
+                        {columnsConfig.length > 0 && groups.map(group => (
                           <TripTableRow
                             key={group.trip_id + '::' + (group.vehicle_id || 'none')}
                             group={group}
@@ -871,6 +836,8 @@ export default function ListsPage() {
                             setMoveMenuOpenFor={setMoveMenuOpenFor}
                             onAssign={assignGroupToSection}
                             paxByTripRow={paxByTripRow}
+                            columnsConfig={columnsConfig}
+                            gridTemplate={gridTemplate}
                           />
                         ))}
                       </div>
@@ -895,7 +862,7 @@ export default function ListsPage() {
                           {groups.length}
                         </span>
                       </div>
-                      {groups.map(group => (
+                      {columnsConfig.length > 0 && groups.map(group => (
                         <TripTableRow
                           key={group.trip_id + '::' + (group.vehicle_id || 'none')}
                           group={group}
@@ -906,6 +873,8 @@ export default function ListsPage() {
                           setMoveMenuOpenFor={setMoveMenuOpenFor}
                           onAssign={assignGroupToSection}
                           paxByTripRow={paxByTripRow}
+                          columnsConfig={columnsConfig}
+                          gridTemplate={gridTemplate}
                         />
                       ))}
                     </DropTargetWrapper>
@@ -942,7 +911,7 @@ export default function ListsPage() {
                               </span>
                             )}
                           </div>
-                          {unassignedGroups.map(group => (
+                          {columnsConfig.length > 0 && unassignedGroups.map(group => (
                             <TripTableRow
                               key={group.trip_id + '::' + (group.vehicle_id || 'none')}
                               group={group}
@@ -953,6 +922,8 @@ export default function ListsPage() {
                               setMoveMenuOpenFor={setMoveMenuOpenFor}
                               onAssign={assignGroupToSection}
                               paxByTripRow={paxByTripRow}
+                              columnsConfig={columnsConfig}
+                              gridTemplate={gridTemplate}
                             />
                           ))}
                         </DropTargetWrapper>
