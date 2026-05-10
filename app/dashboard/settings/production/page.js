@@ -10,8 +10,6 @@ import { useRouter } from 'next/navigation'
 import { getProductionId } from '../../../../lib/production'
 import { Navbar } from '../../../../lib/navbar'
 
-const BUCKET = 'production-logos'
-
 export default function ProductionSettingsPage() {
   const router = useRouter()
   const [user,    setUser]    = useState(null)
@@ -104,14 +102,13 @@ export default function ProductionSettingsPage() {
   }
 
   async function uploadLogo(file, id) {
-    const ext  = file.name.split('.').pop()
-    const path = `${id}/logo.${ext}`
-    const { error: upErr } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, file, { upsert: true, contentType: file.type })
-    if (upErr) throw new Error(upErr.message)
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
-    return data.publicUrl + '?t=' + Date.now()
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('productionId', id)
+    const res  = await fetch('/api/productions/upload-logo', { method: 'POST', body: fd })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Upload failed')
+    return json.logo_url
   }
 
   async function handleSave(e) {
