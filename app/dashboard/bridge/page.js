@@ -134,7 +134,7 @@ function ResultPreview({ selCrew, fieldChoices, hotelLabel }) {
 }
 
 // ── CrewDuplicatesWidget ──────────────────────────────────
-function CrewDuplicatesWidget({ productionId, locations }) {
+function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
   const [dupeGroups, setDupeGroups] = useState([])
   const [loading,    setLoading]    = useState(false)
   const [checked,    setChecked]    = useState({})   // { groupIdx: Set<crewId> }
@@ -241,6 +241,7 @@ function CrewDuplicatesWidget({ productionId, locations }) {
       setSaving(false)
       setMergeCtx(null)
       load()
+      onMerged?.()
     } catch (e) { setMergeError(e.message); setSaving(false) }
   }
 
@@ -676,7 +677,7 @@ function DriveSyncWidget({ productionId, onPreview, refreshKey }) {
 }
 
 // ── Travel Discrepancies Widget ──────────────────────────
-function TravelDiscrepanciesWidget({ productionId }) {
+function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
   const [items, setItems] = useState([])
   const [resolving, setResolving] = useState({})
   const [notes, setNotes] = useState({})
@@ -780,7 +781,7 @@ function TravelDiscrepanciesWidget({ productionId }) {
 
       setItems(validItems)
     })
-  }, [productionId])
+  }, [productionId, refreshKey])
 
   async function resolve(id) {
     setResolving(p => ({ ...p, [id]: true }))
@@ -2004,6 +2005,7 @@ export default function BridgePage() {
   const [PRODUCTION_ID, setProductionId] = useState(null)
   const [previewModal,  setPreviewModal]  = useState(null)
   const [driveRefreshKey, setDriveRefreshKey] = useState(0)
+  const [crewMergeKey,    setCrewMergeKey]    = useState(0)
   const [importOpen,  setImportOpen]  = useState(false)
   const [importMode,  setImportMode]  = useState('hal')
   const [locations,   setLocations]   = useState([])
@@ -2075,8 +2077,8 @@ export default function BridgePage() {
         {/* ── Dashboard Panels ── */}
         <NotificationsPanel productionId={PRODUCTION_ID} />
 <DriveSyncWidget productionId={PRODUCTION_ID} onPreview={setPreviewModal} refreshKey={driveRefreshKey} />
-        <TravelDiscrepanciesWidget productionId={PRODUCTION_ID} />
-        <CrewDuplicatesWidget productionId={PRODUCTION_ID} locations={locations} />
+        <TravelDiscrepanciesWidget productionId={PRODUCTION_ID} refreshKey={crewMergeKey} />
+        <CrewDuplicatesWidget productionId={PRODUCTION_ID} locations={locations} onMerged={() => setCrewMergeKey(k => k + 1)} />
         <TomorrowPanel productionId={PRODUCTION_ID} />
         <ArrivalsDeparturesChart key={PRODUCTION_ID} productionId={PRODUCTION_ID} />
         <MiniWidgets productionId={PRODUCTION_ID} />
