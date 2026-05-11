@@ -2046,14 +2046,15 @@ function InviteCodesTabControlled({ productions, showFormProp, onFormClose }) {
 // ── Main Page ─────────────────────────────────────────────
 export default function BridgePage() {
   const router = useRouter()
-  const [user,         setUser]         = useState(null)
-  const [productions,  setProductions]  = useState([])
-  const [productionId, setProductionId] = useState(null)
-  const [role,         setRole]         = useState(null)
-  const [tab,          setTab]          = useState('overview')  // 'overview' | 'pending' | 'invites'
-  const [loading,      setLoading]      = useState(true)
-  const [importCtx,    setImportCtx]    = useState(null)   // for DriveSyncWidget preview
-  const [refreshKey,   setRefreshKey]   = useState(0)
+  // productionId is always available from localStorage/env — no DB query needed
+  const productionId = getProductionId()
+  const [user,        setUser]        = useState(null)
+  const [productions, setProductions] = useState([])
+  const [role,        setRole]        = useState(null)
+  const [tab,         setTab]         = useState('overview')  // 'overview' | 'pending' | 'invites'
+  const [loading,     setLoading]     = useState(true)
+  const [importCtx,   setImportCtx]   = useState(null)   // for DriveSyncWidget preview
+  const [refreshKey,  setRefreshKey]  = useState(0)
   const isMobile = useIsMobile()
 
   // ── locations (needed for DriveSyncWidget import modal) ──
@@ -2063,9 +2064,9 @@ export default function BridgePage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace('/login'); return }
       setUser(session.user)
+      setLoading(false)  // unblock immediately — productionId is already available
 
-      const pid = getProductionId()
-
+      // Load role + productions list (non-blocking — used for admin tabs + Navbar)
       supabase
         .from('production_members')
         .select('production_id, role, productions(id, name)')
@@ -2078,13 +2079,9 @@ export default function BridgePage() {
           }))
           setProductions(prods)
 
-          // Determine active production + role
-          const match = prods.find(p => p.id === pid) || prods[0]
-          if (match) {
-            setProductionId(match.id)
-            setRole(match.role)
-          }
-          setLoading(false)
+          // Determine role for the active production (for admin tabs)
+          const match = prods.find(p => p.id === productionId) || prods[0]
+          if (match) setRole(match.role)
         })
     })
   }, [router])
