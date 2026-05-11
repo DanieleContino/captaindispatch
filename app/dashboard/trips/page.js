@@ -3532,6 +3532,16 @@ function TripsPageInner() {
         onSaved={() => { setEditTripRow(null); loadTrips(date) }}
         onPaxChanged={() => loadTrips(date)}
       />
+
+      {/* ── Replica Day Modal ── */}
+      <ReplicaDayModal
+        open={replicaOpen}
+        onClose={() => setReplicaOpen(false)}
+        sourceDate={isoAdd(date, -1)}
+        targetDate={date}
+        locations={locsList}
+        onDone={() => loadTrips(date)}
+      />
     </div>
   )
 }
