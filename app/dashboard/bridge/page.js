@@ -2042,3 +2042,180 @@ function InviteCodesTabControlled({ productions, showFormProp, onFormClose }) {
     </div>
   )
 }
+
+// ── Main Page ─────────────────────────────────────────────
+export default function BridgePage() {
+  const router = useRouter()
+  const [user,         setUser]         = useState(null)
+  const [productions,  setProductions]  = useState([])
+  const [productionId, setProductionId] = useState(null)
+  const [role,         setRole]         = useState(null)
+  const [tab,          setTab]          = useState('overview')  // 'overview' | 'pending' | 'invites'
+  const [loading,      setLoading]      = useState(true)
+  const [importCtx,    setImportCtx]    = useState(null)   // for DriveSyncWidget preview
+  const [refreshKey,   setRefreshKey]   = useState(0)
+  const isMobile = useIsMobile()
+
+  // ── locations (needed for DriveSyncWidget import modal) ──
+  const [locations, setLocations] = useState([])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { router.replace('/login'); return }
+      setUser(session.user)
+
+      const pid = getProductionId()
+
+      supabase
+        .from('production_members')
+        .select('production_id, role, productions(id, name)')
+        .eq('user_id', session.user.id)
+        .then(({ data }) => {
+          const prods = (data || []).map(m => ({
+            id:   m.productions?.id   || m.production_id,
+            name: m.productions?.name || m.production_id,
+            role: m.role,
+          }))
+          setProductions(prods)
+
+          // Determine active production + role
+          const match = prods.find(p => p.id === pid) || prods[0]
+          if (match) {
+            setProductionId(match.id)
+            setRole(match.role)
+          }
+          setLoading(false)
+        })
+    })
+  }, [router])
+
+  useEffect(() => {
+    if (!productionId) return
+    supabase.from('locations').select('id, name').eq('production_id', productionId)
+      .then(({ data }) => setLocations(data || []))
+  }, [productionId])
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#94a3b8', fontSize: '14px' }}>Loading…</div>
+      </div>
+    )
+  }
+
+  const isAdmin = ['CAPTAIN', 'ADMIN'].includes(role)
+
+  const TABS = [
+    { id: 'overview', label: '⚓ Overview' },
+    ...(isAdmin ? [
+      { id: 'pending', label: '👥 Pending Users' },
+      { id: 'invites', label: '🔑 Invite Codes' },
+    ] : []),
+  ]
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
+      <Navbar user={user} productions={productions} activeProductionId={productionId} />
+
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px' : '24px 20px' }}>
+
+        {/* Page header */}
+        <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <h1 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: '900', color: '#0f2340', margin: 0 }}>
+              ⚓ Captain Bridge
+            </h1>
+            <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+              Production command centre
+            </div>
+          </div>
+          {tab === 'invites' && isAdmin && (
+            <button
+              onClick={() => document.dispatchEvent(new CustomEvent('bridge:newCode'))}
+              style={{ ...btnPrimary, fontSize: '13px', padding: '8px 16px' }}>
+              + New Code
+            </button>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '4px' }}>
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: '7px',
+                border: 'none',
+                background: tab === t.id ? '#0f2340' : 'transparent',
+                color:      tab === t.id ? 'white' : '#64748b',
+                fontSize:   '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Overview tab ── */}
+        {tab === 'overview' && productionId && (
+          <>
+            <NotificationsPanel productionId={productionId} />
+            <DriveSyncWidget
+              productionId={productionId}
+              refreshKey={refreshKey}
+              onPreview={ctx => setImportCtx({ ...ctx, locations })}
+            />
+            <TravelDiscrepanciesWidget productionId={productionId} refreshKey={refreshKey} />
+            <CrewDuplicatesWidget
+              productionId={productionId}
+              locations={locations}
+              onMerged={() => setRefreshKey(k => k + 1)}
+            />
+            <TomorrowPanel productionId={productionId} />
+            <ArrivalsDeparturesChart productionId={productionId} />
+            <MiniWidgets productionId={productionId} />
+            <VehicleRentalWidget productionId={productionId} />
+            <ActivityLog productionId={productionId} />
+          </>
+        )}
+
+        {/* ── Pending Users tab ── */}
+        {tab === 'pending' && isAdmin && (
+          <div style={card}>
+            <div style={hdr}>
+              <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f2340' }}>👥 Pending Users</span>
+            </div>
+            <PendingUsersTab productions={productions} />
+          </div>
+        )}
+
+        {/* ── Invite Codes tab ── */}
+        {tab === 'invites' && isAdmin && (
+          <div style={card}>
+            <div style={hdr}>
+              <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f2340' }}>🔑 Invite Codes</span>
+            </div>
+            <InviteCodesTabWrapper productions={productions} />
+          </div>
+        )}
+
+      </div>
+
+      {/* Import modal (triggered by DriveSyncWidget preview) */}
+      {importCtx && (
+        <ImportModal
+          file={importCtx.fileObj}
+          selMode={importCtx.selMode}
+          locations={importCtx.locations}
+          productionId={productionId}
+          onClose={() => { setImportCtx(null); setRefreshKey(k => k + 1) }}
+        />
+      )}
+    </div>
+  )
+}
