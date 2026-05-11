@@ -15,6 +15,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Cell, ResponsiveContainer,
 } from 'recharts'
+import { useOnlinePresence, getPageLabel, getInitials, getAvatarColor, fmtOnlineSince, getRoleStyle } from '../../../lib/useOnlinePresence'
 
 // ── helpers ──────────────────────────────────────────────
 function fmt(iso) {
@@ -2043,6 +2044,90 @@ function InviteCodesTabControlled({ productions, showFormProp, onFormClose }) {
   )
 }
 
+// ── Online Users Widget ───────────────────────────────────
+function OnlineUsersWidget({ productionId, userId, userEmail, userRole }) {
+  const onlineUsers = useOnlinePresence({
+    productionId,
+    userId,
+    email: userEmail,
+    page:  '/dashboard/bridge',
+    role:  userRole || '',
+  })
+
+  if (!onlineUsers.length) return null
+
+  return (
+    <div style={{ ...card, borderLeft: '4px solid #22c55e', marginBottom: '20px' }}>
+      {/* Header */}
+      <div style={hdr}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 0 3px rgba(34,197,94,0.2)' }} />
+            Online Now
+          </span>
+          <span style={{ background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', padding: '2px 8px', borderRadius: '999px', fontSize: '12px', fontWeight: '700' }}>
+            {onlineUsers.length} {onlineUsers.length === 1 ? 'user' : 'users'}
+          </span>
+        </div>
+        <span style={{ fontSize: '11px', color: '#94a3b8' }}>live · Supabase Realtime</span>
+      </div>
+
+      {/* User rows */}
+      <div style={{ padding: '4px 0' }}>
+        {onlineUsers.map((u, i) => {
+          const rs = getRoleStyle(u.role)
+          const isMe = u.user_id === userId
+          return (
+            <div key={u.user_id || i} style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '10px 20px',
+              borderBottom: i < onlineUsers.length - 1 ? '1px solid #f1f5f9' : 'none',
+              background: isMe ? '#f0fdf4' : 'transparent',
+            }}>
+              {/* Avatar */}
+              <div style={{
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: getAvatarColor(u.user_id),
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: '12px', fontWeight: '900', flexShrink: 0,
+              }}>
+                {getInitials(u.email)}
+              </div>
+
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {u.email || u.user_id}
+                  {isMe && (
+                    <span style={{ marginLeft: '7px', fontSize: '10px', color: '#22c55e', fontWeight: '700', background: '#dcfce7', padding: '1px 5px', borderRadius: '4px' }}>
+                      you
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {u.role && (
+                    <span style={{ background: rs.bg, color: rs.color, padding: '1px 6px', borderRadius: '4px', fontWeight: '700', fontSize: '10px' }}>
+                      {u.role}
+                    </span>
+                  )}
+                  {u.page && (
+                    <span style={{ color: '#475569' }}>{getPageLabel(u.page)}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Time online */}
+              <div style={{ fontSize: '11px', color: '#94a3b8', flexShrink: 0 }}>
+                {fmtOnlineSince(u.online_at)}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────
 export default function BridgePage() {
   const router = useRouter()
@@ -2160,6 +2245,12 @@ export default function BridgePage() {
         {/* ── Overview tab ── */}
         {tab === 'overview' && productionId && (
           <>
+            <OnlineUsersWidget
+              productionId={productionId}
+              userId={user?.id}
+              userEmail={user?.email}
+              userRole={role}
+            />
             <NotificationsPanel productionId={productionId} />
             <DriveSyncWidget
               productionId={productionId}
