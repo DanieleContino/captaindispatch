@@ -2103,14 +2103,10 @@ export default function BridgePage() {
     )
   }
 
-  const isAdmin = ['CAPTAIN', 'ADMIN'].includes(role)
-
   const TABS = [
     { id: 'overview', label: '⚓ Overview' },
-    ...(isAdmin ? [
-      { id: 'pending', label: '👥 Pending Users' },
-      { id: 'invites', label: '🔑 Invite Codes' },
-    ] : []),
+    { id: 'pending',  label: '👥 Pending Users' },
+    { id: 'invites',  label: '🔑 Invite Codes' },
   ]
 
   return (
@@ -2129,7 +2125,7 @@ export default function BridgePage() {
               Production command centre
             </div>
           </div>
-          {tab === 'invites' && isAdmin && (
+          {tab === 'invites' && (
             <button
               onClick={() => document.dispatchEvent(new CustomEvent('bridge:newCode'))}
               style={{ ...btnPrimary, fontSize: '13px', padding: '8px 16px' }}>
@@ -2185,7 +2181,7 @@ export default function BridgePage() {
         )}
 
         {/* ── Pending Users tab ── */}
-        {tab === 'pending' && isAdmin && (
+        {tab === 'pending' && (
           <div style={card}>
             <div style={hdr}>
               <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f2340' }}>👥 Pending Users</span>
@@ -2195,7 +2191,7 @@ export default function BridgePage() {
         )}
 
         {/* ── Invite Codes tab ── */}
-        {tab === 'invites' && isAdmin && (
+        {tab === 'invites' && (
           <div style={card}>
             <div style={hdr}>
               <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f2340' }}>🔑 Invite Codes</span>
