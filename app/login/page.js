@@ -5,19 +5,14 @@ import { supabase } from '../../lib/supabase'
 export default function LoginPage() {
 
   async function signInWithGoogle() {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
-      scopes: 'https://www.googleapis.com/auth/drive.readonly',
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent'
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
       }
-    }
-  })
-  console.log('signin data:', data, 'error:', error)
-}
+    })
+    if (error) console.error('signin error:', error)
+  }
 
   return (
     <div style={{
