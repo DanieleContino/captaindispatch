@@ -2064,9 +2064,10 @@ export default function BridgePage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.replace('/login'); return }
       setUser(session.user)
-      setLoading(false)  // unblock immediately — productionId is already available
 
-      // Load role + productions list (non-blocking — used for admin tabs + Navbar)
+      // Load role + productions — wait for this before showing the page
+      // so that admin tabs (Pending Users, Invite Codes) are visible on first render.
+      // productionId is already available via getProductionId(), so Overview always works.
       supabase
         .from('production_members')
         .select('production_id, role, productions(id, name)')
@@ -2082,7 +2083,9 @@ export default function BridgePage() {
           // Determine role for the active production (for admin tabs)
           const match = prods.find(p => p.id === productionId) || prods[0]
           if (match) setRole(match.role)
+          setLoading(false)
         })
+        .catch(() => setLoading(false))  // failsafe: never hang if DB unreachable
     })
   }, [router])
 
