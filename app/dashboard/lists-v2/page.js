@@ -10,6 +10,7 @@ import { SectionsManagerSidebar } from '../../../lib/SectionsManagerSidebar'
 import { COLUMNS_CATALOG, CAPTAIN_PRESET } from '../../../lib/listColumnsCatalog'
 import { ColumnsEditorSidebar } from '../../../lib/ColumnsEditorSidebar'
 import { HeaderFooterEditorSidebar } from '../../../lib/HeaderFooterEditorSidebar'
+import { TLHeaderFooterRenderer } from '../../../lib/TLHeaderFooterRenderer'
 
 // ─── Utility ──────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
@@ -427,6 +428,7 @@ export default function ListsPage() {
       const [applyingPreset, setApplyingPreset] = useState(false)
       const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
       const [headerFooterOpen, setHeaderFooterOpen] = useState(false)
+      const [headerFooterReloadKey, setHeaderFooterReloadKey] = useState(0)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -757,11 +759,6 @@ export default function ListsPage() {
                 style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                 Header & Footer
               </button>
-              <a href="/dashboard/settings/production"
-                className="no-print"
-                style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', textDecoration: 'none', cursor: 'pointer' }}>
-                ⚙️ Edit Header
-              </a>
             </>
           )}
           <button onClick={() => window.print()}
@@ -775,8 +772,14 @@ export default function ListsPage() {
       {/* ── Contenuto stampabile ── */}
       <div className="print-wrap" style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px', background: '#f1f5f9', minHeight: '80vh' }}>
 
-        {/* ── Transport List Header (nuovo layout) ── */}
-        <TransportListHeader production={production} date={date} />
+        {/* ── Transport List Header (data-driven) ── */}
+        <TLHeaderFooterRenderer
+          productionId={prodId}
+          zone="header"
+          currentDate={new Date(date + 'T12:00:00Z')}
+          reloadKey={headerFooterReloadKey}
+          onOpenEditor={() => setHeaderFooterOpen(true)}
+        />
 
         {!prodId && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
@@ -999,8 +1002,13 @@ export default function ListsPage() {
           </DndContext>
         )}
 
-        {/* ── Transport List Footer (nuovo layout) ── */}
-        <TransportListFooter />
+        {/* ── Transport List Footer (data-driven) ── */}
+        <TLHeaderFooterRenderer
+          productionId={prodId}
+          zone="footer"
+          currentDate={new Date(date + 'T12:00:00Z')}
+          reloadKey={headerFooterReloadKey}
+        />
 
       <SectionsManagerSidebar
         open={sectionsOpen}
@@ -1014,7 +1022,10 @@ export default function ListsPage() {
       />
       <HeaderFooterEditorSidebar
         open={headerFooterOpen}
-        onClose={() => setHeaderFooterOpen(false)}
+        onClose={() => {
+          setHeaderFooterOpen(false)
+          setHeaderFooterReloadKey(k => k + 1)
+        }}
         productionId={prodId}
         productionLabel={production?.name || null}
       />
