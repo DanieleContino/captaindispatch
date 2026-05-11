@@ -9,6 +9,7 @@ import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, use
 import { SectionsManagerSidebar } from '../../../lib/SectionsManagerSidebar'
 import { COLUMNS_CATALOG, CAPTAIN_PRESET } from '../../../lib/listColumnsCatalog'
 import { ColumnsEditorSidebar } from '../../../lib/ColumnsEditorSidebar'
+import { HeaderFooterEditorSidebar } from '../../../lib/HeaderFooterEditorSidebar'
 
 // ─── Utility ──────────────────────────────────────────────────
 const pad2 = n => String(n).padStart(2, '0')
@@ -425,6 +426,7 @@ export default function ListsPage() {
       const [columnsConfig, setColumnsConfig] = useState([])
       const [applyingPreset, setApplyingPreset] = useState(false)
       const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
+      const [headerFooterOpen, setHeaderFooterOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -750,6 +752,11 @@ export default function ListsPage() {
                 style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
                 Manage sections
               </button>
+              <button onClick={() => setHeaderFooterOpen(true)}
+                className="no-print"
+                style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                Header & Footer
+              </button>
               <a href="/dashboard/settings/production"
                 className="no-print"
                 style={{ padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', textDecoration: 'none', cursor: 'pointer' }}>
@@ -1004,6 +1011,12 @@ export default function ListsPage() {
         open={columnsEditorOpen}
         onClose={() => setColumnsEditorOpen(false)}
         onChanged={() => loadData(date)}
+      />
+      <HeaderFooterEditorSidebar
+        open={headerFooterOpen}
+        onClose={() => setHeaderFooterOpen(false)}
+        productionId={prodId}
+        productionLabel={production?.name || null}
       />
       </div>
     </div>
