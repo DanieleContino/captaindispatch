@@ -1748,7 +1748,50 @@ function InviteCodesTab({ productions }) {
   const [saving,  setSaving]  = useState(false)
   const [formErr, setFormErr] = useState(null)
 
-  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  // Edit invite state
+  const [editingId,  setEditingId]  = useState(null)   // id of the invite being edited
+  const [editForm,   setEditForm]   = useState({})
+  const [editSaving, setEditSaving] = useState(false)
+  const [editErr,    setEditErr]    = useState(null)
+
+  const setF  = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const setEF = (k, v) => setEditForm(f => ({ ...f, [k]: v }))
+
+  function openEdit(inv) {
+    setEditingId(inv.id)
+    setEditForm({
+      label:      inv.label      || '',
+      role:       inv.role       || 'MANAGER',
+      max_uses:   inv.max_uses   != null ? String(inv.max_uses) : '',
+      expires_at: inv.expires_at ? inv.expires_at.slice(0, 10) : '',
+    })
+    setEditErr(null)
+  }
+
+  function closeEdit() {
+    setEditingId(null)
+    setEditErr(null)
+  }
+
+  async function handleSaveEdit(invId) {
+    setEditSaving(true); setEditErr(null)
+    const res = await fetch('/api/bridge/invites', {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id:         invId,
+        label:      editForm.label.trim()   || null,
+        role:       editForm.role,
+        max_uses:   editForm.max_uses       ? parseInt(editForm.max_uses) : null,
+        expires_at: editForm.expires_at     || null,
+      }),
+    })
+    const json = await res.json()
+    if (!res.ok) { setEditErr(json.error || 'Save failed'); setEditSaving(false); return }
+    setInvites(list => list.map(i => i.id === json.invite.id ? json.invite : i))
+    setEditSaving(false)
+    closeEdit()
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -2215,7 +2258,50 @@ function InviteCodesTabControlled({ productions, showFormProp, onFormClose }) {
   const [saving,  setSaving]  = useState(false)
   const [formErr, setFormErr] = useState(null)
 
-  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  // Edit state
+  const [editingId,  setEditingId]  = useState(null)
+  const [editForm,   setEditForm]   = useState({})
+  const [editSaving, setEditSaving] = useState(false)
+  const [editErr,    setEditErr]    = useState(null)
+
+  const setF  = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const setEF = (k, v) => setEditForm(f => ({ ...f, [k]: v }))
+
+  function openEdit(inv) {
+    setEditingId(inv.id)
+    setEditForm({
+      label:      inv.label      || '',
+      role:       inv.role       || 'MANAGER',
+      max_uses:   inv.max_uses   != null ? String(inv.max_uses) : '',
+      expires_at: inv.expires_at ? inv.expires_at.slice(0, 10) : '',
+    })
+    setEditErr(null)
+  }
+
+  function closeEdit() {
+    setEditingId(null)
+    setEditErr(null)
+  }
+
+  async function handleSaveEdit(invId) {
+    setEditSaving(true); setEditErr(null)
+    const res = await fetch('/api/bridge/invites', {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id:         invId,
+        label:      editForm.label.trim()   || null,
+        role:       editForm.role,
+        max_uses:   editForm.max_uses       ? parseInt(editForm.max_uses) : null,
+        expires_at: editForm.expires_at     || null,
+      }),
+    })
+    const json = await res.json()
+    if (!res.ok) { setEditErr(json.error || 'Save failed'); setEditSaving(false); return }
+    setInvites(list => list.map(i => i.id === json.invite.id ? json.invite : i))
+    setEditSaving(false)
+    closeEdit()
+  }
 
   // Sync external trigger
   useEffect(() => {
@@ -2381,51 +2467,120 @@ function InviteCodesTabControlled({ productions, showFormProp, onFormClose }) {
           const statusColor = !inv.active ? '#64748b' : isExpired || isFull ? '#dc2626' : '#16a34a'
           const statusLabel = !inv.active ? 'INACTIVE' : isExpired ? 'EXPIRED' : isFull ? 'FULL' : 'ACTIVE'
 
+          const isEditing = editingId === inv.id
+
           return (
-            <div key={inv.id} style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '14px', opacity: !inv.active ? 0.65 : 1 }}>
-              {/* Code */}
-              <div onClick={() => handleCopy(inv.code)} title="Click to copy"
-                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 14px', fontFamily: 'monospace', fontSize: '16px', fontWeight: '900', color: '#0f2340', letterSpacing: '0.1em', cursor: 'pointer', flexShrink: 0, userSelect: 'none' }}>
-                {inv.code}
-                <span style={{ fontSize: '11px', marginLeft: '8px', color: '#94a3b8', fontFamily: 'sans-serif', fontWeight: '400' }}>
-                  {copied === inv.code ? '✓ copied' : '📋'}
-                </span>
-              </div>
-
-              {/* Info */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
-                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>
-                    {inv.productions?.name || '—'}
-                  </span>
-                  <span style={{ padding: '1px 7px', borderRadius: '5px', background: '#e0f2fe', color: '#0369a1', fontSize: '10px', fontWeight: '700' }}>
-                    {inv.role}
-                  </span>
-                  <span style={{ padding: '1px 7px', borderRadius: '5px', background: statusBg, color: statusColor, fontSize: '10px', fontWeight: '700' }}>
-                    {statusLabel}
+            <div key={inv.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+              {/* ── Main row ── */}
+              <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '14px', opacity: !inv.active && !isEditing ? 0.65 : 1 }}>
+                {/* Code */}
+                <div onClick={() => handleCopy(inv.code)} title="Click to copy"
+                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 14px', fontFamily: 'monospace', fontSize: '16px', fontWeight: '900', color: '#0f2340', letterSpacing: '0.1em', cursor: 'pointer', flexShrink: 0, userSelect: 'none' }}>
+                  {inv.code}
+                  <span style={{ fontSize: '11px', marginLeft: '8px', color: '#94a3b8', fontFamily: 'sans-serif', fontWeight: '400' }}>
+                    {copied === inv.code ? '✓ copied' : '📋'}
                   </span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>
-                  {inv.label && <span style={{ marginRight: '8px' }}>📝 {inv.label}</span>}
-                  <span>Uses: <strong>{inv.uses_count}</strong>{inv.max_uses ? `/${inv.max_uses}` : ''}</span>
-                  <span style={{ margin: '0 8px' }}>·</span>
-                  <span>{inv.expires_at ? `Expires ${fmtDate(inv.expires_at)}` : 'No expiry'}</span>
-                  <span style={{ margin: '0 8px' }}>·</span>
-                  <span>Created {fmt(inv.created_at)}</span>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                    <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>
+                      {inv.productions?.name || '—'}
+                    </span>
+                    <span style={{ padding: '1px 7px', borderRadius: '5px', background: '#e0f2fe', color: '#0369a1', fontSize: '10px', fontWeight: '700' }}>
+                      {inv.role}
+                    </span>
+                    <span style={{ padding: '1px 7px', borderRadius: '5px', background: statusBg, color: statusColor, fontSize: '10px', fontWeight: '700' }}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>
+                    {inv.label && <span style={{ marginRight: '8px' }}>📝 {inv.label}</span>}
+                    <span>Uses: <strong>{inv.uses_count}</strong>{inv.max_uses ? `/${inv.max_uses}` : ''}</span>
+                    <span style={{ margin: '0 8px' }}>·</span>
+                    <span>{inv.expires_at ? `Expires ${fmtDate(inv.expires_at)}` : 'No expiry'}</span>
+                    <span style={{ margin: '0 8px' }}>·</span>
+                    <span>Created {fmt(inv.created_at)}</span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  <button
+                    onClick={() => isEditing ? closeEdit() : openEdit(inv)}
+                    style={{ ...btnSecondary, fontSize: '11px', padding: '5px 10px', background: isEditing ? '#eff6ff' : 'white', borderColor: isEditing ? '#bfdbfe' : '#e2e8f0', color: isEditing ? '#1d4ed8' : '#475569' }}>
+                    {isEditing ? '✕ Cancel' : '✏️ Edit'}
+                  </button>
+                  <button onClick={() => toggleActive(inv)}
+                    style={{ ...btnSecondary, fontSize: '11px', padding: '5px 10px' }}>
+                    {inv.active ? '⏸ Pause' : '▶ Enable'}
+                  </button>
+                  <button onClick={() => deleteInvite(inv.id)} disabled={deleting === inv.id}
+                    style={{ ...btnRed, fontSize: '11px', padding: '5px 10px', opacity: deleting === inv.id ? 0.6 : 1 }}>
+                    {deleting === inv.id ? '…' : '🗑'}
+                  </button>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                <button onClick={() => toggleActive(inv)}
-                  style={{ ...btnSecondary, fontSize: '11px', padding: '5px 10px' }}>
-                  {inv.active ? '⏸ Pause' : '▶ Enable'}
-                </button>
-                <button onClick={() => deleteInvite(inv.id)} disabled={deleting === inv.id}
-                  style={{ ...btnRed, fontSize: '11px', padding: '5px 10px', opacity: deleting === inv.id ? 0.6 : 1 }}>
-                  {deleting === inv.id ? '…' : '🗑'}
-                </button>
-              </div>
+              {/* ── Inline edit form ── */}
+              {isEditing && (
+                <div style={{ padding: '14px 20px 16px', background: '#f8fafc', borderTop: '1px solid #e0f2fe' }}>
+                  <div style={{ fontWeight: '700', fontSize: '12px', color: '#1d4ed8', marginBottom: '12px' }}>
+                    ✏️ Edit Invite — <span style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }}>{inv.code}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                    <div>
+                      <label style={lbl}>Label (optional)</label>
+                      <input
+                        value={editForm.label}
+                        onChange={e => setEF('label', e.target.value)}
+                        placeholder="e.g. Crew access June"
+                        style={inp}
+                      />
+                    </div>
+                    <div>
+                      <label style={lbl}>Role assigned</label>
+                      <select value={editForm.role} onChange={e => setEF('role', e.target.value)} style={sel}>
+                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                    <div>
+                      <label style={lbl}>Max uses (blank = unlimited)</label>
+                      <input
+                        type="number" min="1"
+                        value={editForm.max_uses}
+                        onChange={e => setEF('max_uses', e.target.value)}
+                        placeholder="e.g. 10"
+                        style={inp}
+                      />
+                    </div>
+                    <div>
+                      <label style={lbl}>Expires (blank = never)</label>
+                      <input
+                        type="date"
+                        value={editForm.expires_at}
+                        onChange={e => setEF('expires_at', e.target.value)}
+                        style={inp}
+                      />
+                    </div>
+                  </div>
+                  {editErr && (
+                    <div style={{ fontSize: '12px', color: '#dc2626', marginBottom: '10px' }}>❌ {editErr}</div>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={closeEdit} style={{ ...btnSecondary, fontSize: '12px' }}>Cancel</button>
+                    <button
+                      onClick={() => handleSaveEdit(inv.id)}
+                      disabled={editSaving}
+                      style={{ ...btnPrimary, fontSize: '12px', opacity: editSaving ? 0.6 : 1 }}>
+                      {editSaving ? 'Saving…' : '✓ Save Changes'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )
         })

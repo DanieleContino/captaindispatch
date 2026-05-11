@@ -52,9 +52,10 @@ export async function POST(req) {
 
     if (!existingRole) {
       const { error: roleErr } = await service.from('user_roles').insert({
-        user_id:       user.id,
-        production_id: invite.production_id,
-        role:          invite.role,
+        user_id:        user.id,
+        production_id:  invite.production_id,
+        role:           invite.role,
+        invite_code_id: invite.id,   // ← tracks which invite granted this access
       })
       if (roleErr) return NextResponse.json({ error: roleErr.message }, { status: 500 })
     }
