@@ -176,8 +176,6 @@ export async function POST (request) {
         }))
       )
       const sortedDropoffs = dropoffDistances.sort((a, b) => a.dur - b.dur)
-      // firstDropoffId = the dropoff closest to last pickup = first place van delivers
-      const firstDropoffId = sortedDropoffs[0].id
 
       // Step 4: reference call_min (= arrival at first dropoff)
       const callMin = sortedByDur[0].call_min  // all sibling legs share call_min
@@ -382,7 +380,6 @@ export async function POST (request) {
 
       // Compute cumulative duration: each hotel's effective arrival = prev_arrival + drive(prev→this)
       const results = new Array(sorted.length)
-      const callMin = sorted[0].call_min
       const date    = sorted[0].date
 
       // First hotel: driver goes directly from hub (pickup_min + duration[0])

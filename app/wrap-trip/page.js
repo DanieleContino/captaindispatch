@@ -96,7 +96,7 @@ function PickerModal({ title, items, selected, onSelect, onClose, showSearch = t
 }
 
 // ─── Field Button (tappable, replaces <select>) ─────────────────
-function FieldButton({ label, value, placeholder, onClick, icon }) {
+function FieldButton({ label, value, placeholder, onClick }) {
   return (
     <div>
       <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>{label}</label>

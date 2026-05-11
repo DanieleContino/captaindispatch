@@ -1,5 +1,229 @@
-# CAPTAINDISPATCH — Context S53 (Cline)
-## Updated: 9 May 2026 (S53 — Settings page + Google Drive OAuth system)
+# CAPTAINDISPATCH — Context S54 (Cline)
+## Updated: 10 May 2026 (S54 — Transport List Columns Editor (EG series) + Production Settings)
+
+---
+
+## WHAT CHANGED IN SESSION S54 (10 May 2026)
+
+### Feature ✅ — Transport List `lists-v2`: colonne data-driven da DB (EG series)
+
+> **Obiettivo**: il Transport List (`/dashboard/lists-v2`) passa da colonne hardcoded a colonne configurabili per produzione, salvate in DB. L'utente può aggiungere, modificare, cancellare e riordinare le colonne tramite un sidebar editor.
+
+---
+
+#### EG-2A — `lib/listColumnsCatalog.js` (nuovo file) — commit `a0129c9`
+
+**Catalog centralizzato di tutti i renderer di colonna**:
+- `COLUMNS_CATALOG` — object con ~30 chiavi, ogni entry ha: `label`, `category`, `defaultWidth`, `render(group, ctx)`
+- Ogni renderer riceve `group` (il trip group: trip_id, vehicle_id, rows[], pickup_min, call_min, driver_name…) e `ctx` (`{ locsMap, paxByTripRow, driverPhonesByName }`)
+- `CAPTAIN_PRESET` — array di 6 colonne default, usato per "Reset to Captain Preset"
+- `getCatalogByCategory()` — raggruppa il catalog per categoria per il field picker del sidebar
+
+**Categorie e chiavi disponibili**:
+| Categoria | Chiavi |
+|---|---|
+| Vehicle | `vehicle_id`, `vehicle_capacity`, `sign_code` |
+| Driver | `driver_name`, `driver_phone`, `driver_name_phone_2lines` |
+| Time | `pickup_min_hhmm`, `call_min_hhmm`, `pickup_call_2lines` |
+| Trip | `trip_id`, `status`, `service_type`, `notes`, `flight_no` |
+| Counts | `pax_count`, `pax_capacity_combined` |
+| Passengers | `passengers_lastname_role`, `passengers_fullname_only` |
+| Pickup | `pickup_name`, `pickup_name_address`, `pickup_maps_link_compact`, `pickup_full_with_map_compact`, `pickup_full_with_map_url`, `pickup_maps_link_full` |
+| Dropoff | `dropoff_name`, `dropoff_name_address`, `dropoff_name_flight`, `dropoff_maps_link_compact`, `dropoff_full_with_map_compact`, `dropoff_full_with_map_url`, `dropoff_maps_link_full` |
+
+**`CAPTAIN_PRESET`** (6 colonne default):
+```js
+[
+  { source_field: 'vehicle_id',               header_label: 'Vehicle',    width: '110px', display_order: 10 },
+  { source_field: 'driver_name_phone_2lines', header_label: 'Driver',     width: '130px', display_order: 20 },
+  { source_field: 'pickup_call_2lines',       header_label: 'Time',       width: '70px',  display_order: 30 },
+  { source_field: 'passengers_lastname_role', header_label: 'Passengers', width: '1fr',   display_order: 40 },
+  { source_field: 'pickup_name_address',      header_label: 'From',       width: '160px', display_order: 50 },
+  { source_field: 'dropoff_name_flight',      header_label: 'To',         width: '160px', display_order: 60 },
+]
+```
+
+**Helper `buildMapsUrl(loc)`**: costruisce URL Google Maps da `{lat,lng}` (coordinate precise) o da `name/default_pickup_point` (search URL).
+
+**Renderer maps link — 2 varianti**:
+- `*_compact`: mostra solo `🗺 Map` (link) — per uso a schermo
+- `*_full`: mostra `🗺 Map` + URL testuale in `<div class="show-only-on-print">` — URL compare solo stampando
+
+---
+
+#### EG-2B — `app/dashboard/lists-v2/page.js` data-driven — commit `1dc42f9`
+
+**Cambiamento principale**: le righe trip (`TripTableRow`) ora renderizzano le colonne leggendo `columnsConfig` (array da DB) invece di una lista hardcoded.
+
+- Ogni trip row usa `gridTemplateColumns` calcolato da `columnsConfig.map(c => c.width).join(' ')`
+- Per ogni colonna: `COLUMNS_CATALOG[col.source_field].render(group, ctx)` — se non trovato, mostra badge rosso `?campo`
+- Il bottone "Move to" è nell'ultima colonna (posizionamento relativo)
+- Bottone **"Apply Captain Preset"** in toolbar: inserisce i 6 preset in DB se non ci sono colonne configurate
+
+**Nuova tabella DB**: `transport_list_columns`
+```sql
+CREATE TABLE transport_list_columns (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  production_id  UUID REFERENCES productions(id) ON DELETE CASCADE,
+  source_field   TEXT NOT NULL,   -- chiave del COLUMNS_CATALOG
+  header_label   TEXT NOT NULL,
+  width          TEXT NOT NULL DEFAULT '110px',
+  display_order  INTEGER DEFAULT 10,
+  created_at     TIMESTAMPTZ DEFAULT now(),
+  updated_at     TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**`TransportListHeader`** (componente in `lists-v2/page.js`):
+- Layout 2 colonne: 70% SX (logo + titolo + date/shoot day + set/basecamp + contacts) / 30% DX (contatti telefono)
+- Legge tutti i campi della tabella `productions` (director, producer, production_manager, transportation_coordinator, transportation_captain, production_office_phone, set_location, set_address, basecamp, general_call_time, shoot_day, revision, logo_url)
+- Logo: `<img src={prod.logo_url}>` (44×44px, padding, border)
+- Titolo: "TRANSPORT LIST — PRODUCTION NAME" in uppercase grande
+- Badge rosso "DRAFT" accanto al titolo (sempre visibile)
+- Mostra shoot_day, revision, general_call_time, set location+address, basecamp, data del giorno
+
+---
+
+#### EG-3 — `lib/ColumnsEditorSidebar.js` (nuovo file) — commit `874dd89`
+
+**Sidebar editor per le colonne del Transport List** (360px, slide da destra):
+- Lista colonne attive con `edit` + `delete` per ognuna
+- Form "Add new column" / "Edit column":
+  - Select campo (raggruppato per categoria da `getCatalogByCategory()`)
+  - Input header label
+  - Select width (60px / 80px / 100px / 120px / 140px / 160px / 200px / 1fr)
+- **`handleSave()`**: INSERT (nuova colonna) o UPDATE (edit). `display_order` = `max(existing) + 10`
+- **`handleDelete(c)`**: confirm → DELETE
+- **`handleResetToCaptainPreset()`**: DELETE tutte le colonne della produzione → INSERT `CAPTAIN_PRESET`
+- `onChanged` callback: notifica `lists-v2/page.js` di ricaricare le colonne
+- Aperto da toolbar button "⚙️ Columns" in `lists-v2/page.js`
+
+---
+
+#### EG-4 — Drag-and-drop reorder in Columns editor — commit `564f700`
+
+**Dipendenza aggiunta**: `@dnd-kit/sortable` (già usato in lists-v2 per le sezioni)
+
+**`SortableColumnRow`** (nuovo componente in `ColumnsEditorSidebar.js`):
+- Usa `useSortable({ id: column.id })` da `@dnd-kit/sortable`
+- Handle `⋮⋮` grigio a sinistra di ogni riga — `cursor: grab`
+- `touchAction: 'none'` sul container (richiesto da dnd-kit)
+- Opacità 0.5 durante drag
+- `activationConstraint: { distance: 8 }` su `PointerSensor` (evita drag accidentale su click)
+
+**`handleDragEnd(event)`**:
+- `arrayMove(columns, oldIdx, newIdx)` → `setColumns(reordered)` (optimistic UI)
+- Persiste nuovi `display_order` (10, 20, 30…) con `Promise.all` degli UPDATE
+- Se fallisce: `setError` + `loadColumns()` per revertire l'UI
+
+---
+
+#### EG-5 — Print/PDF refinements — commit `f227503`
+
+**`app/dashboard/lists-v2/page.js`**:
+- Toolbar: `className="no-print"` su tutto il div toolbar (nascosto in stampa)
+- Trip rows: `pageBreakInside: 'avoid'` — nessuna riga tagliata tra 2 pagine
+- Intestazione colonne ripetuta su ogni sezione (per stampa multi-pagina leggibile)
+- CSS globale aggiunto (`@media print`):
+  ```css
+  @media print { .no-print { display: none !important } }
+  @media screen { .show-only-on-print { display: none !important } }
+  ```
+
+**`lib/listColumnsCatalog.js`**:
+- Renderer `*_maps_link_full` e `*_full_with_map_url`: URL Google Maps in `<div className="show-only-on-print">` — stampato per i conducenti, invisibile a schermo
+- Classe `show-only-on-print` aggiunta ai div URL
+
+---
+
+#### EG-fix-1 — Driver phone da tabella `crew` — commit `e35ce66`
+
+**Problema**: `driver_phone` renderer usava `ctx.driverPhonesByName[group.driver_name]` ma la map non veniva popolata.
+
+**Fix** in `app/dashboard/lists-v2/page.js`:
+- Aggiunta query: `supabase.from('crew').select('full_name,phone').eq('production_id', PRODUCTION_ID)`
+- Build map: `driverPhonesByName = Object.fromEntries(crew.map(c => [c.full_name, c.phone]).filter(([,p]) => p))`
+- Passata come `ctx.driverPhonesByName` al renderer
+
+**Fix** in `lib/listColumnsCatalog.js` (`driver_phone` e `driver_name_phone_2lines` renderer):
+- Ora leggono `ctx?.driverPhonesByName?.[group.driver_name]` — se non presente, mostra `—`
+
+---
+
+#### EG-fix-2 — 4 renderer combinati pickup/dropoff — commit `0c39fed`
+
+Aggiunti 4 nuovi renderer in `lib/listColumnsCatalog.js`:
+- `pickup_full_with_map_compact` — name + address + `🗺 Map` link
+- `pickup_full_with_map_url` — name + address + `🗺 Map` + URL stampato
+- `dropoff_full_with_map_compact` — name + address + flight info + `🗺 Map` link
+- `dropoff_full_with_map_url` — name + address + flight info + `🗺 Map` + URL stampato
+
+---
+
+### Feature ✅ — `/dashboard/settings/production` — Production Settings page
+
+**File nuovi/modificati**:
+- `app/dashboard/settings/production/page.js` — pagina impostazioni produzione (client component)
+- `app/api/productions/upload-logo/route.js` — API upload logo via service-role (bypassa RLS Storage) — commit `cb9ca72`
+
+**`app/dashboard/settings/production/page.js`**:
+- Auth guard: redirect `/login` se non loggato
+- Carica la produzione attiva tramite `getProductionId()` → `supabase.from('productions').select('*')`
+- **Sezioni form**:
+  - 🎬 Production Identity: nome, shoot_day, revision, general_call_time, logo upload
+  - 🎭 Key Creatives: director, producer
+  - 👥 Production Team: production_manager (nome + tel), production_coordinator (nome + tel)
+  - 🚌 Transportation Team: transportation_coordinator (nome + tel), transportation_captain (nome + tel), production_office_phone
+  - 📍 Set & Basecamp: set_location, set_address, basecamp
+- **Logo upload**: `<input type="file" accept="image/*">` → preview immediata con `URL.createObjectURL`
+- **Save**: `uploadLogo()` → `POST /api/productions/upload-logo` → poi `PATCH /api/productions` con tutti i campi
+- Tip: link a `/dashboard/lists` per vedere il header con i dati della produzione
+
+**`app/api/productions/upload-logo/route.js`** — `POST /api/productions/upload-logo`:
+1. Verifica sessione Supabase (auth user)
+2. Verifica che l'utente abbia un ruolo per la produzione (`user_roles`)
+3. Legge il file da FormData
+4. Upload via **service-role client** → `production-logos` bucket → `{productionId}/logo.{ext}` (upsert)
+5. Ottiene URL pubblico con `?t=Date.now()` (cache-bust)
+6. Response: `{ logo_url }`
+
+**Nota**: bypass necessario perché le policy RLS di Supabase Storage non permettono upload diretto dal client per il bucket `production-logos`.
+
+**Nuovi campi DB `productions`** (migration `scripts/migrate-productions-details.sql`):
+```sql
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS director TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS producer TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS production_manager TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS production_manager_phone TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS production_coordinator TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS production_coordinator_phone TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS transportation_coordinator TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS transportation_coordinator_phone TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS transportation_captain TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS transportation_captain_phone TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS production_office_phone TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS set_location TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS set_address TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS basecamp TEXT;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS general_call_time TIME;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS shoot_day INTEGER;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS revision INTEGER DEFAULT 1;
+ALTER TABLE productions ADD COLUMN IF NOT EXISTS logo_url TEXT;
+```
+
+---
+
+### Stato commits S54 (10 May 2026)
+| Hash | Commit |
+|---|---|
+| `a0129c9` | EG-2A: add list columns catalog with renderers (incl. maps links, Captain Preset) |
+| `1dc42f9` | EG-2B: data-driven trip rows from DB columns config + Apply Captain Preset button |
+| `874dd89` | EG-3: Columns editor sidebar with add/edit/delete + Reset to Captain Preset |
+| `564f700` | EG-4: drag-and-drop column reorder in Columns editor (with @dnd-kit/sortable) |
+| `f227503` | EG-5: print/PDF refinements (no-print toolbar, page-break-avoid trips, repeated col-header, maps link compact vs full variants) |
+| `e35ce66` | EG-fix-1: load driver phone from crew table by name match |
+| `0c39fed` | EG-fix-2: add 4 combined renderers (pickup/dropoff: name + address + maps link, compact and URL variants) |
+| `cb9ca72` | fix: use API route for logo upload in production settings (bypass Storage RLS) |
 
 ---
 

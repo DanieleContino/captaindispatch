@@ -77,7 +77,6 @@ export async function GET(request) {
   });
 
   // 5. Set state cookie + redirect to Google
-  const response = Response.redirect(authUrl, 303);
   // Note: Response.redirect doesn't allow setting cookies via the constructor.
   // We need to build the response manually:
   const headers = new Headers();

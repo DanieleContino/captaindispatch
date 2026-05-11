@@ -13,12 +13,6 @@ import { HeaderFooterEditorSidebar } from '../../../lib/HeaderFooterEditorSideba
 import { TLHeaderFooterRenderer } from '../../../lib/TLHeaderFooterRenderer'
 
 // ─── Utility ──────────────────────────────────────────────────
-const pad2 = n => String(n).padStart(2, '0')
-function minToHHMM(min) {
-  if (min === null || min === undefined) return '–'
-  const m = ((min % 1440) + 1440) % 1440
-  return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60)
-}
 function isoToday() { return new Date().toISOString().split('T')[0] }
 function isoAdd(d, n) {
   const dt = new Date(d + 'T12:00:00Z')
@@ -30,16 +24,6 @@ function fmtDateLong(d) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
 }
-// ─── formatCrewName: "John Smith" → "Smith J." | "Mary Jane Watson" → "Watson M." ──
-function formatCrewName(name) {
-  if (!name) return ''
-  const parts = name.trim().split(/\s+/)
-  if (parts.length === 1) return parts[0]
-  const last = parts[parts.length - 1]
-  const initial = parts[0][0].toUpperCase()
-  return `${last} ${initial}.`
-}
-
 // ─── baseTripId: strip lettera finale (es. R_0326_01A → R_0326_01) ──
 function baseTripId(id) { return id ? id.replace(/[A-Z]$/, '') : id }
 

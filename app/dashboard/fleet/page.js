@@ -75,16 +75,6 @@ const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌' }
  * raggruppa per trip_id: calcola minStart e maxEnd aggregati.
  * Equivalente della logica in FleetMonitor.html (Apps Script).
  */
-// compute start/end from pickup_min+duration_min when timestamps missing
-function dtFromPickup(t) {
-  const pmin = t.pickup_min ?? t.call_min
-  if (pmin == null || !t.duration_min || !t.date) return { sd: null, ed: null }
-  const [y, mo, dd] = t.date.split('-').map(Number)
-  const sdMs = new Date(y, mo - 1, dd, Math.floor(pmin / 60), pmin % 60, 0, 0).getTime()
-  const rtMult = ['Wrap', 'Charter', 'Other'].includes(t.service_type) ? 2 : 1
-  return { sd: new Date(sdMs), ed: new Date(sdMs + t.duration_min * rtMult * 60_000) }
-}
-
 function groupByTripId(tripRows) {
   const map = {}
   for (const t of tripRows) {

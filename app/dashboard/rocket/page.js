@@ -1613,8 +1613,6 @@ export default function RocketPage() {
     else { setCrewCallOverrides(prev => ({ ...prev, [crewId]: callMin })) }
   }
 
-  function getCrewEffectiveDest(c) { return ((c.department && deptDestOverrides[c.department]?.destId) ?? destId) }
-
   // ── TASK 5: Apply / Dismiss suggestion handlers ──────────
   function handleApplySuggestion(s) {
     if (s.type === 'DEPT_CALL_TIME') {
