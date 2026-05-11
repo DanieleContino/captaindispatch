@@ -519,12 +519,6 @@ export default function ListsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>📋</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Transport Lists</span>
-          <span style={{ marginLeft: '8px', padding: '2px 8px', borderRadius: '6px',
-                         fontSize: '10px', fontWeight: '800', letterSpacing: '0.04em',
-                         background: '#fef9c3', color: '#92400e',
-                         border: '1px solid #fde68a' }}>
-            EXCEL MODE - PREVIEW
-          </span>
           <span style={{ color: '#cbd5e1', margin: '0 4px' }}>·</span>
           <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>◀</button>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}

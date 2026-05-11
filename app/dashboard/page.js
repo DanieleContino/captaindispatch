@@ -29,7 +29,7 @@ export default function Dashboard() {
     { emoji: '🚦', title: 'Fleet Monitor',          desc: t.fleetMonitorDesc,    href: '/dashboard/fleet',        accent: '#f59e0b', bg: '#fffbeb' },
     { emoji: '🗓', title: 'Trips',                   desc: t.tripsDesc || 'Manage daily transfers: create, edit, assign passengers and vehicles', href: '/dashboard/trips', accent: '#2563eb', bg: '#eff6ff' },
     { emoji: '🎬', title: 'Crew',                    desc: t.crewDesc,            href: '/dashboard/crew',         accent: '#16a34a', bg: '#f0fdf4' },
-    { emoji: '📋', title: 'Transport Lists',         desc: t.listsDesc,           href: '/dashboard/lists',        accent: '#0891b2', bg: '#ecfeff' },
+    { emoji: '📋', title: 'Transport Lists',         desc: t.listsDesc,           href: '/dashboard/lists-v2',     accent: '#0891b2', bg: '#ecfeff' },
     { emoji: '🛫', title: 'Hub Coverage',            desc: t.hubCoverageCardDesc, href: '/dashboard/hub-coverage', accent: '#7c3aed', bg: '#f5f3ff' },
     { emoji: '📍', title: 'Locations',               desc: t.locationsDesc,       href: '/dashboard/locations',    accent: '#6366f1', bg: '#eef2ff' },
     { emoji: '📱', title: 'QR Codes',                desc: t.qrCodesDesc,         href: '/dashboard/qr-codes',     accent: '#0891b2', bg: '#ecfeff' },
