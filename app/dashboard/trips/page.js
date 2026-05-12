@@ -61,6 +61,16 @@ function calcTimes({ date, arrTimeMin, durationMin, transferClass, callMin }) {
   return { callMin: call, pickupMin: pickup, startDt: new Date(startMs).toISOString(), endDt: new Date(startMs + durationMin * 60000).toISOString() }
 }
 
+// ─── Location Types ──────────────────────────────────────────
+const LOCATION_TYPES = [
+  { value: 'hotel',         label: '🏨 Hotel',         prefix: 'H',    is_hub: false },
+  { value: 'house',         label: '🏠 House',         prefix: 'HSE_', is_hub: false },
+  { value: 'airport',       label: '✈️ Airport',       prefix: 'APT_', is_hub: true  },
+  { value: 'train_station', label: '🚂 Train Station', prefix: 'STN_', is_hub: true  },
+  { value: 'bus_station',   label: '🚌 Bus Station',   prefix: 'BST_', is_hub: false },
+  { value: 'port',          label: '⚓ Port',           prefix: 'PRT_', is_hub: true  },
+]
+
 // ─── Colori ──────────────────────────────────────────────────
 const CLS = {
   ARRIVAL:   { bg: '#dcfce7', color: '#15803d', border: '#86efac', dot: '#16a34a' },
@@ -580,6 +590,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const [newLocPlaceError,   setNewLocPlaceError]   = useState(null)
   const [newLocLat,          setNewLocLat]          = useState('')
   const [newLocLng,          setNewLocLng]          = useState('')
+  const [newLocType,         setNewLocType]         = useState('')
   const newLocDebounceRef = useRef(null)
   const newLocDropdownRef = useRef(null)
 
@@ -617,7 +628,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     setMultiMode(false); setSavedLegs([]); setEditingLegLocalId(null)
     setLocalLocs(locations)
     setNewLocTarget(null); setNewLocForm({ id: '', name: '', is_hub: false }); setNewLocError(null); setNewLocDoneMsg(null)
-    setNewLocPlaceQuery(''); setNewLocPredictions([]); setNewLocPlaceOpen(false); setNewLocLat(''); setNewLocLng('')
+    setNewLocPlaceQuery(''); setNewLocPredictions([]); setNewLocPlaceOpen(false); setNewLocLat(''); setNewLocLng(''); setNewLocType('')
     if (PRODUCTION_ID) {
       supabase.from('trips').select('trip_id').eq('production_id', PRODUCTION_ID).like('trip_id', 'T%')
         .order('trip_id', { ascending: false }).limit(1).maybeSingle()
@@ -1484,10 +1495,21 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               <div style={{ background: '#f0f9ff', border: '1px solid #7dd3fc', borderRadius: '10px', padding: '12px 14px' }}>
                 <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px' }}>➕ New Pickup Location</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <select value={newLocType} onChange={e => {
+                    const type = e.target.value; setNewLocType(type)
+                    const def = LOCATION_TYPES.find(lt => lt.value === type)
+                    if (def) setNewLocForm(f => {
+                      const suffix = f.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC'
+                      return { ...f, is_hub: def.is_hub, id: def.prefix + suffix }
+                    })
+                  }} style={{ ...inp, fontSize: '12px' }}>
+                    <option value="">📍 Select location type…</option>
+                    {LOCATION_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
+                  </select>
                   <div style={{ position: 'relative' }} ref={newLocDropdownRef}>
                     <div style={{ position: 'relative' }}>
                       <input type="text" placeholder="Search on Google Maps…" value={newLocPlaceQuery}
-                        onChange={e => { setNewLocPlaceQuery(e.target.value); setNewLocForm(f => ({ ...f, name: e.target.value, id: suggestLocId(e.target.value) })) }}
+                        onChange={e => { setNewLocPlaceQuery(e.target.value); const _def = LOCATION_TYPES.find(lt => lt.value === newLocType); setNewLocForm(f => ({ ...f, name: e.target.value, id: _def ? (_def.prefix + (e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC')) : suggestLocId(e.target.value) })) }}
                         onFocus={() => newLocPredictions.length > 0 && setNewLocPlaceOpen(true)}
                         style={{ ...inp, fontSize: '12px', paddingRight: newLocPlaceLoading ? '32px' : '10px', borderColor: newLocPlaceOpen ? '#0369a1' : '#e2e8f0' }}
                         autoComplete="off" />
@@ -1500,7 +1522,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                           <button key={p.place_id} type="button"
                             onMouseDown={async () => {
                               setNewLocPlaceOpen(false); setNewLocPlaceQuery(p.description)
-                              setNewLocForm(f => ({ ...f, name: p.main_text || p.description, id: suggestLocId(p.main_text || p.description) }))
+                              { const _pn = p.main_text || p.description; const _def = LOCATION_TYPES.find(lt => lt.value === newLocType); setNewLocForm(f => ({ ...f, name: _pn, id: _def ? (_def.prefix + (_pn.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC')) : suggestLocId(_pn) })) }
                               setNewLocPlaceLoading(true); setNewLocPlaceError(null)
                               try {
                                 const res = await fetch(`/api/places/details?place_id=${encodeURIComponent(p.place_id)}`)
@@ -1521,7 +1543,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     )}
                   </div>
                   <input type="text" placeholder="Location name…" value={newLocForm.name}
-                    onChange={e => setNewLocForm(f => ({ ...f, name: e.target.value, id: suggestLocId(e.target.value) }))}
+                    onChange={e => { const _def = LOCATION_TYPES.find(lt => lt.value === newLocType); setNewLocForm(f => ({ ...f, name: e.target.value, id: _def ? (_def.prefix + (e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC')) : suggestLocId(e.target.value) })) }}
                     style={{ ...inp, fontSize: '12px' }} />
                   <input type="text" placeholder="ID (es. H042, APT_PMO)" value={newLocForm.id}
                     onChange={e => setNewLocForm(f => ({ ...f, id: e.target.value.toUpperCase() }))}
@@ -1574,10 +1596,21 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               <div style={{ background: '#f0f9ff', border: '1px solid #7dd3fc', borderRadius: '10px', padding: '12px 14px' }}>
                 <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px' }}>➕ New Dropoff Location</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <select value={newLocType} onChange={e => {
+                    const type = e.target.value; setNewLocType(type)
+                    const def = LOCATION_TYPES.find(lt => lt.value === type)
+                    if (def) setNewLocForm(f => {
+                      const suffix = f.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC'
+                      return { ...f, is_hub: def.is_hub, id: def.prefix + suffix }
+                    })
+                  }} style={{ ...inp, fontSize: '12px' }}>
+                    <option value="">📍 Select location type…</option>
+                    {LOCATION_TYPES.map(lt => <option key={lt.value} value={lt.value}>{lt.label}</option>)}
+                  </select>
                   <div style={{ position: 'relative' }} ref={newLocDropdownRef}>
                     <div style={{ position: 'relative' }}>
                       <input type="text" placeholder="Search on Google Maps…" value={newLocPlaceQuery}
-                        onChange={e => { setNewLocPlaceQuery(e.target.value); setNewLocForm(f => ({ ...f, name: e.target.value, id: suggestLocId(e.target.value) })) }}
+                        onChange={e => { setNewLocPlaceQuery(e.target.value); const _def = LOCATION_TYPES.find(lt => lt.value === newLocType); setNewLocForm(f => ({ ...f, name: e.target.value, id: _def ? (_def.prefix + (e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC')) : suggestLocId(e.target.value) })) }}
                         onFocus={() => newLocPredictions.length > 0 && setNewLocPlaceOpen(true)}
                         style={{ ...inp, fontSize: '12px', paddingRight: newLocPlaceLoading ? '32px' : '10px', borderColor: newLocPlaceOpen ? '#0369a1' : '#e2e8f0' }}
                         autoComplete="off" />
@@ -1590,7 +1623,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                           <button key={p.place_id} type="button"
                             onMouseDown={async () => {
                               setNewLocPlaceOpen(false); setNewLocPlaceQuery(p.description)
-                              setNewLocForm(f => ({ ...f, name: p.main_text || p.description, id: suggestLocId(p.main_text || p.description) }))
+                              { const _pn = p.main_text || p.description; const _def = LOCATION_TYPES.find(lt => lt.value === newLocType); setNewLocForm(f => ({ ...f, name: _pn, id: _def ? (_def.prefix + (_pn.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC')) : suggestLocId(_pn) })) }
                               setNewLocPlaceLoading(true); setNewLocPlaceError(null)
                               try {
                                 const res = await fetch(`/api/places/details?place_id=${encodeURIComponent(p.place_id)}`)
@@ -1611,7 +1644,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     )}
                   </div>
                   <input type="text" placeholder="Location name…" value={newLocForm.name}
-                    onChange={e => setNewLocForm(f => ({ ...f, name: e.target.value, id: suggestLocId(e.target.value) }))}
+                    onChange={e => { const _def = LOCATION_TYPES.find(lt => lt.value === newLocType); setNewLocForm(f => ({ ...f, name: e.target.value, id: _def ? (_def.prefix + (e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC')) : suggestLocId(e.target.value) })) }}
                     style={{ ...inp, fontSize: '12px' }} />
                   <input type="text" placeholder="ID (es. H042, APT_PMO)" value={newLocForm.id}
                     onChange={e => setNewLocForm(f => ({ ...f, id: e.target.value.toUpperCase() }))}
