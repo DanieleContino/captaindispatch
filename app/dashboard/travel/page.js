@@ -665,9 +665,18 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
     const updates = {}
 
-    // Update dates only when the new movement gives a more extreme value
-    if (direction === 'IN' && (!crewRec.arrival_date || travelDate < crewRec.arrival_date)) {
-      updates.arrival_date = travelDate
+    // Update dates based on direction
+    if (direction === 'IN') {
+      const dep = crewRec.departure_date
+      const arr = crewRec.arrival_date
+      if (dep && travelDate > dep) {
+        // "Return" arrival AFTER a past departure → new stint: reset dep, set new arr
+        updates.arrival_date   = travelDate
+        updates.departure_date = null
+      } else if (!arr || travelDate < arr) {
+        // First arrival or earlier leg of same journey
+        updates.arrival_date = travelDate
+      }
     }
     if (direction === 'OUT' && (!crewRec.departure_date || travelDate > crewRec.departure_date)) {
       updates.departure_date = travelDate
