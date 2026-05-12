@@ -1,3 +1,52 @@
+## WHAT CHANGED IN SESSION S56 (12 May 2026)
+
+### Feature ✅ — Travel: multi-leg journey support — commit `e7dc69e`
+
+**Obiettivo**: permettere di inserire più leg (volo + treno, coincidenze, ecc.) per la stessa persona, raggruppati visivamente nella tabella e inseribili in modo guidato dal sidebar.
+
+#### Nuova colonna DB — `travel_movements.journey_id` (`scripts/migrate-travel-journey.sql`)
+```sql
+ALTER TABLE travel_movements ADD COLUMN IF NOT EXISTS journey_id UUID DEFAULT NULL;
+CREATE INDEX IF NOT EXISTS idx_travel_movements_journey ON travel_movements(journey_id) WHERE journey_id IS NOT NULL;
+```
+- Nullable: i movement esistenti hanno `journey_id = NULL` (retrocompatibile)
+- I leg dello stesso viaggio condividono lo stesso UUID
+
+#### `app/dashboard/travel/page.js`
+
+**`buildDisplayRows(rows)`** — nuova funzione pura (prima di `SectionTable`):
+- Raggruppa i row per `journey_id`, ordina ogni gruppo per `from_time`
+- Aggiunge a ogni row: `legIndex` (-1=standalone, 0=primo, 1+=successivo) e `journeySize`
+- Ordina i gruppi per `from_time` del primo leg (analogo ai standalone)
+- `SectionTable` usa `buildDisplayRows(rows)` invece di `rows` direttamente
+
+**`renderCell` — caso `full_name` aggiornato**:
+- `legIndex > 0` → mostra `↩ leg N` (grigio, paddingLeft 20px) invece del nome
+- `legIndex === 0 && journeySize > 1` → mostra badge viola `N✈` accanto al nome
+
+**`SectionTable` — styling leg rows**:
+- Bordo sinistro dei leg 2+ = stesso colore con alpha 88% (`${borderColor}88`)
+- `opacity: 0.9` per i leg successivi
+
+**`MovementSidebar`** — nuove funzionalità:
+- Prop aggiuntiva: `onAddLeg(savedMovement)` — callback per aprire il leg successivo
+- `EMPTY_MOV` ora include `journey_id: null`
+- `buildRow()` — helper che costruisce il payload row (riduce duplicazione)
+- `SELECT_FIELDS` — costante stringa Supabase centralizzata (include `journey_id`)
+- `handleSaveAndAddLeg()` — salva con `journey_id` (via `crypto.randomUUID()`) e chiama `onAddLeg`
+- Branch `mode === 'new' && initial?.__isLeg` nel `useEffect` di inizializzazione form: pre-compila dalla `prevMovement` passata da `openAddLeg`
+- `isLegMode` flag: header viola `#4c1d95`, titolo "↩ Connecting Leg", banner "Multi-leg journey" con journey_id abbreviato
+- Footer: tasto primario "Add Movement" / "Save Changes" + riga secondaria [Cancel | ↩ Save & Add Connecting Leg]
+
+**`openAddLeg(prevMovement)`** — nuova funzione in `TravelPage`:
+- Crea `nextLeg` con `__isLeg: true`, stesso `journey_id`, stessa data/direzione/tipo/persona
+- `from_location` = `prevMovement.to_location`, `from_time` = `prevMovement.to_time`
+- Apre sidebar in mode `'new'` con `sidebarTarget = nextLeg`
+
+**`MovementSidebar` nel render**: ora riceve `onAddLeg={openAddLeg}`
+
+---
+
 ## WHAT CHANGED IN SESSION S55 (12 May 2026)
 
 ### Feature ✅ — Travel: colonne configurabili per produzione — commits `3195194` + `95d9660`

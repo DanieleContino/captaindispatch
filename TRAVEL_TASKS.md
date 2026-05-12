@@ -205,6 +205,60 @@ Switch su `col.source_field` che restituisce la `<td>` corretta:
 
 ---
 
+## 🟩 TASK TV-4 — Multi-leg Journey Support
+
+**Priorità: Media**
+**Status: [x] DONE — commit `e7dc69e` (12 May 2026)**
+
+### Obiettivo
+Permettere di inserire più viaggi (leg) per la stessa persona all'interno dello stesso viaggio complessivo (es. volo + treno + auto, coincidenze, ecc.). I leg vengono raggruppati visivamente nella tabella e possono essere inseriti in modo guidato tramite un apposito tasto nel sidebar.
+
+### SQL da eseguire in Supabase (`scripts/migrate-travel-journey.sql`)
+```sql
+ALTER TABLE travel_movements
+  ADD COLUMN IF NOT EXISTS journey_id UUID DEFAULT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_travel_movements_journey
+  ON travel_movements(journey_id)
+  WHERE journey_id IS NOT NULL;
+```
+> ⚠️ Eseguire in Supabase prima di usare la funzionalità.
+
+### Cambiamenti implementati
+
+#### 1. DB — colonna `journey_id`
+- Nullable UUID su `travel_movements`
+- I leg dello stesso viaggio condividono lo stesso `journey_id`
+- I movement standalone hanno `journey_id = NULL` (retrocompatibile)
+
+#### 2. MovementSidebar — tasto "↩ Save & Add Connecting Leg"
+- Salva il movement corrente assegnando/riutilizzando un `journey_id` (via `crypto.randomUUID()`)
+- Riapre il sidebar in modalità "new leg" pre-compilato con:
+  - Stessa persona (`crew_id`, `full_name_raw`)
+  - Stessa data e direzione
+  - `from_location` = `to_location` del leg precedente
+  - `from_time` = `to_time` del leg precedente
+  - Stesso `journey_id`
+- Header sidebar viola (`#4c1d95`) + banner "Multi-leg journey" in modalità leg
+- `isLegMode` = `mode === 'new' && initial?.__isLeg`
+
+#### 3. Table — `buildDisplayRows()` (grouping visivo)
+- I row con lo stesso `journey_id` vengono raggruppati e ordinati per `from_time`
+- Ogni row riceve `legIndex` (-1 = standalone, 0 = primo leg, 1+ = leg successivo) e `journeySize`
+- **Primo leg** (legIndex=0): mostra nome + badge viola `N✈` (es. "2✈", "3✈")
+- **Leg successivi** (legIndex>0): mostra `↩ leg N` in grigio indentato (20px padding-left)
+- Bordo sinistro dei leg successivi è dimmer (alpha 88% sul colore border)
+- Opacity 0.9 per i leg successivi
+
+#### 4. `SELECT_FIELDS` costante centralizzata
+Sostituisce le stringhe Supabase duplicate con una costante riusata da `loadData`, `handleSubmit` e `handleSaveAndAddLeg`.
+
+### File modificati
+- `scripts/migrate-travel-journey.sql` — Nuovo
+- `app/dashboard/travel/page.js` — Modifica
+
+---
+
 ## Riepilogo file
 
 | File | Task | Tipo |
@@ -212,5 +266,6 @@ Switch su `col.source_field` che restituisce la `<td>` corretta:
 | `scripts/migrate-travel-columns.sql` | TV-1 | Nuovo |
 | `lib/travelColumnsCatalog.js` | TV-2 | Nuovo |
 | `lib/TravelColumnsEditorSidebar.js` | TV-2 | Nuovo |
-| `app/dashboard/travel/page.js` | TV-3 | Modifica |
-| `CAPTAINDISPATCH_Context.md` | TV-3 | Aggiornamento |
+| `app/dashboard/travel/page.js` | TV-3 + TV-4 | Modifica |
+| `scripts/migrate-travel-journey.sql` | TV-4 | Nuovo |
+| `CAPTAINDISPATCH_Context.md` | TV-3 + TV-4 | Aggiornamento |
