@@ -682,9 +682,11 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
       updates.departure_date = travelDate
     }
 
-    // Always compute expected status (using current + potentially updated dates)
-    const arr = updates.arrival_date  ?? crewRec.arrival_date
-    const dep = updates.departure_date ?? crewRec.departure_date
+    // Always compute expected status (using current + potentially updated dates).
+    // Use 'in' check instead of ?? because updates.departure_date may be explicitly null
+    // (null ?? fallback = fallback, which is wrong when we intentionally reset to null)
+    const arr = 'arrival_date'   in updates ? updates.arrival_date   : crewRec.arrival_date
+    const dep = 'departure_date' in updates ? updates.departure_date : crewRec.departure_date
 
     // Replicate expectedStatus logic from crew/page.js
     let newStatus = null
