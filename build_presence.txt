@@ -1,0 +1,91 @@
+
+> captaindispatch@0.1.0 build
+> next build
+
+▲ Next.js 16.2.1 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 10.3s
+  Running TypeScript ...
+  Finished TypeScript in 1345ms ...
+  Collecting page data using 23 workers ...
+  Generating static pages using 23 workers (0/64) ...
+  Generating static pages using 23 workers (16/64) 
+  Generating static pages using 23 workers (32/64) 
+  Generating static pages using 23 workers (48/64) 
+✓ Generating static pages using 23 workers (64/64) in 576ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/google/callback
+├ ƒ /api/auth/google/connect
+├ ƒ /api/auth/google/disconnect
+├ ƒ /api/bridge/approve-user
+├ ƒ /api/bridge/invites
+├ ƒ /api/bridge/pending-users
+├ ƒ /api/check-approval
+├ ƒ /api/crew/merge
+├ ƒ /api/cron/arrival-status
+├ ƒ /api/cron/daily-briefing
+├ ƒ /api/cron/drive-sync
+├ ƒ /api/cron/refresh-routes-traffic
+├ ƒ /api/drive/check-updates
+├ ƒ /api/drive/download
+├ ƒ /api/drive/files
+├ ƒ /api/drive/preview
+├ ƒ /api/drive/sync
+├ ƒ /api/google/status
+├ ƒ /api/import/confirm
+├ ƒ /api/import/parse
+├ ƒ /api/import/save-location
+├ ƒ /api/import/sheets
+├ ƒ /api/invites/redeem
+├ ƒ /api/places/autocomplete
+├ ƒ /api/places/details
+├ ƒ /api/places/map
+├ ƒ /api/productions
+├ ƒ /api/productions/export
+├ ƒ /api/productions/upload-logo
+├ ƒ /api/push/send
+├ ƒ /api/push/subscribe
+├ ƒ /api/push/unsubscribe
+├ ƒ /api/qr/resolve
+├ ƒ /api/rocket/suggestions
+├ ƒ /api/rocket/templates
+├ ƒ /api/route-duration
+├ ƒ /api/routes/compute
+├ ƒ /api/routes/compute-chain
+├ ƒ /api/routes/refresh-all-locations
+├ ƒ /api/routes/refresh-location
+├ ƒ /api/routes/refresh-traffic
+├ ƒ /api/routes/traffic-check
+├ ƒ /api/trips/delete-sibling
+├ ƒ /auth/callback
+├ ○ /dashboard
+├ ○ /dashboard/bridge
+├ ○ /dashboard/crew
+├ ○ /dashboard/fleet
+├ ○ /dashboard/hub-coverage
+├ ○ /dashboard/lists-v2
+├ ○ /dashboard/locations
+├ ○ /dashboard/pax-coverage
+├ ○ /dashboard/productions
+├ ○ /dashboard/qr-codes
+├ ○ /dashboard/reports
+├ ○ /dashboard/rocket
+├ ○ /dashboard/settings
+├ ○ /dashboard/settings/production
+├ ○ /dashboard/trips
+├ ○ /dashboard/vehicles
+├ ○ /login
+├ ○ /pending
+├ ○ /scan
+└ ○ /wrap-trip
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
