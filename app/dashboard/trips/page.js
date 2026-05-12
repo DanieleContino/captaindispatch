@@ -545,7 +545,7 @@ function CrewInfoModal({ crew, productionId, locations, onClose, overlayRight = 
 }
 
 // ─── TripSidebar (CREATE new trip) ────────────────────────────
-function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips }) {
+function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips, onLocationCreated }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const isMobile = useIsMobile()
@@ -566,6 +566,23 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const [crewLookupResults, setCrewLookupResults] = useState([])
   const [crewInfoCrew,      setCrewInfoCrew]      = useState(null)
 
+  // ── New Location inline form state ────────────────────────
+  const [localLocs,          setLocalLocs]          = useState(locations)
+  const [newLocTarget,       setNewLocTarget]       = useState(null) // 'pickup' | 'dropoff' | null
+  const [newLocForm,         setNewLocForm]         = useState({ id: '', name: '', is_hub: false })
+  const [newLocSaving,       setNewLocSaving]       = useState(false)
+  const [newLocError,        setNewLocError]        = useState(null)
+  const [newLocDoneMsg,      setNewLocDoneMsg]      = useState(null)
+  const [newLocPlaceQuery,   setNewLocPlaceQuery]   = useState('')
+  const [newLocPredictions,  setNewLocPredictions]  = useState([])
+  const [newLocPlaceOpen,    setNewLocPlaceOpen]    = useState(false)
+  const [newLocPlaceLoading, setNewLocPlaceLoading] = useState(false)
+  const [newLocPlaceError,   setNewLocPlaceError]   = useState(null)
+  const [newLocLat,          setNewLocLat]          = useState('')
+  const [newLocLng,          setNewLocLng]          = useState('')
+  const newLocDebounceRef = useRef(null)
+  const newLocDropdownRef = useRef(null)
+
   // ── Multi-trip state ──────────────────────────────────────
   const [multiMode,         setMultiMode]         = useState(false)
   const [multiType,         setMultiType]         = useState('ARRIVAL')
@@ -579,6 +596,10 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const durMin  = parseInt(form.duration_min) || null
   const computed = calcTimes({ date: form.date, arrTimeMin: arrMin, durationMin: durMin, transferClass, callMin })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  function suggestLocId(name) {
+    return name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC'
+  }
 
   // Reset on open
   useEffect(() => {
@@ -594,6 +615,9 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     setSelExistingTrip(null); setAddedToTrip(null)
     setCrewLookupQ(''); setCrewLookupResults([]); setCrewInfoCrew(null)
     setMultiMode(false); setSavedLegs([]); setEditingLegLocalId(null)
+    setLocalLocs(locations)
+    setNewLocTarget(null); setNewLocForm({ id: '', name: '', is_hub: false }); setNewLocError(null); setNewLocDoneMsg(null)
+    setNewLocPlaceQuery(''); setNewLocPredictions([]); setNewLocPlaceOpen(false); setNewLocLat(''); setNewLocLng('')
     if (PRODUCTION_ID) {
       supabase.from('trips').select('trip_id').eq('production_id', PRODUCTION_ID).like('trip_id', 'T%')
         .order('trip_id', { ascending: false }).limit(1).maybeSingle()
@@ -651,6 +675,30 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       .limit(8)
       .then(({ data }) => setCrewLookupResults(data || []))
   }, [crewLookupQ, PRODUCTION_ID])
+
+  // Google Places debounce for new location inline form
+  useEffect(() => {
+    if (newLocDebounceRef.current) clearTimeout(newLocDebounceRef.current)
+    if (!newLocPlaceQuery.trim() || newLocPlaceQuery.length < 2) { setNewLocPredictions([]); setNewLocPlaceOpen(false); return }
+    newLocDebounceRef.current = setTimeout(async () => {
+      setNewLocPlaceLoading(true); setNewLocPlaceError(null)
+      try {
+        const res  = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(newLocPlaceQuery)}`)
+        const data = await res.json()
+        if (data.predictions) { setNewLocPredictions(data.predictions); setNewLocPlaceOpen(data.predictions.length > 0) }
+        else { setNewLocPlaceError(data.error || 'Errore ricerca'); setNewLocPlaceOpen(false) }
+      } catch { setNewLocPlaceError('Network error'); setNewLocPlaceOpen(false) }
+      setNewLocPlaceLoading(false)
+    }, 400)
+    return () => clearTimeout(newLocDebounceRef.current)
+  }, [newLocPlaceQuery])
+
+  // Close new-loc dropdown on outside click
+  useEffect(() => {
+    function handler(e) { if (newLocDropdownRef.current && !newLocDropdownRef.current.contains(e.target)) setNewLocPlaceOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const selVehicle    = vehicles.find(v => v.id === form.vehicle_id)
   const suggestedCrew = (selVehicle && (selVehicle.preferred_dept || selVehicle.preferred_crew_ids?.length > 0))
@@ -844,6 +892,53 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     } catch (e) {
       setMultiSaving(false); setError(e.message)
     }
+  }
+
+  // ── Inline New Location save ──────────────────────────────
+  async function handleSaveNewLoc() {
+    if (!newLocForm.id.trim() || !newLocForm.name.trim()) { setNewLocError('ID e Nome obbligatori'); return }
+    if (!PRODUCTION_ID) { setNewLocError('Production ID mancante'); return }
+    setNewLocSaving(true); setNewLocError(null); setNewLocDoneMsg(null)
+    const row = {
+      production_id: PRODUCTION_ID,
+      id:     newLocForm.id.trim().toUpperCase(),
+      name:   newLocForm.name.trim(),
+      is_hub: newLocForm.is_hub,
+      lat:    newLocLat !== '' ? parseFloat(String(newLocLat).replace(',', '.')) : null,
+      lng:    newLocLng !== '' ? parseFloat(String(newLocLng).replace(',', '.')) : null,
+    }
+    const { error: insErr } = await supabase.from('locations').insert(row)
+    if (insErr) { setNewLocSaving(false); setNewLocError(insErr.message); return }
+    // Ricalcola rotte se lat/lng presenti
+    if (row.lat != null && row.lng != null) {
+      try {
+        const r    = await fetch(`/api/routes/refresh-location?id=${encodeURIComponent(row.id)}`)
+        const data = await r.json()
+        setNewLocDoneMsg(data.updated ? `✅ ${data.updated} rotte calcolate` : '✅ Location salvata')
+      } catch { setNewLocDoneMsg('✅ Location salvata') }
+    } else {
+      setNewLocDoneMsg('✅ Location salvata')
+    }
+    // Aggiungi alla lista locale e auto-seleziona il campo corretto
+    const newLoc = { ...row, default_pickup_point: null }
+    setLocalLocs(prev => [...prev, newLoc].sort((a, b) => {
+      if (a.is_hub !== b.is_hub) return a.is_hub ? -1 : 1
+      return a.name.localeCompare(b.name)
+    }))
+    if (newLocTarget === 'pickup') set('pickup_id', row.id)
+    else set('dropoff_id', row.id)
+    setNewLocSaving(false)
+    // Chiudi dopo breve pausa per mostrare il messaggio di successo
+    setTimeout(() => {
+      setNewLocTarget(null)
+      setNewLocForm({ id: '', name: '', is_hub: false })
+      setNewLocDoneMsg(null)
+      setNewLocPlaceQuery('')
+      setNewLocPredictions([])
+      setNewLocLat('')
+      setNewLocLng('')
+      onLocationCreated?.()
+    }, 900)
   }
 
   // ── Existing trip assignment helpers (assignCtx only) ─────
@@ -1365,22 +1460,183 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             <div>
               <label style={lbl}>Pickup</label>
               <select value={form.pickup_id} onChange={e => {
-                set('pickup_id', e.target.value)
-                if (activeLeg?.isNew) setExtraLegs(prev => prev.map(l => l.id === activeLeg.id ? { ...l, pickup_id: e.target.value } : l))
+                if (e.target.value === '__NEW__') {
+                  setNewLocTarget('pickup')
+                  setNewLocForm({ id: '', name: '', is_hub: false })
+                  setNewLocPlaceQuery(''); setNewLocPredictions([])
+                  setNewLocError(null); setNewLocDoneMsg(null)
+                  setNewLocLat(''); setNewLocLng('')
+                } else {
+                  set('pickup_id', e.target.value)
+                  if (activeLeg?.isNew) setExtraLegs(prev => prev.map(l => l.id === activeLeg.id ? { ...l, pickup_id: e.target.value } : l))
+                  if (newLocTarget === 'pickup') setNewLocTarget(null)
+                }
               }} style={inp} required>
                 <option value="">Select pickup…</option>
-                <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
-                <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                <option value="__NEW__" style={{ color: '#0369a1', fontWeight: '800' }}>➕ New location…</option>
+                <optgroup label="Hubs">{localLocs.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                <optgroup label="Hotels / Locations">{localLocs.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
               </select>
             </div>
+
+            {/* ── Inline New Pickup Location form ── */}
+            {newLocTarget === 'pickup' && (
+              <div style={{ background: '#f0f9ff', border: '1px solid #7dd3fc', borderRadius: '10px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px' }}>➕ New Pickup Location</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ position: 'relative' }} ref={newLocDropdownRef}>
+                    <div style={{ position: 'relative' }}>
+                      <input type="text" placeholder="Search on Google Maps…" value={newLocPlaceQuery}
+                        onChange={e => { setNewLocPlaceQuery(e.target.value); setNewLocForm(f => ({ ...f, name: e.target.value, id: suggestLocId(e.target.value) })) }}
+                        onFocus={() => newLocPredictions.length > 0 && setNewLocPlaceOpen(true)}
+                        style={{ ...inp, fontSize: '12px', paddingRight: newLocPlaceLoading ? '32px' : '10px', borderColor: newLocPlaceOpen ? '#0369a1' : '#e2e8f0' }}
+                        autoComplete="off" />
+                      {newLocPlaceLoading && <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', border: '2px solid #e2e8f0', borderTop: '2px solid #0369a1', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />}
+                    </div>
+                    {newLocPlaceError && <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '2px' }}>⚠ {newLocPlaceError}</div>}
+                    {newLocPlaceOpen && newLocPredictions.length > 0 && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 200, overflow: 'hidden', marginTop: '2px' }}>
+                        {newLocPredictions.map((p, i) => (
+                          <button key={p.place_id} type="button"
+                            onMouseDown={async () => {
+                              setNewLocPlaceOpen(false); setNewLocPlaceQuery(p.description)
+                              setNewLocForm(f => ({ ...f, name: p.main_text || p.description, id: suggestLocId(p.main_text || p.description) }))
+                              setNewLocPlaceLoading(true); setNewLocPlaceError(null)
+                              try {
+                                const res = await fetch(`/api/places/details?place_id=${encodeURIComponent(p.place_id)}`)
+                                const data = await res.json()
+                                if (data.lat != null) { setNewLocLat(String(data.lat)); setNewLocLng(String(data.lng)) }
+                                else setNewLocPlaceError(data.error || 'Dettagli non disponibili')
+                              } catch { setNewLocPlaceError('Network error') }
+                              setNewLocPlaceLoading(false)
+                            }}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', borderBottom: i < newLocPredictions.length - 1 ? '1px solid #f1f5f9' : 'none', background: 'white', cursor: 'pointer' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a' }}>📍 {p.main_text}</div>
+                            {p.secondary_text && <div style={{ fontSize: '10px', color: '#94a3b8' }}>{p.secondary_text}</div>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <input type="text" placeholder="Location name…" value={newLocForm.name}
+                    onChange={e => setNewLocForm(f => ({ ...f, name: e.target.value, id: suggestLocId(e.target.value) }))}
+                    style={{ ...inp, fontSize: '12px' }} />
+                  <input type="text" placeholder="ID (es. H042, APT_PMO)" value={newLocForm.id}
+                    onChange={e => setNewLocForm(f => ({ ...f, id: e.target.value.toUpperCase() }))}
+                    style={{ ...inp, fontFamily: 'monospace', fontWeight: '800', letterSpacing: '0.05em', fontSize: '12px' }} />
+                  {(newLocLat || newLocLng) && <div style={{ fontSize: '10px', color: '#0369a1', background: '#e0f2fe', borderRadius: '5px', padding: '4px 8px' }}>📍 {newLocLat}, {newLocLng}</div>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${newLocForm.is_hub ? '#86efac' : '#e2e8f0'}`, background: newLocForm.is_hub ? '#f0fdf4' : '#f8fafc', cursor: 'pointer' }}
+                    onClick={() => setNewLocForm(f => ({ ...f, is_hub: !f.is_hub }))}>
+                    <div style={{ width: '32px', height: '18px', borderRadius: '999px', background: newLocForm.is_hub ? '#16a34a' : '#cbd5e1', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
+                      <div style={{ position: 'absolute', top: '1px', left: newLocForm.is_hub ? '15px' : '1px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: newLocForm.is_hub ? '#15803d' : '#374151' }}>{newLocForm.is_hub ? '✈ Hub (aeroporto/stazione)' : '🏨 Hotel / Location'}</span>
+                  </div>
+                  {newLocError && <div style={{ fontSize: '11px', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '5px', padding: '4px 8px' }}>❌ {newLocError}</div>}
+                  {newLocDoneMsg && <div style={{ fontSize: '11px', color: '#15803d', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '5px', padding: '4px 8px' }}>{newLocDoneMsg}</div>}
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button type="button" onClick={() => { setNewLocTarget(null); setNewLocError(null); setNewLocDoneMsg(null); setNewLocPlaceQuery(''); setNewLocPredictions([]) }}
+                      style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+                    <button type="button" disabled={newLocSaving || !newLocForm.name.trim() || !newLocForm.id.trim()} onClick={handleSaveNewLoc}
+                      style={{ flex: 2, padding: '7px', borderRadius: '7px', border: 'none', background: (newLocSaving || !newLocForm.name.trim() || !newLocForm.id.trim()) ? '#94a3b8' : '#0369a1', color: 'white', fontSize: '12px', fontWeight: '800', cursor: (newLocSaving || !newLocForm.name.trim() || !newLocForm.id.trim()) ? 'default' : 'pointer' }}>
+                      {newLocSaving ? '⏳ Saving…' : '✓ Create & Select'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div>
               <label style={lbl}>Dropoff</label>
-              <select value={form.dropoff_id} onChange={e => set('dropoff_id', e.target.value)} style={inp} required>
+              <select value={form.dropoff_id} onChange={e => {
+                if (e.target.value === '__NEW__') {
+                  setNewLocTarget('dropoff')
+                  setNewLocForm({ id: '', name: '', is_hub: false })
+                  setNewLocPlaceQuery(''); setNewLocPredictions([])
+                  setNewLocError(null); setNewLocDoneMsg(null)
+                  setNewLocLat(''); setNewLocLng('')
+                } else {
+                  set('dropoff_id', e.target.value)
+                  if (newLocTarget === 'dropoff') setNewLocTarget(null)
+                }
+              }} style={inp} required>
                 <option value="">Select dropoff…</option>
-                <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
-                <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                <option value="__NEW__" style={{ color: '#0369a1', fontWeight: '800' }}>➕ New location…</option>
+                <optgroup label="Hubs">{localLocs.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                <optgroup label="Hotels / Locations">{localLocs.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
               </select>
             </div>
+
+            {/* ── Inline New Dropoff Location form ── */}
+            {newLocTarget === 'dropoff' && (
+              <div style={{ background: '#f0f9ff', border: '1px solid #7dd3fc', borderRadius: '10px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px' }}>➕ New Dropoff Location</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ position: 'relative' }} ref={newLocDropdownRef}>
+                    <div style={{ position: 'relative' }}>
+                      <input type="text" placeholder="Search on Google Maps…" value={newLocPlaceQuery}
+                        onChange={e => { setNewLocPlaceQuery(e.target.value); setNewLocForm(f => ({ ...f, name: e.target.value, id: suggestLocId(e.target.value) })) }}
+                        onFocus={() => newLocPredictions.length > 0 && setNewLocPlaceOpen(true)}
+                        style={{ ...inp, fontSize: '12px', paddingRight: newLocPlaceLoading ? '32px' : '10px', borderColor: newLocPlaceOpen ? '#0369a1' : '#e2e8f0' }}
+                        autoComplete="off" />
+                      {newLocPlaceLoading && <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', border: '2px solid #e2e8f0', borderTop: '2px solid #0369a1', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />}
+                    </div>
+                    {newLocPlaceError && <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '2px' }}>⚠ {newLocPlaceError}</div>}
+                    {newLocPlaceOpen && newLocPredictions.length > 0 && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 200, overflow: 'hidden', marginTop: '2px' }}>
+                        {newLocPredictions.map((p, i) => (
+                          <button key={p.place_id} type="button"
+                            onMouseDown={async () => {
+                              setNewLocPlaceOpen(false); setNewLocPlaceQuery(p.description)
+                              setNewLocForm(f => ({ ...f, name: p.main_text || p.description, id: suggestLocId(p.main_text || p.description) }))
+                              setNewLocPlaceLoading(true); setNewLocPlaceError(null)
+                              try {
+                                const res = await fetch(`/api/places/details?place_id=${encodeURIComponent(p.place_id)}`)
+                                const data = await res.json()
+                                if (data.lat != null) { setNewLocLat(String(data.lat)); setNewLocLng(String(data.lng)) }
+                                else setNewLocPlaceError(data.error || 'Dettagli non disponibili')
+                              } catch { setNewLocPlaceError('Network error') }
+                              setNewLocPlaceLoading(false)
+                            }}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', borderBottom: i < newLocPredictions.length - 1 ? '1px solid #f1f5f9' : 'none', background: 'white', cursor: 'pointer' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f0f9ff'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a' }}>📍 {p.main_text}</div>
+                            {p.secondary_text && <div style={{ fontSize: '10px', color: '#94a3b8' }}>{p.secondary_text}</div>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <input type="text" placeholder="Location name…" value={newLocForm.name}
+                    onChange={e => setNewLocForm(f => ({ ...f, name: e.target.value, id: suggestLocId(e.target.value) }))}
+                    style={{ ...inp, fontSize: '12px' }} />
+                  <input type="text" placeholder="ID (es. H042, APT_PMO)" value={newLocForm.id}
+                    onChange={e => setNewLocForm(f => ({ ...f, id: e.target.value.toUpperCase() }))}
+                    style={{ ...inp, fontFamily: 'monospace', fontWeight: '800', letterSpacing: '0.05em', fontSize: '12px' }} />
+                  {(newLocLat || newLocLng) && <div style={{ fontSize: '10px', color: '#0369a1', background: '#e0f2fe', borderRadius: '5px', padding: '4px 8px' }}>📍 {newLocLat}, {newLocLng}</div>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${newLocForm.is_hub ? '#86efac' : '#e2e8f0'}`, background: newLocForm.is_hub ? '#f0fdf4' : '#f8fafc', cursor: 'pointer' }}
+                    onClick={() => setNewLocForm(f => ({ ...f, is_hub: !f.is_hub }))}>
+                    <div style={{ width: '32px', height: '18px', borderRadius: '999px', background: newLocForm.is_hub ? '#16a34a' : '#cbd5e1', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
+                      <div style={{ position: 'absolute', top: '1px', left: newLocForm.is_hub ? '15px' : '1px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: newLocForm.is_hub ? '#15803d' : '#374151' }}>{newLocForm.is_hub ? '✈ Hub (aeroporto/stazione)' : '🏨 Hotel / Location'}</span>
+                  </div>
+                  {newLocError && <div style={{ fontSize: '11px', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '5px', padding: '4px 8px' }}>❌ {newLocError}</div>}
+                  {newLocDoneMsg && <div style={{ fontSize: '11px', color: '#15803d', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '5px', padding: '4px 8px' }}>{newLocDoneMsg}</div>}
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button type="button" onClick={() => { setNewLocTarget(null); setNewLocError(null); setNewLocDoneMsg(null); setNewLocPlaceQuery(''); setNewLocPredictions([]) }}
+                      style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+                    <button type="button" disabled={newLocSaving || !newLocForm.name.trim() || !newLocForm.id.trim()} onClick={handleSaveNewLoc}
+                      style={{ flex: 2, padding: '7px', borderRadius: '7px', border: 'none', background: (newLocSaving || !newLocForm.name.trim() || !newLocForm.id.trim()) ? '#94a3b8' : '#0369a1', color: 'white', fontSize: '12px', fontWeight: '800', cursor: (newLocSaving || !newLocForm.name.trim() || !newLocForm.id.trim()) ? 'default' : 'pointer' }}>
+                      {newLocSaving ? '⏳ Saving…' : '✓ Create & Select'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Vehicle + check */}
             <div>
@@ -3518,6 +3774,11 @@ function TripsPageInner() {
         onSaved={() => { loadTrips(date) }}
         assignCtx={assignCtx}
         trips={trips}
+        onLocationCreated={async () => {
+          if (!PRODUCTION_ID) return
+          const { data } = await supabase.from('locations').select('*').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name')
+          if (data) { const m = {}; data.forEach(l => { m[l.id] = l.name }); setLocsMap(m); setLocsList(data) }
+        }}
       />
 
       {/* ── EDIT sidebar ── */}
