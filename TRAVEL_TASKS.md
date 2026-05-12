@@ -17,7 +17,7 @@ TASK TV-1 → (esegui SQL in Supabase) → TASK TV-2 → TASK TV-3
 ## 🟥 TASK TV-1 — DB Migration: tabella `travel_columns`
 
 **Priorità: Alta (prerequisito)**
-**Status: [ ] Da fare**
+**Status: [x] DONE — commit `3195194` (12 May 2026)**
 
 ### Obiettivo
 Creare la tabella Supabase che persiste la configurazione delle colonne di `/dashboard/travel` per produzione.
@@ -57,7 +57,7 @@ CREATE POLICY "production members can manage travel columns"
 ## 🟧 TASK TV-2 — Catalog + Sidebar
 
 **Priorità: Media (prerequisito di TV-3)**
-**Status: [ ] Da fare**
+**Status: [x] DONE — commit `3195194` · fix `95d9660` (12 May 2026)**
 
 ### Obiettivo
 Creare il catalog dei campi disponibili e il sidebar editor per aggiungere/riordinare/ridimensionare le colonne di Travel — identico nel funzionamento al `ColumnsEditorSidebar` di Lists.
@@ -107,7 +107,7 @@ Deve essere molto simile a `lib/ColumnsEditorSidebar.js` (già esistente per Lis
 ## 🟨 TASK TV-3 — Refactor `travel/page.js`
 
 **Priorità: Media**
-**Status: [ ] Da fare**
+**Status: [x] DONE — commit `3195194` (12 May 2026)**
 
 ### Obiettivo
 Rendere la tabella di `/dashboard/travel` completamente data-driven: le colonne visibili, il loro ordine e la loro larghezza sono configurati tramite `TravelColumnsEditorSidebar` e persistiti in DB.

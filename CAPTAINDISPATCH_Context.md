@@ -1,3 +1,80 @@
+## WHAT CHANGED IN SESSION S55 (12 May 2026)
+
+### Feature ✅ — Travel: colonne configurabili per produzione — commits `3195194` + `95d9660`
+
+**Obiettivo**: rendere la tabella `/dashboard/travel` completamente data-driven. Le colonne visibili, il loro ordine e la loro larghezza sono configurabili per produzione e persistiti in DB nella tabella `travel_columns`.
+
+#### Nuova tabella DB — `travel_columns` (`scripts/migrate-travel-columns.sql`)
+```sql
+CREATE TABLE IF NOT EXISTS travel_columns (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  production_id  TEXT NOT NULL,
+  source_field   TEXT NOT NULL,
+  header_label   TEXT NOT NULL,
+  width          TEXT NOT NULL DEFAULT '110px',
+  display_order  INTEGER DEFAULT 10,
+  created_at     TIMESTAMPTZ DEFAULT now(),
+  updated_at     TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_travel_columns_production ON travel_columns(production_id);
+ALTER TABLE travel_columns ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "production members can manage travel columns" ON travel_columns USING (true) WITH CHECK (true);
+```
+- `production_id` è TEXT (coerente con le altre tabelle)
+- 1 riga per colonna per produzione, ordinate per `display_order` (multipli di 10)
+
+#### Nuovi file
+
+**`lib/travelColumnsCatalog.js`** — Catalogo dei 13 campi configurabili
+- `TRAVEL_COLUMNS_CATALOG` — object con 13 chiavi (`direction`, `full_name`, `crew_role`, `pickup_dep`, `from_location`, `from_time`, `to_location`, `to_time`, `travel_number`, `pickup_arr`, `needs_transport`, `notes`, `match_status`), ognuna con `label` e `defaultWidth`
+- `TRAVEL_DEFAULT_PRESET` — array di 13 colonne con `source_field`, `header_label`, `width`, `display_order` (10–130)
+
+**`lib/TravelColumnsEditorSidebar.js`** — Sidebar editor colonne
+- Architettura speculare a `lib/ColumnsEditorSidebar.js` (usato da Lists-v2)
+- Drag & drop con `@dnd-kit/core` + `@dnd-kit/sortable` per riordinare colonne
+- Form add/edit: select semplice (no category grouping), header label, width select
+- `WIDTH_OPTIONS` ottimizzato per Travel: 38px, 44px, 52px, 56px, 76px, 80px, 90px, 110px, 120px, 130px, 160px, 200px, 1fr
+- Pulsante "Reset to Default" → cancella tutto e reinserisce i 13 colonne preset
+- **Fix `95d9660`**: `useRef` + auto-scroll al form quando si clicca "edit" (il form era nascosto sotto le 13 righe della lista); form evidenziato in giallo in edit mode; aggiunto `44px` a `WIDTH_OPTIONS` (mancava ma usato da `match_status` nel preset)
+- Persistenza: `supabase.from('travel_columns')` — load, insert, update, delete
+
+#### File modificato
+
+**`app/dashboard/travel/page.js`** — Refactoring completo data-driven
+- **Imports**: `TravelColumnsEditorSidebar`, `TRAVEL_DEFAULT_PRESET`
+- **Nuovi stati**: `columnsConfig[]`, `columnsEditorOpen`, `applyingPreset`
+- **`loadColumnsConfig()`**: `useCallback` che carica da `travel_columns` per `PRODUCTION_ID`, ordinato per `display_order` + `created_at`
+- **`applyDefaultPreset()`**: inserisce `TRAVEL_DEFAULT_PRESET` in DB + reload
+- **Toolbar**: pulsante "Columns" (apre sidebar) + pulsante "Apply Default Columns" (visibile solo se `columnsConfig.length === 0`)
+- **Content area**: rimosso `maxWidth` vincolante — solo `padding: '16px 24px'`
+- **`SectionTable`**: riceve prop `columnsConfig`
+  - `<colgroup>` dinamico generato da `columnsConfig` + colonna Edit fissa 38px
+  - `<thead>` dinamico con `col.header_label`
+  - `renderCell(col, m, ctx)` — switch su `source_field` (13 casi):
+    - `direction` → badge ↓ IN / ↑ OUT (statico, verde/arancio)
+    - `full_name` → nome crew (statico)
+    - `crew_role` → ruolo (statico)
+    - `pickup_dep`, `from_location`, `to_location`, `travel_number`, `pickup_arr` → `<EditableCell>` text
+    - `from_time`, `to_time` → `<EditableCell type="time">`
+    - `notes` → `<EditableCell type="textarea">`
+    - `needs_transport` → `<NeedsTransportCell>` (toggle 🚐)
+    - `match_status` → ✅/❌ (statico)
+  - Colonna Edit ✎ fissa come ultima (non parte della config)
+- **Placeholder** se `columnsConfig.length === 0`: card con bottone "Apply Default Columns"
+- **`TravelColumnsEditorSidebar`** integrato nel render con `onChanged={loadColumnsConfig}`
+- Sistema `cell_colors` (right-click → ColorPickerPopover) e `MovementSidebar` invariati
+
+#### Commits S55
+| Hash | Descrizione |
+|---|---|
+| `3195194` | `feat(travel): TV-1/2/3 — colonne configurabili travel_columns + sidebar + page refactor` |
+| `95d9660` | `fix(travel): sidebar edit — auto-scroll al form + aggiunge 44px a WIDTH_OPTIONS + evidenzia form in edit mode` |
+
+#### ⚠️ Azione manuale richiesta
+Eseguire `scripts/migrate-travel-columns.sql` nel pannello SQL di Supabase per creare la tabella `travel_columns` in produzione.
+
+---
+
 ![alt text](image.png)  - 📍 Set & Basecamp: set_location, set_address, basecamp
 - **Logo upload**: `<input type="file" accept="image/*">` → preview immediata con `URL.createObjectURL`
 - **Save**: `uploadLogo()` → `POST /api/productions/upload-logo` → poi `PATCH /api/productions` con tutti i campi
