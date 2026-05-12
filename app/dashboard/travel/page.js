@@ -42,8 +42,156 @@ const SECTIONS = [
   { key: 'GROUND', icon: '🚐', label: 'GROUND TRANSPORT', types: ['GROUND'] },
 ]
 
+// ─── Toast ────────────────────────────────────────────────────
+function Toast({ message, type }) {
+  if (!message) return null
+  return (
+    <div style={{
+      position: 'fixed', bottom: '24px', right: '24px', zIndex: 999,
+      padding: '10px 18px', borderRadius: '10px', fontSize: '13px',
+      fontWeight: '700', boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+      background: type === 'error' ? '#fef2f2' : '#f0fdf4',
+      color: type === 'error' ? '#dc2626' : '#15803d',
+      border: `1px solid ${type === 'error' ? '#fecaca' : '#86efac'}`,
+      pointerEvents: 'none',
+    }}>
+      {type === 'error' ? '❌' : '✅'} {message}
+    </div>
+  )
+}
+
+// ─── EditableCell ─────────────────────────────────────────────
+function EditableCell({ value, field, rowId, type = 'text', onSaved, style }) {
+  const PRODUCTION_ID = getProductionId()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft]     = useState(value || '')
+  const [saving, setSaving]   = useState(false)
+
+  // Sync when external value changes (e.g. after optimistic update)
+  useEffect(() => { if (!editing) setDraft(value || '') }, [value, editing])
+
+  async function save() {
+    const trimmed = typeof draft === 'string' ? draft.trim() : draft
+    const payload = trimmed === '' ? null : trimmed
+    if (payload === (value || null)) { setEditing(false); return }
+    setSaving(true)
+    const { error } = await supabase
+      .from('travel_movements')
+      .update({ [field]: payload })
+      .eq('id', rowId)
+    setSaving(false)
+    if (!error) {
+      onSaved(rowId, field, payload)
+      setEditing(false)
+    } else {
+      setDraft(value || '')
+      setEditing(false)
+      onSaved(rowId, '__error__', 'Save failed')
+    }
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && type !== 'textarea') { e.preventDefault(); save() }
+    if (e.key === 'Escape') { setDraft(value || ''); setEditing(false) }
+  }
+
+  if (editing) {
+    const inputStyle = {
+      width: '100%', padding: '4px 6px', fontSize: '11px',
+      border: '2px solid #2563eb', borderRadius: '5px',
+      background: 'white', color: '#0f172a',
+      fontFamily: type === 'time' ? 'monospace' : 'inherit',
+      outline: 'none', boxSizing: 'border-box',
+      opacity: saving ? 0.6 : 1,
+    }
+    if (type === 'textarea') {
+      return (
+        <td style={{ padding: '4px 6px', ...style }}>
+          <textarea
+            autoFocus
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={save}
+            onKeyDown={e => { if (e.key === 'Escape') { setDraft(value || ''); setEditing(false) } }}
+            disabled={saving}
+            rows={2}
+            style={{ ...inputStyle, resize: 'vertical', minWidth: '140px' }}
+          />
+        </td>
+      )
+    }
+    return (
+      <td style={{ padding: '4px 6px', ...style }}>
+        <input
+          autoFocus
+          type={type}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={save}
+          onKeyDown={handleKeyDown}
+          disabled={saving}
+          style={{ ...inputStyle, minWidth: type === 'time' ? '80px' : '90px' }}
+        />
+      </td>
+    )
+  }
+
+  return (
+    <td
+      onClick={() => { setDraft(value || ''); setEditing(true) }}
+      title="Click to edit"
+      style={{
+        padding: '7px 10px', cursor: 'text',
+        ...style,
+        position: 'relative',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = '' }}
+    >
+      {value || <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '10px' }}>–</span>}
+    </td>
+  )
+}
+
+// ─── NeedsTransportCell ───────────────────────────────────────
+function NeedsTransportCell({ value, rowId, onSaved }) {
+  const [saving, setSaving] = useState(false)
+
+  async function toggle() {
+    if (saving) return
+    setSaving(true)
+    const next = !value
+    const { error } = await supabase
+      .from('travel_movements')
+      .update({ needs_transport: next })
+      .eq('id', rowId)
+    setSaving(false)
+    if (!error) onSaved(rowId, 'needs_transport', next)
+    else onSaved(rowId, '__error__', 'Save failed')
+  }
+
+  return (
+    <td style={{ padding: '7px 10px', textAlign: 'center' }}>
+      <button
+        onClick={toggle}
+        disabled={saving}
+        title={value ? 'Remove transport' : 'Mark as needs transport'}
+        style={{
+          background: 'none', border: 'none', cursor: saving ? 'default' : 'pointer',
+          padding: 0, opacity: saving ? 0.5 : 1,
+        }}
+      >
+        {value
+          ? <span style={{ fontSize: '10px', fontWeight: '800', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 5px' }}>🚐</span>
+          : <span style={{ fontSize: '10px', color: '#cbd5e1' }}>–</span>
+        }
+      </button>
+    </td>
+  )
+}
+
 // ─── SectionTable component ────────────────────────────────────
-function SectionTable({ section, rows, today }) {
+function SectionTable({ section, rows, today, onCellSaved }) {
   return (
     <div style={{ marginBottom: '16px' }}>
       {/* Section header */}
@@ -75,10 +223,11 @@ function SectionTable({ section, rows, today }) {
           <thead>
             <tr style={{ background: '#f1f5f9' }}>
               {['Dir', 'Name', 'Role', 'p/up dep', 'From', 'Dep', 'To', 'Arr',
-                'Travel #', 'p/up arr', '🚐', 'Match'].map(h => (
+                'Travel #', 'p/up arr', '🚐', 'Notes', 'Match'].map(h => (
                 <th key={h} style={{
                   padding: '6px 10px', fontSize: '10px', fontWeight: '800',
-                  color: '#64748b', textAlign: 'left', whiteSpace: 'nowrap',
+                  color: h === 'Notes' ? '#2563eb' : '#64748b',
+                  textAlign: 'left', whiteSpace: 'nowrap',
                   letterSpacing: '0.05em', textTransform: 'uppercase',
                   borderBottom: '1px solid #e2e8f0',
                 }}>{h}</th>
@@ -86,15 +235,19 @@ function SectionTable({ section, rows, today }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((m, i) => {
+            {rows.map((m) => {
               const isUnmatched = m.match_status === 'unmatched'
-              const isIN = m.direction === 'IN'
-              const isToday = m.travel_date === today
+              const isIN        = m.direction === 'IN'
+              const isToday     = m.travel_date === today
               const displayName = m.crew?.full_name || m.full_name_raw || '–'
-              const bgColor = isUnmatched ? '#fef2f2'
-                            : isIN ? '#f0fdf4' : '#fff7ed'
-              const borderColor = isUnmatched ? '#ef4444'
-                                : isIN ? '#22c55e' : '#f97316'
+              const bgColor     = isUnmatched ? '#fef2f2' : isIN ? '#f0fdf4' : '#fff7ed'
+              const borderColor = isUnmatched ? '#ef4444' : isIN ? '#22c55e' : '#f97316'
+
+              const cellStyle = {
+                fontSize: '11px', color: '#374151', whiteSpace: 'nowrap',
+                background: bgColor,
+              }
+
               return (
                 <tr key={m.id} style={{
                   background: bgColor,
@@ -102,78 +255,90 @@ function SectionTable({ section, rows, today }) {
                   outline: isToday ? '2px solid #fbbf24' : 'none',
                   outlineOffset: '-2px',
                 }}>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '11px', fontWeight: '800',
+
+                  {/* READ-ONLY: Dir */}
+                  <td style={{ padding: '7px 10px', fontSize: '11px', fontWeight: '800',
                     color: isIN ? '#15803d' : '#c2410c', whiteSpace: 'nowrap',
-                  }}>
+                    background: bgColor }}>
                     {isIN ? '↓ IN' : '↑ OUT'}
                   </td>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '12px',
+
+                  {/* READ-ONLY: Name */}
+                  <td style={{ padding: '7px 10px', fontSize: '12px',
                     fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap',
-                  }}>
+                    background: bgColor }}>
                     {displayName}
                   </td>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '11px',
-                    color: '#64748b', whiteSpace: 'nowrap',
-                  }}>
+
+                  {/* READ-ONLY: Role */}
+                  <td style={{ padding: '7px 10px', fontSize: '11px',
+                    color: '#64748b', whiteSpace: 'nowrap', background: bgColor }}>
                     {m.crew?.role || '–'}
                   </td>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '11px',
-                    color: '#374151', whiteSpace: 'nowrap',
-                  }}>
-                    {m.pickup_dep || '–'}
-                  </td>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '11px',
-                    fontWeight: '600', color: '#0f172a', whiteSpace: 'nowrap',
-                  }}>
-                    {m.from_location || '–'}
-                  </td>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '11px',
-                    color: '#374151', fontFamily: 'monospace', whiteSpace: 'nowrap',
-                  }}>
-                    {fmtTime(m.from_time)}
-                  </td>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '11px',
-                    fontWeight: '600', color: '#0f172a', whiteSpace: 'nowrap',
-                  }}>
-                    {m.to_location || '–'}
-                  </td>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '11px',
-                    color: '#374151', fontFamily: 'monospace', whiteSpace: 'nowrap',
-                  }}>
-                    {fmtTime(m.to_time)}
-                  </td>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '11px',
-                    fontFamily: 'monospace', fontWeight: '700',
-                    color: '#2563eb', whiteSpace: 'nowrap',
-                  }}>
-                    {m.travel_number || '–'}
-                  </td>
-                  <td style={{
-                    padding: '7px 10px', fontSize: '11px',
-                    color: '#374151', whiteSpace: 'nowrap',
-                  }}>
-                    {m.pickup_arr || '–'}
-                  </td>
-                  <td style={{ padding: '7px 10px', textAlign: 'center' }}>
-                    {m.needs_transport && (
-                      <span style={{
-                        fontSize: '10px', fontWeight: '800',
-                        color: '#1d4ed8', background: '#eff6ff',
-                        border: '1px solid #bfdbfe', borderRadius: '4px',
-                        padding: '1px 5px',
-                      }}>🚐</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '7px 10px', textAlign: 'center' }}>
+
+                  {/* EDITABLE: pickup_dep */}
+                  <EditableCell
+                    value={m.pickup_dep} field="pickup_dep" rowId={m.id}
+                    onSaved={onCellSaved}
+                    style={{ ...cellStyle }}
+                  />
+
+                  {/* EDITABLE: from_location */}
+                  <EditableCell
+                    value={m.from_location} field="from_location" rowId={m.id}
+                    onSaved={onCellSaved}
+                    style={{ ...cellStyle, fontWeight: '600', color: '#0f172a' }}
+                  />
+
+                  {/* EDITABLE: from_time */}
+                  <EditableCell
+                    value={m.from_time ? m.from_time.slice(0,5) : ''} field="from_time"
+                    rowId={m.id} type="time" onSaved={onCellSaved}
+                    style={{ ...cellStyle, fontFamily: 'monospace' }}
+                  />
+
+                  {/* EDITABLE: to_location */}
+                  <EditableCell
+                    value={m.to_location} field="to_location" rowId={m.id}
+                    onSaved={onCellSaved}
+                    style={{ ...cellStyle, fontWeight: '600', color: '#0f172a' }}
+                  />
+
+                  {/* EDITABLE: to_time */}
+                  <EditableCell
+                    value={m.to_time ? m.to_time.slice(0,5) : ''} field="to_time"
+                    rowId={m.id} type="time" onSaved={onCellSaved}
+                    style={{ ...cellStyle, fontFamily: 'monospace' }}
+                  />
+
+                  {/* EDITABLE: travel_number */}
+                  <EditableCell
+                    value={m.travel_number} field="travel_number" rowId={m.id}
+                    onSaved={onCellSaved}
+                    style={{ ...cellStyle, fontFamily: 'monospace', fontWeight: '700', color: '#2563eb' }}
+                  />
+
+                  {/* EDITABLE: pickup_arr */}
+                  <EditableCell
+                    value={m.pickup_arr} field="pickup_arr" rowId={m.id}
+                    onSaved={onCellSaved}
+                    style={{ ...cellStyle }}
+                  />
+
+                  {/* EDITABLE: needs_transport toggle */}
+                  <NeedsTransportCell
+                    value={m.needs_transport} rowId={m.id} onSaved={onCellSaved}
+                  />
+
+                  {/* EDITABLE: notes */}
+                  <EditableCell
+                    value={m.notes} field="notes" rowId={m.id}
+                    type="textarea" onSaved={onCellSaved}
+                    style={{ ...cellStyle, minWidth: '140px', color: '#374151' }}
+                  />
+
+                  {/* READ-ONLY: Match */}
+                  <td style={{ padding: '7px 10px', textAlign: 'center', background: bgColor }}>
                     {isUnmatched
                       ? <span style={{ fontSize: '10px', fontWeight: '800', color: '#dc2626' }}>❌</span>
                       : <span style={{ fontSize: '10px' }}>✅</span>
@@ -207,6 +372,25 @@ export default function TravelPage() {
   // Date window
   const [windowStart, setWindowStart] = useState(() => isoAdd(isoToday(), -3))
   const [windowEnd,   setWindowEnd]   = useState(() => isoAdd(isoToday(), 10))
+
+  // Toast
+  const [toast, setToast] = useState(null)
+  function showToast(message, type = 'success') {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 2500)
+  }
+
+  // Optimistic cell update
+  function handleCellSaved(rowId, field, value) {
+    if (field === '__error__') {
+      showToast(value, 'error')
+      return
+    }
+    setMovements(prev => prev.map(m =>
+      m.id === rowId ? { ...m, [field]: value } : m
+    ))
+    showToast('Saved')
+  }
 
   // Filters
   const [search,      setSearch]      = useState('')
@@ -600,6 +784,7 @@ export default function TravelPage() {
                     section={section}
                     rows={rows}
                     today={today}
+                    onCellSaved={handleCellSaved}
                   />
                 )
               })}
@@ -607,6 +792,7 @@ export default function TravelPage() {
           ))
         )}
       </div>
+      <Toast message={toast?.message} type={toast?.type} />
     </div>
   )
 }
