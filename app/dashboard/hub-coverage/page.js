@@ -645,6 +645,11 @@ export default function HubCoveragePage() {
           style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8', whiteSpace: 'nowrap', touchAction: 'manipulation' }}>
           {t.today}
         </button>
+        <button
+          onClick={() => { const tmr = isoAdd(isoToday(), 1); setDate(tmr); setStripCenter(tmr) }}
+          style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#92400e', whiteSpace: 'nowrap', touchAction: 'manipulation' }}>
+          🔜 Tomorrow
+        </button>
       </div>
 
       {/* ── Toolbar Row 2: filtri ── */}
