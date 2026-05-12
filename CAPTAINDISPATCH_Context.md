@@ -24,6 +24,17 @@ Aggiunta dentro `MovementSidebar`, chiamata (fire-and-forget) dopo ogni save riu
 
 **Non tocca**: movimenti non matchati (`crew_id = null`); non fa rollback se si elimina un movimento.
 
+#### Bugfix durante lo sviluppo (3 iterazioni)
+
+**Bug 1** (`25612f7`): l'`if (Object.keys(updates).length === 0) return` era PRIMA del calcolo del `newStatus`. Se le date erano già corrette nel DB, `updates` rimaneva vuoto e il `travel_status` non veniva mai toccato.
+→ Fix: spostato il check vuoto DOPO `if (newStatus && newStatus !== crewRec.travel_status) updates.travel_status = newStatus`
+
+**Bug 2** (`6458d8d`): se il crew aveva `departure_date` in passato (vecchio stint) e si salvava un nuovo IN, la logica `today > departure_date → 'OUT'` bloccava tutto.
+→ Fix: se `travelDate > crewRec.departure_date` (ritorno dopo partenza) → reset `departure_date = null` + set nuova `arrival_date`
+
+**Bug 3** (`1593d7f`): `null ?? crewRec.departure_date` restituisce il valore del DB (il `??` tratta `null` come assente → usa il fallback). Quindi anche dopo il reset, `dep` usava ancora il vecchio valore in memoria.
+→ Fix: sostituiti i due `??` con `'departure_date' in updates ? updates.departure_date : crewRec.departure_date` — così un `null` esplicito viene rispettato.
+
 ---
 
 ## WHAT CHANGED IN SESSION S56 (12 May 2026)

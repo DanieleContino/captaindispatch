@@ -259,6 +259,48 @@ Sostituisce le stringhe Supabase duplicate con una costante riusata da `loadData
 
 ---
 
+## 🟩 TASK TV-5 — Auto-sync `crew` dates & status da Travel sidebar
+
+**Priorità: Alta**
+**Status: [x] DONE — commits `f2df40c`, `25612f7`, `6458d8d`, `1593d7f` (12 May 2026)**
+
+### Obiettivo
+Quando si salva un `travel_movement` con `crew_id` settato, aggiornare automaticamente `crew.arrival_date`, `crew.departure_date` e `crew.travel_status` senza dover aprire la pagina Crew manualmente.
+
+### File modificato
+`app/dashboard/travel/page.js` — nuova funzione `syncCrewDates` in `MovementSidebar`
+
+### Logica `syncCrewDates(crewId, direction, travelDate)`
+
+**Aggiornamento date:**
+- `direction === 'IN'`:
+  - Se `travelDate > departure_date` (ritorno dopo vecchio stint) → reset `departure_date = null`, set `arrival_date = travelDate`
+  - Se prima arrival o leg precedente → set `arrival_date = travelDate` solo se più piccola
+- `direction === 'OUT'` → set `departure_date = travelDate` solo se più grande
+
+**Calcolo `travel_status`** (replica esatta di `expectedStatus()` di `crew/page.js`):
+- `today > departure_date` → `'OUT'`
+- `today > arrival_date` → `'PRESENT'`
+- `today === arrival_date` + IN movement oggi → `'IN'`; else → `'PRESENT'`
+- `today < arrival_date` → `'IN'`
+
+**Regole implementative:**
+- Usa `'key' in updates` invece di `??` per gestire `null` esplicito (reset `departure_date`)
+- Il check "niente da fare" è DOPO il calcolo del status (non prima)
+- Chiamata fire-and-forget dopo ogni save riuscito in `handleSubmit` e `handleSaveAndAddLeg`
+- Nessuna azione se `crew_id === null` (movimenti non matchati)
+
+### Bug risolti durante lo sviluppo
+
+| Commit | Bug |
+|---|---|
+| `f2df40c` | Early return prima del calcolo status — implementazione iniziale |
+| `25612f7` | `if(updates===0) return` era prima del calcolo status → status mai aggiornato se date invariate |
+| `6458d8d` | `departure_date` passato bloccava nuovo IN (vecchio stint) — aggiunto reset departure per ritorni |
+| `1593d7f` | `null ?? oldValue = oldValue` (nullish coalescing) → `dep` usava ancora il vecchio valore anche dopo reset |
+
+---
+
 ## Riepilogo file
 
 | File | Task | Tipo |
@@ -266,6 +308,6 @@ Sostituisce le stringhe Supabase duplicate con una costante riusata da `loadData
 | `scripts/migrate-travel-columns.sql` | TV-1 | Nuovo |
 | `lib/travelColumnsCatalog.js` | TV-2 | Nuovo |
 | `lib/TravelColumnsEditorSidebar.js` | TV-2 | Nuovo |
-| `app/dashboard/travel/page.js` | TV-3 + TV-4 | Modifica |
+| `app/dashboard/travel/page.js` | TV-3 + TV-4 + TV-5 | Modifica |
 | `scripts/migrate-travel-journey.sql` | TV-4 | Nuovo |
-| `CAPTAINDISPATCH_Context.md` | TV-3 + TV-4 | Aggiornamento |
+| `CAPTAINDISPATCH_Context.md` | TV-3 + TV-4 + TV-5 | Aggiornamento |
