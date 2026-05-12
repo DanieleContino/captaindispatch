@@ -252,6 +252,44 @@ function ContactPopover({ crewId, email, phone, onSaved }) {
   )
 }
 
+// ─── StayForm (standalone — must NOT be nested inside AccommodationAccordion) ─
+const STAY_INP = { width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+const STAY_LBL = { fontSize: '10px', fontWeight: '700', color: '#15803d', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }
+
+function StayForm({ form, setF, onSave, onCancel, saveLabel, saving, hotelLocations }) {
+  return (
+    <div style={{ background: 'white', border: '1px dashed #86efac', borderRadius: '7px', padding: '8px 10px', marginBottom: '6px' }}>
+      <div style={{ marginBottom: '6px' }}>
+        <label style={STAY_LBL}>Hotel</label>
+        <select value={form.hotel_id || ''} onChange={e => setF(f => ({ ...f, hotel_id: e.target.value }))} style={STAY_INP}>
+          <option value="">– No hotel –</option>
+          {hotelLocations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+        </select>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+        <div>
+          <label style={STAY_LBL}>Check-in</label>
+          <input type="date" value={form.arrival_date || ''} onChange={e => setF(f => ({ ...f, arrival_date: e.target.value }))} style={STAY_INP} />
+        </div>
+        <div>
+          <label style={STAY_LBL}>Check-out</label>
+          <input type="date" value={form.departure_date || ''} onChange={e => setF(f => ({ ...f, departure_date: e.target.value }))} style={STAY_INP} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <button type="button" onClick={onCancel}
+          style={{ flex: 1, padding: '4px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
+          Cancel
+        </button>
+        <button type="button" onClick={onSave} disabled={saving || !form.arrival_date || !form.departure_date}
+          style={{ flex: 2, padding: '4px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : '#15803d', color: 'white', fontSize: '11px', cursor: saving ? 'default' : 'pointer', fontWeight: '700' }}>
+          {saving ? 'Saving…' : saveLabel}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Accommodation Accordion ────────────────────────────────
 function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
   const PRODUCTION_ID = getProductionId()
@@ -354,43 +392,7 @@ function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
     if (newStays.length > 0) await syncCrewDates(newStays)
   }
 
-  const inp = { width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
-  const lbl = { fontSize: '10px', fontWeight: '700', color: '#15803d', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }
   const hotelLocations = locations.filter(l => !l.is_hub)
-
-  function StayForm({ form, setF, onSave, onCancel, saveLabel }) {
-    return (
-      <div style={{ background: 'white', border: '1px dashed #86efac', borderRadius: '7px', padding: '8px 10px', marginBottom: '6px' }}>
-        <div style={{ marginBottom: '6px' }}>
-          <label style={lbl}>Hotel</label>
-          <select value={form.hotel_id || ''} onChange={e => setF(f => ({ ...f, hotel_id: e.target.value }))} style={inp}>
-            <option value="">– No hotel –</option>
-            {hotelLocations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
-          <div>
-            <label style={lbl}>Check-in</label>
-            <input type="date" value={form.arrival_date || ''} onChange={e => setF(f => ({ ...f, arrival_date: e.target.value }))} style={inp} />
-          </div>
-          <div>
-            <label style={lbl}>Check-out</label>
-            <input type="date" value={form.departure_date || ''} onChange={e => setF(f => ({ ...f, departure_date: e.target.value }))} style={inp} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <button type="button" onClick={onCancel}
-            style={{ flex: 1, padding: '4px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
-            Cancel
-          </button>
-          <button type="button" onClick={onSave} disabled={saving || !form.arrival_date || !form.departure_date}
-            style={{ flex: 2, padding: '4px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : '#15803d', color: 'white', fontSize: '11px', cursor: saving ? 'default' : 'pointer', fontWeight: '700' }}>
-            {saving ? 'Saving…' : saveLabel}
-          </button>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div style={{ marginBottom: '12px' }}>
@@ -420,12 +422,14 @@ function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
                 if (editId === s.id) {
                   return (
                     <div key={s.id}>
-                      <StayForm
+                     <StayForm
                         form={editForm}
                         setF={setEditForm}
                         onSave={() => handleEditSave(s.id)}
                         onCancel={() => setEditId(null)}
                         saveLabel="✓ Save Stay"
+                        saving={saving}
+                        hotelLocations={hotelLocations}
                       />
                     </div>
                   )
@@ -466,6 +470,8 @@ function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
                   onSave={handleAdd}
                   onCancel={() => { setAddOpen(false); setAddForm({ hotel_id: '', arrival_date: '', departure_date: '' }) }}
                   saveLabel="+ Add Stay"
+                  saving={saving}
+                  hotelLocations={hotelLocations}
                 />
               ) : (
                 <button type="button" onClick={() => setAddOpen(true)}
@@ -477,6 +483,80 @@ function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── MovForm (standalone — must NOT be nested inside TravelAccordion) ─────────
+const MOV_INP = { width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+const MOV_LBL = { fontSize: '10px', fontWeight: '700', color: '#6d28d9', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }
+
+function MovForm({ form, setF, onSave, onCancel, saveLabel, saving }) {
+  const dirBg = form.direction === 'IN' ? '#f0fdf4' : '#fff7ed'
+  return (
+    <div style={{ background: 'white', border: '1px dashed #c4b5fd', borderRadius: '7px', padding: '8px 10px', marginBottom: '6px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+        <div>
+          <label style={MOV_LBL}>Date</label>
+          <input type="date" value={form.travel_date || ''} onChange={e => setF(f => ({ ...f, travel_date: e.target.value }))} style={MOV_INP} />
+        </div>
+        <div>
+          <label style={MOV_LBL}>Direction</label>
+          <select value={form.direction || 'IN'} onChange={e => setF(f => ({ ...f, direction: e.target.value }))} style={{ ...MOV_INP, background: dirBg }}>
+            <option value="IN">↓ IN — Arrival</option>
+            <option value="OUT">↑ OUT — Departure</option>
+          </select>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+        <div>
+          <label style={MOV_LBL}>Type</label>
+          <select value={form.travel_type || 'FLIGHT'} onChange={e => setF(f => ({ ...f, travel_type: e.target.value }))} style={MOV_INP}>
+            <option value="FLIGHT">✈️ Flight</option>
+            <option value="TRAIN">🚂 Train</option>
+            <option value="GROUND">🚐 Ground</option>
+            <option value="OA">📋 OA</option>
+          </select>
+        </div>
+        <div>
+          <label style={MOV_LBL}>Number</label>
+          <input value={form.travel_number || ''} onChange={e => setF(f => ({ ...f, travel_number: e.target.value }))} style={MOV_INP} placeholder="FR1234" />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '6px', marginBottom: '6px' }}>
+        <div>
+          <label style={MOV_LBL}>From</label>
+          <input value={form.from_location || ''} onChange={e => setF(f => ({ ...f, from_location: e.target.value }))} style={MOV_INP} placeholder="LHR" />
+        </div>
+        <div>
+          <label style={MOV_LBL}>Dep time</label>
+          <input type="time" value={form.from_time || ''} onChange={e => setF(f => ({ ...f, from_time: e.target.value }))} style={MOV_INP} />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '6px', marginBottom: '6px' }}>
+        <div>
+          <label style={MOV_LBL}>To</label>
+          <input value={form.to_location || ''} onChange={e => setF(f => ({ ...f, to_location: e.target.value }))} style={MOV_INP} placeholder="BRI" />
+        </div>
+        <div>
+          <label style={MOV_LBL}>Arr time</label>
+          <input type="time" value={form.to_time || ''} onChange={e => setF(f => ({ ...f, to_time: e.target.value }))} style={MOV_INP} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+        <input type="checkbox" checked={!!form.needs_transport} onChange={e => setF(f => ({ ...f, needs_transport: e.target.checked }))} style={{ width: '14px', height: '14px', accentColor: '#2563eb', cursor: 'pointer' }} />
+        <span style={{ fontSize: '11px', color: '#374151', cursor: 'pointer' }}>🚐 Needs transport to/from hub</span>
+      </div>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <button type="button" onClick={onCancel}
+          style={{ flex: 1, padding: '4px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
+          Cancel
+        </button>
+        <button type="button" onClick={onSave} disabled={saving || !form.travel_date}
+          style={{ flex: 2, padding: '4px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : '#6d28d9', color: 'white', fontSize: '11px', cursor: saving ? 'default' : 'pointer', fontWeight: '700' }}>
+          {saving ? 'Saving…' : saveLabel}
+        </button>
+      </div>
     </div>
   )
 }
@@ -578,79 +658,6 @@ function TravelAccordion({ crewId }) {
     setConfirmDelId(null)
   }
 
-  const inp = { width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
-  const lbl = { fontSize: '10px', fontWeight: '700', color: '#6d28d9', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }
-
-  function MovForm({ form, setF, onSave, onCancel, saveLabel }) {
-    const dirBg = form.direction === 'IN' ? '#f0fdf4' : '#fff7ed'
-    return (
-      <div style={{ background: 'white', border: '1px dashed #c4b5fd', borderRadius: '7px', padding: '8px 10px', marginBottom: '6px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
-          <div>
-            <label style={lbl}>Date</label>
-            <input type="date" value={form.travel_date || ''} onChange={e => setF(f => ({ ...f, travel_date: e.target.value }))} style={inp} />
-          </div>
-          <div>
-            <label style={lbl}>Direction</label>
-            <select value={form.direction || 'IN'} onChange={e => setF(f => ({ ...f, direction: e.target.value }))} style={{ ...inp, background: dirBg }}>
-              <option value="IN">↓ IN — Arrival</option>
-              <option value="OUT">↑ OUT — Departure</option>
-            </select>
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
-          <div>
-            <label style={lbl}>Type</label>
-            <select value={form.travel_type || 'FLIGHT'} onChange={e => setF(f => ({ ...f, travel_type: e.target.value }))} style={inp}>
-              <option value="FLIGHT">✈️ Flight</option>
-              <option value="TRAIN">🚂 Train</option>
-              <option value="GROUND">🚐 Ground</option>
-              <option value="OA">📋 OA</option>
-            </select>
-          </div>
-          <div>
-            <label style={lbl}>Number</label>
-            <input value={form.travel_number || ''} onChange={e => setF(f => ({ ...f, travel_number: e.target.value }))} style={inp} placeholder="FR1234" />
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '6px', marginBottom: '6px' }}>
-          <div>
-            <label style={lbl}>From</label>
-            <input value={form.from_location || ''} onChange={e => setF(f => ({ ...f, from_location: e.target.value }))} style={inp} placeholder="LHR" />
-          </div>
-          <div>
-            <label style={lbl}>Dep time</label>
-            <input type="time" value={form.from_time || ''} onChange={e => setF(f => ({ ...f, from_time: e.target.value }))} style={inp} />
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '6px', marginBottom: '6px' }}>
-          <div>
-            <label style={lbl}>To</label>
-            <input value={form.to_location || ''} onChange={e => setF(f => ({ ...f, to_location: e.target.value }))} style={inp} placeholder="BRI" />
-          </div>
-          <div>
-            <label style={lbl}>Arr time</label>
-            <input type="time" value={form.to_time || ''} onChange={e => setF(f => ({ ...f, to_time: e.target.value }))} style={inp} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-          <input type="checkbox" checked={!!form.needs_transport} onChange={e => setF(f => ({ ...f, needs_transport: e.target.checked }))} style={{ width: '14px', height: '14px', accentColor: '#2563eb', cursor: 'pointer' }} />
-          <span style={{ fontSize: '11px', color: '#374151', cursor: 'pointer' }}>🚐 Needs transport to/from hub</span>
-        </div>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <button type="button" onClick={onCancel}
-            style={{ flex: 1, padding: '4px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
-            Cancel
-          </button>
-          <button type="button" onClick={onSave} disabled={saving || !form.travel_date}
-            style={{ flex: 2, padding: '4px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : '#6d28d9', color: 'white', fontSize: '11px', cursor: saving ? 'default' : 'pointer', fontWeight: '700' }}>
-            {saving ? 'Saving…' : saveLabel}
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div style={{ marginBottom: '12px' }}>
       <button type="button" onClick={toggle}
@@ -687,6 +694,7 @@ function TravelAccordion({ crewId }) {
                         onSave={() => handleEditSave(m.id)}
                         onCancel={() => setEditId(null)}
                         saveLabel="✓ Save"
+                        saving={saving}
                       />
                     </div>
                   )
@@ -732,6 +740,7 @@ function TravelAccordion({ crewId }) {
                   onSave={handleAdd}
                   onCancel={() => { setAddOpen(false); setAddForm(EMPTY_MOV) }}
                   saveLabel="+ Add Movement"
+                  saving={saving}
                 />
               ) : (
                 <button type="button" onClick={() => setAddOpen(true)}
