@@ -673,12 +673,11 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
       updates.departure_date = travelDate
     }
 
-    if (Object.keys(updates).length === 0) return
-
+    // Always compute expected status (using current + potentially updated dates)
     const arr = updates.arrival_date  ?? crewRec.arrival_date
     const dep = updates.departure_date ?? crewRec.departure_date
 
-    // Replicate expectedStatus logic
+    // Replicate expectedStatus logic from crew/page.js
     let newStatus = null
     if (dep && today > dep)        newStatus = 'OUT'
     else if (arr && today > arr)   newStatus = 'PRESENT'
@@ -689,6 +688,9 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     else if (arr && today < arr)   newStatus = 'IN'
 
     if (newStatus && newStatus !== crewRec.travel_status) updates.travel_status = newStatus
+
+    // Nothing changed — skip DB write
+    if (Object.keys(updates).length === 0) return
 
     await supabase.from('crew').update(updates).eq('id', crewId).eq('production_id', PRODUCTION_ID)
   }
