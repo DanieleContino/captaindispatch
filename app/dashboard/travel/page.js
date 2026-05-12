@@ -645,6 +645,54 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     return () => clearTimeout(timer)
   }, [crewSearch])
 
+  // ── Auto-sync crew.arrival_date / departure_date / travel_status ──────────
+  // Called after every successful save of a matched movement (crew_id set).
+  // Mirrors the expectedStatus() logic from crew/page.js:
+  //   today > dep_date  → OUT
+  //   today > arr_date  → PRESENT
+  //   today === arr_date → IN if saving an IN movement today, else PRESENT
+  //   today < arr_date  → IN
+  async function syncCrewDates(crewId, direction, travelDate) {
+    if (!crewId || !travelDate || !PRODUCTION_ID) return
+    const { data: crewRec } = await supabase
+      .from('crew')
+      .select('arrival_date, departure_date, travel_status')
+      .eq('id', crewId)
+      .eq('production_id', PRODUCTION_ID)
+      .single()
+    if (!crewRec) return
+
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+    const updates = {}
+
+    // Update dates only when the new movement gives a more extreme value
+    if (direction === 'IN' && (!crewRec.arrival_date || travelDate < crewRec.arrival_date)) {
+      updates.arrival_date = travelDate
+    }
+    if (direction === 'OUT' && (!crewRec.departure_date || travelDate > crewRec.departure_date)) {
+      updates.departure_date = travelDate
+    }
+
+    if (Object.keys(updates).length === 0) return
+
+    const arr = updates.arrival_date  ?? crewRec.arrival_date
+    const dep = updates.departure_date ?? crewRec.departure_date
+
+    // Replicate expectedStatus logic
+    let newStatus = null
+    if (dep && today > dep)        newStatus = 'OUT'
+    else if (arr && today > arr)   newStatus = 'PRESENT'
+    else if (arr && today === arr) {
+      // Has IN movement today? We know the one being saved counts
+      newStatus = (direction === 'IN' && travelDate === today) ? 'IN' : 'PRESENT'
+    }
+    else if (arr && today < arr)   newStatus = 'IN'
+
+    if (newStatus && newStatus !== crewRec.travel_status) updates.travel_status = newStatus
+
+    await supabase.from('crew').update(updates).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+  }
+
   function buildRow() {
     return {
       production_id:   PRODUCTION_ID,
@@ -683,6 +731,8 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     setSaving(false)
     if (result.error) { setError(result.error.message); return }
     onSaved(result.data, mode)
+    // Fire-and-forget: sync crew dates from the saved movement
+    syncCrewDates(form.crew_id, form.direction, form.travel_date)
     onClose()
   }
 
@@ -704,6 +754,8 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     setSaving(false)
     if (result.error) { setError(result.error.message); return }
     onSaved(result.data, mode)
+    // Fire-and-forget: sync crew dates from the saved movement
+    syncCrewDates(form.crew_id, form.direction, form.travel_date)
     // Signal parent to open next leg sidebar
     if (onAddLeg) onAddLeg(result.data)
   }

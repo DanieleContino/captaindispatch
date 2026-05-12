@@ -1,3 +1,31 @@
+## WHAT CHANGED IN SESSION S57 (12 May 2026)
+
+### Feature ✅ — Travel: auto-sync `crew.arrival_date` / `departure_date` / `travel_status` dal sidebar
+
+**Obiettivo**: quando si salva un `travel_movement` con `crew_id` settato, aggiornare automaticamente le date e lo status del record crew corrispondente, senza dover aprire la pagina Crew manualmente.
+
+#### `app/dashboard/travel/page.js` — nuova funzione `syncCrewDates`
+
+Aggiunta dentro `MovementSidebar`, chiamata (fire-and-forget) dopo ogni save riuscito in **`handleSubmit`** e **`handleSaveAndAddLeg`**.
+
+**Logica**:
+1. Carica `crew.arrival_date`, `crew.departure_date`, `crew.travel_status` per il `crew_id` del movimento
+2. Aggiorna le date **solo se più estreme** (non distruttivo):
+   - `direction === 'IN'`: aggiorna `arrival_date` se null o `travelDate < arrival_date`
+   - `direction === 'OUT'`: aggiorna `departure_date` se null o `travelDate > departure_date`
+3. Ricalcola `travel_status` replicando esattamente `expectedStatus()` di `crew/page.js`:
+   - `today > departure_date` → `'OUT'`
+   - `today > arrival_date` → `'PRESENT'`
+   - `today === arrival_date` + saving IN movement today → `'IN'`; else → `'PRESENT'`
+   - `today < arrival_date` → `'IN'`
+4. Esegue `crew.update(updates)` solo se c'è effettivamente qualcosa da cambiare
+
+**Effetto**: dopo aver aggiunto un volo IN per un crew member, Hub Coverage e Pax Coverage mostrano automaticamente il membro nella data corretta con lo status aggiornato.
+
+**Non tocca**: movimenti non matchati (`crew_id = null`); non fa rollback se si elimina un movimento.
+
+---
+
 ## WHAT CHANGED IN SESSION S56 (12 May 2026)
 
 ### Feature ✅ — Travel: multi-leg journey support — commit `e7dc69e`
