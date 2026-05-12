@@ -76,7 +76,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
     setLoading(true)
     Promise.all([
       supabase.from('crew')
-        .select('id,full_name,role,department,phone,email,hotel_id,arrival_date,departure_date,hotel:hotel_id(id,name)')
+        .select('id,full_name,role,department,phone,email,hotel_id,arrival_date,departure_date,no_transport_needed,hotel:hotel_id(id,name)')
         .eq('id', member.id).single(),
       supabase.from('travel_movements')
         .select('travel_date,direction,travel_type,from_location,from_time,to_location,to_time,travel_number,needs_transport,pickup_dep,pickup_arr')
@@ -99,6 +99,11 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
           <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
             {[details?.role, details?.department].filter(Boolean).join(' · ') || member.department || ''}
           </div>
+          {details?.no_transport_needed && (
+            <span style={{ display: 'inline-block', marginTop: '6px', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '800', background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5' }}>
+              🚐 NTN — No Transport Needed
+            </span>
+          )}
         </div>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
       </div>
