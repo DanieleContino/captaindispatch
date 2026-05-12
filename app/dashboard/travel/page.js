@@ -3,6 +3,7 @@
 /**
  * /dashboard/travel
  * Session S55 — 12 May 2026
+ * Updated S56 — 12 May 2026: multi-leg journey support (journey_id)
  *
  * Travel Coordinator view — all travel_movements grouped by date and section
  * (FLIGHT / TRAIN / OA / GROUND).
@@ -138,7 +139,7 @@ function EditableCell({ value, field, rowId, type = 'text', onSaved, style, onCo
       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
       onMouseLeave={e => { e.currentTarget.style.background = style?.background || '' }}
     >
-      {value || <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '10px' }}>–</span>}
+      {value || <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '10px' }}>-</span>}
     </td>
   )
 }
@@ -167,7 +168,7 @@ function NeedsTransportCell({ value, rowId, onSaved }) {
         style={{ background: 'none', border: 'none', cursor: saving ? 'default' : 'pointer', padding: 0, opacity: saving ? 0.5 : 1 }}>
         {value
           ? <span style={{ fontSize: '10px', fontWeight: '800', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 5px' }}>🚐</span>
-          : <span style={{ fontSize: '10px', color: '#cbd5e1' }}>–</span>
+          : <span style={{ fontSize: '10px', color: '#cbd5e1' }}>-</span>
         }
       </button>
     </td>
@@ -219,7 +220,7 @@ function ColorPickerPopover({ field, rowId, currentColor, onColorSaved, onClose 
             background: c || 'white', cursor: 'pointer', padding: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px',
           }}>
-          {c === null && '✕'}
+          {c === null && 'x'}
         </button>
       ))}
     </div>
@@ -242,17 +243,34 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
           color: m.direction === 'IN' ? '#15803d' : '#c2410c',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           background: bgColor }}>
-          {m.direction === 'IN' ? '↓ IN' : '↑ OUT'}
+          {m.direction === 'IN' ? 'v IN' : '^ OUT'}
         </td>
       )
 
     case 'full_name': {
-      const displayName = m.crew?.full_name || m.full_name_raw || '–'
+      // Leg 2+ of a multi-leg journey: show indented connector instead of name
+      if (m.legIndex > 0) {
+        return (
+          <td key={field} style={{ padding: '7px 10px 7px 20px', fontSize: '11px', fontWeight: '600',
+            color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            background: bgColor }}>
+            {'\u21aa'} leg {m.legIndex + 1}
+          </td>
+        )
+      }
+      const displayName = m.crew?.full_name || m.full_name_raw || '-'
       return (
         <td key={field} style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700',
           color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           background: bgColor }}>
           {displayName}
+          {m.journeySize > 1 && (
+            <span style={{ marginLeft: '5px', fontSize: '9px', fontWeight: '700',
+              color: '#7c3aed', background: '#f5f3ff', padding: '1px 4px',
+              borderRadius: '3px', verticalAlign: 'middle' }}>
+              {m.journeySize}{'\u2708'}
+            </span>
+          )}
         </td>
       )
     }
@@ -261,7 +279,7 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
       return (
         <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: bgColor }}>
-          {m.crew?.role || '–'}
+          {m.crew?.role || '-'}
         </td>
       )
 
@@ -350,17 +368,55 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
       return (
         <td key={field} style={{ padding: '7px 10px', textAlign: 'center', background: bgColor }}>
           {m.match_status === 'unmatched'
-            ? <span style={{ fontSize: '10px', fontWeight: '800', color: '#dc2626' }}>❌</span>
-            : <span style={{ fontSize: '10px' }}>✅</span>
+            ? <span style={{ fontSize: '10px', fontWeight: '800', color: '#dc2626' }}>X</span>
+            : <span style={{ fontSize: '10px' }}>OK</span>
           }
         </td>
       )
 
     default:
       return (
-        <td key={field} style={{ background: bgColor, padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>–</td>
+        <td key={field} style={{ background: bgColor, padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>-</td>
       )
   }
+}
+
+// ─── buildDisplayRows — group journey legs visually ────────────
+// Rows with the same journey_id are sorted together and annotated
+// with legIndex (0-based) and journeySize so renderCell can adapt.
+// Standalone rows (journey_id = null) get legIndex = -1, journeySize = 1.
+function buildDisplayRows(rows) {
+  const journeyMap = new Map()
+  const standalone = []
+
+  for (const m of rows) {
+    if (m.journey_id) {
+      if (!journeyMap.has(m.journey_id)) journeyMap.set(m.journey_id, [])
+      journeyMap.get(m.journey_id).push(m)
+    } else {
+      standalone.push(m)
+    }
+  }
+
+  // Sort each journey group internally by from_time
+  for (const legs of journeyMap.values()) {
+    legs.sort((a, b) => (a.from_time || '').localeCompare(b.from_time || ''))
+  }
+
+  // Build sortable items keyed by first from_time of each group
+  const items = [
+    ...standalone.map(m => ({
+      sortTime: m.from_time || '',
+      flatRows: [{ ...m, legIndex: -1, journeySize: 1 }],
+    })),
+    ...Array.from(journeyMap.values()).map(legs => ({
+      sortTime: legs[0].from_time || '',
+      flatRows: legs.map((leg, i) => ({ ...leg, legIndex: i, journeySize: legs.length })),
+    })),
+  ]
+
+  items.sort((a, b) => a.sortTime.localeCompare(b.sortTime))
+  return items.flatMap(item => item.flatRows)
 }
 
 // ─── SectionTable ─────────────────────────────────────────────
@@ -373,6 +429,8 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
   }
 
   if (!columnsConfig || columnsConfig.length === 0) return null
+
+  const displayRows = buildDisplayRows(rows)
 
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -393,7 +451,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
         </span>
       </div>
 
-      {/* Table wrapper — NO overflowX */}
+      {/* Table wrapper */}
       <div style={{ position: 'relative' }}>
         {colorPicker && (
           <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 200 }}>
@@ -439,22 +497,27 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
             </tr>
           </thead>
 
-          {/* Body */}
+          {/* Body — uses buildDisplayRows for journey grouping */}
           <tbody>
-            {rows.map((m) => {
+            {displayRows.map((m) => {
               const isUnmatched = m.match_status === 'unmatched'
               const isIN        = m.direction === 'IN'
               const isToday     = m.travel_date === today
               const colors      = m.cell_colors || {}
               const bgColor     = isUnmatched ? '#fef2f2' : isIN ? '#f0fdf4' : '#fff7ed'
               const borderColor = isUnmatched ? '#ef4444' : isIN ? '#22c55e' : '#f97316'
+              // Leg rows (2nd, 3rd…) get a slightly dimmer left border to visually connect
+              const isLeg       = m.legIndex > 0
 
               return (
                 <tr key={m.id} style={{
                   background: bgColor,
-                  borderLeft: `3px solid ${borderColor}`,
+                  borderLeft: isLeg
+                    ? `3px solid ${borderColor}88`
+                    : `3px solid ${borderColor}`,
                   outline: isToday ? '2px solid #fbbf24' : 'none',
                   outlineOffset: '-2px',
+                  opacity: isLeg ? 0.9 : 1,
                 }}>
                   {columnsConfig.map(col =>
                     renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors })
@@ -469,7 +532,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                         background: 'none', border: '1px solid #e2e8f0',
                         borderRadius: '5px', padding: '2px 6px',
                         cursor: 'pointer', fontSize: '11px', color: '#64748b',
-                      }}>✎</button>
+                      }}>&#9998;</button>
                   </td>
                 </tr>
               )
@@ -487,16 +550,24 @@ const EMPTY_MOV = {
   full_name_raw: '', crew_id: null,
   travel_number: '', from_location: '', from_time: '',
   to_location: '', to_time: '', pickup_dep: '', pickup_arr: '',
-  needs_transport: false, notes: '',
+  needs_transport: false, notes: '', journey_id: null,
 }
 
-function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
+const SELECT_FIELDS = `
+  id, crew_id, full_name_raw, travel_date, direction,
+  travel_type, travel_number, from_location, from_time,
+  to_location, to_time, needs_transport, match_status,
+  pickup_dep, pickup_arr, notes, cell_colors, journey_id,
+  crew:crew_id(full_name, role, department)
+`
+
+function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onAddLeg }) {
   const PRODUCTION_ID = getProductionId()
-  const [form, setForm]       = useState(EMPTY_MOV)
-  const [saving, setSaving]   = useState(false)
+  const [form, setForm]         = useState(EMPTY_MOV)
+  const [saving, setSaving]     = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
-  const [error, setError]     = useState(null)
+  const [error, setError]       = useState(null)
   const [crewSearch, setCrewSearch] = useState('')
   const [crewResults, setCrewResults] = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
@@ -504,6 +575,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
   useEffect(() => {
     if (!open) return
     setError(null); setConfirmDel(false)
+
     if (mode === 'edit' && initial) {
       setForm({
         travel_date:     initial.travel_date    || '',
@@ -520,11 +592,38 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
         pickup_arr:      initial.pickup_arr     || '',
         needs_transport: !!initial.needs_transport,
         notes:           initial.notes          || '',
+        journey_id:      initial.journey_id     || null,
       })
+      setCrewSearch(initial.full_name_raw || initial.crew?.full_name || '')
+      setCrewResults([])
+
+    } else if (mode === 'new' && initial?.__isLeg) {
+      // Pre-filled new leg: same person, same date/direction, from = prev to
+      setForm({
+        travel_date:     initial.travel_date    || '',
+        direction:       initial.direction      || 'IN',
+        travel_type:     initial.travel_type    || 'FLIGHT',
+        full_name_raw:   initial.full_name_raw  || '',
+        crew_id:         initial.crew_id        || null,
+        travel_number:   '',
+        from_location:   initial.from_location  || '',
+        from_time:       initial.from_time      || '',
+        to_location:     '',
+        to_time:         '',
+        pickup_dep:      '',
+        pickup_arr:      '',
+        needs_transport: false,
+        notes:           '',
+        journey_id:      initial.journey_id     || null,
+      })
+      setCrewSearch(initial.full_name_raw || '')
+      setCrewResults([])
+
     } else {
       setForm(EMPTY_MOV)
+      setCrewSearch('')
+      setCrewResults([])
     }
-    setCrewSearch(''); setCrewResults([])
   }, [open, mode, initial])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -546,12 +645,8 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
     return () => clearTimeout(timer)
   }, [crewSearch])
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (!form.travel_date) { setError('Date required'); return }
-    if (!form.full_name_raw.trim() && !form.crew_id) { setError('Name required'); return }
-    setSaving(true)
-    const row = {
+  function buildRow() {
+    return {
       production_id:   PRODUCTION_ID,
       travel_date:     form.travel_date,
       direction:       form.direction,
@@ -568,30 +663,49 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
       needs_transport: form.needs_transport,
       notes:           form.notes.trim() || null,
       match_status:    form.crew_id ? 'matched' : 'unmatched',
+      journey_id:      form.journey_id || null,
     }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.travel_date) { setError('Date required'); return }
+    if (!form.full_name_raw.trim() && !form.crew_id) { setError('Name required'); return }
+    setSaving(true)
+    const row = buildRow()
     let result
     if (mode === 'new') {
-      result = await supabase.from('travel_movements').insert(row).select(`
-        id, crew_id, full_name_raw, travel_date, direction,
-        travel_type, travel_number, from_location, from_time,
-        to_location, to_time, needs_transport, match_status,
-        pickup_dep, pickup_arr, notes, cell_colors,
-        crew:crew_id(full_name, role, department)
-      `).single()
+      result = await supabase.from('travel_movements').insert(row).select(SELECT_FIELDS).single()
     } else {
       result = await supabase.from('travel_movements').update(row)
-        .eq('id', initial.id).select(`
-          id, crew_id, full_name_raw, travel_date, direction,
-          travel_type, travel_number, from_location, from_time,
-          to_location, to_time, needs_transport, match_status,
-          pickup_dep, pickup_arr, notes, cell_colors,
-          crew:crew_id(full_name, role, department)
-        `).single()
+        .eq('id', initial.id).select(SELECT_FIELDS).single()
     }
     setSaving(false)
     if (result.error) { setError(result.error.message); return }
     onSaved(result.data, mode)
     onClose()
+  }
+
+  // Save current movement and open sidebar for the next connecting leg
+  async function handleSaveAndAddLeg() {
+    if (!form.travel_date) { setError('Date required'); return }
+    if (!form.full_name_raw.trim() && !form.crew_id) { setError('Name required'); return }
+    setSaving(true)
+    // Assign or reuse journey_id
+    const journeyId = form.journey_id || crypto.randomUUID()
+    const row = { ...buildRow(), journey_id: journeyId }
+    let result
+    if (mode === 'new') {
+      result = await supabase.from('travel_movements').insert(row).select(SELECT_FIELDS).single()
+    } else {
+      result = await supabase.from('travel_movements').update(row)
+        .eq('id', initial.id).select(SELECT_FIELDS).single()
+    }
+    setSaving(false)
+    if (result.error) { setError(result.error.message); return }
+    onSaved(result.data, mode)
+    // Signal parent to open next leg sidebar
+    if (onAddLeg) onAddLeg(result.data)
   }
 
   async function handleDelete() {
@@ -618,7 +732,9 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
     IN:  { bg: '#f0fdf4', color: '#15803d', border: '#86efac' },
     OUT: { bg: '#fff7ed', color: '#c2410c', border: '#fdba74' },
   }
-  const TYPE_ICONS = { FLIGHT: '✈️', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴️' }
+  const TYPE_ICONS = { FLIGHT: '✈', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴' }
+
+  const isLegMode = mode === 'new' && initial?.__isLeg
 
   return (
     <>
@@ -634,14 +750,29 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
         {/* Header */}
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: '#0f2340', flexShrink: 0 }}>
+          background: isLegMode ? '#4c1d95' : '#0f2340', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
-            {mode === 'new' ? '✈️ New Movement' : '✎ Edit Movement'}
+            {mode === 'new'
+              ? (isLegMode ? '\u21aa Connecting Leg' : '\u2708 New Movement')
+              : '\u270e Edit Movement'}
           </div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none',
             cursor: 'pointer', color: 'white', fontSize: '16px',
-            lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+            lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>x</button>
         </div>
+
+        {/* Journey indicator */}
+        {(form.journey_id || isLegMode) && (
+          <div style={{ padding: '6px 18px', background: '#f5f3ff', borderBottom: '1px solid #e9d5ff',
+            fontSize: '11px', color: '#7c3aed', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>\u2708 Multi-leg journey</span>
+            {form.journey_id && (
+              <span style={{ fontSize: '9px', color: '#a78bfa', fontWeight: '400', fontFamily: 'monospace' }}>
+                {form.journey_id.slice(0, 8)}...
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
@@ -664,7 +795,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
                         fontWeight: '700', cursor: 'pointer',
                         border: `1px solid ${active ? c.border : '#e2e8f0'}`,
                         background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8' }}>
-                      {d === 'IN' ? '↓ IN' : '↑ OUT'}
+                      {d === 'IN' ? 'v IN' : '^ OUT'}
                     </button>
                   )
                 })}
@@ -693,8 +824,8 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
               <label style={lbl}>Crew member (search to link)</label>
               <input value={crewSearch}
                 onChange={e => { setCrewSearch(e.target.value); if (!e.target.value) set('crew_id', null) }}
-                style={inp} placeholder="Type name to search crew…" autoComplete="off" />
-              {crewSearching && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Searching…</div>}
+                style={inp} placeholder="Type name to search crew..." autoComplete="off" />
+              {crewSearching && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Searching...</div>}
               {crewResults.length > 0 && (
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', overflow: 'hidden' }}>
                   {crewResults.map(c => (
@@ -720,7 +851,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
             <div style={rowSt}>
               <label style={lbl}>Travel Number</label>
               <input value={form.travel_number} onChange={e => set('travel_number', e.target.value)}
-                style={{ ...inp, fontFamily: 'monospace', fontWeight: '700' }} placeholder="FR1234, AZ0001…" />
+                style={{ ...inp, fontFamily: 'monospace', fontWeight: '700' }} placeholder="FR1234, AZ0001..." />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '8px', marginBottom: '12px' }}>
@@ -748,11 +879,11 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
               <div>
                 <label style={lbl}>p/up dep</label>
-                <input value={form.pickup_dep} onChange={e => set('pickup_dep', e.target.value)} style={inp} placeholder="OA, TRANSPORT DEPT…" />
+                <input value={form.pickup_dep} onChange={e => set('pickup_dep', e.target.value)} style={inp} placeholder="OA, TRANSPORT DEPT..." />
               </div>
               <div>
                 <label style={lbl}>p/up arr</label>
-                <input value={form.pickup_arr} onChange={e => set('pickup_arr', e.target.value)} style={inp} placeholder="Rental car, TRANSPORT…" />
+                <input value={form.pickup_arr} onChange={e => set('pickup_arr', e.target.value)} style={inp} placeholder="Rental car, TRANSPORT..." />
               </div>
             </div>
 
@@ -774,7 +905,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
             <div style={rowSt}>
               <label style={lbl}>Notes</label>
               <textarea value={form.notes} onChange={e => set('notes', e.target.value)}
-                style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Any operational notes…" />
+                style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Any operational notes..." />
             </div>
 
             {mode === 'edit' && (
@@ -783,7 +914,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
                 {!confirmDel ? (
                   <button type="button" onClick={handleDelete} disabled={deleting}
                     style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
-                    🗑 Delete Movement
+                    Delete Movement
                   </button>
                 ) : (
                   <div>
@@ -793,7 +924,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
                         style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Cancel</button>
                       <button type="button" onClick={handleDelete} disabled={deleting}
                         style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: deleting ? 'default' : 'pointer', fontSize: '12px', fontWeight: '800' }}>
-                        {deleting ? '…' : '⚠ Confirm Delete'}
+                        {deleting ? '...' : 'Confirm Delete'}
                       </button>
                     </div>
                   </div>
@@ -804,18 +935,32 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
 
           {error && (
             <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>
-              ❌ {error}
+              {error}
             </div>
           )}
-          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexShrink: 0, position: 'sticky', bottom: 0, background: 'white' }}>
-            <button type="button" onClick={onClose}
-              style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
-              Cancel
-            </button>
+
+          {/* Footer — primary action + secondary row */}
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', flexShrink: 0,
+            position: 'sticky', bottom: 0, background: 'white', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <button type="submit" disabled={saving}
-              style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
-              {saving ? 'Saving…' : mode === 'new' ? '+ Add Movement' : '✓ Save Changes'}
+              style={{ padding: '9px', borderRadius: '8px', border: 'none',
+                background: saving ? '#94a3b8' : (isLegMode ? '#4c1d95' : '#0f2340'),
+                color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Saving...' : mode === 'new' ? '+ Add Movement' : 'Save Changes'}
             </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" onClick={onClose}
+                style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                  background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>
+                Cancel
+              </button>
+              <button type="button" onClick={handleSaveAndAddLeg} disabled={saving}
+                style={{ flex: 2, padding: '8px', borderRadius: '8px', border: '1px solid #7c3aed',
+                  background: '#f5f3ff', color: '#7c3aed', fontSize: '12px',
+                  cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+                {'\u21aa'} Save & Add Connecting Leg
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -851,8 +996,26 @@ export default function TravelPage() {
   const [sidebarMode,   setSidebarMode]   = useState('new')
   const [sidebarTarget, setSidebarTarget] = useState(null)
 
-  function openNew()  { setSidebarMode('new');  setSidebarTarget(null); setSidebarOpen(true) }
-  function openEdit(m){ setSidebarMode('edit'); setSidebarTarget(m);    setSidebarOpen(true) }
+  function openNew()   { setSidebarMode('new');  setSidebarTarget(null); setSidebarOpen(true) }
+  function openEdit(m) { setSidebarMode('edit'); setSidebarTarget(m);    setSidebarOpen(true) }
+
+  // Open sidebar pre-filled for the next connecting leg of a journey
+  function openAddLeg(prevMovement) {
+    const nextLeg = {
+      __isLeg:       true,
+      journey_id:    prevMovement.journey_id,
+      travel_date:   prevMovement.travel_date,
+      direction:     prevMovement.direction,
+      travel_type:   prevMovement.travel_type,
+      crew_id:       prevMovement.crew_id,
+      full_name_raw: prevMovement.full_name_raw || prevMovement.crew?.full_name || '',
+      from_location: prevMovement.to_location   || '',
+      from_time:     prevMovement.to_time        ? prevMovement.to_time.slice(0, 5) : '',
+    }
+    setSidebarMode('new')
+    setSidebarTarget(nextLeg)
+    setSidebarOpen(true)
+  }
 
   // Toast
   const [toast, setToast] = useState(null)
@@ -896,13 +1059,7 @@ export default function TravelPage() {
     setLoading(true)
     const { data } = await supabase
       .from('travel_movements')
-      .select(`
-        id, crew_id, full_name_raw, travel_date, direction,
-        travel_type, travel_number, from_location, from_time,
-        to_location, to_time, needs_transport, match_status,
-        pickup_dep, pickup_arr, notes, cell_colors,
-        crew:crew_id(full_name, role, department)
-      `)
+      .select(SELECT_FIELDS)
       .eq('production_id', PRODUCTION_ID)
       .gte('travel_date', start)
       .lte('travel_date', end)
@@ -1033,7 +1190,7 @@ export default function TravelPage() {
   // ── Auth guard ─────────────────────────────────────────────
   if (!user) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-      Loading…
+      Loading...
     </div>
   )
 
@@ -1081,7 +1238,7 @@ export default function TravelPage() {
           </button>
           <button onClick={() => loadData(windowStart, windowEnd)}
             style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
-            ↻
+            &#8635;
           </button>
         </div>
 
@@ -1093,7 +1250,7 @@ export default function TravelPage() {
                 background: applyingPreset ? '#cbd5e1' : '#2563eb', color: 'white',
                 fontSize: '11px', fontWeight: '700', cursor: applyingPreset ? 'default' : 'pointer',
                 whiteSpace: 'nowrap' }}>
-              {applyingPreset ? 'Applying…' : 'Apply Default Columns'}
+              {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
             </button>
           )}
           <button onClick={() => setColumnsEditorOpen(true)}
@@ -1112,7 +1269,7 @@ export default function TravelPage() {
         display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
         position: 'sticky', top: '104px', zIndex: 20,
       }}>
-        <input type="text" placeholder="Search name…" value={search}
+        <input type="text" placeholder="Search name..." value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px', minWidth: 0 }}
         />
@@ -1122,9 +1279,9 @@ export default function TravelPage() {
         <div style={{ display: 'flex', gap: '3px' }}>
           <Pill active={filterDir === 'ALL'} onClick={() => setFilterDir('ALL')}>ALL</Pill>
           <Pill active={filterDir === 'IN'}  onClick={() => setFilterDir('IN')}
-            activeStyle={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}>↓ IN</Pill>
+            activeStyle={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}>IN</Pill>
           <Pill active={filterDir === 'OUT'} onClick={() => setFilterDir('OUT')}
-            activeStyle={{ background: '#fff7ed', color: '#c2410c', borderColor: '#fdba74' }}>↑ OUT</Pill>
+            activeStyle={{ background: '#fff7ed', color: '#c2410c', borderColor: '#fdba74' }}>OUT</Pill>
         </div>
 
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
@@ -1142,16 +1299,16 @@ export default function TravelPage() {
         <div style={{ display: 'flex', gap: '3px' }}>
           <Pill active={filterMatch === 'ALL'}       onClick={() => setFilterMatch('ALL')}>ALL</Pill>
           <Pill active={filterMatch === 'matched'}   onClick={() => setFilterMatch('matched')}
-            activeStyle={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}>✅ Matched</Pill>
+            activeStyle={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}>Matched</Pill>
           <Pill active={filterMatch === 'unmatched'} onClick={() => setFilterMatch('unmatched')}
-            activeStyle={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>❌ Unmatched</Pill>
+            activeStyle={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>Unmatched</Pill>
         </div>
 
         {isFilterActive && (
           <button onClick={resetFilters}
             style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
               background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#64748b' }}>
-            ✕ Reset
+            x Reset
           </button>
         )}
       </div>
@@ -1161,7 +1318,7 @@ export default function TravelPage() {
 
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
-            ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> not set in .env.local
+            NEXT_PUBLIC_PRODUCTION_ID not set in .env.local
           </div>
         )}
 
@@ -1171,12 +1328,12 @@ export default function TravelPage() {
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>🗂</div>
             <div style={{ fontSize: '14px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>No columns configured</div>
             <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px' }}>
-              Click <strong>Apply Default Columns</strong> in the toolbar to use the standard 13-column layout,<br />
+              Click <strong>Apply Default Columns</strong> in the toolbar to use the standard 13-column layout,
               or click <strong>Columns</strong> to configure manually.
             </div>
             <button onClick={applyDefaultPreset} disabled={applyingPreset}
               style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#2563eb', color: 'white', fontSize: '13px', fontWeight: '800', cursor: applyingPreset ? 'default' : 'pointer' }}>
-              {applyingPreset ? 'Applying…' : 'Apply Default Columns'}
+              {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
             </button>
           </div>
         )}
@@ -1188,21 +1345,21 @@ export default function TravelPage() {
             <div style={{ fontSize: '12px', color: '#374151', fontWeight: '700' }}>
               Total: <span style={{ fontWeight: '900', color: '#0f172a' }}>{movements.length}</span> movements
             </div>
-            <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>IN ↓: <span style={{ fontWeight: '900' }}>{totalIn}</span></div>
-            <div style={{ fontSize: '12px', fontWeight: '700', color: '#c2410c' }}>OUT ↑: <span style={{ fontWeight: '900' }}>{totalOut}</span></div>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>IN: <span style={{ fontWeight: '900' }}>{totalIn}</span></div>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#c2410c' }}>OUT: <span style={{ fontWeight: '900' }}>{totalOut}</span></div>
             {totalUnmatched > 0 && (
-              <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>Unmatched ❌: <span style={{ fontWeight: '900' }}>{totalUnmatched}</span></div>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>Unmatched: <span style={{ fontWeight: '900' }}>{totalUnmatched}</span></div>
             )}
             {totalTransport > 0 && (
-              <div style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Need transport 🚐: <span style={{ fontWeight: '900' }}>{totalTransport}</span></div>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>Need transport: <span style={{ fontWeight: '900' }}>{totalTransport}</span></div>
             )}
-            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#94a3b8' }}>{windowStart} → {windowEnd}</div>
+            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#94a3b8' }}>{windowStart} to {windowEnd}</div>
           </div>
         )}
 
         {/* Loading */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading travel movements…</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading travel movements...</div>
 
         ) : movements.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
@@ -1212,7 +1369,7 @@ export default function TravelPage() {
 
         ) : sortedDates.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '14px', color: '#64748b' }}>No results — reset filters</div>
+            <div style={{ fontSize: '14px', color: '#64748b' }}>No results - reset filters</div>
           </div>
 
         ) : (
@@ -1255,6 +1412,7 @@ export default function TravelPage() {
         onClose={() => setSidebarOpen(false)}
         onSaved={handleMovementSaved}
         onDeleted={handleMovementDeleted}
+        onAddLeg={openAddLeg}
       />
       <TravelColumnsEditorSidebar
         open={columnsEditorOpen}
