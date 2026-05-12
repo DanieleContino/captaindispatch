@@ -8,7 +8,7 @@
  * READ-ONLY for now.
  */
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
@@ -61,7 +61,7 @@ function Toast({ message, type }) {
 }
 
 // ─── EditableCell ─────────────────────────────────────────────
-function EditableCell({ value, field, rowId, type = 'text', onSaved, style }) {
+function EditableCell({ value, field, rowId, type = 'text', onSaved, style, onContextMenu }) {
   const PRODUCTION_ID = getProductionId()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState(value || '')
@@ -139,7 +139,8 @@ function EditableCell({ value, field, rowId, type = 'text', onSaved, style }) {
   return (
     <td
       onClick={() => { setDraft(value || ''); setEditing(true) }}
-      title="Click to edit"
+      onContextMenu={onContextMenu}
+      title="Click to edit · Right-click to change color"
       style={{
         padding: '7px 10px', cursor: 'text',
         ...style,
@@ -190,8 +191,494 @@ function NeedsTransportCell({ value, rowId, onSaved }) {
   )
 }
 
+// ─── Color Picker Palette ─────────────────────────────────────
+const COLOR_PALETTE = [
+  null,        // no color (reset)
+  '#fef9c3',   // yellow
+  '#fef2f2',   // red light
+  '#f0fdf4',   // green light
+  '#eff6ff',   // blue light
+  '#fdf4ff',   // purple light
+  '#fff7ed',   // orange light
+  '#f1f5f9',   // slate light
+  '#fbbf24',   // amber
+  '#86efac',   // green
+  '#93c5fd',   // blue
+  '#f9a8d4',   // pink
+  '#0f2340',   // navy (dark)
+]
+
+// ─── ColorPickerPopover ───────────────────────────────────────
+function ColorPickerPopover({ field, rowId, currentColor, onColorSaved, onClose }) {
+  const ref = React.useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) onClose()
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [onClose])
+
+  async function pickColor(color) {
+    const { data: current } = await supabase
+      .from('travel_movements')
+      .select('cell_colors')
+      .eq('id', rowId)
+      .single()
+    const existing = current?.cell_colors || {}
+    const next = color === null
+      ? Object.fromEntries(Object.entries(existing).filter(([k]) => k !== field))
+      : { ...existing, [field]: color }
+    const { error } = await supabase
+      .from('travel_movements')
+      .update({ cell_colors: next })
+      .eq('id', rowId)
+    if (!error) onColorSaved(rowId, next)
+    onClose()
+  }
+
+  return (
+    <div ref={ref} style={{
+      position: 'absolute', top: '100%', left: 0, zIndex: 300,
+      background: 'white', border: '1px solid #e2e8f0',
+      borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+      padding: '8px', display: 'flex', flexWrap: 'wrap',
+      gap: '4px', width: '148px',
+    }}>
+      {COLOR_PALETTE.map((c, i) => (
+        <button key={i} onClick={() => pickColor(c)}
+          title={c || 'No color'}
+          style={{
+            width: '24px', height: '24px', borderRadius: '5px',
+            border: c === currentColor ? '2px solid #2563eb' : '1px solid #e2e8f0',
+            background: c || 'white', cursor: 'pointer', padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '10px',
+          }}>
+          {c === null && '✕'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ─── MovementSidebar ──────────────────────────────────────────
+const EMPTY_MOV = {
+  travel_date: '', direction: 'IN', travel_type: 'FLIGHT',
+  full_name_raw: '', crew_id: null,
+  travel_number: '', from_location: '', from_time: '',
+  to_location: '', to_time: '', pickup_dep: '', pickup_arr: '',
+  needs_transport: false, notes: '',
+}
+
+function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted }) {
+  const PRODUCTION_ID = getProductionId()
+  const [form, setForm]       = useState(EMPTY_MOV)
+  const [saving, setSaving]   = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [error, setError]     = useState(null)
+  const [crewSearch, setCrewSearch] = useState('')
+  const [crewResults, setCrewResults] = useState([])
+  const [crewSearching, setCrewSearching] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setError(null); setConfirmDel(false)
+    if (mode === 'edit' && initial) {
+      setForm({
+        travel_date:    initial.travel_date    || '',
+        direction:      initial.direction      || 'IN',
+        travel_type:    initial.travel_type    || 'FLIGHT',
+        full_name_raw:  initial.full_name_raw  || initial.crew?.full_name || '',
+        crew_id:        initial.crew_id        || null,
+        travel_number:  initial.travel_number  || '',
+        from_location:  initial.from_location  || '',
+        from_time:      initial.from_time      ? initial.from_time.slice(0,5) : '',
+        to_location:    initial.to_location    || '',
+        to_time:        initial.to_time        ? initial.to_time.slice(0,5) : '',
+        pickup_dep:     initial.pickup_dep     || '',
+        pickup_arr:     initial.pickup_arr     || '',
+        needs_transport: !!initial.needs_transport,
+        notes:          initial.notes          || '',
+      })
+    } else {
+      setForm(EMPTY_MOV)
+    }
+    setCrewSearch(''); setCrewResults([])
+  }, [open, mode, initial])
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  async function searchCrew(q) {
+    if (!q || q.length < 2 || !PRODUCTION_ID) { setCrewResults([]); return }
+    setCrewSearching(true)
+    const { data } = await supabase.from('crew')
+      .select('id, full_name, role, department')
+      .eq('production_id', PRODUCTION_ID)
+      .ilike('full_name', `%${q}%`)
+      .limit(8)
+    setCrewResults(data || [])
+    setCrewSearching(false)
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => searchCrew(crewSearch), 300)
+    return () => clearTimeout(timer)
+  }, [crewSearch])
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.travel_date) { setError('Date required'); return }
+    if (!form.full_name_raw.trim() && !form.crew_id) { setError('Name required'); return }
+    setSaving(true)
+    const row = {
+      production_id:   PRODUCTION_ID,
+      travel_date:     form.travel_date,
+      direction:       form.direction,
+      travel_type:     form.travel_type,
+      full_name_raw:   form.full_name_raw.trim() || null,
+      crew_id:         form.crew_id || null,
+      travel_number:   form.travel_number.trim() || null,
+      from_location:   form.from_location.trim() || null,
+      from_time:       form.from_time || null,
+      to_location:     form.to_location.trim() || null,
+      to_time:         form.to_time || null,
+      pickup_dep:      form.pickup_dep.trim() || null,
+      pickup_arr:      form.pickup_arr.trim() || null,
+      needs_transport: form.needs_transport,
+      notes:           form.notes.trim() || null,
+      match_status:    form.crew_id ? 'matched' : 'unmatched',
+    }
+    let result
+    if (mode === 'new') {
+      result = await supabase.from('travel_movements').insert(row).select(`
+        id, crew_id, full_name_raw, travel_date, direction,
+        travel_type, travel_number, from_location, from_time,
+        to_location, to_time, needs_transport, match_status,
+        pickup_dep, pickup_arr, notes, cell_colors,
+        crew:crew_id(full_name, role, department)
+      `).single()
+    } else {
+      result = await supabase.from('travel_movements').update(row)
+        .eq('id', initial.id).select(`
+          id, crew_id, full_name_raw, travel_date, direction,
+          travel_type, travel_number, from_location, from_time,
+          to_location, to_time, needs_transport, match_status,
+          pickup_dep, pickup_arr, notes, cell_colors,
+          crew:crew_id(full_name, role, department)
+        `).single()
+    }
+    setSaving(false)
+    if (result.error) { setError(result.error.message); return }
+    onSaved(result.data, mode)
+    onClose()
+  }
+
+  async function handleDelete() {
+    if (!confirmDel) { setConfirmDel(true); return }
+    setDeleting(true)
+    await supabase.from('travel_movements').delete().eq('id', initial.id)
+    setDeleting(false)
+    onDeleted(initial.id)
+    onClose()
+  }
+
+  const inp = {
+    width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0',
+    borderRadius: '8px', fontSize: '13px', color: '#0f172a',
+    background: 'white', boxSizing: 'border-box',
+  }
+  const lbl = {
+    fontSize: '10px', fontWeight: '800', color: '#94a3b8',
+    letterSpacing: '0.07em', textTransform: 'uppercase',
+    display: 'block', marginBottom: '3px',
+  }
+  const row = { marginBottom: '12px' }
+
+  const DIR_COLORS = {
+    IN:  { bg: '#f0fdf4', color: '#15803d', border: '#86efac' },
+    OUT: { bg: '#fff7ed', color: '#c2410c', border: '#fdba74' },
+  }
+  const TYPE_ICONS = {
+    FLIGHT: '✈️', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴️',
+  }
+
+  return (
+    <>
+      {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: '420px',
+        background: 'white', borderLeft: '1px solid #e2e8f0',
+        boxShadow: '-4px 0 24px rgba(0,0,0,0.1)',
+        zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)',
+        transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '14px 18px', borderBottom: '1px solid #e2e8f0',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: '#0f2340', flexShrink: 0,
+        }}>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
+            {mode === 'new' ? '✈️ New Movement' : '✎ Edit Movement'}
+          </div>
+          <button onClick={onClose} style={{
+            background: 'rgba(255,255,255,0.15)', border: 'none',
+            cursor: 'pointer', color: 'white', fontSize: '16px',
+            lineHeight: 1, borderRadius: '6px', padding: '4px 8px',
+          }}>✕</button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '16px 18px' }}>
+
+            {/* Date */}
+            <div style={row}>
+              <label style={lbl}>Date *</label>
+              <input type="date" value={form.travel_date}
+                onChange={e => set('travel_date', e.target.value)}
+                style={inp} required />
+            </div>
+
+            {/* Direction */}
+            <div style={row}>
+              <label style={lbl}>Direction *</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {['IN', 'OUT'].map(d => {
+                  const c = DIR_COLORS[d]; const active = form.direction === d
+                  return (
+                    <button key={d} type="button" onClick={() => set('direction', d)}
+                      style={{
+                        flex: 1, padding: '8px', borderRadius: '8px', fontSize: '13px',
+                        fontWeight: '700', cursor: 'pointer',
+                        border: `1px solid ${active ? c.border : '#e2e8f0'}`,
+                        background: active ? c.bg : 'white',
+                        color: active ? c.color : '#94a3b8',
+                      }}>
+                      {d === 'IN' ? '↓ IN' : '↑ OUT'}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Travel type */}
+            <div style={row}>
+              <label style={lbl}>Type *</label>
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {['FLIGHT', 'TRAIN', 'OA', 'GROUND', 'FERRY'].map(tp => {
+                  const active = form.travel_type === tp
+                  return (
+                    <button key={tp} type="button" onClick={() => set('travel_type', tp)}
+                      style={{
+                        padding: '6px 10px', borderRadius: '7px', fontSize: '12px',
+                        fontWeight: '700', cursor: 'pointer',
+                        border: `1px solid ${active ? '#0f2340' : '#e2e8f0'}`,
+                        background: active ? '#0f2340' : 'white',
+                        color: active ? 'white' : '#64748b',
+                      }}>
+                      {TYPE_ICONS[tp]} {tp}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Crew search */}
+            <div style={row}>
+              <label style={lbl}>Crew member (search to link)</label>
+              <input
+                value={crewSearch}
+                onChange={e => { setCrewSearch(e.target.value); if (!e.target.value) { set('crew_id', null) } }}
+                style={inp} placeholder="Type name to search crew…" autoComplete="off"
+              />
+              {crewSearching && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Searching…</div>}
+              {crewResults.length > 0 && (
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', overflow: 'hidden' }}>
+                  {crewResults.map(c => (
+                    <div key={c.id} onClick={() => {
+                      set('crew_id', c.id)
+                      set('full_name_raw', c.full_name)
+                      setCrewSearch(c.full_name)
+                      setCrewResults([])
+                    }} style={{
+                      padding: '8px 12px', cursor: 'pointer', fontSize: '12px',
+                      borderBottom: '1px solid #f1f5f9',
+                      display: 'flex', gap: '8px', alignItems: 'center',
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                    >
+                      <span style={{ fontWeight: '700', color: '#0f172a' }}>{c.full_name}</span>
+                      {c.role && <span style={{ fontSize: '11px', color: '#64748b' }}>{c.role}</span>}
+                      {c.department && <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{c.department}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Name raw */}
+            <div style={row}>
+              <label style={lbl}>Name (raw) *</label>
+              <input value={form.full_name_raw}
+                onChange={e => set('full_name_raw', e.target.value)}
+                style={inp} placeholder="Rossi Mario" />
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>
+                Auto-filled when you select a crew member above
+              </div>
+            </div>
+
+            {/* Travel number */}
+            <div style={row}>
+              <label style={lbl}>Travel Number</label>
+              <input value={form.travel_number}
+                onChange={e => set('travel_number', e.target.value)}
+                style={{ ...inp, fontFamily: 'monospace', fontWeight: '700' }}
+                placeholder="FR1234, AZ0001, IC123…" />
+            </div>
+
+            {/* From / To */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '8px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>From</label>
+                <input value={form.from_location}
+                  onChange={e => set('from_location', e.target.value)}
+                  style={inp} placeholder="Rome FCO" />
+              </div>
+              <div>
+                <label style={lbl}>Dep time</label>
+                <input type="time" value={form.from_time}
+                  onChange={e => set('from_time', e.target.value)}
+                  style={{ ...inp, fontFamily: 'monospace' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '8px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>To</label>
+                <input value={form.to_location}
+                  onChange={e => set('to_location', e.target.value)}
+                  style={inp} placeholder="Bari BRI" />
+              </div>
+              <div>
+                <label style={lbl}>Arr time</label>
+                <input type="time" value={form.to_time}
+                  onChange={e => set('to_time', e.target.value)}
+                  style={{ ...inp, fontFamily: 'monospace' }} />
+              </div>
+            </div>
+
+            {/* Pickup dep / arr */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>p/up dep</label>
+                <input value={form.pickup_dep}
+                  onChange={e => set('pickup_dep', e.target.value)}
+                  style={inp} placeholder="OA, TRANSPORT DEPT…" />
+              </div>
+              <div>
+                <label style={lbl}>p/up arr</label>
+                <input value={form.pickup_arr}
+                  onChange={e => set('pickup_arr', e.target.value)}
+                  style={inp} placeholder="Rental car, TRANSPORT…" />
+              </div>
+            </div>
+
+            {/* Needs transport */}
+            <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151' }}>🚐 Needs transport to/from hub</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Transport Dept. will handle pickup/dropoff</div>
+              </div>
+              <button type="button" onClick={() => set('needs_transport', !form.needs_transport)}
+                style={{
+                  width: '40px', height: '22px', borderRadius: '999px', border: 'none',
+                  cursor: 'pointer', background: form.needs_transport ? '#2563eb' : '#e2e8f0',
+                  position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0,
+                }}>
+                <span style={{
+                  position: 'absolute', top: '2px', width: '18px', height: '18px',
+                  borderRadius: '50%', background: 'white',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  transition: 'left 0.2s', left: form.needs_transport ? '20px' : '2px', display: 'block',
+                }} />
+              </button>
+            </div>
+
+            {/* Notes */}
+            <div style={row}>
+              <label style={lbl}>Notes</label>
+              <textarea value={form.notes}
+                onChange={e => set('notes', e.target.value)}
+                style={{ ...inp, resize: 'vertical', minHeight: '60px' }}
+                placeholder="Any operational notes…" />
+            </div>
+
+            {/* Delete zone (edit only) */}
+            {mode === 'edit' && (
+              <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
+                {!confirmDel ? (
+                  <button type="button" onClick={handleDelete} disabled={deleting}
+                    style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
+                    🗑 Delete Movement
+                  </button>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>Delete this movement? This cannot be undone.</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setConfirmDel(false)}
+                        style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                        Cancel
+                      </button>
+                      <button type="button" onClick={handleDelete} disabled={deleting}
+                        style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: deleting ? 'default' : 'pointer', fontSize: '12px', fontWeight: '800' }}>
+                        {deleting ? '…' : '⚠ Confirm Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          {error && (
+            <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>
+              ❌ {error}
+            </div>
+          )}
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexShrink: 0, position: 'sticky', bottom: 0, background: 'white' }}>
+            <button type="button" onClick={onClose}
+              style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>
+              Cancel
+            </button>
+            <button type="submit" disabled={saving}
+              style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Saving…' : mode === 'new' ? '+ Add Movement' : '✓ Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
 // ─── SectionTable component ────────────────────────────────────
-function SectionTable({ section, rows, today, onCellSaved }) {
+function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved }) {
+  const [colorPicker, setColorPicker] = useState(null)
+  // colorPicker: { rowId, field, currentColor } | null
+
+  function handleCellRightClick(e, rowId, field, currentColor) {
+    e.preventDefault()
+    setColorPicker({ rowId, field, currentColor })
+  }
+
   return (
     <div style={{ marginBottom: '16px' }}>
       {/* Section header */}
@@ -214,7 +701,18 @@ function SectionTable({ section, rows, today, onCellSaved }) {
       </div>
 
       {/* Table */}
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto', position: 'relative' }}>
+        {colorPicker && (
+          <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 200 }}>
+            <ColorPickerPopover
+              field={colorPicker.field}
+              rowId={colorPicker.rowId}
+              currentColor={colorPicker.currentColor}
+              onColorSaved={(rowId, colors) => { onColorSaved(rowId, colors); setColorPicker(null) }}
+              onClose={() => setColorPicker(null)}
+            />
+          </div>
+        )}
         <table style={{
           width: '100%', borderCollapse: 'collapse',
           border: '1px solid #e2e8f0', borderTop: 'none',
@@ -222,7 +720,7 @@ function SectionTable({ section, rows, today, onCellSaved }) {
         }}>
           <thead>
             <tr style={{ background: '#f1f5f9' }}>
-              {['Dir', 'Name', 'Role', 'p/up dep', 'From', 'Dep', 'To', 'Arr',
+              {['', 'Dir', 'Name', 'Role', 'p/up dep', 'From', 'Dep', 'To', 'Arr',
                 'Travel #', 'p/up arr', '🚐', 'Notes', 'Match'].map(h => (
                 <th key={h} style={{
                   padding: '6px 10px', fontSize: '10px', fontWeight: '800',
@@ -240,13 +738,18 @@ function SectionTable({ section, rows, today, onCellSaved }) {
               const isIN        = m.direction === 'IN'
               const isToday     = m.travel_date === today
               const displayName = m.crew?.full_name || m.full_name_raw || '–'
+              const colors      = m.cell_colors || {}
               const bgColor     = isUnmatched ? '#fef2f2' : isIN ? '#f0fdf4' : '#fff7ed'
               const borderColor = isUnmatched ? '#ef4444' : isIN ? '#22c55e' : '#f97316'
 
-              const cellStyle = {
-                fontSize: '11px', color: '#374151', whiteSpace: 'nowrap',
-                background: bgColor,
+              function cellBg(field) {
+                return colors[field] || bgColor
               }
+
+              const cellStyle = (field) => ({
+                fontSize: '11px', color: '#374151', whiteSpace: 'nowrap',
+                background: cellBg(field),
+              })
 
               return (
                 <tr key={m.id} style={{
@@ -255,6 +758,17 @@ function SectionTable({ section, rows, today, onCellSaved }) {
                   outline: isToday ? '2px solid #fbbf24' : 'none',
                   outlineOffset: '-2px',
                 }}>
+
+                  {/* Edit button */}
+                  <td style={{ padding: '4px 6px', background: bgColor, width: '28px' }}>
+                    <button onClick={() => onEditRow(m)}
+                      title="Edit movement"
+                      style={{
+                        background: 'none', border: '1px solid #e2e8f0',
+                        borderRadius: '5px', padding: '2px 6px',
+                        cursor: 'pointer', fontSize: '11px', color: '#64748b',
+                      }}>✎</button>
+                  </td>
 
                   {/* READ-ONLY: Dir */}
                   <td style={{ padding: '7px 10px', fontSize: '11px', fontWeight: '800',
@@ -280,49 +794,56 @@ function SectionTable({ section, rows, today, onCellSaved }) {
                   <EditableCell
                     value={m.pickup_dep} field="pickup_dep" rowId={m.id}
                     onSaved={onCellSaved}
-                    style={{ ...cellStyle }}
+                    style={cellStyle('pickup_dep')}
+                    onContextMenu={(e) => handleCellRightClick(e, m.id, 'pickup_dep', colors['pickup_dep'])}
                   />
 
                   {/* EDITABLE: from_location */}
                   <EditableCell
                     value={m.from_location} field="from_location" rowId={m.id}
                     onSaved={onCellSaved}
-                    style={{ ...cellStyle, fontWeight: '600', color: '#0f172a' }}
+                    style={{ ...cellStyle('from_location'), fontWeight: '600', color: '#0f172a' }}
+                    onContextMenu={(e) => handleCellRightClick(e, m.id, 'from_location', colors['from_location'])}
                   />
 
                   {/* EDITABLE: from_time */}
                   <EditableCell
                     value={m.from_time ? m.from_time.slice(0,5) : ''} field="from_time"
                     rowId={m.id} type="time" onSaved={onCellSaved}
-                    style={{ ...cellStyle, fontFamily: 'monospace' }}
+                    style={{ ...cellStyle('from_time'), fontFamily: 'monospace' }}
+                    onContextMenu={(e) => handleCellRightClick(e, m.id, 'from_time', colors['from_time'])}
                   />
 
                   {/* EDITABLE: to_location */}
                   <EditableCell
                     value={m.to_location} field="to_location" rowId={m.id}
                     onSaved={onCellSaved}
-                    style={{ ...cellStyle, fontWeight: '600', color: '#0f172a' }}
+                    style={{ ...cellStyle('to_location'), fontWeight: '600', color: '#0f172a' }}
+                    onContextMenu={(e) => handleCellRightClick(e, m.id, 'to_location', colors['to_location'])}
                   />
 
                   {/* EDITABLE: to_time */}
                   <EditableCell
                     value={m.to_time ? m.to_time.slice(0,5) : ''} field="to_time"
                     rowId={m.id} type="time" onSaved={onCellSaved}
-                    style={{ ...cellStyle, fontFamily: 'monospace' }}
+                    style={{ ...cellStyle('to_time'), fontFamily: 'monospace' }}
+                    onContextMenu={(e) => handleCellRightClick(e, m.id, 'to_time', colors['to_time'])}
                   />
 
                   {/* EDITABLE: travel_number */}
                   <EditableCell
                     value={m.travel_number} field="travel_number" rowId={m.id}
                     onSaved={onCellSaved}
-                    style={{ ...cellStyle, fontFamily: 'monospace', fontWeight: '700', color: '#2563eb' }}
+                    style={{ ...cellStyle('travel_number'), fontFamily: 'monospace', fontWeight: '700', color: '#2563eb' }}
+                    onContextMenu={(e) => handleCellRightClick(e, m.id, 'travel_number', colors['travel_number'])}
                   />
 
                   {/* EDITABLE: pickup_arr */}
                   <EditableCell
                     value={m.pickup_arr} field="pickup_arr" rowId={m.id}
                     onSaved={onCellSaved}
-                    style={{ ...cellStyle }}
+                    style={cellStyle('pickup_arr')}
+                    onContextMenu={(e) => handleCellRightClick(e, m.id, 'pickup_arr', colors['pickup_arr'])}
                   />
 
                   {/* EDITABLE: needs_transport toggle */}
@@ -334,7 +855,8 @@ function SectionTable({ section, rows, today, onCellSaved }) {
                   <EditableCell
                     value={m.notes} field="notes" rowId={m.id}
                     type="textarea" onSaved={onCellSaved}
-                    style={{ ...cellStyle, minWidth: '140px', color: '#374151' }}
+                    style={{ ...cellStyle('notes'), minWidth: '140px', color: '#374151' }}
+                    onContextMenu={(e) => handleCellRightClick(e, m.id, 'notes', colors['notes'])}
                   />
 
                   {/* READ-ONLY: Match */}
@@ -372,6 +894,35 @@ export default function TravelPage() {
   // Date window
   const [windowStart, setWindowStart] = useState(() => isoAdd(isoToday(), -3))
   const [windowEnd,   setWindowEnd]   = useState(() => isoAdd(isoToday(), 10))
+
+  // Sidebar
+  const [sidebarOpen, setSidebarOpen]   = useState(false)
+  const [sidebarMode, setSidebarMode]   = useState('new')
+  const [sidebarTarget, setSidebarTarget] = useState(null)
+
+  function openNew() { setSidebarMode('new'); setSidebarTarget(null); setSidebarOpen(true) }
+  function openEdit(m) { setSidebarMode('edit'); setSidebarTarget(m); setSidebarOpen(true) }
+
+  function handleMovementSaved(saved, mode) {
+    if (mode === 'new') {
+      setMovements(prev => [...prev, saved].sort((a, b) =>
+        a.travel_date.localeCompare(b.travel_date) || (a.from_time || '').localeCompare(b.from_time || '')
+      ))
+      showToast('Movement added')
+    } else {
+      setMovements(prev => prev.map(m => m.id === saved.id ? saved : m))
+      showToast('Movement updated')
+    }
+  }
+
+  function handleMovementDeleted(id) {
+    setMovements(prev => prev.filter(m => m.id !== id))
+    showToast('Movement deleted')
+  }
+
+  function handleColorSaved(rowId, colors) {
+    setMovements(prev => prev.map(m => m.id === rowId ? { ...m, cell_colors: colors } : m))
+  }
 
   // Toast
   const [toast, setToast] = useState(null)
@@ -416,7 +967,7 @@ export default function TravelPage() {
         id, crew_id, full_name_raw, travel_date, direction,
         travel_type, travel_number, from_location, from_time,
         to_location, to_time, needs_transport, match_status,
-        pickup_dep, pickup_arr,
+        pickup_dep, pickup_arr, notes, cell_colors,
         crew:crew_id(full_name, role, department)
       `)
       .eq('production_id', PRODUCTION_ID)
@@ -535,6 +1086,15 @@ export default function TravelPage() {
           fontWeight: '800', fontSize: isMobile ? '14px' : '16px',
           color: '#0f172a', whiteSpace: 'nowrap',
         }}>Travel</span>
+        <button onClick={openNew}
+          style={{
+            background: '#2563eb', color: 'white', border: 'none',
+            borderRadius: '8px', padding: '6px 14px', fontSize: '12px',
+            fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap',
+            boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
+          }}>
+          + Add Movement
+        </button>
 
         {/* Center: navigation */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -785,6 +1345,8 @@ export default function TravelPage() {
                     rows={rows}
                     today={today}
                     onCellSaved={handleCellSaved}
+                    onEditRow={openEdit}
+                    onColorSaved={handleColorSaved}
                   />
                 )
               })}
@@ -792,6 +1354,14 @@ export default function TravelPage() {
           ))
         )}
       </div>
+      <MovementSidebar
+        open={sidebarOpen}
+        mode={sidebarMode}
+        initial={sidebarTarget}
+        onClose={() => setSidebarOpen(false)}
+        onSaved={handleMovementSaved}
+        onDeleted={handleMovementDeleted}
+      />
       <Toast message={toast?.message} type={toast?.type} />
     </div>
   )
