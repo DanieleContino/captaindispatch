@@ -485,7 +485,8 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                 <th key={col.source_field} style={{
                   padding: '6px 8px', fontSize: '10px', fontWeight: '800',
                   color: col.source_field === 'notes' ? '#2563eb' : '#64748b',
-                  textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis',
+                  textAlign: (col.source_field === 'needs_transport' || col.source_field === 'match_status') ? 'center' : 'left',
+                  overflow: 'hidden', textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   letterSpacing: '0.05em', textTransform: 'uppercase',
                   borderBottom: '1px solid #e2e8f0',
