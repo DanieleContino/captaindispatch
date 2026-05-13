@@ -73,7 +73,6 @@ export async function GET(request) {
     prompt: 'consent',
     scope: SCOPES,
     state,
-    include_granted_scopes: true,
   });
 
   // 5. Set state cookie + redirect to Google
