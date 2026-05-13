@@ -2296,6 +2296,7 @@ export default function BridgePage() {
       {/* Import modal (triggered by DriveSyncWidget preview) */}
       {importCtx && (
         <ImportModal
+          open={true}
           initialFile={importCtx.fileObj}
           selMode={importCtx.selMode}
           locations={importCtx.locations}
