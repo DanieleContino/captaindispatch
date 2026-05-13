@@ -516,7 +516,7 @@ export default function HubCoveragePage() {
     setTravelMap(travelMapData)
     const { data: crewWithDates } = await supabase
       .from('crew')
-      .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date')
+      .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date, no_transport_needed')
       .eq('production_id', PRODUCTION_ID)
       .eq('hotel_status', 'CONFIRMED')
       .or(`arrival_date.eq.${d},departure_date.eq.${d}`)
@@ -524,15 +524,15 @@ export default function HubCoveragePage() {
       .order('full_name')
     const crewWithDatesIds = (crewWithDates || []).map(c => c.id)
     const allCrewIds = [...new Set([...crewIdsFromMovements, ...crewWithDatesIds])]
-    let allCrewData = crewWithDates || []
+    let allCrewData = (crewWithDates || []).filter(c => !c.no_transport_needed)
     const missingFromDates = crewIdsFromMovements.filter(id => !crewWithDatesIds.includes(id))
     if (missingFromDates.length > 0) {
       const { data: extra } = await supabase
         .from('crew')
-        .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date')
+        .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date, no_transport_needed')
         .eq('production_id', PRODUCTION_ID)
         .in('id', missingFromDates)
-      allCrewData = [...allCrewData, ...(extra || [])]
+      allCrewData = [...allCrewData, ...(extra || []).filter(c => !c.no_transport_needed)]
     }
     allCrewData.sort((a, b) => {
       const da = a.department || 'ZZZ'
