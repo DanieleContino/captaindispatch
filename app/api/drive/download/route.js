@@ -16,6 +16,7 @@
  */
 
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import { getDriveClient } from '@/lib/googleClient'
 import { NextResponse } from 'next/server'
 
 // ── Google Workspace export mappings ─────────────────────────
@@ -60,29 +61,17 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // provider_token richiesto (Google OAuth access token nella sessione corrente)
-    const { data: { session } } = await supabase.auth.getSession()
-    const providerToken = session?.provider_token
-    if (!providerToken) {
-      return NextResponse.json(
-        {
-          error: 'Google access token non disponibile. ' +
-                 'Effettua il logout e rientra con Google per autorizzare Drive.',
-        },
-        { status: 401 }
-      )
-    }
-
+    // (provider_token removed — now uses per-user OAuth refresh_token via googleClient)
     const body = await req.json()
     const { production_id, file_id } = body
 
     if (!production_id) return NextResponse.json({ error: 'production_id is required' }, { status: 400 })
     if (!file_id)       return NextResponse.json({ error: 'file_id is required' },       { status: 400 })
 
-    // Recupera il record da drive_synced_files per avere il file_name
+    // Recupera il record da drive_synced_files per avere il file_name e owner_user_id
     const { data: fileRecord, error: fetchErr } = await supabase
       .from('drive_synced_files')
-      .select('file_name, import_mode')
+      .select('file_name, import_mode, owner_user_id')
       .eq('production_id', production_id)
       .eq('file_id', file_id)
       .single()
@@ -95,22 +84,15 @@ export async function POST(req) {
       )
     }
 
-    const { file_name } = fileRecord
+    const { file_name, owner_user_id } = fileRecord
+    if (!owner_user_id) {
+      return NextResponse.json({ error: 'File has no owner_user_id — reconnect Google Drive in Settings.' }, { status: 401 })
+    }
 
     // ── Step 1: Metadata Drive ──────────────────────────────
-    const metaRes = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file_id)}` +
-      `?fields=name%2CmimeType`,
-      { headers: { Authorization: `Bearer ${providerToken}` } }
-    )
-    if (!metaRes.ok) {
-      const errText = await metaRes.text()
-      return NextResponse.json(
-        { error: `Drive metadata error ${metaRes.status}: ${errText.slice(0, 200)}` },
-        { status: 502 }
-      )
-    }
-    const meta = await metaRes.json()
+    const drive = await getDriveClient(owner_user_id)
+    const metaRes = await drive.files.get({ fileId: file_id, fields: 'name,mimeType' })
+    const meta = metaRes.data || {}
     const driveName = meta.name     || file_name || file_id
     const mimeType  = meta.mimeType || ''
 
@@ -120,30 +102,24 @@ export async function POST(req) {
     let downloadMimeType
 
     const exportInfo = WORKSPACE_EXPORT[mimeType]
+    let fileBuffer
     if (exportInfo) {
-      // Google Workspace (Sheets, Docs): esporta nel formato equivalente Office
-      downloadUrl      = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file_id)}/export` +
-                         `?mimeType=${encodeURIComponent(exportInfo.mimeType)}`
       downloadFileName = driveName.replace(/\.[^.]+$/, '') + '.' + exportInfo.ext
       downloadMimeType = exportInfo.mimeType
+      const exportRes = await drive.files.export(
+        { fileId: file_id, mimeType: exportInfo.mimeType },
+        { responseType: 'arraybuffer' }
+      )
+      fileBuffer = exportRes.data
     } else {
-      // File normale: download diretto (?alt=media)
-      downloadUrl      = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file_id)}?alt=media`
       downloadFileName = driveName.includes('.') ? driveName : `${driveName}.${resolveExt(mimeType, file_name)}`
       downloadMimeType = mimeType || 'application/octet-stream'
-    }
-
-    const downloadRes = await fetch(downloadUrl, {
-      headers: { Authorization: `Bearer ${providerToken}` },
-    })
-    if (!downloadRes.ok) {
-      const errText = await downloadRes.text()
-      return NextResponse.json(
-        { error: `Drive download error ${downloadRes.status}: ${errText.slice(0, 200)}` },
-        { status: 502 }
+      const downloadRes = await drive.files.get(
+        { fileId: file_id, alt: 'media' },
+        { responseType: 'arraybuffer' }
       )
+      fileBuffer = downloadRes.data
     }
-    const fileBuffer = await downloadRes.arrayBuffer()
     console.log(`[drive/download] Downloaded "${downloadFileName}" (${fileBuffer.byteLength} bytes)`)
 
     // ── Risposta blob ───────────────────────────────────────
