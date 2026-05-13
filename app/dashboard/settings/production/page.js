@@ -19,6 +19,14 @@ function sectionTitle(icon, title) {
   )
 }
 
+function getHubIcon(hub) {
+  const s = ((hub.id || '') + ' ' + (hub.name || '')).toUpperCase()
+  if (/APT|AIRPORT|AEROPORTO/.test(s))                   return '✈️'
+  if (/STN|TRAIN|STAZIONE|CENTRALE|FERROVIARIA/.test(s)) return '🚂'
+  if (/PORT|PORTO|FERRY/.test(s))                        return '⛴️'
+  return '📍'
+}
+
 // ── Hub Locations Section ──────────────────────────────
 const HUB_EMPTY = { id: '', name: '', lat: '', lng: '', default_pickup_point: '' }
 
