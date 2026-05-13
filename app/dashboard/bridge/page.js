@@ -862,7 +862,17 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                     )}
                     {item.hotel_conflict && (() => {
                       const roomingHotel = locations.find(l => l.id === item.rooming_hotel_id)?.name || item.rooming_hotel_id || '?'
-                      const travelHotel  = locations.find(l => l.id === item.hotel_id)?.name || item.hotel_raw || '?'
+                      // Resolve travel hotel ID: use item.hotel_id if set, otherwise try fuzzy-match hotel_raw against locations
+                      const resolvedTravelHotelId = item.hotel_id || (
+                        item.hotel_raw
+                          ? locations.find(l =>
+                              l.name.toLowerCase().includes(item.hotel_raw.toLowerCase()) ||
+                              item.hotel_raw.toLowerCase().includes(l.name.toLowerCase())
+                            )?.id
+                          : null
+                      )
+                      const travelHotel = locations.find(l => l.id === resolvedTravelHotelId)?.name || item.hotel_raw || '?'
+                      const canUseCalendar = !!(item.crew_id && resolvedTravelHotelId)
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
@@ -882,13 +892,14 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                             </button>
                             <button
                               onClick={async () => {
-                                if (!item.crew_id || !item.hotel_id) return
-                                await supabase.from('crew').update({ hotel_id: item.hotel_id }).eq('id', item.crew_id).eq('production_id', productionId)
-                                await supabase.from('crew_stays').update({ hotel_id: item.hotel_id }).eq('crew_id', item.crew_id).eq('production_id', productionId)
+                                if (!item.crew_id || !resolvedTravelHotelId) return
+                                await supabase.from('crew').update({ hotel_id: resolvedTravelHotelId }).eq('id', item.crew_id).eq('production_id', productionId)
+                                await supabase.from('crew_stays').update({ hotel_id: resolvedTravelHotelId }).eq('crew_id', item.crew_id).eq('production_id', productionId)
                                 await resolve(item.id)
                               }}
-                              title={`Usa l'hotel del Travel Calendar: ${travelHotel}`}
-                              style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                              disabled={!canUseCalendar}
+                              title={canUseCalendar ? `Usa l'hotel del Travel Calendar: ${travelHotel}` : `Hotel "${travelHotel}" non trovato nel sistema — impossibile aggiornare`}
+                              style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: canUseCalendar ? '#15803d' : '#94a3b8', color: 'white', fontSize: '11px', fontWeight: '700', cursor: canUseCalendar ? 'pointer' : 'not-allowed', opacity: canUseCalendar ? 1 : 0.6 }}>
                               ✓ Use Calendar ({travelHotel.split(' ')[0]})
                             </button>
                           </div>
