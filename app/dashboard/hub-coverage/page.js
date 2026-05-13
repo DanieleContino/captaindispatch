@@ -576,6 +576,18 @@ export default function HubCoveragePage() {
       travelMapData[m.crew_id].push(m)
     }
     setTravelMap(travelMapData)
+
+    // Query ALL movements (incl. NTN with needs_transport=false) to know
+    // which crew actually have a hub journey on this date.
+    // NTN crew without any travel_movement (hotel checkout only) should NOT appear.
+    const { data: allMovsRaw } = await supabase
+      .from('travel_movements')
+      .select('crew_id')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('travel_date', d)
+      .not('crew_id', 'is', null)
+    const allMovementCrewIds = new Set((allMovsRaw || []).map(m => m.crew_id))
+
     const { data: crewWithDates } = await supabase
       .from('crew')
       .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date, no_transport_needed')
@@ -605,6 +617,9 @@ export default function HubCoveragePage() {
       return a.full_name.localeCompare(b.full_name)
     }
     allCrewData.sort(sortFn)
+    // Only show NTN crew who have an actual travel movement on this date
+    // (i.e. a flight/train imported). Crew with only hotel checkout are excluded.
+    allNtnCrewData = allNtnCrewData.filter(c => allMovementCrewIds.has(c.id))
     allNtnCrewData.sort(sortFn)
     setCrew(allCrewData)
     setNtnCrew(allNtnCrewData)
