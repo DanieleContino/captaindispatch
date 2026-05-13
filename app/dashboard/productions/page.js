@@ -258,7 +258,7 @@ function HubLocationsSection({ productionId }) {
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px', marginBottom: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px', marginBottom: '6px' }}>
             <div>
               <label style={lbl2}>ID *</label>
               <input value={form.id} onChange={e => setForm(f => ({ ...f, id: e.target.value.toUpperCase() }))}
@@ -269,6 +269,17 @@ function HubLocationsSection({ productionId }) {
               <label style={lbl2}>Name *</label>
               <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 style={inp2} placeholder="Bari Airport" />
+            </div>
+          </div>
+
+          {/* ID convention helper */}
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '7px', padding: '8px 12px', marginBottom: '10px', fontSize: '11px', color: '#0369a1' }}>
+            <div style={{ fontWeight: '800', marginBottom: '4px', letterSpacing: '0.03em' }}>ℹ️ ID convention</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto auto 1fr', gap: '2px 10px', fontFamily: 'monospace' }}>
+              <span>✈️</span><span style={{ fontWeight: '700' }}>Airport</span><span style={{ color: '#0284c7' }}>APT_xxx &nbsp;→ APT_BRI, APT_FCO</span>
+              <span>🚂</span><span style={{ fontWeight: '700' }}>Train Stn</span><span style={{ color: '#0284c7' }}>STN_xxx &nbsp;→ STN_ROM, STN_MIL</span>
+              <span>⛴️</span><span style={{ fontWeight: '700' }}>Port/Ferry</span><span style={{ color: '#0284c7' }}>PORT_xxx → PORT_GEN, PORT_NAP</span>
+              <span>📍</span><span style={{ fontWeight: '700' }}>Other hub</span><span style={{ color: '#0284c7' }}>HUB_xxx &nbsp;→ HUB_SET, HUB_BASE</span>
             </div>
           </div>
 
