@@ -5,7 +5,6 @@ import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
-import { ImportModal } from '../../../lib/ImportModal'
 import { normalizeDept } from '../../../lib/normalizeDept'
 import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
@@ -1302,7 +1301,6 @@ export default function CrewPage() {
   const [sidebarOpen, setSO]    = useState(false)
   const [sidebarMode, setSM]    = useState('new')  // 'new' | 'edit'
   const [editTarget, setET]     = useState(null)
-  const [importOpen, setImportOpen] = useState(false)
   const [addNewRawName, setAddNewRawName] = useState(null)
   const [addNewBanner, setAddNewBanner] = useState(null)
   // { rawName: string, fullName: string }
@@ -1612,7 +1610,6 @@ export default function CrewPage() {
           <div style={{ flex: 1 }} />
           {/* Azioni */}
           <button onClick={loadCrew} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
-          {!isMobile && <button onClick={() => setImportOpen(true)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151' }}>{t.importFromFile}</button>}
           <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>{t.addCrew}</button>
         </div>
 
@@ -1792,14 +1789,6 @@ export default function CrewPage() {
         onSaved={handleSaved}
       />
 
-      <ImportModal
-        open={importOpen}
-        mode="crew"
-        productionId={PRODUCTION_ID}
-        locations={locations}
-        onClose={() => setImportOpen(false)}
-        onImported={() => { setImportOpen(false); loadCrew() }}
-      />
     </div>
   )
 }

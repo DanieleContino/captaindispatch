@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
+import { ImportModal } from '../../../lib/ImportModal'
+import { getProductionId } from '../../../lib/production'
 
 // Wrap the actual page in Suspense because useSearchParams() requires it
 // (per Next.js App Router rules, prevents Vercel build failure).
@@ -29,6 +31,9 @@ function SettingsPage() {
   const [loadingStatus, setLoadingStatus] = useState(true)
   const [disconnecting, setDisconnecting] = useState(false)
   const [flash, setFlash] = useState(null) // { type: 'success'|'error', text: string }
+  const [importOpen, setImportOpen] = useState(false)
+  const [locations, setLocations] = useState([])
+  const PRODUCTION_ID = getProductionId()
 
   // ── Auth check (same pattern as other pages) ──
   useEffect(() => {
@@ -77,6 +82,13 @@ function SettingsPage() {
   }, [])
 
   useEffect(() => { if (user) loadStatus() }, [user, loadStatus])
+
+  // ── Load locations (needed for ImportModal hotel matching) ──
+  useEffect(() => {
+    if (!PRODUCTION_ID) return
+    supabase.from('locations').select('id, name').eq('production_id', PRODUCTION_ID)
+      .then(({ data }) => setLocations(data || []))
+  }, [PRODUCTION_ID])
 
   // ── Disconnect handler ──
   async function handleDisconnect() {
@@ -290,6 +302,41 @@ function SettingsPage() {
           )}
         </div>
 
+        {/* ── Import Data section ── */}
+        <div style={cardStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '28px', background: '#f0fdf4', width: '52px', height: '52px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              📥
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', marginBottom: '2px' }}>
+                Import Data
+              </div>
+              <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.5 }}>
+                Importa Crew, Fleet, Accommodation o Travel Calendar da file Excel / CSV. HAL auto-rileva il tipo di documento.
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setImportOpen(true)}
+              style={{
+                background: '#0f2340',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '9px 18px',
+                fontSize: '13px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(15,35,64,0.2)',
+              }}
+            >
+              📂 Import from File…
+            </button>
+          </div>
+        </div>
+
         {/* ── Account section (placeholder for future) ── */}
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -304,6 +351,16 @@ function SettingsPage() {
         </div>
 
       </div>
+
+      {/* ── Import Modal ── */}
+      <ImportModal
+        open={importOpen}
+        mode="hal"
+        productionId={PRODUCTION_ID}
+        locations={locations}
+        onClose={() => setImportOpen(false)}
+        onImported={() => setImportOpen(false)}
+      />
     </div>
   )
 }
