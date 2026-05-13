@@ -6,8 +6,8 @@
  * Scarica il/i file registrati in drive_synced_files da Google Drive,
  * chiama /api/import/parse + /api/import/confirm internamente.
  *
- * Richiede provider_token nella sessione utente attiva (Google OAuth).
- * NON funziona dal cron (nessun provider_token disponibile senza sessione utente).
+ * Richiede che l'utente abbia collegato Google Drive (user_google_tokens nel DB).
+ * Usa getGoogleOAuthClient(userId) per ottenere un access token con scope drive.readonly.
  *
  * Delta check: se modifiedTime Drive === last_modified nel DB → skip (nessuna modifica).
  *
@@ -27,6 +27,7 @@
  */
 
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabaseServer'
+import { getGoogleOAuthClient } from '@/lib/googleClient'
 import { NextResponse } from 'next/server'
 
 // ── Google Workspace export mappings ─────────────────────────
@@ -327,17 +328,19 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // provider_token richiesto (Google OAuth access token nella sessione corrente)
-    const { data: { session } } = await supabase.auth.getSession()
-    const providerToken = session?.provider_token
-    if (!providerToken) {
-      return NextResponse.json(
-        {
-          error: 'Google access token non disponibile. ' +
-                 'Effettua il logout e rientra con Google per autorizzare Drive.',
-        },
-        { status: 401 }
-      )
+    // Ottieni un access token Drive-scoped tramite il refresh_token memorizzato in user_google_tokens.
+    // NON usa session.provider_token (che ha solo scope email/profile, non drive.readonly).
+    let providerToken
+    try {
+      const oauth2Client = await getGoogleOAuthClient(user.id)
+      const { token } = await oauth2Client.getAccessToken()
+      if (!token) throw new Error('empty_token')
+      providerToken = token
+    } catch (e) {
+      const msg = e.message === 'NO_GOOGLE_TOKEN'
+        ? 'Google Drive non collegato. Vai in Impostazioni → Connetti Google Drive.'
+        : `Errore token Google Drive: ${e.message}`
+      return NextResponse.json({ error: msg }, { status: 401 })
     }
 
     const body = await req.json()
