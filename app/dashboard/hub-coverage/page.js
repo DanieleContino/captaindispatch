@@ -320,6 +320,67 @@ function MissingRow({ member, locsMap, onAssign, travelInfo }) {
   )
 }
 
+// ─── Riga crew NTN (No Transport Needed) ───────────────────
+function NtnRow({ member, locsMap, travelInfo }) {
+  const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
+  const tc = TC[member.travel_status] || TC.OUT
+  const dateLabel = member.travel_status === 'IN'
+    ? member.arrival_date
+    : member.departure_date
+
+  return (
+    <div style={{
+      background: '#faf5ff',
+      border: '1px solid #e9d5ff',
+      borderLeft: '4px solid #a855f7',
+      borderRadius: '9px',
+      padding: '10px 14px',
+      display: 'grid',
+      gridTemplateColumns: '1fr auto',
+      gap: '12px',
+      alignItems: 'center',
+    }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+          <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{member.full_name}</span>
+          <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{member.department || 'N/A'}</span>
+          <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
+            {member.travel_status === 'IN' ? '✈ IN' : '✈ OUT'}
+          </span>
+          {dateLabel && (
+            <span style={{ fontSize: '10px', color: '#64748b' }}>
+              {member.travel_status === 'IN' ? '🏨' : '🧳'} {dateLabel}
+            </span>
+          )}
+          <span style={{ fontSize: '10px', fontWeight: '800', color: '#7c3aed', background: '#ede9fe', padding: '1px 7px', borderRadius: '5px', border: '1px solid #ddd6fe' }}>
+            🚐 NTN
+          </span>
+        </div>
+        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: travelInfo?.length > 0 ? '4px' : 0 }}>🏨 {hotel}</div>
+        {travelInfo && travelInfo.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {travelInfo.map((tm, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#374151', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '6px', padding: '3px 8px', marginTop: '2px' }}>
+                <span>{tm.travel_type === 'FLIGHT' ? '✈️' : tm.travel_type === 'TRAIN' ? '🚂' : '🚐'}</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: '700' }}>{tm.travel_number || '–'}</span>
+                <span style={{ color: '#94a3b8' }}>·</span>
+                <span>{tm.from_location || '–'}</span>
+                <span style={{ color: '#94a3b8' }}>{tm.from_time || ''}</span>
+                <span>→</span>
+                <span>{tm.to_location || '–'}</span>
+                <span style={{ color: '#94a3b8' }}>{tm.to_time || ''}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '700', whiteSpace: 'nowrap', paddingTop: '2px' }}>
+        🚗 Self Drive
+      </div>
+    </div>
+  )
+}
+
 // ─── DayStrip ──────────────────────────────────────────────────
 function DayStrip({ selectedDate, centerDate, onSelectDay, onShiftCenter, productionId }) {
   const [counts, setCounts] = useState({})
@@ -455,6 +516,7 @@ export default function HubCoveragePage() {
 
   // Raw data
   const [crew,      setCrew]      = useState([])
+  const [ntnCrew,   setNtnCrew]   = useState([])
   const [locsMap,   setLocsMap]   = useState({})
   const [rawMovements, setRawMovements] = useState([])
   // crewId → [trips] per la data selezionata
@@ -524,7 +586,8 @@ export default function HubCoveragePage() {
       .order('full_name')
     const crewWithDatesIds = (crewWithDates || []).map(c => c.id)
     const allCrewIds = [...new Set([...crewIdsFromMovements, ...crewWithDatesIds])]
-    let allCrewData = (crewWithDates || []).filter(c => !c.no_transport_needed)
+    let allCrewData     = (crewWithDates || []).filter(c => !c.no_transport_needed)
+    let allNtnCrewData  = (crewWithDates || []).filter(c =>  c.no_transport_needed)
     const missingFromDates = crewIdsFromMovements.filter(id => !crewWithDatesIds.includes(id))
     if (missingFromDates.length > 0) {
       const { data: extra } = await supabase
@@ -532,15 +595,19 @@ export default function HubCoveragePage() {
         .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date, no_transport_needed')
         .eq('production_id', PRODUCTION_ID)
         .in('id', missingFromDates)
-      allCrewData = [...allCrewData, ...(extra || []).filter(c => !c.no_transport_needed)]
+      allCrewData    = [...allCrewData,    ...(extra || []).filter(c => !c.no_transport_needed)]
+      allNtnCrewData = [...allNtnCrewData, ...(extra || []).filter(c =>  c.no_transport_needed)]
     }
-    allCrewData.sort((a, b) => {
+    const sortFn = (a, b) => {
       const da = a.department || 'ZZZ'
       const db = b.department || 'ZZZ'
       if (da !== db) return da.localeCompare(db)
       return a.full_name.localeCompare(b.full_name)
-    })
+    }
+    allCrewData.sort(sortFn)
+    allNtnCrewData.sort(sortFn)
     setCrew(allCrewData)
+    setNtnCrew(allNtnCrewData)
     const { data: tripsData } = await supabase
       .from('trips')
       .select('id, trip_id, pickup_min, call_min, transfer_class, vehicle_id, pickup_id, dropoff_id, status')
@@ -759,6 +826,12 @@ export default function HubCoveragePage() {
                   <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', fontWeight: '600' }}>{s.l}</div>
                 </div>
               ))}
+              {ntnCrew.length > 0 && (
+                <div style={{ textAlign: 'center', padding: '8px 14px', borderRadius: '10px', background: '#faf5ff', border: '1px solid #e9d5ff' }}>
+                  <div style={{ fontSize: '22px', fontWeight: '900', color: '#7c3aed', lineHeight: 1 }}>{ntnCrew.length}</div>
+                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', fontWeight: '600' }}>🚐 {t.ntnShort}</div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -809,7 +882,7 @@ export default function HubCoveragePage() {
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
-        ) : crew.length === 0 ? (
+        ) : crew.length === 0 && ntnCrew.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '40px', marginBottom: '10px' }}>✈️</div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>
@@ -819,6 +892,34 @@ export default function HubCoveragePage() {
               {t.hubCoverageDesc}
             </div>
             <a href="/dashboard/crew" style={{ marginTop: '12px', display: 'inline-block', color: '#2563eb', fontSize: '13px' }}>{t.goToCrewLink}</a>
+          </div>
+        ) : crew.length === 0 && ntnCrew.length > 0 ? (
+          /* ── Solo crew NTN per questa data ── */
+          <div>
+            <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderLeft: '4px solid #a855f7', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '24px' }}>🚗</span>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#4c1d95' }}>
+                  No transfer required for {fmtDate(date)}
+                </div>
+                <div style={{ fontSize: '12px', color: '#7c3aed', marginTop: '2px' }}>
+                  {ntnCrew.length} crew member{ntnCrew.length > 1 ? 's' : ''} marked as <strong>No Transport Needed (NTN)</strong> — travelling independently
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #a855f7' }}>
+              <span style={{ fontSize: '16px' }}>🚐</span>
+              <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>{t.ntnSection}</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', background: '#a855f7', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
+                {ntnCrew.length} crew
+              </span>
+              <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— {t.ntnCoverageNote}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {ntnCrew.map(c => (
+                <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} />
+              ))}
+            </div>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
@@ -897,6 +998,25 @@ export default function HubCoveragePage() {
                       })
                       router.push('/dashboard/trips?' + params.toString())
                     }} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ══ NTN — No Transport Needed (sempre visibile in ALL) ══ */}
+            {showOnly === 'ALL' && ntnCrew.length > 0 && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #a855f7' }}>
+                  <span style={{ fontSize: '16px' }}>🚐</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>{t.ntnSection}</span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', background: '#a855f7', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
+                    {ntnCrew.length} crew
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— {t.ntnCoverageNote}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {ntnCrew.map(c => (
+                    <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} />
                   ))}
                 </div>
               </div>
