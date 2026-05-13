@@ -217,7 +217,14 @@ async function syncOneFile(fileRecord, providerToken, cookieHeader) {
         detectedMode: lastDetectedMode,
       }),
     })
+    if (!confirmRes.ok) {
+      const errText = await confirmRes.text()
+      throw new Error(`confirm error ${confirmRes.status}: ${errText.slice(0, 400)}`)
+    }
     const confirmData = await confirmRes.json()
+    if (confirmData.error) {
+      throw new Error(`confirm returned error: ${confirmData.error}`)
+    }
     console.log(
       `[drive/sync] accommodation confirm OK: inserted=${confirmData.inserted} updated=${confirmData.updated}` +
       ` skipped=${confirmData.skipped} errors=${(confirmData.errors || []).length}`
