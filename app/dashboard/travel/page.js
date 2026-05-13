@@ -773,11 +773,45 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     if (onAddLeg) onAddLeg(result.data)
   }
 
+  // Recompute crew dates from remaining movements after a delete.
+  // Reads all remaining travel_movements for this crew and recalculates
+  // arrival_date, departure_date, travel_status from scratch.
+  async function revertCrewDates(crewId) {
+    if (!crewId || !PRODUCTION_ID) return
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+    const { data: remaining } = await supabase
+      .from('travel_movements')
+      .select('direction, travel_date')
+      .eq('crew_id', crewId)
+      .eq('production_id', PRODUCTION_ID)
+      .order('travel_date', { ascending: true })
+    const ins  = (remaining || []).filter(m => m.direction === 'IN').map(m => m.travel_date)
+    const outs = (remaining || []).filter(m => m.direction === 'OUT').map(m => m.travel_date)
+    const newArr = ins.length  > 0 ? ins[0]              : null
+    const newDep = outs.length > 0 ? outs[outs.length-1] : null
+    let newStatus = null
+    if (newArr || newDep) {
+      const dep = newDep
+      const arr = newArr
+      if (dep && today > dep)      newStatus = 'OUT'
+      else if (arr && today > arr) newStatus = 'PRESENT'
+      else if (arr && today === arr) newStatus = 'IN'
+      else if (arr && today < arr) newStatus = 'IN'
+    }
+    const updates = { arrival_date: newArr, departure_date: newDep }
+    if (newStatus) updates.travel_status = newStatus
+    await supabase.from('crew').update(updates).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+  }
+
   async function handleDelete() {
     if (!confirmDel) { setConfirmDel(true); return }
     setDeleting(true)
     await supabase.from('travel_movements').delete().eq('id', initial.id)
     setDeleting(false)
+    // Revert crew dates based on remaining movements
+    if (initial.crew_id && PRODUCTION_ID) {
+      await revertCrewDates(initial.crew_id)
+    }
     onDeleted(initial.id)
     onClose()
   }
