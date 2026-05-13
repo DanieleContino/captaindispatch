@@ -40,6 +40,7 @@ const SECTIONS = [
   { key: 'TRAIN',  icon: '🚂', label: 'TRAIN',            types: ['TRAIN'] },
   { key: 'OA',     icon: '🚗', label: 'OA / SELF',        types: ['OA', 'SELF'] },
   { key: 'GROUND', icon: '🚐', label: 'GROUND TRANSPORT', types: ['GROUND'] },
+  { key: 'FERRY',  icon: '⛴️', label: 'FERRY',            types: ['FERRY'] },
 ]
 
 // ─── Toast ────────────────────────────────────────────────────
@@ -1387,6 +1388,7 @@ export default function TravelPage() {
           <Pill active={filterType === 'TRAIN'}  onClick={() => setFilterType('TRAIN')}>🚂 TRAIN</Pill>
           <Pill active={filterType === 'OA'}     onClick={() => setFilterType('OA')}>🚗 OA</Pill>
           <Pill active={filterType === 'GROUND'} onClick={() => setFilterType('GROUND')}>🚐 GROUND</Pill>
+          <Pill active={filterType === 'FERRY'}  onClick={() => setFilterType('FERRY')}>⛴️ FERRY</Pill>
         </div>
 
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
