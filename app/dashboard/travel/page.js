@@ -773,9 +773,6 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     if (onAddLeg) onAddLeg(result.data)
   }
 
-  // Recompute crew dates from remaining movements after a delete.
-  // Reads all remaining travel_movements for this crew and recalculates
-  // arrival_date, departure_date, travel_status from scratch.
   async function revertCrewDates(crewId) {
     if (!crewId || !PRODUCTION_ID) return
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
@@ -787,16 +784,14 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
       .order('travel_date', { ascending: true })
     const ins  = (remaining || []).filter(m => m.direction === 'IN').map(m => m.travel_date)
     const outs = (remaining || []).filter(m => m.direction === 'OUT').map(m => m.travel_date)
-    const newArr = ins.length  > 0 ? ins[0]              : null
-    const newDep = outs.length > 0 ? outs[outs.length-1] : null
+    const newArr = ins.length  > 0 ? ins[0]               : null
+    const newDep = outs.length > 0 ? outs[outs.length - 1] : null
     let newStatus = null
     if (newArr || newDep) {
-      const dep = newDep
-      const arr = newArr
-      if (dep && today > dep)      newStatus = 'OUT'
-      else if (arr && today > arr) newStatus = 'PRESENT'
-      else if (arr && today === arr) newStatus = 'IN'
-      else if (arr && today < arr) newStatus = 'IN'
+      if (newDep && today > newDep)       newStatus = 'OUT'
+      else if (newArr && today > newArr)  newStatus = 'PRESENT'
+      else if (newArr && today === newArr) newStatus = 'IN'
+      else if (newArr && today < newArr)  newStatus = 'IN'
     }
     const updates = { arrival_date: newArr, departure_date: newDep }
     if (newStatus) updates.travel_status = newStatus
