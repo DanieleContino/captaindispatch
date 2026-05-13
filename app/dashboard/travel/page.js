@@ -355,6 +355,16 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
     case 'needs_transport':
       return <NeedsTransportCell key={field} value={m.needs_transport} rowId={m.id} onSaved={onCellSaved} />
 
+    case 'accommodation':
+      return (
+        <EditableCell key={field}
+          value={m.accommodation} field="accommodation" rowId={m.id}
+          onSaved={onCellSaved}
+          style={{ ...base, color: '#374151' }}
+          onContextMenu={(e) => handleCellRightClick(e, m.id, 'accommodation', colors['accommodation'])}
+        />
+      )
+
     case 'notes':
       return (
         <EditableCell key={field}
@@ -553,14 +563,14 @@ const EMPTY_MOV = {
   full_name_raw: '', crew_id: null,
   travel_number: '', from_location: '', from_time: '',
   to_location: '', to_time: '', pickup_dep: '', pickup_arr: '',
-  needs_transport: false, notes: '', journey_id: null,
+  needs_transport: false, accommodation: '', notes: '', journey_id: null,
 }
 
 const SELECT_FIELDS = `
   id, crew_id, full_name_raw, travel_date, direction,
   travel_type, travel_number, from_location, from_time,
   to_location, to_time, needs_transport, match_status,
-  pickup_dep, pickup_arr, notes, cell_colors, journey_id,
+  pickup_dep, pickup_arr, accommodation, notes, cell_colors, journey_id,
   crew:crew_id(full_name, role, department)
 `
 
@@ -594,6 +604,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
         pickup_dep:      initial.pickup_dep     || '',
         pickup_arr:      initial.pickup_arr     || '',
         needs_transport: !!initial.needs_transport,
+        accommodation:   initial.accommodation  || '',
         notes:           initial.notes          || '',
         journey_id:      initial.journey_id     || null,
       })
@@ -725,6 +736,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
       pickup_dep:      form.pickup_dep.trim() || null,
       pickup_arr:      form.pickup_arr.trim() || null,
       needs_transport: form.needs_transport,
+      accommodation:   form.accommodation.trim() || null,
       notes:           form.notes.trim() || null,
       match_status:    form.crew_id ? 'matched' : 'unmatched',
       journey_id:      form.journey_id || null,
@@ -997,6 +1009,12 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
                   borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                   transition: 'left 0.2s', left: form.needs_transport ? '20px' : '2px', display: 'block' }} />
               </button>
+            </div>
+
+            <div style={rowSt}>
+              <label style={lbl}>Accommodation</label>
+              <input value={form.accommodation} onChange={e => set('accommodation', e.target.value)}
+                style={inp} placeholder="Hotel name, room number..." />
             </div>
 
             <div style={rowSt}>
