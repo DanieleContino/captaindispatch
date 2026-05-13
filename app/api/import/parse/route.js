@@ -908,7 +908,7 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
 
 async function processTravelRows(rawRows, supabase, productionId) {
   const [{ data: existingCrew }, { data: hubs }, { data: locations }, { data: allStays }] = await Promise.all([
-    supabase.from('crew').select('id, full_name, arrival_date, departure_date, hotel_id').eq('production_id', productionId),
+    supabase.from('crew').select('id, full_name, arrival_date, departure_date, hotel_id, no_rooming_check').eq('production_id', productionId),
     supabase.from('locations').select('id, name').eq('production_id', productionId).eq('is_hub', true),
     supabase.from('locations').select('id, name').eq('production_id', productionId),
     supabase.from('crew_stays').select('crew_id, hotel_id, arrival_date, departure_date').eq('production_id', productionId),
@@ -995,12 +995,15 @@ async function processTravelRows(rawRows, supabase, productionId) {
     }
 
     // Cross-check rooming vs travel
+    // Skipped entirely for crew members flagged as no_rooming_check = true
+    // (e.g. Travel & Accommodation Coordinators who manage trips outside the
+    //  production rooming list scope).
     let travel_date_conflict = false
     let hotel_conflict = false
     let rooming_date = null
     let rooming_hotel_id = null
 
-    if (match) {
+    if (match && !match.no_rooming_check) {
       // Cerca stays della persona
       const personStays = (allStays || []).filter(s => s.crew_id === match.id)
 

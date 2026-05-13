@@ -942,6 +942,32 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                     style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', textAlign: 'center' }}>
                     👤 Crew
                   </button>
+                  {/* Skip future checks — for coordinators / multi-production crew */}
+                  {item.crew_id && (item.hotel_conflict || item.travel_date_conflict) && (
+                    <button
+                      onClick={async () => {
+                        if (!item.crew_id) return
+                        // Mark crew as no_rooming_check so future imports skip conflict detection
+                        await supabase.from('crew')
+                          .update({ no_rooming_check: true })
+                          .eq('id', item.crew_id)
+                          .eq('production_id', productionId)
+                        // Resolve the current discrepancy
+                        await resolve(item.id)
+                      }}
+                      disabled={resolving[item.id]}
+                      title="Questo membro gestisce viaggi e hotel fuori dalla Rooming List (es. Travel Coordinator). I futuri import non genereranno conflitti per questa persona."
+                      style={{
+                        padding: '5px 10px', borderRadius: '6px', border: '1px solid #7c3aed',
+                        background: '#f5f3ff', color: '#7c3aed',
+                        fontSize: '11px', fontWeight: '700',
+                        cursor: resolving[item.id] ? 'default' : 'pointer',
+                        opacity: resolving[item.id] ? 0.6 : 1,
+                        textAlign: 'center',
+                      }}>
+                      ✈ Skip future
+                    </button>
+                  )}
                   <button
                     onClick={() => resolve(item.id)}
                     disabled={resolving[item.id]}
