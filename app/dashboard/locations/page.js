@@ -388,6 +388,114 @@ function LocationRow({ loc, onEdit }) {
   )
 }
 
+// ── Hub Locations Section ──────────────────────────────
+function HubLocationsSection({ productionId }) {
+  const [hubs,      setHubs]      = useState([])
+  const [search,    setSearch]    = useState('')
+  const [results,   setResults]   = useState([])
+  const [searching, setSearching] = useState(false)
+  const [saving,    setSaving]    = useState(false)
+
+  const loadHubs = useCallback(async () => {
+    if (!productionId) return
+    const { data } = await supabase.from('locations')
+      .select('id, name')
+      .eq('production_id', productionId)
+      .eq('is_hub', true)
+      .order('name')
+    setHubs(data || [])
+  }, [productionId])
+
+  useEffect(() => { loadHubs() }, [loadHubs])
+
+  // Realtime sync
+  useEffect(() => {
+    if (!productionId) return
+    const channel = supabase.channel(`hub-locations-prod-${productionId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'locations',
+        filter: `production_id=eq.${productionId}`,
+      }, () => loadHubs())
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [productionId, loadHubs])
+
+  useEffect(() => {
+    if (!search || search.length < 2) { setResults([]); return }
+    setSearching(true)
+    supabase.from('locations')
+      .select('id, name')
+      .eq('production_id', productionId)
+      .eq('is_hub', false)
+      .ilike('name', `%${search}%`)
+      .limit(6)
+      .then(({ data }) => { setResults(data || []); setSearching(false) })
+  }, [search, productionId])
+
+  async function addHub(loc) {
+    setSaving(true)
+    await supabase.from('locations').update({ is_hub: true }).eq('id', loc.id)
+    setSearch(''); setResults([])
+    setSaving(false)
+  }
+
+  async function removeHub(loc) {
+    setSaving(true)
+    await supabase.from('locations').update({ is_hub: false }).eq('id', loc.id)
+    setSaving(false)
+  }
+
+  const inp2 = { width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+
+  return (
+    <>
+      {sectionTitle('🛫', 'Hub Locations')}
+      <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+        Hub locations filter Travel Calendar imports — only movements touching a hub are imported.
+      </div>
+
+      {hubs.length === 0 ? (
+        <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '10px', fontStyle: 'italic' }}>No hub locations set</div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+          {hubs.map(h => (
+            <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '999px', fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>
+              🛫 {h.name}
+              <button type="button" onClick={() => removeHub(h)} disabled={saving}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '15px', lineHeight: 1, padding: 0, marginLeft: '2px' }}>
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ position: 'relative' }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search a location to mark as hub…"
+          style={inp2}
+          autoComplete="off"
+        />
+        {searching && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Searching…</div>}
+        {results.length > 0 && (
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+            {results.map(r => (
+              <div key={r.id} onClick={() => addHub(r)}
+                style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', color: '#0f172a', borderBottom: '1px solid #f1f5f9' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                📍 {r.name}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 // ─── Pagina ───────────────────────────────────────────────────
 export default function LocationsPage() {
   const t = useT()
@@ -421,6 +529,18 @@ export default function LocationsPage() {
   }, [])
 
   useEffect(() => { if (user) load() }, [user, load])
+
+  // Realtime sync — aggiorna lista quando is_hub cambia da Productions
+  useEffect(() => {
+    if (!PRODUCTION_ID) return
+    const channel = supabase.channel(`locations-page-${PRODUCTION_ID}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'locations',
+        filter: `production_id=eq.${PRODUCTION_ID}`,
+      }, () => load())
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [PRODUCTION_ID, load])
 
   function openNew()    { setMode('new');  setEdit(null); setSO(true) }
   function openEdit(l)  { setMode('edit'); setEdit(l);    setSO(true) }
