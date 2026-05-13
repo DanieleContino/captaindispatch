@@ -186,7 +186,7 @@ function CoveredRow({ member, trips, locsMap, travelInfo }) {
           </span>
           {dateLabel && (
             <span style={{ fontSize: '10px', color: '#64748b' }}>
-              {member.travel_status === 'IN' ? '🛬' : '🛫'} {dateLabel}
+              {member.travel_status === 'IN' ? '🏨' : '🧳'} {dateLabel}
             </span>
           )}
         </div>
@@ -278,7 +278,7 @@ function MissingRow({ member, locsMap, onAssign, travelInfo }) {
           </span>
           {dateLabel && (
             <span style={{ fontSize: '10px', color: '#64748b' }}>
-              {member.travel_status === 'IN' ? '🛬' : '🛫'} {dateLabel}
+              {member.travel_status === 'IN' ? '🏨' : '🧳'} {dateLabel}
             </span>
           )}
           <span style={{ fontSize: '10px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: '5px', border: '1px solid #fecaca' }}>MISSING</span>
