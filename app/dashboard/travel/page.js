@@ -421,7 +421,7 @@ function buildDisplayRows(rows) {
 }
 
 // ─── SectionTable ─────────────────────────────────────────────
-function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig }) {
+function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor }) {
   const [colorPicker, setColorPicker] = useState(null)
 
   function handleCellRightClick(e, rowId, field, currentColor) {
@@ -506,7 +506,8 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
               const isIN        = m.direction === 'IN'
               const isToday     = m.travel_date === today
               const colors      = m.cell_colors || {}
-              const bgColor     = isUnmatched ? '#fef2f2' : isIN ? '#f0fdf4' : '#fff7ed'
+              const defaultBg   = isIN ? '#f0fdf4' : '#fff7ed'
+              const bgColor     = isUnmatched ? '#fef2f2' : (sectionColor || defaultBg)
               const borderColor = isUnmatched ? '#ef4444' : isIN ? '#22c55e' : '#f97316'
               // Leg rows (2nd, 3rd…) get a slightly dimmer left border to visually connect
               const isLeg       = m.legIndex > 0
@@ -1082,6 +1083,8 @@ export default function TravelPage() {
   const [columnsConfig,     setColumnsConfig]     = useState([])
   const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
   const [applyingPreset,    setApplyingPreset]    = useState(false)
+  const [sectionColors,     setSectionColors]     = useState({})
+  const [sectionColorOpen,  setSectionColorOpen]  = useState(null)
 
   // Date window
   const [windowStart, setWindowStart] = useState(() => isoAdd(isoToday(), -3))
@@ -1132,6 +1135,27 @@ export default function TravelPage() {
     setColumnsConfig(data || [])
   }, [PRODUCTION_ID])
 
+  // ── Section colors loader ──────────────────────────────────
+  const loadSectionColors = useCallback(async () => {
+    if (!PRODUCTION_ID) return
+    const { data } = await supabase
+      .from('productions')
+      .select('travel_section_colors')
+      .eq('id', PRODUCTION_ID)
+      .single()
+    if (data?.travel_section_colors) setSectionColors(data.travel_section_colors)
+  }, [PRODUCTION_ID])
+
+  async function saveSectionColor(sectionKey, color) {
+    const next = color === null
+      ? Object.fromEntries(Object.entries(sectionColors).filter(([k]) => k !== sectionKey))
+      : { ...sectionColors, [sectionKey]: color }
+    setSectionColors(next)
+    await supabase.from('productions')
+      .update({ travel_section_colors: next })
+      .eq('id', PRODUCTION_ID)
+  }
+
   // ── Apply default preset ───────────────────────────────────
   async function applyDefaultPreset() {
     if (!PRODUCTION_ID || applyingPreset) return
@@ -1177,6 +1201,7 @@ export default function TravelPage() {
   useEffect(() => {
     if (user) {
       loadColumnsConfig()
+      loadSectionColors()
       loadData(windowStart, windowEnd)
     }
   }, [user, loadColumnsConfig, loadData])
@@ -1355,6 +1380,54 @@ export default function TravelPage() {
               cursor: 'pointer', whiteSpace: 'nowrap' }}>
             Columns {columnsConfig.length > 0 && `(${columnsConfig.length})`}
           </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
+            {[
+              { key: 'FLIGHT', icon: '✈️' },
+              { key: 'TRAIN',  icon: '🚂' },
+              { key: 'OA',     icon: '🚗' },
+              { key: 'GROUND', icon: '🚐' },
+              { key: 'FERRY',  icon: '⛴️' },
+            ].map(({ key, icon }) => {
+              const color = sectionColors[key] || null
+              return (
+                <div key={key} style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setSectionColorOpen(o => o === key ? null : key)}
+                    title={`${key} row color`}
+                    style={{
+                      width: '28px', height: '28px', borderRadius: '6px',
+                      border: `1px solid ${color ? '#2563eb' : '#e2e8f0'}`,
+                      cursor: 'pointer', background: color || 'white',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '13px', padding: 0,
+                    }}>
+                    {icon}
+                  </button>
+                  {sectionColorOpen === key && (
+                    <div style={{
+                      position: 'absolute', top: '32px', right: 0, zIndex: 300,
+                      background: 'white', border: '1px solid #e2e8f0',
+                      borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                      padding: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px', width: '148px',
+                    }}>
+                      {[null, '#fef9c3', '#fef2f2', '#f0fdf4', '#eff6ff', '#fdf4ff', '#fff7ed', '#f1f5f9', '#fbbf24', '#86efac', '#93c5fd', '#f9a8d4', '#0f2340'].map((c, i) => (
+                        <button key={i} onClick={() => { saveSectionColor(key, c); setSectionColorOpen(null) }}
+                          title={c || 'Default'}
+                          style={{
+                            width: '24px', height: '24px', borderRadius: '5px',
+                            border: c === color ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                            background: c || 'white', cursor: 'pointer', padding: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px',
+                          }}>
+                          {c === null && 'x'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 
@@ -1495,6 +1568,7 @@ export default function TravelPage() {
                     onEditRow={openEdit}
                     onColorSaved={handleColorSaved}
                     columnsConfig={columnsConfig}
+                    sectionColor={sectionColors[section.key] || null}
                   />
                 )
               })}
