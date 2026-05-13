@@ -168,7 +168,7 @@ function NeedsTransportCell({ value, rowId, onSaved }) {
         style={{ background: 'none', border: 'none', cursor: saving ? 'default' : 'pointer', padding: 0, opacity: saving ? 0.5 : 1 }}>
         {value
           ? <span style={{ fontSize: '10px', fontWeight: '800', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 5px' }}>🚐</span>
-          : <span style={{ fontSize: '10px', color: '#cbd5e1' }}>-</span>
+          : <span style={{ fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', padding: '1px 5px' }}>🚐</span>
         }
       </button>
     </td>
