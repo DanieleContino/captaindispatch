@@ -438,7 +438,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
       {/* Section header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '8px',
-        padding: '6px 12px', background: '#f8fafc',
+        padding: '6px 12px', background: sectionColor || '#f8fafc',
         border: '1px solid #e2e8f0', borderRadius: '8px 8px 0 0',
         borderBottom: 'none',
       }}>
@@ -507,7 +507,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
               const isToday     = m.travel_date === today
               const colors      = m.cell_colors || {}
               const defaultBg   = isIN ? '#f0fdf4' : '#fff7ed'
-              const bgColor     = isUnmatched ? '#fef2f2' : (sectionColor || defaultBg)
+              const bgColor     = isUnmatched ? '#fef2f2' : defaultBg
               const borderColor = isUnmatched ? '#ef4444' : isIN ? '#22c55e' : '#f97316'
               // Leg rows (2nd, 3rd…) get a slightly dimmer left border to visually connect
               const isLeg       = m.legIndex > 0
