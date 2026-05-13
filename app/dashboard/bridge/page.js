@@ -820,6 +820,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                                 .eq('id', item.id)
                               await resolve(item.id)
                             }}
+                            title={`Usa la data della Rooming List: ${liveRoomingDate}`}
                             style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
                             ✓ Use Rooming ({liveRoomingDate})
                           </button>
@@ -852,6 +853,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                               }
                               await resolve(item.id)
                             }}
+                            title={`Usa la data del Travel Calendar: ${item.travel_date}`}
                             style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
                             ✓ Use Calendar ({item.travel_date})
                           </button>
@@ -874,6 +876,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                                 await supabase.from('crew_stays').update({ hotel_id: item.rooming_hotel_id }).eq('crew_id', item.crew_id).eq('production_id', productionId)
                                 await resolve(item.id)
                               }}
+                              title={`Usa l'hotel della Rooming List: ${roomingHotel}`}
                               style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
                               ✓ Use Rooming ({roomingHotel.split(' ')[0]})
                             </button>
@@ -884,6 +887,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                                 await supabase.from('crew_stays').update({ hotel_id: item.hotel_id }).eq('crew_id', item.crew_id).eq('production_id', productionId)
                                 await resolve(item.id)
                               }}
+                              title={`Usa l'hotel del Travel Calendar: ${travelHotel}`}
                               style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
                               ✓ Use Calendar ({travelHotel.split(' ')[0]})
                             </button>
