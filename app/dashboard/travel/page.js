@@ -4,6 +4,7 @@
  * /dashboard/travel
  * Session S55 — 12 May 2026
  * Updated S56 — 12 May 2026: multi-leg journey support (journey_id)
+ * Updated S58-C — 14 May 2026: crew notes section in sidebar + unread badge in table
  *
  * Travel Coordinator view — all travel_movements grouped by date and section
  * (FLIGHT / TRAIN / OA / GROUND).
@@ -32,6 +33,14 @@ function fmtDateHeader(dateStr) {
   return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
+}
+function relTime(ts) {
+  const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 60000)
+  if (diff < 1)  return 'just now'
+  if (diff < 60) return `${diff}m ago`
+  const h = Math.floor(diff / 60)
+  if (h < 24)    return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
 }
 
 // ─── Section definitions ───────────────────────────────────────
@@ -229,7 +238,8 @@ function ColorPickerPopover({ field, rowId, currentColor, onColorSaved, onClose 
 }
 
 // ─── renderCell — data-driven cell renderer ────────────────────
-function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors }) {
+// S58-C: unreadMap added to context for 💬 badge in full_name column
+function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors, unreadMap }) {
   const field = col.source_field
   const base = {
     fontSize: '11px', color: '#374151',
@@ -260,6 +270,7 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
         )
       }
       const displayName = m.crew?.full_name || m.full_name_raw || '-'
+      const unreadCount = (m.crew_id && unreadMap) ? (unreadMap[m.crew_id] || 0) : 0
       return (
         <td key={field} style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700',
           color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -270,6 +281,14 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
               color: '#7c3aed', background: '#f5f3ff', padding: '1px 4px',
               borderRadius: '3px', verticalAlign: 'middle' }}>
               {m.journeySize}{'\u2708'}
+            </span>
+          )}
+          {unreadCount > 0 && (
+            <span title={`${unreadCount} unread note${unreadCount > 1 ? 's' : ''}`}
+              style={{ marginLeft: '4px', fontSize: '9px', fontWeight: '800',
+                color: '#ea580c', background: '#fff7ed', border: '1px solid #fed7aa',
+                padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle' }}>
+              💬
             </span>
           )}
         </td>
@@ -431,7 +450,8 @@ function buildDisplayRows(rows) {
 }
 
 // ─── SectionTable ─────────────────────────────────────────────
-function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor }) {
+// S58-C: unreadMap prop added — passed to renderCell for 💬 badge
+function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor, unreadMap }) {
   const [colorPicker, setColorPicker] = useState(null)
 
   function handleCellRightClick(e, rowId, field, currentColor) {
@@ -533,7 +553,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                   opacity: isLeg ? 0.9 : 1,
                 }}>
                   {columnsConfig.map(col =>
-                    renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors })
+                    renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors, unreadMap })
                   )}
 
                   {/* Edit button — always last column */}
@@ -574,7 +594,8 @@ const SELECT_FIELDS = `
   crew:crew_id(full_name, role, department)
 `
 
-function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onAddLeg }) {
+// S58-C: currentUser prop added for crew notes authoring
+function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onAddLeg, currentUser }) {
   const PRODUCTION_ID = getProductionId()
   const [form, setForm]         = useState(EMPTY_MOV)
   const [saving, setSaving]     = useState(false)
@@ -584,10 +605,16 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
   const [crewSearch, setCrewSearch] = useState('')
   const [crewResults, setCrewResults] = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
+  // S58-C: notes states
+  const [sidebarNotes, setSidebarNotes] = useState([])
+  const [notesLoading, setNotesLoading] = useState(false)
+  const [noteText, setNoteText]         = useState('')
+  const [noteSending, setNoteSending]   = useState(false)
 
   useEffect(() => {
     if (!open) return
     setError(null); setConfirmDel(false)
+    setSidebarNotes([]); setNoteText('')
 
     if (mode === 'edit' && initial) {
       setForm({
@@ -658,6 +685,48 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     const timer = setTimeout(() => searchCrew(crewSearch), 300)
     return () => clearTimeout(timer)
   }, [crewSearch])
+
+  // S58-C: Load last 3 shared notes when a crew member is linked
+  useEffect(() => {
+    if (!form.crew_id || !PRODUCTION_ID) { setSidebarNotes([]); return }
+    setNotesLoading(true)
+    supabase.from('crew_notes')
+      .select('id, content, author_name, author_role, context, created_at')
+      .eq('crew_id', form.crew_id)
+      .eq('production_id', PRODUCTION_ID)
+      .eq('is_private', false)
+      .order('created_at', { ascending: false })
+      .limit(3)
+      .then(({ data }) => { setSidebarNotes(data || []); setNotesLoading(false) })
+  }, [form.crew_id, PRODUCTION_ID])
+
+  // S58-C: Send a quick shared note from the sidebar
+  async function sendNote() {
+    if (!noteText.trim() || !form.crew_id || !currentUser || noteSending) return
+    setNoteSending(true)
+    const { error } = await supabase.from('crew_notes').insert({
+      production_id: PRODUCTION_ID,
+      crew_id:       form.crew_id,
+      author_id:     currentUser.id,
+      author_name:   currentUser.name,
+      author_role:   currentUser.role || 'CAPTAIN',
+      content:       noteText.trim(),
+      is_private:    false,
+      context:       'travel',
+    })
+    setNoteSending(false)
+    if (!error) {
+      setNoteText('')
+      const { data } = await supabase.from('crew_notes')
+        .select('id, content, author_name, author_role, context, created_at')
+        .eq('crew_id', form.crew_id)
+        .eq('production_id', PRODUCTION_ID)
+        .eq('is_private', false)
+        .order('created_at', { ascending: false })
+        .limit(3)
+      setSidebarNotes(data || [])
+    }
+  }
 
   // ── Auto-sync crew.arrival_date / departure_date / travel_status ──────────
   // Called after every successful save of a matched movement (crew_id set).
@@ -1023,6 +1092,62 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
                 style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Any operational notes..." />
             </div>
 
+            {/* S58-C: Team Notes — only shown when a crew member is linked */}
+            {form.crew_id && (
+              <div style={{ marginBottom: '12px', padding: '12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  💬 Team Notes
+                </div>
+
+                {/* Mini list of last 3 shared notes */}
+                {notesLoading ? (
+                  <div style={{ fontSize: '11px', color: '#92400e', marginBottom: '8px' }}>Loading...</div>
+                ) : sidebarNotes.length > 0 ? (
+                  <div style={{ marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {sidebarNotes.map(n => {
+                      const roleColor = n.author_role === 'CAPTAIN' ? '#2563eb' : n.author_role === 'TRAVEL' ? '#7c3aed' : '#15803d'
+                      return (
+                        <div key={n.id} style={{ background: 'white', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px 8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+                            <span style={{ fontSize: '9px', fontWeight: '800', color: 'white', background: roleColor, padding: '1px 5px', borderRadius: '3px' }}>
+                              {n.author_role}
+                            </span>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>{n.author_name}</span>
+                            {n.context === 'travel' && <span title="travel context" style={{ fontSize: '9px' }}>✈️</span>}
+                            <span style={{ fontSize: '9px', color: '#94a3b8', marginLeft: 'auto' }}>{relTime(n.created_at)}</span>
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#0f172a', lineHeight: '1.4', wordBreak: 'break-word' }}>{n.content}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '11px', color: '#92400e', marginBottom: '8px', fontStyle: 'italic' }}>No shared notes yet</div>
+                )}
+
+                {/* Quick note + Send */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
+                  <textarea
+                    value={noteText}
+                    onChange={e => setNoteText(e.target.value)}
+                    placeholder="Add a note for the team..."
+                    rows={2}
+                    style={{ flex: 1, padding: '6px 8px', border: '1px solid #fde68a', borderRadius: '6px',
+                      fontSize: '12px', resize: 'none', background: 'white', color: '#0f172a',
+                      outline: 'none', boxSizing: 'border-box' }}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendNote() } }}
+                  />
+                  <button type="button" onClick={sendNote} disabled={!noteText.trim() || noteSending}
+                    style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', flexShrink: 0,
+                      background: (noteSending || !noteText.trim()) ? '#d1d5db' : '#f59e0b',
+                      color: 'white', fontSize: '12px', fontWeight: '800',
+                      cursor: (noteSending || !noteText.trim()) ? 'default' : 'pointer' }}>
+                    {noteSending ? '...' : 'Send'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {mode === 'edit' && (
               <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
@@ -1113,6 +1238,9 @@ export default function TravelPage() {
   const [sidebarMode,   setSidebarMode]   = useState('new')
   const [sidebarTarget, setSidebarTarget] = useState(null)
 
+  // S58-C: Crew notes unread map { [crew_id]: unread_count }
+  const [unreadMap, setUnreadMap] = useState({})
+
   function openNew()   { setSidebarMode('new');  setSidebarTarget(null); setSidebarOpen(true) }
   function openEdit(m) { setSidebarMode('edit'); setSidebarTarget(m);    setSidebarOpen(true) }
 
@@ -1151,6 +1279,24 @@ export default function TravelPage() {
       .order('display_order', { ascending: true })
       .order('created_at',    { ascending: true })
     setColumnsConfig(data || [])
+  }, [PRODUCTION_ID])
+
+  // S58-C: Unread notes map loader — counts unread shared notes per crew_id
+  const loadUnreadMap = useCallback(async (userId) => {
+    if (!PRODUCTION_ID || !userId) return
+    const { data } = await supabase
+      .from('crew_notes')
+      .select('crew_id, author_id, read_by')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('is_private', false)
+    if (!data) return
+    const map = {}
+    for (const note of data) {
+      if (note.author_id === userId) continue
+      if ((note.read_by || []).includes(userId)) continue
+      map[note.crew_id] = (map[note.crew_id] || 0) + 1
+    }
+    setUnreadMap(map)
   }, [PRODUCTION_ID])
 
   // ── Section colors loader ──────────────────────────────────
@@ -1221,6 +1367,7 @@ export default function TravelPage() {
       loadColumnsConfig()
       loadSectionColors()
       loadData(windowStart, windowEnd)
+      loadUnreadMap(user.id)
     }
   }, [user, loadColumnsConfig, loadData])
 
@@ -1587,6 +1734,7 @@ export default function TravelPage() {
                     onColorSaved={handleColorSaved}
                     columnsConfig={columnsConfig}
                     sectionColor={sectionColors[section.key] || null}
+                    unreadMap={unreadMap}
                   />
                 )
               })}
@@ -1602,6 +1750,7 @@ export default function TravelPage() {
         onSaved={handleMovementSaved}
         onDeleted={handleMovementDeleted}
         onAddLeg={openAddLeg}
+        currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null}
       />
       <TravelColumnsEditorSidebar
         open={columnsEditorOpen}
