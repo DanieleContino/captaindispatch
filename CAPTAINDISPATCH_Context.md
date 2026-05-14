@@ -35,21 +35,23 @@ RLS: SELECT filtra `is_private=false OR author_id=auth.uid()`; DELETE solo autor
 - `scripts/migrate-crew-notes.sql` — tabella + indici + RLS
 - `app/api/crew-notes/route.js` — GET/POST/PATCH/DELETE
 
-#### S58-B — NotesAccordion in CrewSidebar + badge CrewCard
-**File**: `app/dashboard/crew/page.js`
+#### S58-B ✅ NotesAccordion in CrewSidebar + badge CrewCard (DONE — 14 May 2026)
+**File**: `app/dashboard/crew/page.js` — commit `27d684d` (+247/-4)
 
-**`NotesAccordion({ crewId, productionId, currentUser })`** — 4° accordion in CrewSidebar (dopo TravelAccordion):
+**`NotesAccordion({ crewId, currentUser })`** — 4° accordion in CrewSidebar (dopo TravelAccordion):
 - Load lazy delle note all'apertura (GET `/api/crew-notes?crew_id=&production_id=`)
-- Lista note con: badge `[TRAVEL]`/`[CAPTAIN]`/etc. colorato per ruolo, icona contesto, timestamp relativo, contenuto
-- Note non lette evidenziate (bordo arancio + badge `⬤ NEW`)
-- Pulsanti: `✓ Mark as read` / `📌 Reminder` (mark_unread)
-- Form add nota: textarea + toggle `🔒 Privata / 🌐 Condivisa` + bottone `Send`
-- L'autore vede propria nota senza "mark as read" + pulsante 🗑 delete
+- Lista note con: badge ruolo colorato (CAPTAIN blu / TRAVEL viola / ACCOMMODATION verde), icona contesto (💬/✈️/🏨), timestamp relativo
+- Note non lette evidenziate: sfondo `#fff7ed` + bordo arancio `#f97316` + badge `⬤ NEW`
+- Pulsanti: `✓ Mark as read` / `📌 Remind me` (re-mark unread) — solo per chi non è autore
+- Autore: nessun mark, pulsante 🗑 delete con conferma 2-step
+- Toggle: `🔒 Private` / `🌐 Shared` — default Shared
+- Counter nel titolo accordion: `✓ N` (totale) + `❗ N new` (unread)
+- `currentUser` arriva da `CrewPage` come `{ id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' }`
 
 **Badge `❗` su `CrewCard`**:
-- In `CrewPage`: dopo `loadCrew()`, query aggregata `crew_notes` per unread counts per crew_id
-- `unreadMap: { [crew_id]: number }` — numero note condivise non lette per l'utente corrente
-- `CrewCard` riceve `unreadCount` prop → se > 0 mostra badge arancio `❗` nell'angolo
+- `unreadMap: { [crew_id]: number }` — caricato in `CrewPage` via `loadUnreadMap(user.id)`
+- Query `crew_notes` (solo `is_private=false`) + count client-side escludendo l'autore stesso e le note già in `read_by`
+- `CrewCard` riceve `unreadCount` prop → se > 0 mostra pallino arancio `❗` (18×18px) dopo il nome
 
 #### S58-C — Integrazione Travel page
 **File**: `app/dashboard/travel/page.js`
@@ -66,6 +68,57 @@ RLS: SELECT filtra `is_private=false OR author_id=auth.uid()`; DELETE solo autor
 
 ### ⚠️ Azione manuale richiesta (S58-A)
 Eseguire `scripts/migrate-crew-notes.sql` nel pannello SQL di Supabase prima di S58-B.
+*(già eseguita — S58-A e S58-B completate)*
+
+---
+
+## WHAT CHANGED IN SESSION S58 (14 May 2026)
+
+### S58-A ✅ — DB + API `crew_notes`
+
+**Nuova tabella** `crew_notes` (`scripts/migrate-crew-notes.sql`):
+```sql
+CREATE TABLE crew_notes (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  production_id  TEXT NOT NULL,
+  crew_id        TEXT NOT NULL REFERENCES crew(id) ON DELETE CASCADE,
+  author_id      UUID NOT NULL,
+  author_name    TEXT NOT NULL,
+  author_role    TEXT NOT NULL DEFAULT 'CAPTAIN',
+  content        TEXT NOT NULL,
+  is_private     BOOLEAN NOT NULL DEFAULT false,
+  context        TEXT NOT NULL DEFAULT 'general',
+  read_by        UUID[] NOT NULL DEFAULT '{}',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+RLS: SELECT filtra `is_private=false OR author_id=auth.uid()`; DELETE solo autore; UPDATE/INSERT autenticati.
+
+**API** `app/api/crew-notes/route.js`:
+- `GET ?crew_id=&production_id=` → lista note (RLS filtra private)
+- `POST { crew_id, production_id, content, is_private, context, author_name, author_role }` → crea nota
+- `PATCH { id, action: 'mark_read'|'mark_unread' }` → gestisce array `read_by`
+- `DELETE ?id=` → elimina (solo autore)
+
+### S58-B ✅ — `NotesAccordion` in `CrewSidebar` + badge `❗` su `CrewCard`
+
+**File**: `app/dashboard/crew/page.js` — commit `27d684d` (+247/-4)
+
+**Componente `NotesAccordion({ crewId, currentUser })`**:
+- 4° accordion in `CrewSidebar`, solo modalità `edit`, dopo `TravelAccordion`
+- Tema ambra (`#fffbeb`), load lazy al primo toggle
+- Badge ruolo colorato: CAPTAIN (blu), TRAVEL (viola), ACCOMMODATION (verde)
+- Note unread: sfondo `#fff7ed` + bordo arancio + badge `⬤ NEW`
+- Azioni: `✓ Mark as read` / `📌 Remind me` (re-mark unread) per lettori; 🗑 delete per autori
+- Form: textarea + toggle 🔒 Private / 🌐 Shared + bottone Send
+- `currentUser` = `{ id, name, role }` derivato dall'utente Supabase
+
+**Badge `❗` su `CrewCard`**:
+- `loadUnreadMap(userId)` in `CrewPage` — query `crew_notes` (solo `is_private=false`), count client-side per `crew_id` escludendo autori e note già lette
+- `unreadMap` passato come `unreadCount={unreadMap[m.id] || 0}` a ogni `CrewCard`
+- Pallino arancio 18×18px dopo il nome del crew quando `unreadCount > 0`
+
+**`CrewSidebar`**: aggiunto prop `currentUser` + `NotesAccordion` dopo `TravelAccordion`
 
 ---
 
