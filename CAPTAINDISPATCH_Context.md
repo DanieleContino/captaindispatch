@@ -13,7 +13,23 @@
 
 ---
 
-## UPCOMING SESSION S59 — Notes System v2: Unified + Professional (14 May 2026)
+## SESSION S59 — Notes System v2: Unified + Professional (14 May 2026)
+
+### ✅ S59-C COMPLETATO (14 May 2026) — `app/dashboard/travel/page.js`
+- `MovementSidebar`: rimosso box "Team Notes" inline (195 righe) → sostituito con `<NotesPanel crewId productionId currentUser />`
+- `TravelPage`: aggiunto `userRole` state, caricato da `user_roles` DB al login (fix bug #1 — `author_role` non più hardcoded `'CAPTAIN'`)
+- `TravelPage`: aggiunto Realtime subscription `crew_notes:travel:{PRODUCTION_ID}` → `loadUnreadMap` si aggiorna live (fix bug #5)
+- Commit: `afc3fa8` — 56 insertions, 195 deletions
+
+### Stato S59 per file
+| File | Stato |
+|------|-------|
+| `lib/NotesPanel.js` | ✅ Creato (S58-A/B/C) |
+| `app/dashboard/travel/page.js` | ✅ Completato S59-C |
+| `app/dashboard/crew/page.js` | 🔲 Da fare (S59-D) |
+| `app/api/crew-notes/route.js` (edit action) | 🔲 Da fare |
+
+---
 
 ### Obiettivo generale S59
 Riscrivere il sistema note in modo professionale e unificato. Eliminare la duplicazione tra `NotesAccordion` (crew) e Team Notes (travel), fixare i 4 bug identificati, aggiungere Realtime e edit.
