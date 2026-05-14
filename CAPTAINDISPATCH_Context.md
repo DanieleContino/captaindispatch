@@ -27,7 +27,7 @@
 | `lib/NotesPanel.js` | ✅ Creato (S58-A/B/C) |
 | `app/dashboard/travel/page.js` | ✅ Completato S59-C |
 | `app/dashboard/crew/page.js` | 🔲 Da fare (S59-D) |
-| `app/api/crew-notes/route.js` (edit action) | 🔲 Da fare |
+| `app/api/crew-notes/route.js` (edit action) | ✅ Completato S59-D |
 
 ---
 
@@ -98,11 +98,11 @@ Props: `{ crewId, productionId, currentUser, onNotesSent }`
 - Realtime in TravelPage per `unreadMap`
 - ~(-80/+15 righe nette)
 
-#### S59-D — `app/api/crew-notes/route.js` — add edit action
-- `action: 'edit'` nel PATCH
-- Controlla autore + `created_at + 5min`
-- `author_role` derivato sempre da DB (più sicuro)
-- ~+20 righe
+#### S59-D ✅ — `app/api/crew-notes/route.js` — add edit action — commit da fare
+- `action: 'edit'` nel PATCH: `{ id, action: 'edit', content: newContent }`
+- Controlla autore (`note.author_id !== user.id` → 403) + finestra 5min (`Date.now() - created_at > 5min` → 403)
+- `author_role` nel POST derivato sempre da DB (`role.role`), ignora valore client — **fix bug #1** server-side
+- +28 righe nette
 
 ### ⚠️ Nessuna migrazione SQL richiesta
 Il DB ha già tutti i campi necessari: `context`, `author_role`, `is_private`, `read_by`, `created_at`.

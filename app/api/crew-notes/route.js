@@ -4,7 +4,7 @@
  *
  * GET    ?crew_id=&production_id=   → lista note per un crew member
  * POST                              → crea nuova nota
- * PATCH  { id, action }             → mark_read | mark_unread
+ * PATCH  { id, action }             → mark_read | mark_unread | edit (solo autore, entro 5min)
  * DELETE ?id=                       → elimina nota (solo autore)
  */
 
@@ -95,7 +95,7 @@ export async function POST(request) {
       crew_id,
       author_id:   user.id,
       author_name: author_name || user.email || 'Unknown',
-      author_role: author_role || role.role || 'CAPTAIN',
+      author_role: role.role || 'CAPTAIN',  // sempre dal DB, ignora valore client
       content:     content.trim(),
       is_private:  is_private === true,
       context:     context || 'general',
@@ -168,6 +168,44 @@ export async function PATCH(request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
+  }
+
+  if (action === 'edit') {
+    const { content: newContent } = body
+
+    if (!newContent?.trim()) {
+      return NextResponse.json({ error: 'content required' }, { status: 400 })
+    }
+
+    // Carica la nota per verificare autore e timestamp
+    const { data: note } = await supabase
+      .from('crew_notes')
+      .select('author_id, created_at')
+      .eq('id', id)
+      .single()
+
+    if (!note) return NextResponse.json({ error: 'Note not found' }, { status: 404 })
+
+    // Solo l'autore può modificare
+    if (note.author_id !== user.id) {
+      return NextResponse.json({ error: 'Only the author can edit this note' }, { status: 403 })
+    }
+
+    // Solo entro 5 minuti dalla creazione
+    const ageMs = Date.now() - new Date(note.created_at).getTime()
+    if (ageMs > 5 * 60 * 1000) {
+      return NextResponse.json({ error: 'Edit window expired (5 minutes)' }, { status: 403 })
+    }
+
+    const { data: updated, error } = await supabase
+      .from('crew_notes')
+      .update({ content: newContent.trim() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, note: updated })
   }
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
