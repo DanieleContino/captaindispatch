@@ -5,6 +5,7 @@
  * Session S55 — 12 May 2026
  * Updated S56 — 12 May 2026: multi-leg journey support (journey_id)
  * Updated S58-C — 14 May 2026: crew notes section in sidebar + unread badge in table
+ * Updated S59-C — 14 May 2026: NotesPanel replaces inline Team Notes, userRole from DB, Realtime unreadMap
  *
  * Travel Coordinator view — all travel_movements grouped by date and section
  * (FLIGHT / TRAIN / OA / GROUND).
@@ -19,6 +20,7 @@ import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import { TravelColumnsEditorSidebar } from '../../../lib/TravelColumnsEditorSidebar'
 import { TRAVEL_DEFAULT_PRESET } from '../../../lib/travelColumnsCatalog'
+import NotesPanel from '../../../lib/NotesPanel'
 
 // ─── Date helpers ─────────────────────────────────────────────
 function isoToday() {
@@ -33,14 +35,6 @@ function fmtDateHeader(dateStr) {
   return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
-}
-function relTime(ts) {
-  const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 60000)
-  if (diff < 1)  return 'just now'
-  if (diff < 60) return `${diff}m ago`
-  const h = Math.floor(diff / 60)
-  if (h < 24)    return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
 }
 
 // ─── Section definitions ───────────────────────────────────────
@@ -259,7 +253,6 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
       )
 
     case 'full_name': {
-      // Leg 2+ of a multi-leg journey: show indented connector instead of name
       if (m.legIndex > 0) {
         return (
           <td key={field} style={{ padding: '7px 10px 7px 20px', fontSize: '11px', fontWeight: '600',
@@ -421,9 +414,6 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
 }
 
 // ─── buildDisplayRows — group journey legs visually ────────────
-// Rows with the same journey_id are sorted together and annotated
-// with legIndex (0-based) and journeySize so renderCell can adapt.
-// Standalone rows (journey_id = null) get legIndex = -1, journeySize = 1.
 function buildDisplayRows(rows) {
   const journeyMap = new Map()
   const standalone = []
@@ -437,12 +427,10 @@ function buildDisplayRows(rows) {
     }
   }
 
-  // Sort each journey group internally by from_time
   for (const legs of journeyMap.values()) {
     legs.sort((a, b) => (a.from_time || '').localeCompare(b.from_time || ''))
   }
 
-  // Build sortable items keyed by first from_time of each group
   const items = [
     ...standalone.map(m => ({
       sortTime: m.from_time || '',
@@ -459,7 +447,6 @@ function buildDisplayRows(rows) {
 }
 
 // ─── SectionTable ─────────────────────────────────────────────
-// S58-C: unreadMap + notesMap props added — passed to renderCell for 💬 badge
 function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor, unreadMap, notesMap }) {
   const [colorPicker, setColorPicker] = useState(null)
 
@@ -474,7 +461,6 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
 
   return (
     <div style={{ marginBottom: '16px' }}>
-      {/* Section header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '8px',
         padding: '6px 12px', background: sectionColor || '#f8fafc',
@@ -486,12 +472,9 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
           letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           {section.label}
         </span>
-        <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px' }}>
-          {rows.length}
-        </span>
+        <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px' }}>{rows.length}</span>
       </div>
 
-      {/* Table wrapper */}
       <div style={{ position: 'relative' }}>
         {colorPicker && (
           <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 200 }}>
@@ -505,20 +488,17 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
         )}
 
         <table style={{
-          width: '100%', borderCollapse: 'collapse',
-          tableLayout: 'fixed',
+          width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed',
           border: '1px solid #e2e8f0', borderTop: 'none',
           borderRadius: '0 0 8px 8px', overflow: 'hidden',
         }}>
-          {/* Column widths */}
           <colgroup>
             {columnsConfig.map(col => (
               <col key={col.source_field} style={{ width: col.width }} />
             ))}
-            <col style={{ width: '38px' }} /> {/* Edit button */}
+            <col style={{ width: '38px' }} />
           </colgroup>
 
-          {/* Header */}
           <thead>
             <tr style={{ background: '#f1f5f9' }}>
               {columnsConfig.map(col => (
@@ -526,8 +506,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                   padding: '6px 8px', fontSize: '10px', fontWeight: '800',
                   color: col.source_field === 'notes' ? '#2563eb' : '#64748b',
                   textAlign: (col.source_field === 'needs_transport' || col.source_field === 'match_status') ? 'center' : 'left',
-                  overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   letterSpacing: '0.05em', textTransform: 'uppercase',
                   borderBottom: '1px solid #e2e8f0',
                 }}>
@@ -538,7 +517,6 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
             </tr>
           </thead>
 
-          {/* Body — uses buildDisplayRows for journey grouping */}
           <tbody>
             {displayRows.map((m) => {
               const isUnmatched = m.match_status === 'unmatched'
@@ -548,15 +526,12 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
               const defaultBg   = isIN ? '#f0fdf4' : '#fff7ed'
               const bgColor     = isUnmatched ? '#fef2f2' : defaultBg
               const borderColor = isUnmatched ? '#ef4444' : isIN ? '#22c55e' : '#f97316'
-              // Leg rows (2nd, 3rd…) get a slightly dimmer left border to visually connect
               const isLeg       = m.legIndex > 0
 
               return (
                 <tr key={m.id} style={{
                   background: bgColor,
-                  borderLeft: isLeg
-                    ? `3px solid ${borderColor}88`
-                    : `3px solid ${borderColor}`,
+                  borderLeft: isLeg ? `3px solid ${borderColor}88` : `3px solid ${borderColor}`,
                   outline: isToday ? '2px solid #fbbf24' : 'none',
                   outlineOffset: '-2px',
                   opacity: isLeg ? 0.9 : 1,
@@ -564,8 +539,6 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                   {columnsConfig.map(col =>
                     renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors, unreadMap, notesMap })
                   )}
-
-                  {/* Edit button — always last column */}
                   <td style={{ padding: '4px 6px', background: bgColor, textAlign: 'right', verticalAlign: 'middle' }}>
                     <button
                       onClick={() => onEditRow(m)}
@@ -603,27 +576,21 @@ const SELECT_FIELDS = `
   crew:crew_id(full_name, role, department)
 `
 
-// S58-C: currentUser prop added for crew notes authoring
+// S59-C: currentUser now carries the real DB role (not always 'CAPTAIN')
 function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onAddLeg, currentUser }) {
   const PRODUCTION_ID = getProductionId()
-  const [form, setForm]         = useState(EMPTY_MOV)
-  const [saving, setSaving]     = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [form, setForm]             = useState(EMPTY_MOV)
+  const [saving, setSaving]         = useState(false)
+  const [deleting, setDeleting]     = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
-  const [error, setError]       = useState(null)
-  const [crewSearch, setCrewSearch] = useState('')
-  const [crewResults, setCrewResults] = useState([])
+  const [error, setError]           = useState(null)
+  const [crewSearch, setCrewSearch]     = useState('')
+  const [crewResults, setCrewResults]   = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
-  // S58-C: notes states
-  const [sidebarNotes, setSidebarNotes] = useState([])
-  const [notesLoading, setNotesLoading] = useState(false)
-  const [noteText, setNoteText]         = useState('')
-  const [noteSending, setNoteSending]   = useState(false)
 
   useEffect(() => {
     if (!open) return
     setError(null); setConfirmDel(false)
-    setSidebarNotes([]); setNoteText('')
 
     if (mode === 'edit' && initial) {
       setForm({
@@ -648,7 +615,6 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
       setCrewResults([])
 
     } else if (mode === 'new' && initial?.__isLeg) {
-      // Pre-filled new leg: same person, same date/direction, from = prev to
       setForm({
         travel_date:     initial.travel_date    || '',
         direction:       initial.direction      || 'IN',
@@ -695,55 +661,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     return () => clearTimeout(timer)
   }, [crewSearch])
 
-  // S58-C: Load last 3 shared notes when a crew member is linked
-  useEffect(() => {
-    if (!form.crew_id || !PRODUCTION_ID) { setSidebarNotes([]); return }
-    setNotesLoading(true)
-    supabase.from('crew_notes')
-      .select('id, content, author_name, author_role, context, created_at')
-      .eq('crew_id', form.crew_id)
-      .eq('production_id', PRODUCTION_ID)
-      .eq('is_private', false)
-      .order('created_at', { ascending: false })
-      .limit(3)
-      .then(({ data }) => { setSidebarNotes(data || []); setNotesLoading(false) })
-  }, [form.crew_id, PRODUCTION_ID])
-
-  // S58-C: Send a quick shared note from the sidebar
-  async function sendNote() {
-    if (!noteText.trim() || !form.crew_id || !currentUser || noteSending) return
-    setNoteSending(true)
-    const { error } = await supabase.from('crew_notes').insert({
-      production_id: PRODUCTION_ID,
-      crew_id:       form.crew_id,
-      author_id:     currentUser.id,
-      author_name:   currentUser.name,
-      author_role:   currentUser.role || 'CAPTAIN',
-      content:       noteText.trim(),
-      is_private:    false,
-      context:       'travel',
-    })
-    setNoteSending(false)
-    if (!error) {
-      setNoteText('')
-      const { data } = await supabase.from('crew_notes')
-        .select('id, content, author_name, author_role, context, created_at')
-        .eq('crew_id', form.crew_id)
-        .eq('production_id', PRODUCTION_ID)
-        .eq('is_private', false)
-        .order('created_at', { ascending: false })
-        .limit(3)
-      setSidebarNotes(data || [])
-    }
-  }
-
   // ── Auto-sync crew.arrival_date / departure_date / travel_status ──────────
-  // Called after every successful save of a matched movement (crew_id set).
-  // Mirrors the expectedStatus() logic from crew/page.js:
-  //   today > dep_date  → OUT
-  //   today > arr_date  → PRESENT
-  //   today === arr_date → IN if saving an IN movement today, else PRESENT
-  //   today < arr_date  → IN
   async function syncCrewDates(crewId, direction, travelDate) {
     if (!crewId || !travelDate || !PRODUCTION_ID) return
     const { data: crewRec } = await supabase
@@ -757,16 +675,13 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
     const updates = {}
 
-    // Update dates based on direction
     if (direction === 'IN') {
       const dep = crewRec.departure_date
       const arr = crewRec.arrival_date
       if (dep && travelDate > dep) {
-        // "Return" arrival AFTER a past departure → new stint: reset dep, set new arr
         updates.arrival_date   = travelDate
         updates.departure_date = null
       } else if (!arr || travelDate < arr) {
-        // First arrival or earlier leg of same journey
         updates.arrival_date = travelDate
       }
     }
@@ -774,25 +689,18 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
       updates.departure_date = travelDate
     }
 
-    // Always compute expected status (using current + potentially updated dates).
-    // Use 'in' check instead of ?? because updates.departure_date may be explicitly null
-    // (null ?? fallback = fallback, which is wrong when we intentionally reset to null)
     const arr = 'arrival_date'   in updates ? updates.arrival_date   : crewRec.arrival_date
     const dep = 'departure_date' in updates ? updates.departure_date : crewRec.departure_date
 
-    // Replicate expectedStatus logic from crew/page.js
     let newStatus = null
     if (dep && today > dep)        newStatus = 'OUT'
     else if (arr && today > arr)   newStatus = 'PRESENT'
     else if (arr && today === arr) {
-      // Has IN movement today? We know the one being saved counts
       newStatus = (direction === 'IN' && travelDate === today) ? 'IN' : 'PRESENT'
     }
     else if (arr && today < arr)   newStatus = 'IN'
 
     if (newStatus && newStatus !== crewRec.travel_status) updates.travel_status = newStatus
-
-    // Nothing changed — skip DB write
     if (Object.keys(updates).length === 0) return
 
     await supabase.from('crew').update(updates).eq('id', crewId).eq('production_id', PRODUCTION_ID)
@@ -837,17 +745,14 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     setSaving(false)
     if (result.error) { setError(result.error.message); return }
     onSaved(result.data, mode)
-    // Fire-and-forget: sync crew dates from the saved movement
     syncCrewDates(form.crew_id, form.direction, form.travel_date)
     onClose()
   }
 
-  // Save current movement and open sidebar for the next connecting leg
   async function handleSaveAndAddLeg() {
     if (!form.travel_date) { setError('Date required'); return }
     if (!form.full_name_raw.trim() && !form.crew_id) { setError('Name required'); return }
     setSaving(true)
-    // Assign or reuse journey_id
     const journeyId = form.journey_id || crypto.randomUUID()
     const row = { ...buildRow(), journey_id: journeyId }
     let result
@@ -860,9 +765,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     setSaving(false)
     if (result.error) { setError(result.error.message); return }
     onSaved(result.data, mode)
-    // Fire-and-forget: sync crew dates from the saved movement
     syncCrewDates(form.crew_id, form.direction, form.travel_date)
-    // Signal parent to open next leg sidebar
     if (onAddLeg) onAddLeg(result.data)
   }
 
@@ -881,10 +784,10 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     const newDep = outs.length > 0 ? outs[outs.length - 1] : null
     let newStatus = null
     if (newArr || newDep) {
-      if (newDep && today > newDep)       newStatus = 'OUT'
-      else if (newArr && today > newArr)  newStatus = 'PRESENT'
+      if (newDep && today > newDep)        newStatus = 'OUT'
+      else if (newArr && today > newArr)   newStatus = 'PRESENT'
       else if (newArr && today === newArr) newStatus = 'IN'
-      else if (newArr && today < newArr)  newStatus = 'IN'
+      else if (newArr && today < newArr)   newStatus = 'IN'
     }
     const updates = { arrival_date: newArr, departure_date: newDep }
     if (newStatus) updates.travel_status = newStatus
@@ -896,10 +799,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     setDeleting(true)
     await supabase.from('travel_movements').delete().eq('id', initial.id)
     setDeleting(false)
-    // Revert crew dates based on remaining movements
-    if (initial.crew_id && PRODUCTION_ID) {
-      await revertCrewDates(initial.crew_id)
-    }
+    if (initial.crew_id && PRODUCTION_ID) await revertCrewDates(initial.crew_id)
     onDeleted(initial.id)
     onClose()
   }
@@ -1101,60 +1001,13 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
                 style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Any operational notes..." />
             </div>
 
-            {/* S58-C: Team Notes — only shown when a crew member is linked */}
+            {/* S59-C: NotesPanel — replaces inline Team Notes box; only shown when a crew member is linked */}
             {form.crew_id && (
-              <div style={{ marginBottom: '12px', padding: '12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px' }}>
-                <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px' }}>
-                  💬 Team Notes
-                </div>
-
-                {/* Mini list of last 3 shared notes */}
-                {notesLoading ? (
-                  <div style={{ fontSize: '11px', color: '#92400e', marginBottom: '8px' }}>Loading...</div>
-                ) : sidebarNotes.length > 0 ? (
-                  <div style={{ marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {sidebarNotes.map(n => {
-                      const roleColor = n.author_role === 'CAPTAIN' ? '#2563eb' : n.author_role === 'TRAVEL' ? '#7c3aed' : '#15803d'
-                      return (
-                        <div key={n.id} style={{ background: 'white', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px 8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
-                            <span style={{ fontSize: '9px', fontWeight: '800', color: 'white', background: roleColor, padding: '1px 5px', borderRadius: '3px' }}>
-                              {n.author_role}
-                            </span>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>{n.author_name}</span>
-                            {n.context === 'travel' && <span title="travel context" style={{ fontSize: '9px' }}>✈️</span>}
-                            <span style={{ fontSize: '9px', color: '#94a3b8', marginLeft: 'auto' }}>{relTime(n.created_at)}</span>
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#0f172a', lineHeight: '1.4', wordBreak: 'break-word' }}>{n.content}</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '11px', color: '#92400e', marginBottom: '8px', fontStyle: 'italic' }}>No shared notes yet</div>
-                )}
-
-                {/* Quick note + Send */}
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
-                  <textarea
-                    value={noteText}
-                    onChange={e => setNoteText(e.target.value)}
-                    placeholder="Add a note for the team..."
-                    rows={2}
-                    style={{ flex: 1, padding: '6px 8px', border: '1px solid #fde68a', borderRadius: '6px',
-                      fontSize: '12px', resize: 'none', background: 'white', color: '#0f172a',
-                      outline: 'none', boxSizing: 'border-box' }}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendNote() } }}
-                  />
-                  <button type="button" onClick={sendNote} disabled={!noteText.trim() || noteSending}
-                    style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', flexShrink: 0,
-                      background: (noteSending || !noteText.trim()) ? '#d1d5db' : '#f59e0b',
-                      color: 'white', fontSize: '12px', fontWeight: '800',
-                      cursor: (noteSending || !noteText.trim()) ? 'default' : 'pointer' }}>
-                    {noteSending ? '...' : 'Send'}
-                  </button>
-                </div>
-              </div>
+              <NotesPanel
+                crewId={form.crew_id}
+                productionId={PRODUCTION_ID}
+                currentUser={currentUser}
+              />
             )}
 
             {mode === 'edit' && (
@@ -1188,7 +1041,6 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
             </div>
           )}
 
-          {/* Footer — primary action + secondary row */}
           <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', flexShrink: 0,
             position: 'sticky', bottom: 0, background: 'white', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <button type="submit" disabled={saving}
@@ -1225,7 +1077,8 @@ export default function TravelPage() {
   const today         = isoToday()
 
   // Auth
-  const [user, setUser] = useState(null)
+  const [user, setUser]         = useState(null)
+  const [userRole, setUserRole] = useState('CAPTAIN')  // S59-C: real role from DB
 
   // Data
   const [movements, setMovements] = useState([])
@@ -1249,13 +1102,11 @@ export default function TravelPage() {
 
   // S58-C: Crew notes unread map { [crew_id]: unread_count }
   const [unreadMap, setUnreadMap] = useState({})
-  // total notes per crew_id (includes notes authored by self)
   const [notesMap,  setNotesMap]  = useState({})
 
   function openNew()   { setSidebarMode('new');  setSidebarTarget(null); setSidebarOpen(true) }
   function openEdit(m) { setSidebarMode('edit'); setSidebarTarget(m);    setSidebarOpen(true) }
 
-  // Open sidebar pre-filled for the next connecting leg of a journey
   function openAddLeg(prevMovement) {
     const nextLeg = {
       __isLeg:       true,
@@ -1266,7 +1117,7 @@ export default function TravelPage() {
       crew_id:       prevMovement.crew_id,
       full_name_raw: prevMovement.full_name_raw || prevMovement.crew?.full_name || '',
       from_location: prevMovement.to_location   || '',
-      from_time:     prevMovement.to_time        ? prevMovement.to_time.slice(0, 5) : '',
+      from_time:     prevMovement.to_time ? prevMovement.to_time.slice(0, 5) : '',
     }
     setSidebarMode('new')
     setSidebarTarget(nextLeg)
@@ -1292,7 +1143,7 @@ export default function TravelPage() {
     setColumnsConfig(data || [])
   }, [PRODUCTION_ID])
 
-  // S58-C: Unread notes map loader — counts unread shared notes per crew_id
+  // S58-C: Unread notes map loader
   const loadUnreadMap = useCallback(async (userId) => {
     if (!PRODUCTION_ID || !userId) return
     const { data } = await supabase
@@ -1367,11 +1218,21 @@ export default function TravelPage() {
     setLoading(false)
   }, [PRODUCTION_ID])
 
-  // ── Auth check ─────────────────────────────────────────────
+  // ── Auth check + load real role ────────────────────────────
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/login'); return }
       setUser(user)
+      // S59-C: load real role from DB (fix bug — author_role was always hardcoded 'CAPTAIN')
+      if (PRODUCTION_ID) {
+        const { data: roleRow } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('production_id', PRODUCTION_ID)
+          .maybeSingle()
+        if (roleRow?.role) setUserRole(roleRow.role)
+      }
     })
   }, [])
 
@@ -1389,6 +1250,21 @@ export default function TravelPage() {
   useEffect(() => {
     if (user) loadData(windowStart, windowEnd)
   }, [windowStart, windowEnd])
+
+  // S59-C: Realtime subscription for crew_notes → reload unreadMap live
+  useEffect(() => {
+    if (!user || !PRODUCTION_ID) return
+    const channel = supabase
+      .channel(`crew_notes:travel:${PRODUCTION_ID}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'crew_notes',
+        filter: `production_id=eq.${PRODUCTION_ID}`,
+      }, () => { loadUnreadMap(user.id) })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user, PRODUCTION_ID, loadUnreadMap])
 
   // ── Window navigation ──────────────────────────────────────
   function shiftWindow(n) {
@@ -1507,7 +1383,6 @@ export default function TravelPage() {
         display: 'flex', alignItems: 'center', gap: '8px',
         position: 'sticky', top: '52px', zIndex: 21,
       }}>
-        {/* Left: title + add */}
         <span style={{ fontSize: '18px' }}>✈️</span>
         <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>
           Travel
@@ -1521,7 +1396,6 @@ export default function TravelPage() {
           + Add Movement
         </button>
 
-        {/* Center: date navigation */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <button onClick={() => shiftWindow(-7)}
             style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>◀</button>
@@ -1542,7 +1416,6 @@ export default function TravelPage() {
           </button>
         </div>
 
-        {/* Right: columns button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           {columnsConfig.length === 0 && (
             <button onClick={applyDefaultPreset} disabled={applyingPreset}
@@ -1621,9 +1494,7 @@ export default function TravelPage() {
           onChange={e => setSearch(e.target.value)}
           style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px', minWidth: 0 }}
         />
-
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
-
         <div style={{ display: 'flex', gap: '3px' }}>
           <Pill active={filterDir === 'ALL'} onClick={() => setFilterDir('ALL')}>ALL</Pill>
           <Pill active={filterDir === 'IN'}  onClick={() => setFilterDir('IN')}
@@ -1631,9 +1502,7 @@ export default function TravelPage() {
           <Pill active={filterDir === 'OUT'} onClick={() => setFilterDir('OUT')}
             activeStyle={{ background: '#fff7ed', color: '#c2410c', borderColor: '#fdba74' }}>OUT</Pill>
         </div>
-
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
-
         <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
           <Pill active={filterType === 'ALL'}    onClick={() => setFilterType('ALL')}>ALL</Pill>
           <Pill active={filterType === 'FLIGHT'} onClick={() => setFilterType('FLIGHT')}>✈️ FLIGHT</Pill>
@@ -1642,9 +1511,7 @@ export default function TravelPage() {
           <Pill active={filterType === 'GROUND'} onClick={() => setFilterType('GROUND')}>🚐 GROUND</Pill>
           <Pill active={filterType === 'FERRY'}  onClick={() => setFilterType('FERRY')}>⛴️ FERRY</Pill>
         </div>
-
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
-
         <div style={{ display: 'flex', gap: '3px' }}>
           <Pill active={filterMatch === 'ALL'}       onClick={() => setFilterMatch('ALL')}>ALL</Pill>
           <Pill active={filterMatch === 'matched'}   onClick={() => setFilterMatch('matched')}
@@ -1652,7 +1519,6 @@ export default function TravelPage() {
           <Pill active={filterMatch === 'unmatched'} onClick={() => setFilterMatch('unmatched')}
             activeStyle={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>Unmatched</Pill>
         </div>
-
         {isFilterActive && (
           <button onClick={resetFilters}
             style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
@@ -1671,7 +1537,6 @@ export default function TravelPage() {
           </div>
         )}
 
-        {/* No columns configured */}
         {columnsConfig.length === 0 && !loading && (
           <div style={{ textAlign: 'center', padding: '40px 20px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>🗂</div>
@@ -1687,7 +1552,6 @@ export default function TravelPage() {
           </div>
         )}
 
-        {/* Summary bar */}
         {!loading && movements.length > 0 && (
           <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 20px', marginBottom: '20px',
             display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
@@ -1706,7 +1570,6 @@ export default function TravelPage() {
           </div>
         )}
 
-        {/* Loading */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading travel movements...</div>
 
@@ -1724,7 +1587,6 @@ export default function TravelPage() {
         ) : (
           sortedDates.map(date => (
             <div key={date} style={{ marginBottom: '32px' }}>
-              {/* Date header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', paddingBottom: '8px', borderBottom: '2px solid #0f2340' }}>
                 <span style={{ fontSize: '15px', fontWeight: '900', color: '#0f172a' }}>📅 {fmtDateHeader(date)}</span>
                 {date === today && (
@@ -1733,7 +1595,6 @@ export default function TravelPage() {
                 <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: 'auto' }}>{byDate[date].length} movements</span>
               </div>
 
-              {/* Sections */}
               {SECTIONS.map(section => {
                 const rows = byDate[date].filter(m => section.types.includes(m.travel_type))
                 if (rows.length === 0) return null
@@ -1765,7 +1626,7 @@ export default function TravelPage() {
         onSaved={handleMovementSaved}
         onDeleted={handleMovementDeleted}
         onAddLeg={openAddLeg}
-        currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null}
+        currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null}
       />
       <TravelColumnsEditorSidebar
         open={columnsEditorOpen}
