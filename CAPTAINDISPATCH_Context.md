@@ -53,6 +53,20 @@ RLS: SELECT filtra `is_private=false OR author_id=auth.uid()`; DELETE solo autor
 - Query `crew_notes` (solo `is_private=false`) + count client-side escludendo l'autore stesso e le note già in `read_by`
 - `CrewCard` riceve `unreadCount` prop → se > 0 mostra pallino arancio `❗` (18×18px) dopo il nome
 
+#### S58-D ✅ — Hotfix: badge 💬 visibile anche per note proprie — commit `3372c63`
+**Files**: `app/dashboard/crew/page.js` + `app/dashboard/travel/page.js`
+
+**Problema**: il badge `💬` compariva solo per note **scritte da altri** (logica `unreadCount`). Se il Captain scriveva una nota dalla Travel sidebar, diventava `author_id` → non contava come "unread" → badge spariva dalla crew card e dalla tabella travel.
+
+**Fix**:
+- Aggiunto `notesMap: { [crew_id]: total_count }` — conta **tutte** le note condivise per `crew_id` indipendentemente dall'autore
+- `loadUnreadMap(userId)` ora popola sia `unreadMap` (note non lette da altri) sia `notesMap` (totale)
+- **Logica badge**:
+  - 🟠 Badge arancio `❗` / `💬` (existente) → `unreadCount > 0` (note non lette da altri)
+  - 🟡 Badge giallo ambra `💬` (nuovo) → `notesCount > 0 && unreadCount === 0` (note presenti ma già lette o scritte da te)
+- In `crew/page.js`: `notesMap` stato + `notesCount={notesMap[m.id] || 0}` passato a ogni `CrewCard`; badge giallo nel `CrewCard` dopo il nome
+- In `travel/page.js`: `notesMap` stato + `notesCount` in `renderCell` case `full_name`; `notesMap` passato via `SectionTable` → `renderCell`
+
 #### S58-C ✅ — Integrazione Travel page — commit `c4a7b95`
 **File**: `app/dashboard/travel/page.js` (+153 righe)
 
