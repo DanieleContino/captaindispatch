@@ -1,3 +1,146 @@
+## PROFESSIONAL CODING STANDARDS — REGOLA PERMANENTE (aggiunta S59)
+
+> **Quando viene proposto o implementato un nuovo sistema, il modello DEVE sempre:**
+>
+> 1. **Identificare i bug esistenti** prima di aggiungere feature (diagnosi prima del codice)
+> 2. **Proporre l'architettura ottimale** — componenti estratti in `lib/`, non codice duplicato tra pagine
+> 3. **Codice chirurgico e scalabile** — ogni modifica deve essere un `replace_in_file` mirato, mai `write_to_file` su file esistenti
+> 4. **Single source of truth** — se la stessa logica/UI appare in 2+ posti, estrarre un componente condiviso in `lib/`
+> 5. **Realtime dove appropriato** — usare Supabase channel subscriptions per dati che cambiano tra utenti
+> 6. **Zero hardcoding di ruoli/contesti** — tutti i valori configurabili devono essere derivati dal DB
+> 7. **Feature parity tra pagine** — se una feature esiste in un sidebar, deve esistere in tutte le sidebar che condividono lo stesso dominio
+> 8. **Presentare sempre le opzioni** (piano base + upgrade professionali) PRIMA di implementare, con stima effort
+
+---
+
+## UPCOMING SESSION S59 — Notes System v2: Unified + Professional (14 May 2026)
+
+### Obiettivo generale S59
+Riscrivere il sistema note in modo professionale e unificato. Eliminare la duplicazione tra `NotesAccordion` (crew) e Team Notes (travel), fixare i 4 bug identificati, aggiungere Realtime e edit.
+
+### Bug identificati (tutti da fixare)
+
+| # | Bug | Root cause |
+|---|-----|-----------|
+| 1 | `author_role` sempre `'CAPTAIN'` | Hardcoded in `currentUser` in entrambe le pagine |
+| 2 | Nessun selettore "context/destinatario" | `context` hardcoded: `'general'` in crew, `'travel'` in travel |
+| 3 | Feature disparity crew vs travel | Travel manca: mark read, delete, private, highlight unread, mostra solo 3 note |
+| 4 | `❗` mai visibile (solo `💬`) | Comportamento corretto: `❗` mostra solo note di ALTRI utenti non lette. Se c'è un solo utente, sempre 0. Badge logic OK, bisogna documentare |
+| 5 | `loadUnreadMap` non si aggiorna dopo azioni | Solo al caricamento pagina, non live |
+
+### Architettura S59
+
+#### Nuovo file: `lib/NotesPanel.js`
+Componente unificato usato da TUTTE le sidebar che hanno note su un crew member.
+Props: `{ crewId, productionId, currentUser, onNotesSent }`
+
+**Features**:
+- Carica tutte le note via `GET /api/crew-notes`
+- Badge unread nell'header del panel
+- Lista scorrevole (max-height con overflow-y auto)
+- Per ogni nota: badge ruolo (CAPTAIN blu / TRAVEL viola / ACCOMMODATION verde), icona context, timestamp relativo, highlight unread
+- Azioni per lettori: `✓ Mark as read` / `📌 Remind me`
+- Azioni per autori: `✎ Edit` (entro 5min) / `🗑 Delete` (2-step confirm)
+- Pulsante `✓ Mark all as read` nell'header (solo se unread > 0)
+- Form: textarea + selettore context (3 pills: 🌐 General / ✈️ Travel / 🏨 Accommodation) + toggle Private/Shared + Send
+- Filtro pills: ALL / 🌐 / ✈️ / 🏨 (visibile con 3+ note)
+- Supabase Realtime subscription → reload automatico su INSERT/UPDATE/DELETE
+
+#### Modifiche `app/api/crew-notes/route.js`
+- Aggiungere `action: 'edit'` nel PATCH: `{ id, action: 'edit', content: newContent }` — solo autore, solo entro 5min da `created_at`
+- Il `author_role` nel POST viene SEMPRE derivato dal DB (`user_roles.role`), ignorando il valore client-side (più sicuro)
+
+#### Modifiche `app/dashboard/crew/page.js`
+- `CrewPage`: caricare `userRole` da `user_roles` → passare `role: userRole` in `currentUser`
+- `NotesAccordion`: sostituire l'implementazione inline con `<NotesPanel ...props />`
+- Rimuovere tutto il codice note inline (load, markRead, markUnread, handleDelete, handleSend, ROLE_COLOR, CTX_ICON, fmtRelative)
+
+#### Modifiche `app/dashboard/travel/page.js`
+- `TravelPage`: caricare `userRole` da `user_roles` → passare in `currentUser`
+- `MovementSidebar`: sostituire box "Team Notes" inline con `<NotesPanel ...props />`
+- Rimossa la funzione `sendNote()`, stati `sidebarNotes/notesLoading/noteText/noteSending` (gestiti dentro NotesPanel)
+- `loadUnreadMap`: Supabase Realtime rimpiazza il polling manuale → sempre aggiornato live
+
+### Suddivisione commit S59
+
+#### S59-A ✅ — `lib/NotesPanel.js` (nuovo componente unificato) — commit `f80b437`
+- `NotesPanel({ crewId, productionId, currentUser, onNotesSent })`
+- Tutto il CRUD: load, send, mark read/unread, bulk mark all, edit (5min), delete
+- Context selector + Private toggle + Filter pills
+- Supabase Realtime subscription
+- 421 righe
+
+#### S59-B — `crew/page.js` refactor
+- Carica `userRole` da DB
+- Rimuove codice note inline, usa `<NotesPanel>`
+- `loadUnreadMap` + Realtime subscription in CrewPage
+- ~(-100/+20 righe nette)
+
+#### S59-C — `travel/page.js` refactor
+- Carica `userRole` da DB
+- Rimuove box Team Notes inline, usa `<NotesPanel>`
+- Realtime in TravelPage per `unreadMap`
+- ~(-80/+15 righe nette)
+
+#### S59-D — `app/api/crew-notes/route.js` — add edit action
+- `action: 'edit'` nel PATCH
+- Controlla autore + `created_at + 5min`
+- `author_role` derivato sempre da DB (più sicuro)
+- ~+20 righe
+
+### ⚠️ Nessuna migrazione SQL richiesta
+Il DB ha già tutti i campi necessari: `context`, `author_role`, `is_private`, `read_by`, `created_at`.
+
+### Badge logic definitiva
+| Condizione | Badge |
+|-----------|-------|
+| Note da altri utenti non lette | 🟠 `❗ N` arancio |
+| Note presenti, tutte lette o tutte proprie | 🟡 `💬 N` ambra |
+| Nessuna nota | nessun badge |
+
+`❗` appare SOLO con multi-utente quando un altro coordinatore ha scritto e tu non hai letto.
+
+---
+
+## WHAT CHANGED IN SESSION S59 (14 May 2026)
+
+### S59-A ✅ — `lib/NotesPanel.js` — nuovo componente unificato — commit `f80b437`
+
+**File**: `lib/NotesPanel.js` (nuovo, 421 righe)
+
+**Export**: `export default function NotesPanel({ crewId, productionId, currentUser, onNotesSent })`
+
+**Implementazione completa**:
+
+- **Load + try/catch/finally** — `GET /api/crew-notes?crew_id=&production_id=`, setLoading/setNotes gestiti correttamente
+- **Supabase Realtime** — `supabase.channel('crew_notes:{crewId}:{productionId}')` con `postgres_changes` event `*` filtrato per `crew_id=eq.{crewId}` → reload automatico su INSERT/UPDATE/DELETE → **fix bug #5** (`loadUnreadMap` stale)
+- **Lista note** — `maxHeight: 320px` + `overflowY: auto`; badge ruolo CAPTAIN (blu) / TRAVEL (viola) / ACCOMMODATION (verde); icona context (🌐/✈️/🏨); highlight unread (`#fff7ed` + bordo arancio + `⬤ NEW`); timestamp relativo `fmtRelative()`
+- **✓ Mark as read / 📌 Remind me** — aggiornamento ottimistico locale + PATCH API
+- **✓ Mark all as read** — batch PATCH per tutte le unread + aggiornamento locale (visibile solo se unreadCount > 0)
+- **✎ Edit inline** (solo autore, entro 5 min) — textarea inline + Save/Cancel; chiama `PATCH {id, action:'edit', content}` — **attivo dopo S59-D**
+- **🗑 Delete 2-step** — click → confirm → DELETE API + rimozione locale
+- **Context selector pills** — 🌐 General / ✈️ Travel / 🏨 Accommodation → **fix bug #2** (context non più hardcoded)
+- **Filter pills** — ALL / 🌐 / ✈️ / 🏨, visibili con ≥3 note
+- **Toggle 🔒 Private / 🌐 Shared** — default Shared
+- **Textarea Send** — Enter senza Shift = send; `onNotesSent?.()` callback al parent
+- **`isUnread(note)`** — `note.author_id !== currentUser.id && !read_by.includes(currentUser.id)`
+- **`canEdit(note)`** — `note.author_id === currentUser.id && Date.now() - created_at < 5min`
+
+**Costanti**:
+```js
+const ROLE_COLOR = {
+  CAPTAIN:       { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+  TRAVEL:        { bg: '#faf5ff', color: '#7c3aed', border: '#c4b5fd' },
+  ACCOMMODATION: { bg: '#f0fdf4', color: '#15803d', border: '#86efac' },
+}
+const CTX_ICON  = { general: '🌐', travel: '✈️', accommodation: '🏨' }
+const CTX_LABEL = { general: 'General', travel: 'Travel', accommodation: 'Accommodation' }
+```
+
+**Import Supabase**: `import { supabase } from './supabase'` (client browser esistente in `lib/supabase.js`)
+
+---
+
 ## WHAT CHANGED IN SESSION S58 — Hotfix Notes (14 May 2026)
 
 ### S58-fix ✅ — NotesAccordion: loading infinito — commit `a597888`
