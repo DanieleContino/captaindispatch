@@ -238,8 +238,8 @@ function ColorPickerPopover({ field, rowId, currentColor, onColorSaved, onClose 
 }
 
 // ─── renderCell — data-driven cell renderer ────────────────────
-// S58-C: unreadMap added to context for 💬 badge in full_name column
-function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors, unreadMap }) {
+// S58-C: unreadMap + notesMap added to context for 💬 badge in full_name column
+function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors, unreadMap, notesMap }) {
   const field = col.source_field
   const base = {
     fontSize: '11px', color: '#374151',
@@ -271,6 +271,7 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
       }
       const displayName = m.crew?.full_name || m.full_name_raw || '-'
       const unreadCount = (m.crew_id && unreadMap) ? (unreadMap[m.crew_id] || 0) : 0
+      const notesCount  = (m.crew_id && notesMap)  ? (notesMap[m.crew_id]  || 0) : 0
       return (
         <td key={field} style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700',
           color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -287,6 +288,14 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
             <span title={`${unreadCount} unread note${unreadCount > 1 ? 's' : ''}`}
               style={{ marginLeft: '4px', fontSize: '9px', fontWeight: '800',
                 color: '#ea580c', background: '#fff7ed', border: '1px solid #fed7aa',
+                padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle' }}>
+              💬
+            </span>
+          )}
+          {notesCount > 0 && unreadCount === 0 && (
+            <span title={`${notesCount} note${notesCount > 1 ? 's' : ''}`}
+              style={{ marginLeft: '4px', fontSize: '9px', fontWeight: '700',
+                color: '#92400e', background: '#fef3c7', border: '1px solid #fcd34d',
                 padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle' }}>
               💬
             </span>
@@ -450,8 +459,8 @@ function buildDisplayRows(rows) {
 }
 
 // ─── SectionTable ─────────────────────────────────────────────
-// S58-C: unreadMap prop added — passed to renderCell for 💬 badge
-function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor, unreadMap }) {
+// S58-C: unreadMap + notesMap props added — passed to renderCell for 💬 badge
+function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor, unreadMap, notesMap }) {
   const [colorPicker, setColorPicker] = useState(null)
 
   function handleCellRightClick(e, rowId, field, currentColor) {
@@ -553,7 +562,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                   opacity: isLeg ? 0.9 : 1,
                 }}>
                   {columnsConfig.map(col =>
-                    renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors, unreadMap })
+                    renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors, unreadMap, notesMap })
                   )}
 
                   {/* Edit button — always last column */}
@@ -1240,6 +1249,8 @@ export default function TravelPage() {
 
   // S58-C: Crew notes unread map { [crew_id]: unread_count }
   const [unreadMap, setUnreadMap] = useState({})
+  // total notes per crew_id (includes notes authored by self)
+  const [notesMap,  setNotesMap]  = useState({})
 
   function openNew()   { setSidebarMode('new');  setSidebarTarget(null); setSidebarOpen(true) }
   function openEdit(m) { setSidebarMode('edit'); setSidebarTarget(m);    setSidebarOpen(true) }
@@ -1290,13 +1301,16 @@ export default function TravelPage() {
       .eq('production_id', PRODUCTION_ID)
       .eq('is_private', false)
     if (!data) return
-    const map = {}
+    const unread = {}
+    const total  = {}
     for (const note of data) {
+      total[note.crew_id] = (total[note.crew_id] || 0) + 1
       if (note.author_id === userId) continue
       if ((note.read_by || []).includes(userId)) continue
-      map[note.crew_id] = (map[note.crew_id] || 0) + 1
+      unread[note.crew_id] = (unread[note.crew_id] || 0) + 1
     }
-    setUnreadMap(map)
+    setUnreadMap(unread)
+    setNotesMap(total)
   }, [PRODUCTION_ID])
 
   // ── Section colors loader ──────────────────────────────────
@@ -1735,6 +1749,7 @@ export default function TravelPage() {
                     columnsConfig={columnsConfig}
                     sectionColor={sectionColors[section.key] || null}
                     unreadMap={unreadMap}
+                    notesMap={notesMap}
                   />
                 )
               })}

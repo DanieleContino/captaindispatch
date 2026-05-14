@@ -972,7 +972,7 @@ function NotesAccordion({ crewId, currentUser }) {
 }
 
 // ─── Crew card compatta ──────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0 }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0 }) {
   const t = useT()
   const isMobile = useIsMobile()
   const tc = TC[member.travel_status] || TC.PRESENT
@@ -1013,6 +1013,12 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
             <span title={`${unreadCount} unread note${unreadCount > 1 ? 's' : ''}`}
               style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: 'white', background: '#f97316', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', border: '2px solid white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', lineHeight: 1 }}>
               ❗
+            </span>
+          )}
+          {notesCount > 0 && unreadCount === 0 && (
+            <span title={`${notesCount} note${notesCount > 1 ? 's' : ''}`}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 3px', border: '1px solid #fcd34d', lineHeight: 1 }}>
+              💬
             </span>
           )}
           {member.role && (
@@ -1531,6 +1537,7 @@ export default function CrewPage() {
   const [travelMap, setTravelMap]       = useState({})
   const [staysMap,  setStaysMap]        = useState({})
   const [unreadMap, setUnreadMap]       = useState({})
+  const [notesMap,  setNotesMap]        = useState({})  // total notes per crew_id (incl. authored by self)
 
   async function loadUnreadMap(userId) {
     if (!PRODUCTION_ID || !userId) return
@@ -1540,14 +1547,19 @@ export default function CrewPage() {
       .eq('production_id', PRODUCTION_ID)
       .eq('is_private', false)
     if (!data) return
-    const map = {}
+    const unread = {}
+    const total  = {}
     for (const n of data) {
+      // total: count every note regardless of authorship
+      total[n.crew_id] = (total[n.crew_id] || 0) + 1
+      // unread: skip own notes and already-read notes
       if (n.author_id === userId) continue
       if (!(n.read_by || []).includes(userId)) {
-        map[n.crew_id] = (map[n.crew_id] || 0) + 1
+        unread[n.crew_id] = (unread[n.crew_id] || 0) + 1
       }
     }
-    setUnreadMap(map)
+    setUnreadMap(unread)
+    setNotesMap(total)
   }
 
   // Selezione bulk
@@ -2010,7 +2022,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} stays={staysMap[m.id] || []} unreadCount={unreadMap[m.id] || 0} />
+                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} stays={staysMap[m.id] || []} unreadCount={unreadMap[m.id] || 0} notesCount={notesMap[m.id] || 0} />
                   ))}
                 </div>
               </div>
