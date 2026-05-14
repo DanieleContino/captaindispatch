@@ -1,3 +1,74 @@
+## UPCOMING SESSIONS — S58: Note & Comunicazione (14 May 2026)
+
+### Obiettivo generale S58
+Sistema di comunicazione bidirezionale tramite note tra **Captain**, **Travel Coordinator** e **Accommodation Coordinator**. Ogni nota è associata a un crew member. Le note possono essere **condivise** (visibili a tutti nella produzione) o **private** (solo l'autore). I destinatari vedono un badge `❗` quando c'è una nota non letta.
+
+### Architettura
+
+#### Nuova tabella DB: `crew_notes` (`scripts/migrate-crew-notes.sql`)
+```sql
+CREATE TABLE crew_notes (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  production_id  TEXT NOT NULL,
+  crew_id        TEXT NOT NULL REFERENCES crew(id) ON DELETE CASCADE,
+  author_id      UUID NOT NULL,
+  author_name    TEXT NOT NULL,
+  author_role    TEXT NOT NULL DEFAULT 'CAPTAIN',
+  content        TEXT NOT NULL,
+  is_private     BOOLEAN NOT NULL DEFAULT false,
+  context        TEXT NOT NULL DEFAULT 'general',  -- 'travel'|'accommodation'|'general'
+  read_by        UUID[] NOT NULL DEFAULT '{}',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+RLS: SELECT filtra `is_private=false OR author_id=auth.uid()`; DELETE solo autore; UPDATE/INSERT solo membri della produzione.
+
+#### Nuova API Route: `app/api/crew-notes/route.js`
+- `GET ?crew_id=&production_id=` → lista note (RLS filtra private)
+- `POST` → crea nota (`{ crew_id, production_id, content, is_private, context, author_name, author_role }`)
+- `PATCH` → `{ id, action: 'mark_read' | 'mark_unread' }` — gestisce `read_by` array
+- `DELETE ?id=` → elimina (solo autore)
+
+### Suddivisione in sessioni
+
+#### S58-A ✅ DB + API (DONE — 14 May 2026)
+- `scripts/migrate-crew-notes.sql` — tabella + indici + RLS
+- `app/api/crew-notes/route.js` — GET/POST/PATCH/DELETE
+
+#### S58-B — NotesAccordion in CrewSidebar + badge CrewCard
+**File**: `app/dashboard/crew/page.js`
+
+**`NotesAccordion({ crewId, productionId, currentUser })`** — 4° accordion in CrewSidebar (dopo TravelAccordion):
+- Load lazy delle note all'apertura (GET `/api/crew-notes?crew_id=&production_id=`)
+- Lista note con: badge `[TRAVEL]`/`[CAPTAIN]`/etc. colorato per ruolo, icona contesto, timestamp relativo, contenuto
+- Note non lette evidenziate (bordo arancio + badge `⬤ NEW`)
+- Pulsanti: `✓ Mark as read` / `📌 Reminder` (mark_unread)
+- Form add nota: textarea + toggle `🔒 Privata / 🌐 Condivisa` + bottone `Send`
+- L'autore vede propria nota senza "mark as read" + pulsante 🗑 delete
+
+**Badge `❗` su `CrewCard`**:
+- In `CrewPage`: dopo `loadCrew()`, query aggregata `crew_notes` per unread counts per crew_id
+- `unreadMap: { [crew_id]: number }` — numero note condivise non lette per l'utente corrente
+- `CrewCard` riceve `unreadCount` prop → se > 0 mostra badge arancio `❗` nell'angolo
+
+#### S58-C — Integrazione Travel page
+**File**: `app/dashboard/travel/page.js`
+
+**Sezione note in `MovementSidebar`**:
+- Appare quando `form.crew_id` è valorizzato
+- Mini-lista compatta note esistenti (ultime 3, solo condivise)
+- Textarea rapida "Nota per il team" + Send → `context: 'travel'`, `is_private: false`
+- Ricarica dopo send
+
+**Badge `💬` in tabella**:
+- In `TravelPage`: load unread note counts per crew
+- Nella renderCell `full_name`: se `unreadMap[m.crew_id] > 0` → piccolo badge arancio accanto al nome
+
+### ⚠️ Azione manuale richiesta (S58-A)
+Eseguire `scripts/migrate-crew-notes.sql` nel pannello SQL di Supabase prima di S58-B.
+
+---
+
 ## WHAT CHANGED IN SESSION S57 (12 May 2026)
 
 ### Feature ✅ — Travel: auto-sync `crew.arrival_date` / `departure_date` / `travel_status` dal sidebar
