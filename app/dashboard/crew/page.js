@@ -769,11 +769,16 @@ function NotesAccordion({ crewId, currentUser }) {
 
   async function load() {
     setLoading(true)
-    const res = await fetch(`/api/crew-notes?crew_id=${crewId}&production_id=${PRODUCTION_ID}`)
-    const json = await res.json()
-    setNotes(json.notes || [])
-    setLoading(false)
-    setLoaded(true)
+    try {
+      const res = await fetch(`/api/crew-notes?crew_id=${crewId}&production_id=${PRODUCTION_ID}`)
+      const json = await res.json()
+      setNotes(json.notes || [])
+    } catch (err) {
+      console.error('NotesAccordion load:', err)
+    } finally {
+      setLoading(false)
+      setLoaded(true)
+    }
   }
 
   function toggle() {

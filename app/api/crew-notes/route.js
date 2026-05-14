@@ -4,7 +4,7 @@
  *
  * GET    ?crew_id=&production_id=   → lista note per un crew member
  * POST                              → crea nuova nota
- * PATCH  ?id=&action=mark_read      → marca nota come letta dall'utente corrente
+ * PATCH  { id, action }             → mark_read | mark_unread
  * DELETE ?id=                       → elimina nota (solo autore)
  */
 
@@ -14,16 +14,22 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-function makeSupabase() {
-  const cookieStore = cookies()
+// Helper: crea client Supabase con cookies asincroni (Next.js 15+/16)
+async function makeSupabase() {
+  const cookieStore = await cookies()
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
-        get(name)         { return cookieStore.get(name)?.value },
-        set(name, value, options) { try { cookieStore.set({ name, value, ...options }) } catch {} },
-        remove(name, options)     { try { cookieStore.set({ name, value: '', ...options }) } catch {} },
+        getAll()            { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {}
+        },
       },
     }
   )
@@ -39,7 +45,7 @@ export async function GET(request) {
     return NextResponse.json({ error: 'crew_id and production_id required' }, { status: 400 })
   }
 
-  const supabase = makeSupabase()
+  const supabase = await makeSupabase()
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -58,7 +64,7 @@ export async function GET(request) {
 
 // ─── POST — crea nuova nota ───────────────────────────────────
 export async function POST(request) {
-  const supabase = makeSupabase()
+  const supabase = await makeSupabase()
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -103,9 +109,9 @@ export async function POST(request) {
   return NextResponse.json({ note: data }, { status: 201 })
 }
 
-// ─── PATCH — mark as read ─────────────────────────────────────
+// ─── PATCH — mark as read / mark as unread ───────────────────
 export async function PATCH(request) {
-  const supabase = makeSupabase()
+  const supabase = await makeSupabase()
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -118,7 +124,6 @@ export async function PATCH(request) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
   if (action === 'mark_read') {
-    // Aggiunge user.id a read_by se non già presente
     const { data: note } = await supabase
       .from('crew_notes')
       .select('read_by, author_id')
@@ -147,7 +152,6 @@ export async function PATCH(request) {
   }
 
   if (action === 'mark_unread') {
-    // Rimuove user.id da read_by (lascia come promemoria)
     const { data: note } = await supabase
       .from('crew_notes')
       .select('read_by')
@@ -176,7 +180,7 @@ export async function DELETE(request) {
 
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const supabase = makeSupabase()
+  const supabase = await makeSupabase()
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
