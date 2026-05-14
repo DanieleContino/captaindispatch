@@ -78,6 +78,46 @@ const ROLE_CHANNEL = { TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
 
 ---
 
+## SESSION S63-B — Notes: writeContexts + design canali corretto (14 May 2026)
+
+### S63-B ✅ — Design canali Note corretto — commit `7c1a81c`
+
+**Logica definitiva dei canali** (canali = destinatari, non gate di accesso):
+
+**Form di scrittura** (`writeContexts`): ogni ruolo vede tutti i canali TRANNE il proprio
+- CAPTAIN scrive a: 🌐 General, ✈️ Travel, 🏨 Accommodation — NON 🧑‍✈️ Captain
+- TRAVEL scrive a: 🌐 General, 🧑‍✈️ Captain, 🏨 Accommodation — NON ✈️ Travel
+- ACCOMMODATION scrive a: 🌐 General, 🧑‍✈️ Captain, ✈️ Travel — NON 🏨 Accommodation
+- ADMIN/MANAGER/PRODUCTION: tutti e 4
+
+**Filter pills di lettura** (`visibleContexts`): solo il proprio canale + general
+- CAPTAIN legge: general + captain + proprie
+- TRAVEL legge: general + travel + proprie
+- ACCOMMODATION legge: general + accommodation + proprie
+
+**Default context scrittura**: sempre `'general'` per tutti
+
+**Rationale**: "non ha senso scrivere a se stessi" — il canale identifica il destinatario, non l'autore. Chiunque può scrivere a chiunque scegliendo il canale giusto.
+
+**Implementazione**:
+```js
+// writeContexts = tutti TRANNE il proprio canale
+const writeContexts = UNRESTRICTED_R.includes(userRole)
+  ? CONTEXTS
+  : CONTEXTS.filter(c => c !== ROLE_CHANNEL[userRole])
+
+// visibleContexts = solo i canali che ricevi (invariato)
+const visibleContexts = UNRESTRICTED_R.includes(userRole)
+  ? CONTEXTS
+  : ['general', ROLE_CHANNEL[userRole]].filter(Boolean)
+```
+
+**Fix S63 revertito**: CAPTAIN torna restricted (non unrestricted come in S63).
+`UNRESTRICTED_R = ['ADMIN', 'MANAGER', 'PRODUCTION']`
+`ROLE_CHANNEL = { CAPTAIN: 'captain', TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }`
+
+---
+
 ## SESSION S62 — Navbar TRAVEL home fix (14 May 2026)
 
 ### S62 ✅ — Bug fix: utente TRAVEL non poteva tornare a /dashboard/travel dalla navbar
