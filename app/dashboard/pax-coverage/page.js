@@ -39,6 +39,18 @@ function minToHHMM(min) {
   const m = ((min % 1440) + 1440) % 1440
   return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60)
 }
+/**
+ * Restituisce true se il crew è "attivo" nella data d.
+ * Un crew è attivo se:
+ *  - non ha ancora una departure_date, oppure departure_date >= d (non ancora partito)
+ *  - non ha ancora una arrival_date, oppure arrival_date <= d (già arrivato)
+ */
+function isCrewActiveOnDate(c, d) {
+  if (c.departure_date && c.departure_date < d) return false
+  if (c.arrival_date   && c.arrival_date   > d) return false
+  return true
+}
+
 function isTomorrow(s) {
   if (!s) return false
   const t = new Date(); t.setDate(t.getDate() + 1)
@@ -483,7 +495,7 @@ export default function PaxCoveragePage() {
     setLoading(true)
 
     const [crewRes, tripsRes] = await Promise.all([
-      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,travel_status,departure_date,no_transport_needed,on_location')
+      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,travel_status,arrival_date,departure_date,no_transport_needed,on_location')
         .eq('production_id', PRODUCTION_ID)
         .eq('hotel_status', 'CONFIRMED')
         .order('department', { nullsLast: true })
@@ -494,7 +506,8 @@ export default function PaxCoveragePage() {
         .neq('status', 'CANCELLED'),
     ])
 
-    const crewData  = crewRes.data  || []
+    // Filtra il crew per data: escludi chi è già partito o non è ancora arrivato
+    const crewData  = (crewRes.data || []).filter(c => isCrewActiveOnDate(c, d))
     const tripsData = tripsRes.data || []
     const tripIds   = tripsData.map(t => t.id)
 
