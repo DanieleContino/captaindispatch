@@ -8,6 +8,7 @@ import { useT } from '../../../lib/i18n'
 import { normalizeDept } from '../../../lib/normalizeDept'
 import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
+import NotesPanel from '../../../lib/NotesPanel'
 
 const SIDEBAR_W = 400
 
@@ -755,227 +756,6 @@ function TravelAccordion({ crewId }) {
   )
 }
 
-// ─── Notes Accordion ────────────────────────────────────────
-function NotesAccordion({ crewId, currentUser }) {
-  const PRODUCTION_ID = getProductionId()
-  const [open, setOpen] = useState(false)
-  const [loaded, setLoaded] = useState(false)
-  const [notes, setNotes] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [text, setText] = useState('')
-  const [isPrivate, setIsPrivate] = useState(false)
-  const [delConfirm, setDelConfirm] = useState(null)
-
-  async function load() {
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/crew-notes?crew_id=${crewId}&production_id=${PRODUCTION_ID}`)
-      const json = await res.json()
-      setNotes(json.notes || [])
-    } catch (err) {
-      console.error('NotesAccordion load:', err)
-    } finally {
-      setLoading(false)
-      setLoaded(true)
-    }
-  }
-
-  function toggle() {
-    const next = !open
-    setOpen(next)
-    if (next && !loaded) load()
-  }
-
-  function fmtRelative(ts) {
-    const diff = Date.now() - new Date(ts).getTime()
-    const mins = Math.floor(diff / 60000)
-    if (mins < 2)   return 'just now'
-    if (mins < 60)  return `${mins}m ago`
-    const hrs = Math.floor(mins / 60)
-    if (hrs < 24)   return `${hrs}h ago`
-    const days = Math.floor(hrs / 24)
-    return `${days}d ago`
-  }
-
-  function isUnread(note) {
-    if (!currentUser) return false
-    if (note.author_id === currentUser.id) return false
-    return !(note.read_by || []).includes(currentUser.id)
-  }
-
-  async function markRead(note) {
-    if (!currentUser) return
-    await fetch('/api/crew-notes', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: note.id, action: 'mark_read' }),
-    })
-    setNotes(prev => prev.map(n => n.id === note.id ? { ...n, read_by: [...(n.read_by || []), currentUser.id] } : n))
-  }
-
-  async function markUnread(note) {
-    if (!currentUser) return
-    await fetch('/api/crew-notes', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: note.id, action: 'mark_unread' }),
-    })
-    setNotes(prev => prev.map(n => n.id === note.id ? { ...n, read_by: (n.read_by || []).filter(id => id !== currentUser.id) } : n))
-  }
-
-  async function handleDelete(id) {
-    if (delConfirm !== id) { setDelConfirm(id); return }
-    await fetch(`/api/crew-notes?id=${id}`, { method: 'DELETE' })
-    setNotes(prev => prev.filter(n => n.id !== id))
-    setDelConfirm(null)
-  }
-
-  async function handleSend() {
-    if (!text.trim() || !currentUser) return
-    setSending(true)
-    const res = await fetch('/api/crew-notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        crew_id: crewId,
-        production_id: PRODUCTION_ID,
-        content: text.trim(),
-        is_private: isPrivate,
-        context: 'general',
-        author_name: currentUser.name,
-        author_role: currentUser.role || 'CAPTAIN',
-      }),
-    })
-    const json = await res.json()
-    setSending(false)
-    if (json.note) {
-      setNotes(prev => [json.note, ...prev])
-      setText('')
-    }
-  }
-
-  const ROLE_COLOR = {
-    CAPTAIN:       { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-    TRAVEL:        { bg: '#faf5ff', color: '#7c3aed', border: '#c4b5fd' },
-    ACCOMMODATION: { bg: '#f0fdf4', color: '#15803d', border: '#86efac' },
-  }
-  const CTX_ICON = { general: '💬', travel: '✈️', accommodation: '🏨' }
-  const unreadCount = notes.filter(n => isUnread(n)).length
-
-  return (
-    <div style={{ marginBottom: '12px' }}>
-      <button type="button" onClick={toggle}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: open ? '8px 8px 0 0' : '8px', border: '1px solid #e2e8f0', background: open ? '#fffbeb' : '#f8fafc', cursor: 'pointer', transition: 'background 0.15s' }}>
-        <span style={{ fontSize: '12px', fontWeight: '700', color: open ? '#b45309' : '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          💬 Notes
-          {notes.length > 0 && (
-            <span style={{ fontSize: '10px', fontWeight: '700', color: '#92400e', background: '#fef3c7', padding: '1px 6px', borderRadius: '999px', border: '1px solid #fcd34d' }}>✓ {notes.length}</span>
-          )}
-          {unreadCount > 0 && (
-            <span style={{ fontSize: '10px', fontWeight: '700', color: 'white', background: '#f97316', padding: '1px 6px', borderRadius: '999px', border: '1px solid #fb923c' }}>❗ {unreadCount} new</span>
-          )}
-        </span>
-        <span style={{ fontSize: '12px', color: '#94a3b8', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▾</span>
-      </button>
-
-      {open && (
-        <div style={{ border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', background: '#fffbeb', padding: '10px 12px 8px' }}>
-          {loading ? (
-            <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', padding: '8px' }}>Loading…</div>
-          ) : (
-            <>
-              {notes.length === 0 && (
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontStyle: 'italic' }}>No notes yet</div>
-              )}
-
-              {notes.map(n => {
-                const unread = isUnread(n)
-                const isAuthor = currentUser && n.author_id === currentUser.id
-                const roleCls = ROLE_COLOR[n.author_role] || ROLE_COLOR.CAPTAIN
-                const ctxIcon = CTX_ICON[n.context] || '💬'
-                return (
-                  <div key={n.id} style={{
-                    background: unread ? '#fff7ed' : 'white',
-                    border: `1px solid ${unread ? '#fb923c' : '#e2e8f0'}`,
-                    borderLeft: `3px solid ${unread ? '#f97316' : '#e2e8f0'}`,
-                    borderRadius: '7px', padding: '8px 10px', marginBottom: '6px',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '10px', fontWeight: '700', color: roleCls.color, background: roleCls.bg, padding: '1px 6px', borderRadius: '999px', border: `1px solid ${roleCls.border}` }}>
-                        {n.author_role}
-                      </span>
-                      <span style={{ fontSize: '11px', fontWeight: '600', color: '#374151' }}>{n.author_name}</span>
-                      <span style={{ fontSize: '10px' }}>{ctxIcon}</span>
-                      {n.is_private && (
-                        <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '999px' }}>🔒</span>
-                      )}
-                      {unread && (
-                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#f97316' }}>⬤ NEW</span>
-                      )}
-                      <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: 'auto' }}>{fmtRelative(n.created_at)}</span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#0f172a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{n.content}</div>
-                    <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
-                      {!isAuthor && unread && (
-                        <button type="button" onClick={() => markRead(n)}
-                          style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '5px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', cursor: 'pointer', fontWeight: '700' }}>
-                          ✓ Mark as read
-                        </button>
-                      )}
-                      {!isAuthor && !unread && (
-                        <button type="button" onClick={() => markUnread(n)}
-                          style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '5px', border: '1px solid #fcd34d', background: '#fffbeb', color: '#92400e', cursor: 'pointer', fontWeight: '700' }}>
-                          📌 Remind me
-                        </button>
-                      )}
-                      {isAuthor && (
-                        delConfirm === n.id ? (
-                          <div style={{ display: 'flex', gap: '3px' }}>
-                            <button type="button" onClick={() => setDelConfirm(null)}
-                              style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '5px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer' }}>✕</button>
-                            <button type="button" onClick={() => handleDelete(n.id)}
-                              style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '5px', border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer', fontWeight: '700' }}>⚠ Del</button>
-                          </div>
-                        ) : (
-                          <button type="button" onClick={() => handleDelete(n.id)}
-                            style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '5px', border: '1px solid #fecaca', background: '#fff1f2', color: '#dc2626', cursor: 'pointer' }}>🗑</button>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-
-              {/* Add note form */}
-              <div style={{ marginTop: '8px', borderTop: notes.length > 0 ? '1px solid #fde68a' : 'none', paddingTop: notes.length > 0 ? '8px' : '0' }}>
-                <textarea
-                  value={text}
-                  onChange={e => setText(e.target.value)}
-                  placeholder="Add a note for the team…"
-                  style={{ width: '100%', padding: '6px 8px', border: '1px solid #fcd34d', borderRadius: '6px', fontSize: '12px', resize: 'vertical', minHeight: '52px', boxSizing: 'border-box', fontFamily: 'inherit', color: '#0f172a', background: 'white' }}
-                />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px' }}>
-                  <button type="button" onClick={() => setIsPrivate(p => !p)}
-                    style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '999px', border: '1px solid', cursor: 'pointer', fontWeight: '700',
-                      ...(isPrivate ? { background: '#f1f5f9', color: '#475569', borderColor: '#cbd5e1' } : { background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }) }}>
-                    {isPrivate ? '🔒 Private' : '🌐 Shared'}
-                  </button>
-                  <div style={{ flex: 1 }} />
-                  <button type="button" onClick={handleSend} disabled={sending || !text.trim()}
-                    style={{ fontSize: '11px', padding: '4px 12px', borderRadius: '6px', border: 'none', background: (sending || !text.trim()) ? '#94a3b8' : '#b45309', color: 'white', cursor: (sending || !text.trim()) ? 'default' : 'pointer', fontWeight: '700' }}>
-                    {sending ? 'Sending…' : 'Send'}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ─── Crew card compatta ──────────────────────────────────────
 function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0 }) {
   const t = useT()
@@ -1460,7 +1240,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                   }}
                 />
                 <TravelAccordion key={`travel-${initial.id}-${editKey}`} crewId={initial.id} />
-                <NotesAccordion key={`notes-${initial.id}-${editKey}`} crewId={initial.id} currentUser={currentUser} />
+                <NotesPanel key={`notes-${initial.id}-${editKey}`} crewId={initial.id} productionId={PRODUCTION_ID} currentUser={currentUser} />
               </>
             )}
 
@@ -1543,6 +1323,7 @@ export default function CrewPage() {
   const [staysMap,  setStaysMap]        = useState({})
   const [unreadMap, setUnreadMap]       = useState({})
   const [notesMap,  setNotesMap]        = useState({})  // total notes per crew_id (incl. authored by self)
+  const [userRole,  setUserRole]        = useState('CAPTAIN')
 
   async function loadUnreadMap(userId) {
     if (!PRODUCTION_ID || !userId) return
@@ -1602,6 +1383,9 @@ export default function CrewPage() {
       if (!user) { router.push('/login'); return }
       if (PRODUCTION_ID) {
         await supabase.from('user_roles').upsert({ user_id: user.id, production_id: PRODUCTION_ID, role: 'CAPTAIN' }, { onConflict: 'user_id,production_id', ignoreDuplicates: true })
+        // Leggi il ruolo reale da DB (potrebbe essere CAPTAIN, TRAVEL, ACCOMMODATION, ecc.)
+        const { data: roleRow } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('production_id', PRODUCTION_ID).single()
+        if (roleRow?.role) setUserRole(roleRow.role)
         const { data: locs } = await supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name')
         if (locs) {
           const m = {}; locs.forEach(l => { m[l.id] = l.name })
@@ -1682,6 +1466,23 @@ export default function CrewPage() {
   }, [])
 
   useEffect(() => { if (user) { loadCrew(); loadUnreadMap(user.id) } }, [user, loadCrew])
+
+  // Realtime subscription → aggiorna unreadMap + notesMap su ogni cambio crew_notes nella produzione
+  useEffect(() => {
+    if (!user || !PRODUCTION_ID) return
+    const channel = supabase
+      .channel(`crew_notes_prod_${PRODUCTION_ID}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'crew_notes',
+        filter: `production_id=eq.${PRODUCTION_ID}`,
+      }, () => {
+        loadUnreadMap(user.id)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user])
 
   function handleStatusChange(id, s)            { setCrew(p => p.map(c => c.id === id ? { ...c, travel_status: s } : c)) }
   function handleNTNChange(id, val)             { setCrew(p => p.map(c => c.id === id ? { ...c, no_transport_needed: val } : c)) }
@@ -2045,7 +1846,7 @@ export default function CrewPage() {
         deptOptions={departments.filter(d => d !== 'NO DEPT')}
         onClose={() => setSO(false)}
         onSaved={handleSaved}
-        currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null}
+        currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null}
       />
 
     </div>
