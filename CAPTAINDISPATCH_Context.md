@@ -53,18 +53,28 @@ RLS: SELECT filtra `is_private=false OR author_id=auth.uid()`; DELETE solo autor
 - Query `crew_notes` (solo `is_private=false`) + count client-side escludendo l'autore stesso e le note già in `read_by`
 - `CrewCard` riceve `unreadCount` prop → se > 0 mostra pallino arancio `❗` (18×18px) dopo il nome
 
-#### S58-C — Integrazione Travel page
-**File**: `app/dashboard/travel/page.js`
+#### S58-C ✅ — Integrazione Travel page — commit `c4a7b95`
+**File**: `app/dashboard/travel/page.js` (+153 righe)
 
-**Sezione note in `MovementSidebar`**:
-- Appare quando `form.crew_id` è valorizzato
-- Mini-lista compatta note esistenti (ultime 3, solo condivise)
-- Textarea rapida "Nota per il team" + Send → `context: 'travel'`, `is_private: false`
-- Ricarica dopo send
+**`relTime(ts)`** — helper a module level: converte timestamp in "just now / Nm ago / Nh ago / Nd ago"
 
-**Badge `💬` in tabella**:
-- In `TravelPage`: load unread note counts per crew
-- Nella renderCell `full_name`: se `unreadMap[m.crew_id] > 0` → piccolo badge arancio accanto al nome
+**`renderCell` — case `full_name`**: aggiunto `unreadCount = unreadMap[m.crew_id] || 0` → badge `💬` arancio (`#ea580c`) se > 0 con tooltip "N unread note"
+
+**`SectionTable`**: riceve `unreadMap` prop e lo passa a `renderCell`
+
+**`MovementSidebar`**:
+- Prop `currentUser` aggiunto per authoring note
+- Stati: `sidebarNotes, notesLoading, noteText, noteSending`
+- `useEffect` su `form.crew_id`: carica ultime 3 note condivise (`is_private=false`) all'apertura; reset su close
+- `sendNote()`: `INSERT crew_notes` con `context: 'travel', is_private: false` + reload lista
+- Box ambra `💬 Team Notes` visibile solo se `form.crew_id` valorizzato; note mini-card con badge ruolo (CAPTAIN blu / TRAVEL viola / altri verde) + `relTime` + emoji contesto; textarea + Send button (Enter senza Shift = send)
+
+**`TravelPage`**:
+- `unreadMap` state `{ [crew_id]: number }`
+- `loadUnreadMap(userId)`: query `crew_notes` (solo `is_private=false`), count client-side escludendo autori e note già lette
+- `loadUnreadMap(user.id)` chiamata nell'`useEffect` iniziale
+- `unreadMap={unreadMap}` passato a ogni `SectionTable`
+- `currentUser={{ id, name, role }}` passato a `MovementSidebar`
 
 ### ⚠️ Azione manuale richiesta (S58-A)
 Eseguire `scripts/migrate-crew-notes.sql` nel pannello SQL di Supabase prima di S58-B.
