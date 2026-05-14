@@ -13,6 +13,138 @@
 
 ---
 
+## SESSION S60 — Bridge: Team Members Access Management (14 May 2026)
+
+### Obiettivo
+Aggiungere al Captain Bridge un pannello di gestione del team: visualizzare tutti i membri della produzione, cambiare i loro ruoli e revocare l'accesso. Espandere i ruoli disponibili per includere **Travel Coordinator** e **Accommodation Coordinator**.
+
+### Commit
+`a11bb69` — `feat(bridge): S60 — Team Members access management panel`
+**3 file changed, 553 insertions(+), 3 deletions(-)**
+
+---
+
+### S60-A ✅ — Migration SQL (`scripts/migrate-roles-expansion.sql`)
+
+Espande i `CHECK` constraint di due tabelle:
+
+```sql
+-- user_roles: aggiunge TRAVEL e ACCOMMODATION
+ALTER TABLE user_roles DROP CONSTRAINT IF EXISTS user_roles_role_check;
+ALTER TABLE user_roles ADD CONSTRAINT user_roles_role_check
+  CHECK (role IN ('CAPTAIN','ADMIN','MANAGER','PRODUCTION','TRAVEL','ACCOMMODATION'));
+
+-- production_invites: aggiunge TRAVEL e ACCOMMODATION
+ALTER TABLE production_invites DROP CONSTRAINT IF EXISTS production_invites_role_check;
+ALTER TABLE production_invites ADD CONSTRAINT production_invites_role_check
+  CHECK (role IN ('CAPTAIN','MANAGER','PRODUCTION','TRAVEL','ACCOMMODATION'));
+```
+
+**⚠️ Azione manuale**: eseguire `scripts/migrate-roles-expansion.sql` nel Supabase SQL Editor prima di usare i nuovi ruoli.
+
+---
+
+### S60-B ✅ — Nuova API `app/api/bridge/members/route.js`
+
+Tre metodi HTTP sulla stessa route:
+
+| Metodo | Parametri | Descrizione |
+|--------|-----------|-------------|
+| `GET` | `?production_id=` | Lista tutti i membri con `email`, `name`, `avatar_url`, `role`, `joined_at`, `last_sign_in_at` |
+| `PATCH` | `{ user_id, production_id, role }` | Cambia ruolo con protezioni server |
+| `DELETE` | `{ user_id, production_id }` | Rimuove accesso con protezioni server |
+
+**Protezioni server-side (doppio livello: client + server)**:
+- Caller deve essere `CAPTAIN` o `ADMIN` per la produzione (403 altrimenti)
+- Non puoi cambiare il tuo stesso ruolo (403 — "Ask another Captain")
+- Non puoi rimuoverti dalla produzione (403)
+- Non puoi declassare l'ultimo Captain (409 — "Cannot demote the last Captain")
+- Non puoi rimuovere l'ultimo Captain (409 — "Cannot remove the last Captain")
+
+**Implementazione GET**: usa `service.auth.admin.listUsers()` per arricchire i dati con `email`, `name` (da `user_metadata`), `avatar_url`, `last_sign_in_at`.
+
+---
+
+### S60-C ✅ — `TeamMembersWidget` in `app/dashboard/bridge/page.js`
+
+Nuovo widget con UX a doppio confirm. Tutti i testi in inglese.
+
+**Ordinamento**: CAPTAIN/ADMIN in cima, poi alfabetico per nome/email.
+
+**Riga utente corrente**: read-only (badge ruolo, nessun controllo di modifica). Tutte le altre righe mostrano:
+1. **Badge ruolo** (colorato con emoji, da `ROLE_META`)
+2. **Role select** (dropdown nativo — se selezioni un ruolo diverso dall'attuale, appare il pulsante 💾 Save)
+3. **Pulsante 🗑** (apre il pannello di rimozione inline)
+
+#### Confirm panel per cambio ruolo (sfondo giallo `#fffbeb`, bordo arancio)
+- Mostra: `From: [badge] → To: [badge]`
+- Messaggi implicazioni dinamici via `roleImplicationMessage(fromRole, toRole)`:
+  - Da admin a non-admin: "will lose admin access"
+  - Da non-admin a admin: "will gain full admin access"
+  - Da TRAVEL/ACCOMMODATION: "will lose X features, notes keep the badge"
+  - A TRAVEL/ACCOMMODATION: "will gain access to X features"
+  - Generico: "notes keep the original role badge"
+- Pulsanti: Cancel | ✓ Confirm role change
+
+#### Confirm panel per rimozione (sfondo rosso `#fef2f2`, bordo rosso)
+- Lista bullet delle 5 conseguenze (accesso revocato, account non eliminato, note conservate, ecc.)
+- Campo "Type REMOVE to confirm" — il pulsante **🗑 Remove access** è disabilitato finché il valore non è esattamente `"REMOVE"` (gestito con `toUpperCase()` durante la digitazione)
+- Pulsanti: Cancel | 🗑 Remove access (disabilitato se input ≠ "REMOVE")
+
+**Gestione errori**: banner rosso globale in cima al widget con ✕ per chiudere.
+
+---
+
+### S60-D ✅ — Aggiornamenti costanti in `app/dashboard/bridge/page.js`
+
+#### `ROLES` (usato nei `<select>` dei form InviteCodesWidget)
+```js
+// PRIMA:
+const ROLES = ['MANAGER', 'PRODUCTION', 'CAPTAIN']
+
+// DOPO:
+const ROLES = ['CAPTAIN', 'TRAVEL', 'ACCOMMODATION', 'PRODUCTION', 'MANAGER']
+```
+I select "Role assigned" (creazione invito + edit invito) si aggiornano automaticamente.
+
+#### `ROLE_META` (nuovo)
+```js
+const ROLE_META = {
+  CAPTAIN:       { label: 'Captain',                   emoji: '🎖', bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+  ADMIN:         { label: 'Admin',                     emoji: '⚙️', bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' },
+  TRAVEL:        { label: 'Travel Coordinator',        emoji: '✈️', bg: '#faf5ff', color: '#7c3aed', border: '#c4b5fd' },
+  ACCOMMODATION: { label: 'Accommodation Coordinator', emoji: '🏨', bg: '#f0fdf4', color: '#15803d', border: '#86efac' },
+  PRODUCTION:    { label: 'Production',                emoji: '🎬', bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+  MANAGER:       { label: 'Manager',                   emoji: '👤', bg: '#f8fafc', color: '#475569', border: '#e2e8f0' },
+}
+const ALL_ASSIGNABLE_ROLES = ['CAPTAIN', 'TRAVEL', 'ACCOMMODATION', 'PRODUCTION', 'MANAGER']
+```
+
+#### Tab "👥 Team" (nuovo tab nel Bridge)
+```js
+const TABS = [
+  { id: 'overview', label: '⚓ Overview' },
+  { id: 'team',     label: '👥 Team' },      // ← nuovo
+  { id: 'pending',  label: '⏳ Pending' },
+  { id: 'invites',  label: '🔑 Invites' },
+]
+```
+
+---
+
+### Ruoli disponibili post-S60
+
+| Ruolo | Emoji | Uso |
+|-------|-------|-----|
+| `CAPTAIN` | 🎖 | Admin completo: Bridge, approvazioni, inviti, team |
+| `ADMIN` | ⚙️ | Accesso admin interno (system level) |
+| `TRAVEL` | ✈️ | Travel Coordinator — accesso Travel page |
+| `ACCOMMODATION` | 🏨 | Accommodation Coordinator — accesso Accommodation |
+| `PRODUCTION` | 🎬 | Production member |
+| `MANAGER` | 👤 | Manager generico |
+
+---
+
 ## SESSION S59 — Notes System v2: Unified + Professional (14 May 2026)
 
 ### ✅ S59-C COMPLETATO (14 May 2026) — `app/dashboard/travel/page.js`
