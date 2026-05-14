@@ -49,10 +49,11 @@ export async function GET(request) {
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // ── Role-based visibility (S61-B) ────────────────────────
-  // UNRESTRICTED: vede tutto | CAPTAIN/TRAVEL/ACCOMMODATION: solo proprio canale + general
-  const UNRESTRICTED = ['ADMIN', 'MANAGER', 'PRODUCTION']
-  const ROLE_CHANNEL = { CAPTAIN: 'captain', TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
+  // ── Role-based visibility (S61-B rev. S63) ───────────────
+  // CAPTAIN è unrestricted: è il ruolo principale del sistema e vede tutti i canali
+  // TRAVEL/ACCOMMODATION: solo proprio canale + general
+  const UNRESTRICTED = ['ADMIN', 'MANAGER', 'PRODUCTION', 'CAPTAIN']
+  const ROLE_CHANNEL = { TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
 
   const { data: roleData } = await supabase
     .from('user_roles')
