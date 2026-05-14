@@ -1,3 +1,25 @@
+## WHAT CHANGED IN SESSION S58 — Hotfix Notes (14 May 2026)
+
+### S58-fix ✅ — NotesAccordion: loading infinito — commit `a597888`
+**Files**: `app/api/crew-notes/route.js` + `app/dashboard/crew/page.js`
+
+**Problema**: aprendo il 4° accordion "💬 Notes" nella CrewSidebar, il componente restava bloccato su "Loading…" a tempo indeterminato.
+
+**Root cause (doppio bug)**:
+
+1. **`app/api/crew-notes/route.js`** — `makeSupabase()` usava `cookies()` sincrono (vecchio pattern Next.js 14). In Next.js 16, `cookies()` è **async** → `cookieStore` era una Promise → `.get(name)` restituiva `undefined` → nessun cookie letto → `supabase.auth.getUser()` lanciava un'eccezione → il route handler restituiva una risposta HTML 500 (non JSON).
+
+2. **`app/dashboard/crew/page.js` — `NotesAccordion.load()`** — nessun `try/catch` attorno a `res.json()` → quando l'API restituiva HTML 500, `res.json()` lanciava `SyntaxError` → `setLoading(false)` mai raggiunto → **loading infinito**.
+
+**Fix**:
+- `makeSupabase()` → `async function makeSupabase()` con `const cookieStore = await cookies()` e pattern `getAll()`/`setAll()` (identico agli altri route moderni del progetto)
+- `load()` in `NotesAccordion` → aggiunto `try/catch/finally`: `setLoading(false)` e `setLoaded(true)` ora sempre nel `finally`, anche in caso di errore
+
+**Regola aggiunta**:
+> In Next.js 15+/16, `cookies()` da `next/headers` è **async**. Usare sempre `const cookieStore = await cookies()`. Il pattern corretto è `getAll()`/`setAll()` (non `get/set/remove`). Ogni `fetch()` nel client che fa `res.json()` deve essere wrappato in `try/catch/finally` per evitare stati bloccati.
+
+---
+
 ## UPCOMING SESSIONS — S58: Note & Comunicazione (14 May 2026)
 
 ### Obiettivo generale S58
