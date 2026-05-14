@@ -1240,7 +1240,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                   }}
                 />
                 <TravelAccordion key={`travel-${initial.id}-${editKey}`} crewId={initial.id} />
-                <NotesPanel key={`notes-${initial.id}-${editKey}`} crewId={initial.id} productionId={PRODUCTION_ID} currentUser={currentUser} />
+                <NotesPanel accordion key={`notes-${initial.id}-${editKey}`} crewId={initial.id} productionId={PRODUCTION_ID} currentUser={currentUser} />
               </>
             )}
 

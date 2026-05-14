@@ -1001,9 +1001,10 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
                 style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder="Any operational notes..." />
             </div>
 
-            {/* S59-C: NotesPanel — replaces inline Team Notes box; only shown when a crew member is linked */}
+            {/* S59-C/S59-E: NotesPanel accordion — lazy load, solo se crew_id è collegato */}
             {form.crew_id && (
               <NotesPanel
+                accordion
                 crewId={form.crew_id}
                 productionId={PRODUCTION_ID}
                 currentUser={currentUser}
