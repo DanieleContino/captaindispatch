@@ -30,7 +30,29 @@ function copyText(t) {
   navigator.clipboard?.writeText(t).catch(() => {})
 }
 
-const ROLES = ['MANAGER', 'PRODUCTION', 'CAPTAIN']
+const ROLES = ['CAPTAIN', 'TRAVEL', 'ACCOMMODATION', 'PRODUCTION', 'MANAGER']
+
+// ── role metadata ────────────────────────────────────────
+const ROLE_META = {
+  CAPTAIN:       { label: 'Captain',                   emoji: '🎖', bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+  ADMIN:         { label: 'Admin',                     emoji: '⚙️', bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' },
+  TRAVEL:        { label: 'Travel Coordinator',        emoji: '✈️', bg: '#faf5ff', color: '#7c3aed', border: '#c4b5fd' },
+  ACCOMMODATION: { label: 'Accommodation Coordinator', emoji: '🏨', bg: '#f0fdf4', color: '#15803d', border: '#86efac' },
+  PRODUCTION:    { label: 'Production',                emoji: '🎬', bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+  MANAGER:       { label: 'Manager',                   emoji: '👤', bg: '#f8fafc', color: '#475569', border: '#e2e8f0' },
+}
+const ALL_ASSIGNABLE_ROLES = ['CAPTAIN', 'TRAVEL', 'ACCOMMODATION', 'PRODUCTION', 'MANAGER']
+
+function roleImplicationMessage(fromRole, toRole) {
+  const isFromAdmin = ['CAPTAIN', 'ADMIN'].includes(fromRole)
+  const isToAdmin   = ['CAPTAIN', 'ADMIN'].includes(toRole)
+  if (isFromAdmin && !isToAdmin) return 'This user will lose admin access — Bridge, approvals, and invite management.'
+  if (!isFromAdmin && isToAdmin) return 'This user will gain full admin access — Bridge, approvals, invite management, and team management.'
+  const coordRoles = ['TRAVEL', 'ACCOMMODATION']
+  if (coordRoles.includes(fromRole)) return `This user will lose ${(ROLE_META[fromRole] || {}).label} features. Notes already written keep the "${fromRole}" badge.`
+  if (coordRoles.includes(toRole))   return `This user will gain access to ${(ROLE_META[toRole] || {}).label} features.`
+  return 'Notes already written will keep the original role badge. Change takes effect immediately on next page load.'
+}
 
 // ── styles ───────────────────────────────────────────────
 const card  = { background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: '20px' }
@@ -2085,6 +2107,281 @@ function InviteCodesTabControlled({ productions, showFormProp, onFormClose }) {
   )
 }
 
+// ── Team Members Widget ───────────────────────────────────
+function TeamMembersWidget({ productionId, currentUserId }) {
+  const [members,       setMembers]       = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState(null)
+  const [roleEdits,     setRoleEdits]     = useState({})   // { userId: pendingNewRole }
+  const [roleConfirm,   setRoleConfirm]   = useState(null) // { userId, name, fromRole, toRole }
+  const [roleSaving,    setRoleSaving]    = useState(null) // userId
+  const [removeConfirm, setRemoveConfirm] = useState(null) // { userId, name, role }
+  const [removeInput,   setRemoveInput]   = useState('')
+  const [removeLoading, setRemoveLoading] = useState(null) // userId
+  const [actionError,   setActionError]   = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null)
+    try {
+      const res  = await fetch(`/api/bridge/members?production_id=${productionId}`)
+      const json = await res.json()
+      if (!res.ok) { setError(json.error); setLoading(false); return }
+      setMembers(json.members || [])
+    } catch (e) { setError(e.message) }
+    setLoading(false)
+  }, [productionId])
+
+  useEffect(() => { load() }, [load])
+
+  // Sort: CAPTAIN/ADMIN first, then alphabetical by name/email
+  const sorted = [...members].sort((a, b) => {
+    const rankA = ['CAPTAIN', 'ADMIN'].includes(a.role) ? 0 : 1
+    const rankB = ['CAPTAIN', 'ADMIN'].includes(b.role) ? 0 : 1
+    if (rankA !== rankB) return rankA - rankB
+    return (a.name || a.email || '').localeCompare(b.name || b.email || '')
+  })
+
+  function handleRoleSelectChange(userId, newRole) {
+    setRoleEdits(e => ({ ...e, [userId]: newRole }))
+  }
+
+  function handleRoleSaveClick(member) {
+    const pendingRole = roleEdits[member.user_id]
+    if (!pendingRole || pendingRole === member.role) return
+    setActionError(null)
+    setRemoveConfirm(null) // close any open remove confirm
+    setRoleConfirm({
+      userId:   member.user_id,
+      name:     member.name || member.email || member.user_id,
+      fromRole: member.role,
+      toRole:   pendingRole,
+    })
+  }
+
+  async function confirmRoleChange() {
+    const { userId, toRole } = roleConfirm
+    setRoleSaving(userId); setRoleConfirm(null); setActionError(null)
+    try {
+      const res  = await fetch('/api/bridge/members', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ user_id: userId, production_id: productionId, role: toRole }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setActionError(json.error); setRoleSaving(null); return }
+      setMembers(ms => ms.map(m => m.user_id === userId ? { ...m, role: toRole } : m))
+      setRoleEdits(e => { const n = { ...e }; delete n[userId]; return n })
+    } catch (e) { setActionError(e.message) }
+    setRoleSaving(null)
+  }
+
+  function openRemoveConfirm(member) {
+    setActionError(null)
+    setRoleConfirm(null) // close any open role confirm
+    setRemoveConfirm({ userId: member.user_id, name: member.name || member.email || member.user_id, role: member.role })
+    setRemoveInput('')
+  }
+
+  async function confirmRemove() {
+    const { userId } = removeConfirm
+    setRemoveLoading(userId); setRemoveConfirm(null); setActionError(null)
+    try {
+      const res  = await fetch('/api/bridge/members', {
+        method:  'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ user_id: userId, production_id: productionId }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setActionError(json.error); setRemoveLoading(null); return }
+      setMembers(ms => ms.filter(m => m.user_id !== userId))
+    } catch (e) { setActionError(e.message) }
+    setRemoveLoading(null)
+  }
+
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Loading members…</div>
+  if (error)   return <div style={{ padding: '20px', color: '#dc2626', fontSize: '13px' }}>❌ {error}</div>
+
+  return (
+    <div>
+      {/* Global action error banner */}
+      {actionError && (
+        <div style={{ padding: '12px 20px', background: '#fef2f2', borderBottom: '1px solid #fecaca', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: '#dc2626', fontSize: '13px' }}>❌ {actionError}</span>
+          <button onClick={() => setActionError(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', padding: '0 4px' }}>✕</button>
+        </div>
+      )}
+
+      {sorted.length === 0 && (
+        <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No members found.</div>
+      )}
+
+      {sorted.map((member, idx) => {
+        const rm   = ROLE_META[member.role] || ROLE_META.MANAGER
+        const isMe = member.user_id === currentUserId
+        const pendingRole       = roleEdits[member.user_id]
+        const isDirty           = !!pendingRole && pendingRole !== member.role
+        const isSaving          = roleSaving === member.user_id
+        const isRemoving        = removeLoading === member.user_id
+        const showRoleConfirm   = roleConfirm?.userId   === member.user_id
+        const showRemoveConfirm = removeConfirm?.userId === member.user_id
+
+        // Avatar initials
+        const initials = (member.name || member.email || '?')
+          .split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || '?'
+
+        // Role options: ensure current role is always in the list
+        const roleOptions = ALL_ASSIGNABLE_ROLES.includes(member.role)
+          ? ALL_ASSIGNABLE_ROLES
+          : [member.role, ...ALL_ASSIGNABLE_ROLES]
+
+        return (
+          <div key={member.user_id} style={{
+            borderBottom: idx < sorted.length - 1 ? '1px solid #f1f5f9' : 'none',
+            background: isRemoving ? '#fff5f5' : showRemoveConfirm ? '#fef2f2' : showRoleConfirm ? '#fffbeb' : 'white',
+            transition: 'background 0.2s',
+          }}>
+            {/* ── Main member row ── */}
+            <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '12px', opacity: isSaving || isRemoving ? 0.6 : 1, flexWrap: 'wrap' }}>
+
+              {/* Avatar circle */}
+              <div style={{ width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0, background: rm.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '13px', fontWeight: '900' }}>
+                {initials}
+              </div>
+
+              {/* Name + email + joined */}
+              <div style={{ flex: 1, minWidth: '140px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>
+                    {member.name || member.email}
+                  </span>
+                  {isMe && (
+                    <span style={{ fontSize: '10px', color: '#22c55e', fontWeight: '700', background: '#dcfce7', padding: '1px 5px', borderRadius: '4px' }}>you</span>
+                  )}
+                </div>
+                {member.name && (
+                  <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {member.email}
+                  </div>
+                )}
+                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                  Joined {fmt(member.joined_at)}
+                </div>
+              </div>
+
+              {/* Controls */}
+              {isMe ? (
+                /* Current user row: read-only badge only */
+                <div style={{ padding: '5px 10px', borderRadius: '6px', background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
+                  {rm.emoji} {rm.label}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {/* Current role badge */}
+                  <div style={{ padding: '4px 8px', borderRadius: '6px', background: rm.bg, color: rm.color, border: `1px solid ${rm.border}`, fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                    {rm.emoji} {rm.label}
+                  </div>
+                  {/* Role selector */}
+                  <select
+                    value={pendingRole || member.role}
+                    onChange={e => handleRoleSelectChange(member.user_id, e.target.value)}
+                    disabled={isSaving || isRemoving}
+                    style={{ ...sel, width: 'auto', fontSize: '12px', padding: '5px 8px', maxWidth: '170px' }}>
+                    {roleOptions.map(r => {
+                      const m = ROLE_META[r] || {}
+                      return <option key={r} value={r}>{m.emoji} {m.label || r}</option>
+                    })}
+                  </select>
+                  {/* Save button (only when selection differs from current role) */}
+                  {isDirty && (
+                    <button
+                      onClick={() => handleRoleSaveClick(member)}
+                      disabled={isSaving}
+                      style={{ ...btnPrimary, fontSize: '11px', padding: '5px 10px' }}>
+                      💾 Save
+                    </button>
+                  )}
+                  {/* Remove button */}
+                  <button
+                    onClick={() => openRemoveConfirm(member)}
+                    disabled={isSaving || isRemoving}
+                    title="Remove access to this production"
+                    style={{ ...btnRed, fontSize: '11px', padding: '5px 10px', opacity: isSaving || isRemoving ? 0.4 : 1 }}>
+                    🗑
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ── Role change confirmation panel ── */}
+            {showRoleConfirm && (
+              <div style={{ padding: '14px 20px', background: '#fffbeb', borderTop: '1px solid #fde68a', borderLeft: '4px solid #f59e0b' }}>
+                <div style={{ fontWeight: '800', fontSize: '13px', color: '#92400e', marginBottom: '10px' }}>
+                  ⚠️ Change role for {roleConfirm.name}?
+                </div>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', color: '#475569' }}>From:</span>
+                  <span style={{ padding: '3px 8px', borderRadius: '5px', background: (ROLE_META[roleConfirm.fromRole] || {}).bg, color: (ROLE_META[roleConfirm.fromRole] || {}).color, fontSize: '11px', fontWeight: '700' }}>
+                    {(ROLE_META[roleConfirm.fromRole] || {}).emoji} {(ROLE_META[roleConfirm.fromRole] || {}).label || roleConfirm.fromRole}
+                  </span>
+                  <span style={{ color: '#94a3b8' }}>→</span>
+                  <span style={{ padding: '3px 8px', borderRadius: '5px', background: (ROLE_META[roleConfirm.toRole] || {}).bg, color: (ROLE_META[roleConfirm.toRole] || {}).color, fontSize: '11px', fontWeight: '700' }}>
+                    {(ROLE_META[roleConfirm.toRole] || {}).emoji} {(ROLE_META[roleConfirm.toRole] || {}).label || roleConfirm.toRole}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: '#78350f', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: '6px', padding: '8px 10px', marginBottom: '12px' }}>
+                  ℹ️ {roleImplicationMessage(roleConfirm.fromRole, roleConfirm.toRole)}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => setRoleConfirm(null)} style={{ ...btnSecondary, fontSize: '12px' }}>Cancel</button>
+                  <button onClick={confirmRoleChange} style={{ ...btnPrimary, fontSize: '12px' }}>✓ Confirm role change</button>
+                </div>
+              </div>
+            )}
+
+            {/* ── Remove member confirmation panel ── */}
+            {showRemoveConfirm && (
+              <div style={{ padding: '14px 20px', background: '#fef2f2', borderTop: '1px solid #fecaca', borderLeft: '4px solid #dc2626' }}>
+                <div style={{ fontWeight: '800', fontSize: '13px', color: '#991b1b', marginBottom: '8px' }}>
+                  🔴 Remove {removeConfirm.name} from this production?
+                </div>
+                <div style={{ fontSize: '12px', color: '#7f1d1d', marginBottom: '12px', lineHeight: '1.7' }}>
+                  ⚠️ This action will:<br />
+                  &bull; Immediately revoke access to this production<br />
+                  &bull; NOT delete their CaptainDispatch account<br />
+                  &bull; Keep all past notes and activity logs intact<br />
+                  &bull; Show them &ldquo;access pending&rdquo; on next login<br />
+                  &bull; They can be re-invited with a new invite code
+                </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ ...lbl, color: '#991b1b', marginBottom: '4px' }}>Type REMOVE to confirm</label>
+                  <input
+                    value={removeInput}
+                    onChange={e => setRemoveInput(e.target.value.toUpperCase())}
+                    placeholder="REMOVE"
+                    style={{ ...inp, borderColor: removeInput === 'REMOVE' ? '#dc2626' : '#e2e8f0', maxWidth: '200px' }}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => { setRemoveConfirm(null); setRemoveInput('') }} style={{ ...btnSecondary, fontSize: '12px' }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmRemove}
+                    disabled={removeInput !== 'REMOVE'}
+                    style={{ ...btnRed, fontSize: '12px', opacity: removeInput === 'REMOVE' ? 1 : 0.4, cursor: removeInput === 'REMOVE' ? 'pointer' : 'not-allowed' }}>
+                    🗑 Remove access
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Online Users Widget ───────────────────────────────────
 function OnlineUsersWidget({ productionId, userId, userEmail, userRole }) {
   const onlineUsers = useOnlinePresence({
@@ -2231,8 +2528,9 @@ export default function BridgePage() {
 
   const TABS = [
     { id: 'overview', label: '⚓ Overview' },
-    { id: 'pending',  label: '👥 Pending Users' },
-    { id: 'invites',  label: '🔑 Invite Codes' },
+    { id: 'team',     label: '👥 Team' },
+    { id: 'pending',  label: '⏳ Pending' },
+    { id: 'invites',  label: '🔑 Invites' },
   ]
 
   return (
@@ -2310,6 +2608,22 @@ export default function BridgePage() {
             <VehicleRentalWidget productionId={productionId} />
             <ActivityLog productionId={productionId} />
           </>
+        )}
+
+        {/* ── Team Members tab ── */}
+        {tab === 'team' && productionId && (
+          <div style={card}>
+            <div style={{ ...hdr, justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a' }}>👥 Team Members</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Manage roles and access</span>
+              </div>
+            </div>
+            <TeamMembersWidget
+              productionId={productionId}
+              currentUserId={user?.id}
+            />
+          </div>
         )}
 
         {/* ── Pending Users tab ── */}
