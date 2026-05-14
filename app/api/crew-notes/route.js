@@ -49,6 +49,19 @@ export async function GET(request) {
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // ── Role-based visibility (S61-B) ────────────────────────
+  // UNRESTRICTED: vede tutto | CAPTAIN/TRAVEL/ACCOMMODATION: solo proprio canale + general
+  const UNRESTRICTED = ['ADMIN', 'MANAGER', 'PRODUCTION']
+  const ROLE_CHANNEL = { CAPTAIN: 'captain', TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
+
+  const { data: roleData } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('production_id', production_id)
+    .maybeSingle()
+  const userRole = roleData?.role || null
+
   // RLS gestisce visibilità (pubbliche + proprie private)
   const { data, error } = await supabase
     .from('crew_notes')
@@ -59,7 +72,17 @@ export async function GET(request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ notes: data || [], user_id: user.id })
+  // Filtra per canale: autore vede sempre le proprie; UNRESTRICTED vede tutto
+  const notes = (data || []).filter(n => {
+    if (n.is_private && n.author_id !== user.id) return false
+    if (!userRole || UNRESTRICTED.includes(userRole)) return true
+    if (n.author_id === user.id) return true
+    if (n.context === 'general') return true
+    const myChannel = ROLE_CHANNEL[userRole]
+    return myChannel && n.context === myChannel
+  })
+
+  return NextResponse.json({ notes, user_id: user.id })
 }
 
 // ─── POST — crea nuova nota ───────────────────────────────────

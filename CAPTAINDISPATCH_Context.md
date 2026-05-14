@@ -13,6 +13,74 @@
 
 ---
 
+## SESSION S61 — RBAC + Notes Channel System (14 May 2026)
+
+### S61-A ✅ — RBAC: TRAVEL role access control — commit `040e058`
+
+**File creati**:
+- `lib/roleAccess.js` — single source of truth permessi
+- `app/dashboard/layout.js` — guard universale per tutte le pagine `/dashboard/*`
+**File modificati**: `lib/navbar.js`
+
+#### Logica (`lib/roleAccess.js`)
+```js
+ROLE_ACCESS.TRAVEL = ['/dashboard/travel', '/dashboard/crew', '/dashboard/hub-coverage', '/dashboard/locations', '/dashboard/lists-v2']
+canAccess(role, pathname)   // null role = unrestricted (CAPTAIN/ADMIN/MANAGER)
+getHomeForRole(role)        // TRAVEL → '/dashboard/travel'
+ROLE_NAV_ITEMS.TRAVEL       // ['/dashboard/crew', '/dashboard/hub-coverage']
+ROLE_NAV_SECONDARY.TRAVEL   // ['/dashboard/lists-v2', '/dashboard/locations']
+```
+
+#### Guard (`app/dashboard/layout.js`)
+- Client component che wrappa TUTTE le pagine `/dashboard/*`
+- Carica ruolo da `user_roles` una volta (cached in `useRef`)
+- Se `canAccess(role, pathname) === false` → `router.replace(getHomeForRole(role))`
+- CAPTAIN/ADMIN/MANAGER non subiscono redirect
+
+#### Navbar (`lib/navbar.js`)
+- `isRestricted = !!(ROLE_NAV_ITEMS[navRole])`
+- `filteredNavItems` / `filteredNavSecondary` calcolati dal ruolo
+- Mode switcher nascosto per ruoli ristretti
+- Logo click → `logoHref = getHomeForRole(navRole)` per ruoli ristretti
+
+---
+
+### S61-B ✅ — Notes: sistema 4 canali con visibilità per ruolo
+
+#### Matrice visibilità canali
+
+| context | MANAGER/ADMIN | CAPTAIN | TRAVEL | ACCOMMODATION |
+|---------|--------------|---------|--------|---------------|
+| `general` 🌐 | ✅ | ✅ | ✅ | ✅ |
+| `captain` 🧑‍✈️ | ✅ | ✅ | ❌ | ❌ |
+| `travel` ✈️ | ✅ | ❌ | ✅ | ❌ |
+| `accommodation` 🏨 | ✅ | ❌ | ❌ | ✅ |
+
+**Regole**:
+- `ADMIN`/`MANAGER`/`PRODUCTION` vedono tutto
+- L'autore vede sempre le proprie note (qualunque canale)
+- `CAPTAIN` vede solo `general` + `captain` + proprie
+- `TRAVEL` vede solo `general` + `travel` + proprie
+- `ACCOMMODATION` vede solo `general` + `accommodation` + proprie
+
+#### Implementazione
+
+**`app/api/crew-notes/route.js`** — filtro GET server-side:
+```js
+const UNRESTRICTED = ['ADMIN', 'MANAGER', 'PRODUCTION']
+const ROLE_CHANNEL = { CAPTAIN: 'captain', TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
+// Filtra: UNRESTRICTED → tutto | autore → sempre | context='general' → tutti | context=myChannel → sì
+```
+
+**`lib/NotesPanel.js`** — UI:
+- 4 contesti: `['general', 'captain', 'travel', 'accommodation']`
+- Icone: 🌐 / 🧑‍✈️ / ✈️ / 🏨
+- Default context basato su `currentUser.role`
+- Badge "visible to" su ogni nota in lista
+- Nessuna DB migration (context è campo text libero)
+
+---
+
 ## SESSION S60 — Bridge: Team Members Access Management (14 May 2026)
 
 ### Obiettivo
