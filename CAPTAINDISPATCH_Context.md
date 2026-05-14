@@ -45,7 +45,7 @@ ROLE_NAV_SECONDARY.TRAVEL   // ['/dashboard/lists-v2', '/dashboard/locations']
 
 ---
 
-### S61-B ✅ — Notes: sistema 4 canali con visibilità per ruolo
+### S61-B ✅ — Notes: sistema 4 canali con visibilità per ruolo — commit `5ce5a4d`
 
 #### Matrice visibilità canali
 
