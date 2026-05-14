@@ -10,6 +10,45 @@
 > 6. **Zero hardcoding di ruoli/contesti** — tutti i valori configurabili devono essere derivati dal DB
 > 7. **Feature parity tra pagine** — se una feature esiste in un sidebar, deve esistere in tutte le sidebar che condividono lo stesso dominio
 > 8. **Presentare sempre le opzioni** (piano base + upgrade professionali) PRIMA di implementare, con stima effort
+> 9. **Navbar always reachable home (aggiunta S62)** — Quando si crea o modifica un sistema RBAC con ruoli ristretti, la home page del ruolo (`getHomeForRole()`) DEVE essere sempre il **primo link visibile** nella navbar filtrata. Non è MAI ammissibile che un utente con ruolo ristretto non possa tornare alla propria home dalla navbar. Implementazione: prepend automatico in `filteredNavItems` usando `ROLE_HOME_LABEL[navRole]`. Applicare questo check come **primo test di sanità** dopo ogni modifica al sistema di permessi.
+
+---
+
+## SESSION S62 — Navbar TRAVEL home fix (14 May 2026)
+
+### S62 ✅ — Bug fix: utente TRAVEL non poteva tornare a /dashboard/travel dalla navbar
+
+**Problema**: il ruolo TRAVEL aveva accesso a `/dashboard/travel` ma la voce non compariva mai nella navbar. Il mode switcher (`🎬 Captain / ✈️ Travel`) era nascosto per i ruoli ristretti (`{!isRestricted && ...}`), e `/dashboard/travel` non era in `NAV_ITEMS`. Risultato: navigando su `/dashboard/crew` o `/dashboard/hub-coverage`, l'utente TRAVEL non aveva nessun link di ritorno alla sua home.
+
+**Fix** — 2 file, <15 righe totali:
+
+**`lib/roleAccess.js`** (+8 righe):
+```js
+export const ROLE_HOME_LABEL = {
+  TRAVEL:        '✈️ Travel',
+  ACCOMMODATION: '🏨 Accommodation',
+}
+```
+
+**`lib/navbar.js`** (~5 righe modificate):
+```js
+// Import aggiunto:
+import { ROLE_NAV_ITEMS, ROLE_NAV_SECONDARY, ROLE_HOME_LABEL, getHomeForRole } from './roleAccess'
+
+// filteredNavItems: ora prepend automatico della home
+const filteredNavItems = isRestricted
+  ? [
+      { l: ROLE_HOME_LABEL[navRole] || '🏠 Home', p: getHomeForRole(navRole) },
+      ...NAV_ITEMS.filter(i => ROLE_NAV_ITEMS[navRole].includes(i.p)),
+    ]
+  : NAV_ITEMS
+```
+
+**Risultato per TRAVEL**: navbar mostra `✈️ Travel | Crew | Hub Cov.` + `⋯` per secondary. Il link `✈️ Travel` è sempre il primo e porta a `/dashboard/travel`.
+
+**Scalabilità**: quando verrà aggiunto il ruolo `ACCOMMODATION`, basterà aggiungere la sua `ROLE_HOME_LABEL` e `ROLE_NAV_ITEMS` — il prepend avviene automaticamente.
+
+**Regola permanente aggiunta**: vedi punto #9 nei PROFESSIONAL CODING STANDARDS.
 
 ---
 
