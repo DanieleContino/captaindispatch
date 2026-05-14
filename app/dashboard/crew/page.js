@@ -927,7 +927,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
 }
 
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
-function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose, onSaved, currentUser }) {
+function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose, onSaved, currentUser, onNotesChanged }) {
   const t = useT()
   const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '' }
   const PRODUCTION_ID = getProductionId()
@@ -1240,7 +1240,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                   }}
                 />
                 <TravelAccordion key={`travel-${initial.id}-${editKey}`} crewId={initial.id} />
-                <NotesPanel accordion key={`notes-${initial.id}-${editKey}`} crewId={initial.id} productionId={PRODUCTION_ID} currentUser={currentUser} />
+                <NotesPanel accordion key={`notes-${initial.id}-${editKey}`} crewId={initial.id} productionId={PRODUCTION_ID} currentUser={currentUser} onNotesChanged={onNotesChanged} />
               </>
             )}
 
@@ -1847,6 +1847,7 @@ export default function CrewPage() {
         onClose={() => setSO(false)}
         onSaved={handleSaved}
         currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null}
+        onNotesChanged={() => user && loadUnreadMap(user.id)}
       />
 
     </div>
