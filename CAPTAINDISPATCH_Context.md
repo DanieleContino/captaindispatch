@@ -70,11 +70,11 @@ Props: `{ crewId, productionId, currentUser, onNotesSent }`
 - Supabase Realtime subscription
 - 421 righe
 
-#### S59-B — `crew/page.js` refactor
-- Carica `userRole` da DB
-- Rimuove codice note inline, usa `<NotesPanel>`
-- `loadUnreadMap` + Realtime subscription in CrewPage
-- ~(-100/+20 righe nette)
+#### S59-B ✅ — `crew/page.js` refactor — commit `de0508d`
+- Rimossa `NotesAccordion` (218 righe), usa `<NotesPanel crewId productionId currentUser />`
+- `userRole` state + SELECT reale da `user_roles` → `currentUser.role` non più hardcoded
+- Realtime subscription `crew_notes` in `CrewPage` → `loadUnreadMap` live su ogni evento DB
+- +24/-223 righe
 
 #### S59-C — `travel/page.js` refactor
 - Carica `userRole` da DB
@@ -138,6 +138,21 @@ const CTX_LABEL = { general: 'General', travel: 'Travel', accommodation: 'Accomm
 ```
 
 **Import Supabase**: `import { supabase } from './supabase'` (client browser esistente in `lib/supabase.js`)
+
+---
+
+### S59-B completata ✅ — crew/page.js: NotesPanel + userRole + Realtime (14 May 2026)
+
+> **Commit**: `de0508d` — `feat(crew): S59-B — replace NotesAccordion with NotesPanel, load userRole from DB, add Realtime unreadMap`
+> **File**: `app/dashboard/crew/page.js` (+24/-223 righe)
+
+1. **Import `NotesPanel`** da `lib/NotesPanel`
+2. **Rimossa `NotesAccordion`** — 218 righe duplicate (load, markRead, markUnread, handleDelete, handleSend, ROLE_COLOR, CTX_ICON, fmtRelative) completamente rimossi
+3. **`CrewSidebar`**: `<NotesAccordion key="notes-...">` → `<NotesPanel crewId={initial.id} productionId={PRODUCTION_ID} currentUser={currentUser} />`
+4. **`userRole` state** `useState('CAPTAIN')` in `CrewPage`
+5. **Auth `useEffect`**: dopo upsert `user_roles`, `SELECT role FROM user_roles WHERE user_id + production_id` → `setUserRole(roleRow.role)`
+6. **Realtime subscription** (nuovo `useEffect`) su `crew_notes` filtrata per `production_id=eq.${PRODUCTION_ID}` → chiama `loadUnreadMap(user.id)` su ogni `*` event → badge sempre aggiornato live
+7. **`currentUser`**: `role: 'CAPTAIN'` → `role: userRole` (ruolo reale dal DB) — **fix bug #1**
 
 ---
 
