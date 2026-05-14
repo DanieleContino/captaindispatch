@@ -14,6 +14,70 @@
 
 ---
 
+## SESSION S63 — Notes accordion fix: CAPTAIN unrestricted + eager load (14 May 2026)
+
+### S63 ✅ — Fix accordion Notes sidebar: 3 bug corretti — commit `30b70c4`
+
+**Problema 1 — Badge invisibili con accordion chiuso**:
+Il caricamento in accordion mode era *lazy* (solo alla prima apertura) → `notes.length = 0` e `unreadCount = 0` al mount → i badge `✓ N` e `❗ N new` nell'header non comparivano mai allo stato chiuso, nonostante il commento dicesse "mostra badge anche da chiuso".
+
+**Fix**: rimossa la logica di lazy load. Ora le note vengono caricate **sempre al mount** (eager), sia in flat mode che in accordion mode. `accOpen` controlla solo la visibilità del body, non il caricamento. Rimosso `accLoaded` state.
+
+**Problema 2 — CAPTAIN limitato a general+captain**:
+`UNRESTRICTED_R = ['ADMIN', 'MANAGER', 'PRODUCTION']` — CAPTAIN non era incluso → vedeva solo `['general', 'captain']`. Sbagliato: **CAPTAIN (Transportation Captain) è il ruolo principale del sistema** e deve avere visibilità su tutti i canali come ADMIN/MANAGER.
+
+**Problema 3 — Default context sbagliato in travel sidebar**:
+`ROLE_CHANNEL['CAPTAIN'] = 'captain'` → default context = 'captain' per utenti CAPTAIN. Nella Travel sidebar questo causava confusione: il canale selezionato era 'captain' (invisibile al travel coordinator) invece di 'general'.
+
+**Fix bug 2+3** (2 file, server + client):
+
+**`lib/NotesPanel.js`**:
+```js
+// PRIMA (S61-B):
+const ROLE_CHANNEL   = { CAPTAIN: 'captain', TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
+const UNRESTRICTED_R = ['ADMIN', 'MANAGER', 'PRODUCTION']
+
+// DOPO (S63):
+const ROLE_CHANNEL   = { TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
+const UNRESTRICTED_R = ['ADMIN', 'MANAGER', 'PRODUCTION', 'CAPTAIN']
+```
+
+**`app/api/crew-notes/route.js`**:
+```js
+// PRIMA (S61-B):
+const UNRESTRICTED = ['ADMIN', 'MANAGER', 'PRODUCTION']
+const ROLE_CHANNEL = { CAPTAIN: 'captain', TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
+
+// DOPO (S63):
+const UNRESTRICTED = ['ADMIN', 'MANAGER', 'PRODUCTION', 'CAPTAIN']
+const ROLE_CHANNEL = { TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
+```
+
+#### Matrice visibilità canali aggiornata (S63)
+
+| context | MANAGER/ADMIN/CAPTAIN | TRAVEL | ACCOMMODATION |
+|---------|----------------------|--------|---------------|
+| `general` 🌐 | ✅ | ✅ | ✅ |
+| `captain` 🧑‍✈️ | ✅ | ❌ | ❌ |
+| `travel` ✈️ | ✅ | ✅ | ❌ |
+| `accommodation` 🏨 | ✅ | ❌ | ✅ |
+
+**Regole aggiornate**:
+- `ADMIN`/`MANAGER`/`PRODUCTION`/`CAPTAIN` vedono tutto (unrestricted)
+- `TRAVEL` vede solo `general` + `travel` + proprie
+- `ACCOMMODATION` vede solo `general` + `accommodation` + proprie
+- Il canale `captain` esiste ancora (per note interne captain-only) ed è visibile a tutti i ruoli unrestricted
+
+**Default context**:
+- CAPTAIN → `'general'` (era 'captain', ora ROLE_CHANNEL non ha CAPTAIN → fallback 'general')
+- TRAVEL → `'travel'` (invariato)
+- ACCOMMODATION → `'accommodation'` (invariato)
+- ADMIN/MANAGER/PRODUCTION → `'general'` (invariato)
+
+**Nessuna migrazione SQL** — note con `context='captain'` già nel DB rimangono valide.
+
+---
+
 ## SESSION S62 — Navbar TRAVEL home fix (14 May 2026)
 
 ### S62 ✅ — Bug fix: utente TRAVEL non poteva tornare a /dashboard/travel dalla navbar
