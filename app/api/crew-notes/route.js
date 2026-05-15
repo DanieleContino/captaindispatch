@@ -66,7 +66,7 @@ export async function GET(request) {
   // RLS gestisce visibilità (pubbliche + proprie private)
   const { data, error } = await supabase
     .from('crew_notes')
-    .select('id,crew_id,author_id,author_name,author_role,content,is_private,context,read_by,created_at')
+    .select('id,crew_id,author_id,author_name,author_role,content,is_private,context,read_by,created_at,linked_movement_id,linked_stay_id')
     .eq('crew_id', crew_id)
     .eq('production_id', production_id)
     .order('created_at', { ascending: false })
@@ -96,7 +96,7 @@ export async function POST(request) {
   try { body = await request.json() }
   catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
 
-  const { crew_id, production_id, content, is_private, context, author_name, author_role } = body
+  const { crew_id, production_id, content, is_private, context, author_name, author_role, linked_movement_id, linked_stay_id } = body
 
   if (!crew_id || !production_id || !content?.trim()) {
     return NextResponse.json({ error: 'crew_id, production_id, content required' }, { status: 400 })
@@ -120,10 +120,12 @@ export async function POST(request) {
       author_id:   user.id,
       author_name: author_name || user.email || 'Unknown',
       author_role: role.role || 'CAPTAIN',  // sempre dal DB, ignora valore client
-      content:     content.trim(),
-      is_private:  is_private === true,
-      context:     context || 'general',
-      read_by:     [],
+      content:             content.trim(),
+      is_private:          is_private === true,
+      context:             context || 'general',
+      read_by:             [],
+      linked_movement_id:  linked_movement_id || null,
+      linked_stay_id:      linked_stay_id     || null,
     })
     .select()
     .single()
