@@ -1,3 +1,223 @@
+## SESSION S64 — TripNotesPanel: note sui trip + fix crew sidebar (15 May 2026)
+
+### Commit range: `62a1454` → `64a2f06` (12 commit totali)
+
+---
+
+### S64-A ✅ — Nuova tabella DB `trip_notes` + API `/api/trip-notes` — commit `62a1454`
+
+**Nuova tabella** `trip_notes` (struttura analoga a `crew_notes`):
+```sql
+CREATE TABLE trip_notes (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  production_id  TEXT NOT NULL,
+  trip_row_id    UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+  author_id      UUID NOT NULL,
+  author_name    TEXT NOT NULL,
+  author_role    TEXT NOT NULL DEFAULT 'CAPTAIN',
+  content        TEXT NOT NULL,
+  is_private     BOOLEAN NOT NULL DEFAULT false,
+  context        TEXT NOT NULL DEFAULT 'general',
+  read_by        UUID[] NOT NULL DEFAULT '{}',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+RLS: SELECT filtra `is_private=false OR author_id=auth.uid()`; DELETE solo autore; POST solo membri della produzione.
+
+**`app/api/trip-notes/route.js`** — 4 metodi HTTP:
+
+| Metodo | Params | Descrizione |
+|--------|--------|-------------|
+| `GET` | `?trip_row_id=&production_id=` | Lista note con filtro visibilità per ruolo |
+| `POST` | `{ trip_row_id, production_id, content, is_private, context, author_name }` | Crea nota — solo `ALLOWED_ROLES` |
+| `PATCH` | `{ id, action: 'mark_read'\|'mark_unread'\|'edit', [content] }` | Azioni CRUD |
+| `DELETE` | `?id=` | Elimina nota (solo autore, via RLS) |
+
+**Visibilità per ruolo** (server-side nel GET):
+```js
+const ALLOWED_ROLES = ['CAPTAIN', 'ADMIN', 'MANAGER', 'PRODUCTION']  // possono scrivere
+const UNRESTRICTED  = ['CAPTAIN', 'ADMIN', 'MANAGER', 'PRODUCTION']  // vedono tutto
+const ROLE_CHANNEL  = { TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
+// TRAVEL → vede general + travel; ACCOMMODATION → vede general + accommodation
+```
+
+**Edit action**: solo autore, finestra 5 minuti da `created_at`. Server controlla `note.author_id !== user.id` + `Date.now() - created_at > 5min` → 403.
+
+**Pattern `makeSupabase()`**: identico agli altri route moderni — `async`, `await cookies()`, `getAll()`/`setAll()`.
+
+---
+
+### S64-B ✅ — Nuovo componente `lib/TripNotesPanel.js` — commit `e2de3ea`
+
+**Export**: `export default function TripNotesPanel({ tripRowId, productionId, currentUser })`
+
+**Architettura accordion** (a differenza di `NotesPanel` che può essere flat o accordion):
+- Header: `📋 Trip Notes` + badge `✓ N` (totale) + badge `❗ N new` (arancio, unread) + `✓ Mark all read`
+- Body: visibile solo se `accOpen === true` (toggle click sull'header)
+- Caricamento **eager al mount** (non lazy) — i badge sono sempre aggiornati anche da chiuso
+
+**Funzionalità complete**:
+- **Supabase Realtime**: `supabase.channel('trip_notes:{tripRowId}:{productionId}')` con `postgres_changes event='*'` filtrato per `trip_row_id=eq.{tripRowId}` → reload automatico
+- **Lista note**: badge ruolo colorato + icona context + badge `⬤ NEW` + timestamp relativo + highlight unread (`#fff7ed` + bordo arancio)
+- **Mark as read / 📌 Remind me** — aggiornamento ottimistico locale
+- **✓ Mark all as read** — batch PATCH + aggiornamento locale (visibile solo se `unreadCount > 0` e accordion aperto)
+- **✎ Edit inline** (solo autore, entro 5min) — textarea + Save/Cancel + `PATCH action:'edit'`
+- **🗑 Delete 2-step** — click → confirm → DELETE + rimozione locale
+- **Filter pills**: ALL / 🌐 / 🧑‍✈️ / ✈️ / 🏨 — visibili con ≥3 note
+- **Context selector** (form): 🌐 General / 🧑‍✈️ Captain / ✈️ Travel / 🏨 Accommodation
+- **Toggle 🔒 Private / 🌐 Shared** — default Shared
+- **Guard scrittura**: `canWrite = ALLOWED_WRITE_ROLES.includes(currentUser?.role)` — TRAVEL/ACCOMMODATION vedono le note ma non hanno il form di scrittura (mostrato messaggio "Only Captain/Admin can write trip notes")
+
+**Costanti**:
+```js
+const ROLE_COLOR = {
+  CAPTAIN: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+  ADMIN:   { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' },
+  MANAGER: { bg: '#f8fafc', color: '#475569', border: '#e2e8f0' },
+  PRODUCTION: { bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+  TRAVEL:        { bg: '#faf5ff', color: '#7c3aed', border: '#c4b5fd' },
+  ACCOMMODATION: { bg: '#f0fdf4', color: '#15803d', border: '#86efac' },
+}
+const CTX_ICON  = { general: '🌐', captain: '🧑‍✈️', travel: '✈️', accommodation: '🏨' }
+const ALLOWED_WRITE_ROLES = ['CAPTAIN', 'ADMIN', 'MANAGER', 'PRODUCTION']
+```
+
+---
+
+### S64-C ✅ — TripNotesPanel in `EditTripSidebar` — commit `de02e4b` + `001d256`
+
+**`app/dashboard/trips/page.js`** — `EditTripSidebar`:
+
+1. Riceve prop `currentUser` da `TripsPageInner` (commit `001d256`):
+   ```jsx
+   <EditTripSidebar ... currentUser={currentUser} />
+   ```
+
+2. Rende `<TripNotesPanel>` in fondo alla sidebar (commit `de02e4b`):
+   ```jsx
+   {/* Trip Notes */}
+   {initial?.id ? (
+     <TripNotesPanel
+       tripRowId={initial.id}
+       productionId={PRODUCTION_ID}
+       currentUser={currentUser}
+     />
+   ) : null}
+   ```
+   `EditTripSidebar` ha sempre `initial.id` (trip già in DB) → TripNotesPanel è sempre attivo.
+
+---
+
+### S64-D ✅ — TripNotesPanel in `TripSidebar` (new trip) con placeholder — commits `b516091` → `a04e4b8`
+
+**Storia dei commit** (iterazioni durante lo sviluppo):
+
+| Hash | Descrizione |
+|------|-------------|
+| `b516091` | Passa `currentUser` a `TripSidebar` da `TripsPageInner` |
+| `d2567d4` | Tentativo: TripNotesPanel in TripSidebar con draft pre-save |
+| `342510b` | Tentativo: intercetta close sidebar per warning se draft esiste |
+| `ff7ef77` | Debug: log creazione draft |
+| `71ad34d` | Fix: aspetta sessione utente prima di creare draft |
+| `a04e4b8` | **Revert draft system** — placeholder stabile in new mode |
+
+**Problema del draft system**: si tentava di creare un trip "draft" nel DB quando si apriva `TripSidebar` in new mode, in modo che `TripNotesPanel` avesse un `tripRowId` valido e permettesse di scrivere note prima di salvare. Questo approccio ha causato bug di timing (sessione non ancora disponibile), race condition, e complessità eccessiva.
+
+**Soluzione finale (commit `a04e4b8`)** — approccio semplice e stabile:
+```jsx
+{/* Trip Notes — solo se il trip è già salvato */}
+{initial?.id ? (
+  <TripNotesPanel
+    tripRowId={initial.id}
+    productionId={PRODUCTION_ID}
+    currentUser={currentUser}
+  />
+) : (
+  <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', marginTop: '8px', background: '#f8fafc' }}>
+    <span style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+      📋 Trip notes will be available after saving this trip
+    </span>
+  </div>
+)}
+```
+- In `TripSidebar` (new mode): mostra placeholder informativo, nessun draft
+- In `TripSidebar` dopo save → l'utente apre `EditTripSidebar` dove le note sono disponibili
+
+**Principio**: non creare record DB fantasma per feature opzionale. Il pattern "save first, then annotate" è più robusto e comprensibile.
+
+---
+
+### S64-E ✅ — Crew sidebar: placeholder Notes in new mode — commit `863a625`
+
+**`app/dashboard/crew/page.js`** — `CrewSidebar`:
+
+In `mode !== 'edit'` (aggiunta nuovo crew), invece di renderizzare `<NotesPanel>` (che richiederebbe `crewId` non ancora esistente), mostra un placeholder informativo:
+```jsx
+{/* Notes — informativa in new mode, pannello completo in edit */}
+{mode !== 'edit' && (
+  <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', marginTop: '8px', background: '#f8fafc' }}>
+    <span style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+      💬 Notes will be available after saving this crew member
+    </span>
+  </div>
+)}
+```
+**Coerenza**: stesso pattern di TripSidebar — placeholder in new mode, pannello completo in edit mode. Feature parity design.
+
+---
+
+### S64-F ✅ — CrewCard: allineamento controlli destra — commit `64a2f06`
+
+**`app/dashboard/crew/page.js`** — `CrewCard`:
+
+Fix: i controlli sul lato destro della card (badge, icone, bottoni) erano verticalmente centrati invece che allineati al top. Aggiunto `alignItems: 'flex-start'` sul container dei controlli destra.
+
+---
+
+### ⚠️ Azione manuale richiesta (S64-A)
+Eseguire la migration SQL per creare la tabella `trip_notes` nel Supabase SQL Editor:
+```sql
+CREATE TABLE IF NOT EXISTS trip_notes (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  production_id  TEXT NOT NULL,
+  trip_row_id    UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+  author_id      UUID NOT NULL,
+  author_name    TEXT NOT NULL,
+  author_role    TEXT NOT NULL DEFAULT 'CAPTAIN',
+  content        TEXT NOT NULL,
+  is_private     BOOLEAN NOT NULL DEFAULT false,
+  context        TEXT NOT NULL DEFAULT 'general',
+  read_by        UUID[] NOT NULL DEFAULT '{}',
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_trip_notes_trip ON trip_notes(trip_row_id);
+CREATE INDEX IF NOT EXISTS idx_trip_notes_production ON trip_notes(production_id);
+ALTER TABLE trip_notes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Members can read trip notes" ON trip_notes
+  FOR SELECT USING (
+    is_private = false OR author_id = auth.uid()
+  );
+CREATE POLICY "Members can write trip notes" ON trip_notes
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Authors can update trip notes" ON trip_notes
+  FOR UPDATE USING (author_id = auth.uid());
+CREATE POLICY "Authors can delete trip notes" ON trip_notes
+  FOR DELETE USING (author_id = auth.uid());
+```
+
+---
+
+### Riepilogo file modificati S64
+
+| File | Tipo | Descrizione |
+|------|------|-------------|
+| `app/api/trip-notes/route.js` | 🆕 Nuovo | GET/POST/PATCH/DELETE note per trip |
+| `lib/TripNotesPanel.js` | 🆕 Nuovo | Componente accordion note per trip (402 righe) |
+| `app/dashboard/trips/page.js` | ✏️ Modificato | `EditTripSidebar` + `TripSidebar`: integrazione TripNotesPanel + `currentUser` prop |
+| `app/dashboard/crew/page.js` | ✏️ Modificato | `CrewSidebar`: placeholder Note in new mode + fix allineamento CrewCard |
+
+---
+
 ## PROFESSIONAL CODING STANDARDS — REGOLA PERMANENTE (aggiunta S59)
 
 > **Quando viene proposto o implementato un nuovo sistema, il modello DEVE sempre:**

@@ -64,86 +64,65 @@ function Toast({ message, type }) {
   )
 }
 
-// ─── EditableCell ─────────────────────────────────────────────
-function EditableCell({ value, field, rowId, type = 'text', onSaved, style, onContextMenu }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft]     = useState(value || '')
-  const [saving, setSaving]   = useState(false)
-
-  useEffect(() => { if (!editing) setDraft(value || '') }, [value, editing])
-
-  async function save() {
-    const trimmed = typeof draft === 'string' ? draft.trim() : draft
-    const payload = trimmed === '' ? null : trimmed
-    if (payload === (value || null)) { setEditing(false); return }
-    setSaving(true)
-    const { error } = await supabase
-      .from('travel_movements')
-      .update({ [field]: payload })
-      .eq('id', rowId)
-    setSaving(false)
-    if (!error) {
-      onSaved(rowId, field, payload)
-      setEditing(false)
-    } else {
-      setDraft(value || '')
-      setEditing(false)
-      onSaved(rowId, '__error__', 'Save failed')
-    }
-  }
-
-  function handleKeyDown(e) {
-    if (e.key === 'Enter' && type !== 'textarea') { e.preventDefault(); save() }
-    if (e.key === 'Escape') { setDraft(value || ''); setEditing(false) }
-  }
-
-  if (editing) {
-    const inputStyle = {
-      width: '100%', padding: '4px 6px', fontSize: '11px',
-      border: '2px solid #2563eb', borderRadius: '5px',
-      background: 'white', color: '#0f172a',
-      fontFamily: type === 'time' ? 'monospace' : 'inherit',
-      outline: 'none', boxSizing: 'border-box',
-      opacity: saving ? 0.6 : 1,
-    }
-    if (type === 'textarea') {
-      return (
-        <td style={{ padding: '4px 6px', ...style }}>
-          <textarea
-            autoFocus value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onBlur={save}
-            onKeyDown={e => { if (e.key === 'Escape') { setDraft(value || ''); setEditing(false) } }}
-            disabled={saving} rows={2}
-            style={{ ...inputStyle, resize: 'vertical', width: '100%' }}
-          />
-        </td>
-      )
-    }
-    return (
-      <td style={{ padding: '4px 6px', ...style }}>
-        <input
-          autoFocus type={type} value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onBlur={save} onKeyDown={handleKeyDown}
-          disabled={saving}
-          style={{ ...inputStyle, width: '100%' }}
-        />
-      </td>
-    )
-  }
-
+// ─── ClickableCell ────────────────────────────────────────────
+function ClickableCell({ value, field, onClick, onContextMenu, style, emptyLabel = '-' }) {
   return (
     <td
-      onClick={() => { setDraft(value || ''); setEditing(true) }}
+      onClick={onClick}
       onContextMenu={onContextMenu}
       title="Click to edit · Right-click to change color"
-      style={{ padding: '7px 10px', cursor: 'text', overflow: 'hidden',
-        textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...style }}
+      style={{
+        padding: '7px 10px', cursor: 'pointer',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        ...style,
+      }}
       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
       onMouseLeave={e => { e.currentTarget.style.background = style?.background || '' }}
     >
-      {value || <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '10px' }}>-</span>}
+      {value || <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '10px' }}>{emptyLabel}</span>}
+    </td>
+  )
+}
+
+// ─── NotesCell ────────────────────────────────────────────────
+function NotesCell({ crewId, notesMap, unreadMap, onClick, onContextMenu, bgColor }) {
+  const entry       = crewId ? (notesMap[crewId] || null) : null
+  const count       = entry?.count || 0
+  const lastNote    = entry?.lastNote || ''
+  const unreadCount = crewId ? (unreadMap[crewId] || 0) : 0
+  const preview     = lastNote.length > 45 ? lastNote.slice(0, 45) + '…' : lastNote
+
+  return (
+    <td
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+      title="Click to open notes"
+      style={{
+        padding: '7px 10px', cursor: 'pointer',
+        overflow: 'hidden', whiteSpace: 'nowrap',
+        background: bgColor,
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = bgColor || '' }}
+    >
+      {count === 0 ? (
+        <span style={{ color: '#cbd5e1', fontSize: '11px' }}>💬</span>
+      ) : (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <span style={{
+            fontSize: '9px', fontWeight: '800',
+            color: unreadCount > 0 ? '#ea580c' : '#92400e',
+            background: unreadCount > 0 ? '#fff7ed' : '#fef3c7',
+            border: `1px solid ${unreadCount > 0 ? '#fed7aa' : '#fcd34d'}`,
+            padding: '1px 5px', borderRadius: '3px', flexShrink: 0,
+          }}>
+            💬 {count}
+          </span>
+          <span style={{ fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {preview}
+          </span>
+        </span>
+      )}
     </td>
   )
 }
@@ -232,8 +211,7 @@ function ColorPickerPopover({ field, rowId, currentColor, onColorSaved, onClose 
 }
 
 // ─── renderCell — data-driven cell renderer ────────────────────
-// S58-C: unreadMap + notesMap added to context for 💬 badge in full_name column
-function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors, unreadMap, notesMap }) {
+function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, unreadMap, notesMap }) {
   const field = col.source_field
   const base = {
     fontSize: '11px', color: '#374151',
@@ -244,10 +222,13 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
   switch (field) {
     case 'direction':
       return (
-        <td key={field} style={{ padding: '7px 10px', fontSize: '11px', fontWeight: '800',
-          color: m.direction === 'IN' ? '#15803d' : '#c2410c',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          background: bgColor }}>
+        <td key={field} onClick={() => onEditRow(m, 'direction')}
+          style={{ padding: '7px 10px', fontSize: '11px', fontWeight: '800',
+            color: m.direction === 'IN' ? '#15803d' : '#c2410c',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            background: bgColor, cursor: 'pointer' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = bgColor || '' }}>
           {m.direction === 'IN' ? 'v IN' : '^ OUT'}
         </td>
       )
@@ -264,11 +245,14 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
       }
       const displayName = m.crew?.full_name || m.full_name_raw || '-'
       const unreadCount = (m.crew_id && unreadMap) ? (unreadMap[m.crew_id] || 0) : 0
-      const notesCount  = (m.crew_id && notesMap)  ? (notesMap[m.crew_id]  || 0) : 0
+      const notesCount  = (m.crew_id && notesMap)  ? (notesMap[m.crew_id]?.count || 0) : 0
       return (
-        <td key={field} style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700',
-          color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          background: bgColor }}>
+        <td key={field} onClick={() => onEditRow(m, 'full_name')}
+          style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700',
+            color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            background: bgColor, cursor: 'pointer' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = bgColor || '' }}>
           {displayName}
           {m.journeySize > 1 && (
             <span style={{ marginLeft: '5px', fontSize: '9px', fontWeight: '700',
@@ -299,26 +283,31 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
 
     case 'crew_role':
       return (
-        <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: bgColor }}>
+        <td key={field} onClick={() => onEditRow(m, 'crew_role')}
+          style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            background: bgColor, cursor: 'pointer' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = bgColor || '' }}>
           {m.crew?.role || '-'}
         </td>
       )
 
     case 'pickup_dep':
       return (
-        <EditableCell key={field}
-          value={m.pickup_dep} field="pickup_dep" rowId={m.id}
-          onSaved={onCellSaved} style={base}
+        <ClickableCell key={field}
+          value={m.pickup_dep} field="pickup_dep"
+          onClick={() => onEditRow(m, 'pickup_dep')}
+          style={base}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'pickup_dep', colors['pickup_dep'])}
         />
       )
 
     case 'from_location':
       return (
-        <EditableCell key={field}
-          value={m.from_location} field="from_location" rowId={m.id}
-          onSaved={onCellSaved}
+        <ClickableCell key={field}
+          value={m.from_location} field="from_location"
+          onClick={() => onEditRow(m, 'from_location')}
           style={{ ...base, fontWeight: '600', color: '#0f172a' }}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'from_location', colors['from_location'])}
         />
@@ -326,9 +315,9 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
 
     case 'from_time':
       return (
-        <EditableCell key={field}
+        <ClickableCell key={field}
           value={m.from_time ? m.from_time.slice(0, 5) : ''} field="from_time"
-          rowId={m.id} type="time" onSaved={onCellSaved}
+          onClick={() => onEditRow(m, 'from_time')}
           style={{ ...base, fontFamily: 'monospace' }}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'from_time', colors['from_time'])}
         />
@@ -336,9 +325,9 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
 
     case 'to_location':
       return (
-        <EditableCell key={field}
-          value={m.to_location} field="to_location" rowId={m.id}
-          onSaved={onCellSaved}
+        <ClickableCell key={field}
+          value={m.to_location} field="to_location"
+          onClick={() => onEditRow(m, 'to_location')}
           style={{ ...base, fontWeight: '600', color: '#0f172a' }}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'to_location', colors['to_location'])}
         />
@@ -346,9 +335,9 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
 
     case 'to_time':
       return (
-        <EditableCell key={field}
+        <ClickableCell key={field}
           value={m.to_time ? m.to_time.slice(0, 5) : ''} field="to_time"
-          rowId={m.id} type="time" onSaved={onCellSaved}
+          onClick={() => onEditRow(m, 'to_time')}
           style={{ ...base, fontFamily: 'monospace' }}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'to_time', colors['to_time'])}
         />
@@ -356,9 +345,9 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
 
     case 'travel_number':
       return (
-        <EditableCell key={field}
-          value={m.travel_number} field="travel_number" rowId={m.id}
-          onSaved={onCellSaved}
+        <ClickableCell key={field}
+          value={m.travel_number} field="travel_number"
+          onClick={() => onEditRow(m, 'travel_number')}
           style={{ ...base, fontFamily: 'monospace', fontWeight: '700', color: '#2563eb' }}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'travel_number', colors['travel_number'])}
         />
@@ -366,21 +355,24 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
 
     case 'pickup_arr':
       return (
-        <EditableCell key={field}
-          value={m.pickup_arr} field="pickup_arr" rowId={m.id}
-          onSaved={onCellSaved} style={base}
+        <ClickableCell key={field}
+          value={m.pickup_arr} field="pickup_arr"
+          onClick={() => onEditRow(m, 'pickup_arr')}
+          style={base}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'pickup_arr', colors['pickup_arr'])}
         />
       )
 
     case 'needs_transport':
-      return <NeedsTransportCell key={field} value={m.needs_transport} rowId={m.id} onSaved={onCellSaved} />
+      return <NeedsTransportCell key={field} value={m.needs_transport} rowId={m.id} onSaved={() => {
+        // NeedsTransportCell richiede onSaved — gestito separatamente in SectionTable
+      }} />
 
     case 'accommodation':
       return (
-        <EditableCell key={field}
-          value={m.accommodation} field="accommodation" rowId={m.id}
-          onSaved={onCellSaved}
+        <ClickableCell key={field}
+          value={m.accommodation} field="accommodation"
+          onClick={() => onEditRow(m, 'accommodation')}
           style={{ ...base, color: '#374151' }}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'accommodation', colors['accommodation'])}
         />
@@ -388,11 +380,13 @@ function renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors
 
     case 'notes':
       return (
-        <EditableCell key={field}
-          value={m.notes} field="notes" rowId={m.id}
-          type="textarea" onSaved={onCellSaved}
-          style={{ ...base, color: '#374151' }}
+        <NotesCell key={field}
+          crewId={m.crew_id}
+          notesMap={notesMap}
+          unreadMap={unreadMap}
+          onClick={() => onEditRow(m, 'notes')}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'notes', colors['notes'])}
+          bgColor={colors['notes'] || bgColor}
         />
       )
 
@@ -496,7 +490,6 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
             {columnsConfig.map(col => (
               <col key={col.source_field} style={{ width: col.width }} />
             ))}
-            <col style={{ width: '38px' }} />
           </colgroup>
 
           <thead>
@@ -513,7 +506,6 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                   {col.header_label}
                 </th>
               ))}
-              <th style={{ borderBottom: '1px solid #e2e8f0', width: '38px' }} />
             </tr>
           </thead>
 
@@ -537,18 +529,10 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                   opacity: isLeg ? 0.9 : 1,
                 }}>
                   {columnsConfig.map(col =>
-                    renderCell(col, m, { onCellSaved, handleCellRightClick, bgColor, colors, unreadMap, notesMap })
+                    col.source_field === 'needs_transport'
+                      ? <NeedsTransportCell key={col.source_field} value={m.needs_transport} rowId={m.id} onSaved={onCellSaved} />
+                      : renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, unreadMap, notesMap })
                   )}
-                  <td style={{ padding: '4px 6px', background: bgColor, textAlign: 'right', verticalAlign: 'middle' }}>
-                    <button
-                      onClick={() => onEditRow(m)}
-                      title="Edit movement"
-                      style={{
-                        background: 'none', border: '1px solid #e2e8f0',
-                        borderRadius: '5px', padding: '2px 6px',
-                        cursor: 'pointer', fontSize: '11px', color: '#64748b',
-                      }}>&#9998;</button>
-                  </td>
                 </tr>
               )
             })}
@@ -589,6 +573,22 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
   const [crewResults, setCrewResults]   = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
 
+  const fieldRefs = {
+    travel_date:    React.useRef(null),
+    direction:      React.useRef(null),
+    travel_type:    React.useRef(null),
+    full_name:      React.useRef(null),
+    travel_number:  React.useRef(null),
+    from_location:  React.useRef(null),
+    from_time:      React.useRef(null),
+    to_location:    React.useRef(null),
+    to_time:        React.useRef(null),
+    pickup_dep:     React.useRef(null),
+    pickup_arr:     React.useRef(null),
+    accommodation:  React.useRef(null),
+    notes:          React.useRef(null),
+  }
+
   useEffect(() => {
     if (!open) return
     setError(null); setConfirmDel(false)
@@ -615,6 +615,17 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
       })
       setCrewSearch(initial.full_name_raw || initial.crew?.full_name || '')
       setCrewResults([])
+      // Focus sul campo richiesto dopo apertura
+      if (initial?.__focusField) {
+        const focusKey = initial.__focusField
+        setTimeout(() => {
+          const ref = fieldRefs[focusKey]
+          if (ref?.current) {
+            ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            ref.current.focus()
+          }
+        }, 300)
+      }
 
     } else if (mode === 'new' && initial?.__isLeg) {
       setForm({
@@ -939,40 +950,40 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
 
             <div style={rowSt}>
               <label style={lbl}>Travel Number</label>
-              <input value={form.travel_number} onChange={e => set('travel_number', e.target.value)}
+              <input ref={fieldRefs.travel_number} value={form.travel_number} onChange={e => set('travel_number', e.target.value)}
                 style={{ ...inp, fontFamily: 'monospace', fontWeight: '700' }} placeholder="FR1234, AZ0001..." />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '8px', marginBottom: '12px' }}>
               <div>
                 <label style={lbl}>From</label>
-                <input value={form.from_location} onChange={e => set('from_location', e.target.value)} style={inp} placeholder="Rome FCO" />
+                <input ref={fieldRefs.from_location} value={form.from_location} onChange={e => set('from_location', e.target.value)} style={inp} placeholder="Rome FCO" />
               </div>
               <div>
                 <label style={lbl}>Dep time</label>
-                <input type="time" value={form.from_time} onChange={e => set('from_time', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} />
+                <input ref={fieldRefs.from_time} type="time" value={form.from_time} onChange={e => set('from_time', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '8px', marginBottom: '12px' }}>
               <div>
                 <label style={lbl}>To</label>
-                <input value={form.to_location} onChange={e => set('to_location', e.target.value)} style={inp} placeholder="Bari BRI" />
+                <input ref={fieldRefs.to_location} value={form.to_location} onChange={e => set('to_location', e.target.value)} style={inp} placeholder="Bari BRI" />
               </div>
               <div>
                 <label style={lbl}>Arr time</label>
-                <input type="time" value={form.to_time} onChange={e => set('to_time', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} />
+                <input ref={fieldRefs.to_time} type="time" value={form.to_time} onChange={e => set('to_time', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
               <div>
                 <label style={lbl}>p/up dep</label>
-                <input value={form.pickup_dep} onChange={e => set('pickup_dep', e.target.value)} style={inp} placeholder="OA, TRANSPORT DEPT..." />
+                <input ref={fieldRefs.pickup_dep} value={form.pickup_dep} onChange={e => set('pickup_dep', e.target.value)} style={inp} placeholder="OA, TRANSPORT DEPT..." />
               </div>
               <div>
                 <label style={lbl}>p/up arr</label>
-                <input value={form.pickup_arr} onChange={e => set('pickup_arr', e.target.value)} style={inp} placeholder="Rental car, TRANSPORT..." />
+                <input ref={fieldRefs.pickup_arr} value={form.pickup_arr} onChange={e => set('pickup_arr', e.target.value)} style={inp} placeholder="Rental car, TRANSPORT..." />
               </div>
             </div>
 
@@ -993,28 +1004,28 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
 
             <div style={rowSt}>
               <label style={lbl}>Accommodation</label>
-              <input value={form.accommodation} onChange={e => set('accommodation', e.target.value)}
+              <input ref={fieldRefs.accommodation} value={form.accommodation} onChange={e => set('accommodation', e.target.value)}
                 style={inp} placeholder="Hotel name, room number..." />
             </div>
 
-            
-
             {/* S59-C/S59-E: NotesPanel accordion — lazy load, solo se crew_id è collegato */}
             {form.crew_id && (
-              form.id ? (
-              <NotesPanel
-                crewId={form.crew_id}
-                productionId={PRODUCTION_ID}
-                currentUser={currentUser}
-                linkedMovementId={form.id}
-                onNotesSent={() => {}}
-                accordion={true}
-              />
-              ) : (
-                <div style={{ marginTop: '8px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
-                  💬 Save the movement first to add notes
-                </div>
-              )
+              <div ref={fieldRefs.notes}>
+                {form.id ? (
+                  <NotesPanel
+                    crewId={form.crew_id}
+                    productionId={PRODUCTION_ID}
+                    currentUser={currentUser}
+                    linkedMovementId={form.id}
+                    onNotesSent={() => {}}
+                    accordion={true}
+                  />
+                ) : (
+                  <div style={{ marginTop: '8px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                    💬 Save the movement first to add notes
+                  </div>
+                )}
+              </div>
             )}
 
             {mode === 'edit' && (
@@ -1112,7 +1123,7 @@ export default function TravelPage() {
   const [notesMap,  setNotesMap]  = useState({})
 
   function openNew()   { setSidebarMode('new');  setSidebarTarget(null); setSidebarOpen(true) }
-  function openEdit(m) { setSidebarMode('edit'); setSidebarTarget(m);    setSidebarOpen(true) }
+  function openEdit(m, focusField) { setSidebarMode('edit'); setSidebarTarget({ ...m, __focusField: focusField || null }); setSidebarOpen(true) }
 
   function openAddLeg(prevMovement) {
     const nextLeg = {
@@ -1155,20 +1166,29 @@ export default function TravelPage() {
     if (!PRODUCTION_ID || !userId) return
     const { data } = await supabase
       .from('crew_notes')
-      .select('crew_id, author_id, read_by')
+      .select('crew_id, author_id, read_by, content, created_at')
       .eq('production_id', PRODUCTION_ID)
       .eq('is_private', false)
+      .order('created_at', { ascending: false })
     if (!data) return
-    const unread = {}
-    const total  = {}
+    const unread  = {}
+    const total   = {}
+    const lastMap = {}
     for (const note of data) {
       total[note.crew_id] = (total[note.crew_id] || 0) + 1
+      // Prima nota incontrata (più recente per via dell'order desc) = ultima nota
+      if (!lastMap[note.crew_id]) lastMap[note.crew_id] = note.content || ''
       if (note.author_id === userId) continue
       if ((note.read_by || []).includes(userId)) continue
       unread[note.crew_id] = (unread[note.crew_id] || 0) + 1
     }
     setUnreadMap(unread)
-    setNotesMap(total)
+    // notesMap ora è { [crew_id]: { count, lastNote } }
+    const notes = {}
+    for (const crewId of Object.keys(total)) {
+      notes[crewId] = { count: total[crewId], lastNote: lastMap[crewId] || '' }
+    }
+    setNotesMap(notes)
   }, [PRODUCTION_ID])
 
   // ── Section colors loader ──────────────────────────────────
