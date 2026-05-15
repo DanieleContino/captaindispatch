@@ -102,7 +102,9 @@ function NotesCell({ notesEntry, unreadCount = 0, onClick }) {
 
 // ─── SELECT_FIELDS ─────────────────────────────────────────────
 const SELECT_FIELDS = `
-  id, production_id, crew_id, hotel_id, arrival_date, departure_date, room_type_notes, created_at,
+  id, production_id, crew_id, hotel_id, arrival_date, departure_date,
+  room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
+  total_cost_vat, po_number, invoice_number, created_at,
   crew:crew_id(id, full_name, role, department),
   hotel:hotel_id(id, name)
 `
@@ -296,12 +298,18 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
 
     if (mode === 'edit' && initial) {
       setForm({
-        id:              initial.id              || null,
-        crew_id:         initial.crew_id         || null,
-        hotel_id:        initial.hotel_id        || '',
-        arrival_date:    initial.arrival_date    || '',
-        departure_date:  initial.departure_date  || '',
-        room_type_notes: initial.room_type_notes || '',
+        id:                initial.id                || null,
+        crew_id:           initial.crew_id           || null,
+        hotel_id:          initial.hotel_id          || '',
+        arrival_date:      initial.arrival_date      || '',
+        departure_date:    initial.departure_date    || '',
+        room_type_notes:   initial.room_type_notes   || '',
+        cost_per_night:    initial.cost_per_night    ?? '',
+        city_tax_total:    initial.city_tax_total    ?? '',
+        total_cost_no_vat: initial.total_cost_no_vat ?? '',
+        total_cost_vat:    initial.total_cost_vat    ?? '',
+        po_number:         initial.po_number         || '',
+        invoice_number:    initial.invoice_number    || '',
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
@@ -366,12 +374,18 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
 
   function buildRow() {
     return {
-      production_id:   PRODUCTION_ID,
-      crew_id:         form.crew_id || null,
-      hotel_id:        form.hotel_id || null,
-      arrival_date:    form.arrival_date   || null,
-      departure_date:  form.departure_date || null,
-      room_type_notes: (form.room_type_notes || '').trim() || null,
+      production_id:     PRODUCTION_ID,
+      crew_id:           form.crew_id           || null,
+      hotel_id:          form.hotel_id          || null,
+      arrival_date:      form.arrival_date      || null,
+      departure_date:    form.departure_date    || null,
+      room_type_notes:   (form.room_type_notes  || '').trim() || null,
+      cost_per_night:    form.cost_per_night    !== '' ? parseFloat(form.cost_per_night)    : null,
+      city_tax_total:    form.city_tax_total    !== '' ? parseFloat(form.city_tax_total)    : null,
+      total_cost_no_vat: form.total_cost_no_vat !== '' ? parseFloat(form.total_cost_no_vat) : null,
+      total_cost_vat:    form.total_cost_vat    !== '' ? parseFloat(form.total_cost_vat)    : null,
+      po_number:         (form.po_number        || '').trim() || null,
+      invoice_number:    (form.invoice_number   || '').trim() || null,
     }
   }
 
@@ -558,6 +572,41 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
                 style={inp}
                 placeholder="Room type, number, preferences..."
               />
+            </div>
+
+            {/* Cost fields */}
+            <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Cost (optional)</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+                <div>
+                  <label style={lbl}>€/night</label>
+                  <input type="number" step="0.01" value={form.cost_per_night} onChange={e => set('cost_per_night', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" />
+                </div>
+                <div>
+                  <label style={lbl}>City tax total</label>
+                  <input type="number" step="0.01" value={form.city_tax_total} onChange={e => set('city_tax_total', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+                <div>
+                  <label style={lbl}>Tot. no VAT</label>
+                  <input type="number" step="0.01" value={form.total_cost_no_vat} onChange={e => set('total_cost_no_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" />
+                </div>
+                <div>
+                  <label style={lbl}>Tot. + VAT</label>
+                  <input type="number" step="0.01" value={form.total_cost_vat} onChange={e => set('total_cost_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <div>
+                  <label style={lbl}>P.O.</label>
+                  <input value={form.po_number} onChange={e => set('po_number', e.target.value)} style={inp} placeholder="P.O. number" />
+                </div>
+                <div>
+                  <label style={lbl}>N°Fatt.</label>
+                  <input value={form.invoice_number} onChange={e => set('invoice_number', e.target.value)} style={inp} placeholder="Invoice #" />
+                </div>
+              </div>
             </div>
 
             {/* Notes Panel */}
