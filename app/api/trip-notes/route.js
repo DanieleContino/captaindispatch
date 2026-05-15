@@ -1,0 +1,188 @@
+/**
+ * /api/trip-notes
+ * GET    ?trip_row_id=&production_id=   → lista note per un trip
+ * POST                                  → crea nuova nota
+ * PATCH  { id, action }                 → mark_read | mark_unread | edit
+ * DELETE ?id=                           → elimina nota (solo autore)
+ */
+
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
+
+export const dynamic = 'force-dynamic'
+
+async function makeSupabase() {
+  const cookieStore = await cookies()
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll()             { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {}
+        },
+      },
+    }
+  )
+}
+
+// Only these roles can write trip notes
+const ALLOWED_ROLES = ['CAPTAIN', 'ADMIN', 'MANAGER', 'PRODUCTION']
+const UNRESTRICTED  = ['CAPTAIN', 'ADMIN', 'MANAGER', 'PRODUCTION']
+const ROLE_CHANNEL  = { TRAVEL: 'travel', ACCOMMODATION: 'accommodation' }
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url)
+  const trip_row_id   = searchParams.get('trip_row_id')
+  const production_id = searchParams.get('production_id')
+
+  if (!trip_row_id || !production_id) {
+    return NextResponse.json({ error: 'trip_row_id and production_id required' }, { status: 400 })
+  }
+
+  const supabase = await makeSupabase()
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: roleData } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('production_id', production_id)
+    .maybeSingle()
+  const userRole = roleData?.role || null
+
+  const { data, error } = await supabase
+    .from('trip_notes')
+    .select('id,trip_row_id,author_id,author_name,author_role,content,is_private,context,read_by,created_at')
+    .eq('trip_row_id', trip_row_id)
+    .eq('production_id', production_id)
+    .order('created_at', { ascending: false })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const notes = (data || []).filter(n => {
+    if (n.is_private && n.author_id !== user.id) return false
+    if (!userRole || UNRESTRICTED.includes(userRole)) return true
+    if (n.author_id === user.id) return true
+    if (n.context === 'general') return true
+    const myChannel = ROLE_CHANNEL[userRole]
+    return myChannel && n.context === myChannel
+  })
+
+  return NextResponse.json({ notes, user_id: user.id })
+}
+
+export async function POST(request) {
+  const supabase = await makeSupabase()
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  let body
+  try { body = await request.json() }
+  catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+
+  const { trip_row_id, production_id, content, is_private, context, author_name } = body
+
+  if (!trip_row_id || !production_id || !content?.trim()) {
+    return NextResponse.json({ error: 'trip_row_id, production_id, content required' }, { status: 400 })
+  }
+
+  const { data: role } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('production_id', production_id)
+    .maybeSingle()
+
+  if (!role) return NextResponse.json({ error: 'Not a member of this production' }, { status: 403 })
+  if (!ALLOWED_ROLES.includes(role.role)) return NextResponse.json({ error: 'Not authorized to write trip notes' }, { status: 403 })
+
+  const { data, error } = await supabase
+    .from('trip_notes')
+    .insert({
+      production_id,
+      trip_row_id,
+      author_id:   user.id,
+      author_name: author_name || user.email || 'Unknown',
+      author_role: role.role,
+      content:     content.trim(),
+      is_private:  is_private === true,
+      context:     context || 'general',
+      read_by:     [],
+    })
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ note: data }, { status: 201 })
+}
+
+export async function PATCH(request) {
+  const supabase = await makeSupabase()
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  let body
+  try { body = await request.json() }
+  catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+
+  const { id, action } = body
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  if (action === 'mark_read') {
+    const { data: note } = await supabase.from('trip_notes').select('read_by,author_id').eq('id', id).single()
+    if (!note) return NextResponse.json({ error: 'Note not found' }, { status: 404 })
+    if (note.author_id === user.id) return NextResponse.json({ ok: true, already_author: true })
+    const existing = note.read_by || []
+    if (existing.includes(user.id)) return NextResponse.json({ ok: true, already_read: true })
+    const { error } = await supabase.from('trip_notes').update({ read_by: [...existing, user.id] }).eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
+
+  if (action === 'mark_unread') {
+    const { data: note } = await supabase.from('trip_notes').select('read_by').eq('id', id).single()
+    if (!note) return NextResponse.json({ error: 'Note not found' }, { status: 404 })
+    const updated = (note.read_by || []).filter(uid => uid !== user.id)
+    const { error } = await supabase.from('trip_notes').update({ read_by: updated }).eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
+
+  if (action === 'edit') {
+    const { content: newContent } = body
+    if (!newContent?.trim()) return NextResponse.json({ error: 'content required' }, { status: 400 })
+    const { data: note } = await supabase.from('trip_notes').select('author_id,created_at').eq('id', id).single()
+    if (!note) return NextResponse.json({ error: 'Note not found' }, { status: 404 })
+    if (note.author_id !== user.id) return NextResponse.json({ error: 'Only the author can edit' }, { status: 403 })
+    if (Date.now() - new Date(note.created_at).getTime() > 5 * 60 * 1000) {
+      return NextResponse.json({ error: 'Edit window expired (5 minutes)' }, { status: 403 })
+    }
+    const { data: updated, error } = await supabase.from('trip_notes').update({ content: newContent.trim() }).eq('id', id).select().single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, note: updated })
+  }
+
+  return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+}
+
+export async function DELETE(request) {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  const supabase = await makeSupabase()
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { error } = await supabase.from('trip_notes').delete().eq('id', id).eq('author_id', user.id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
