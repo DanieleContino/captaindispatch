@@ -601,6 +601,8 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const [savedLegs,         setSavedLegs]         = useState([])
   const [editingLegLocalId, setEditingLegLocalId] = useState(null)
   const [multiSaving,       setMultiSaving]       = useState(false)
+  const [draftTripId,       setDraftTripId]        = useState(null)
+  const [showCloseWarning,  setShowCloseWarning]   = useState(false)
 
   const transferClass = getClass(form.pickup_id, form.dropoff_id)
   const arrMin  = timeStrToMin(form.arr_time)
@@ -612,6 +614,28 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   function suggestLocId(name) {
     return name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC'
   }
+
+  // Crea draft trip in DB all'apertura della sidebar
+  useEffect(() => {
+    if (!open || !PRODUCTION_ID) return
+    let cancelled = false
+    async function createDraft() {
+      const { data } = await supabase
+        .from('trips')
+        .insert({
+          production_id: PRODUCTION_ID,
+          trip_id:       'DRAFT_' + Date.now(),
+          date:          defaultDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }),
+          status:        'DRAFT',
+          pax_count:     0,
+        })
+        .select('id')
+        .single()
+      if (!cancelled && data?.id) setDraftTripId(data.id)
+    }
+    createDraft()
+    return () => { cancelled = true }
+  }, [open])
 
   // Reset on open
   useEffect(() => {
@@ -1851,6 +1875,43 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               )}
             </div>
           </div>
+
+        {/* Trip Notes — visibile sempre, usa draftTripId in new mode */}
+        {draftTripId && (
+          <div style={{ padding: '0 18px 12px' }}>
+            <TripNotesPanel
+              tripRowId={draftTripId}
+              productionId={PRODUCTION_ID}
+              currentUser={currentUser}
+            />
+          </div>
+        )}
+
+        {/* Warning chiusura senza save */}
+        {showCloseWarning && (
+          <div style={{ margin: '0 18px 12px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', marginBottom: '8px' }}>
+              ⚠ Unsaved trip — notes will be deleted. Close anyway?
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" onClick={() => setShowCloseWarning(false)}
+                style={{ flex: 1, padding: '6px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>
+                Cancel
+              </button>
+              <button type="button" onClick={async () => {
+                if (draftTripId) {
+                  await supabase.from('trips').delete().eq('id', draftTripId)
+                  setDraftTripId(null)
+                }
+                setShowCloseWarning(false)
+                onClose()
+              }}
+                style={{ flex: 1, padding: '6px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: '800' }}>
+                Yes, close
+              </button>
+            </div>
+          </div>
+        )}
 
           {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
           <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, position: 'sticky', bottom: 0, background: 'white' }}>
