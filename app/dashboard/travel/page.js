@@ -970,7 +970,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
                 style={{ ...inp, fontFamily: 'monospace', fontWeight: '700' }} placeholder="FR1234, AZ0001..." />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '8px', marginBottom: '12px' }}>
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: '8px', marginBottom: '12px' }}>
               <div>
                 <label style={lbl}>From</label>
                 <input ref={fieldRefs.from_location} value={form.from_location} onChange={e => set('from_location', e.target.value)} style={inp} placeholder="Rome FCO" />
@@ -981,7 +981,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '8px', marginBottom: '12px' }}>
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: '8px', marginBottom: '12px' }}>
               <div>
                 <label style={lbl}>To</label>
                 <input ref={fieldRefs.to_location} value={form.to_location} onChange={e => set('to_location', e.target.value)} style={inp} placeholder="Bari BRI" />
