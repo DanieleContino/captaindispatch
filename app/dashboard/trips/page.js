@@ -1893,7 +1893,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 }
 
 // ─── EditTripSidebar (EDIT + PAX management) ──────────────────
-function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTypes, onClose, onSaved, onPaxChanged }) {
+function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTypes, onClose, onSaved, onPaxChanged, currentUser }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const isMobile = useIsMobile()
@@ -3833,6 +3833,7 @@ function TripsPageInner() {
         onClose={() => setEditTripRow(null)}
         onSaved={() => { setEditTripRow(null); loadTrips(date) }}
         onPaxChanged={() => loadTrips(date)}
+        currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null}
       />
 
       {/* ── Replica Day Modal ── */}
