@@ -13,10 +13,17 @@ import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
+import { AccommodationColumnsEditorSidebar } from '../../../lib/AccommodationColumnsEditorSidebar'
+import { ACCOMMODATION_DEFAULT_PRESET } from '../../../lib/accommodationColumnsCatalog'
 
 // ─── Date helpers ─────────────────────────────────────────────
 function isoToday() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+}
+function isoAdd(dateStr, n) {
+  const dt = new Date(dateStr + 'T12:00:00Z')
+  dt.setUTCDate(dt.getUTCDate() + n)
+  return dt.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
 }
 function fmtDate(s) {
   if (!s) return '–'
@@ -108,6 +115,164 @@ const EMPTY_STAY = {
   arrival_date: '',
   departure_date: '',
   room_type_notes: '',
+  cost_per_night: '',
+  city_tax_total: '',
+  total_cost_no_vat: '',
+  total_cost_vat: '',
+  po_number: '',
+  invoice_number: '',
+}
+
+// ─── ClickableCell ─────────────────────────────────────────────
+function ClickableCell({ value, onClick, style, emptyLabel = '—' }) {
+  return (
+    <td
+      onClick={onClick}
+      style={{ padding: '7px 10px', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...style }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = style?.background || '' }}
+    >
+      {value || <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '10px' }}>{emptyLabel}</span>}
+    </td>
+  )
+}
+
+// ─── renderCell — data-driven ──────────────────────────────────
+function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }) {
+  const field = col.source_field
+  switch (field) {
+    case 'full_name':
+      return (
+        <td key={field} onClick={() => onEditRow(stay, 'full_name')}
+          style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+          {stay.crew?.full_name || '—'}
+        </td>
+      )
+    case 'role':
+      return (
+        <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {stay.crew?.role || '—'}
+        </td>
+      )
+    case 'department':
+      return (
+        <td key={field} style={{ padding: '7px 10px', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {stay.crew?.department
+            ? <span style={{ background: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>{stay.crew.department}</span>
+            : '—'}
+        </td>
+      )
+    case 'room_type_notes':
+      return (
+        <ClickableCell key={field}
+          value={stay.room_type_notes}
+          onClick={() => onEditRow(stay, 'room_type_notes')}
+          style={{ fontSize: '11px', color: '#374151' }}
+        />
+      )
+    case 'arrival_date': {
+      const isCI = stay.arrival_date === today
+      return (
+        <td key={field} onClick={() => onEditRow(stay, 'arrival_date')}
+          style={{ padding: '7px 10px', fontSize: '11px', cursor: 'pointer', fontWeight: isCI ? '800' : '500', color: isCI ? '#15803d' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+          {fmtDate(stay.arrival_date)}
+        </td>
+      )
+    }
+    case 'departure_date': {
+      const isCO = stay.departure_date === today
+      return (
+        <td key={field} onClick={() => onEditRow(stay, 'departure_date')}
+          style={{ padding: '7px 10px', fontSize: '11px', cursor: 'pointer', fontWeight: isCO ? '800' : '500', color: isCO ? '#dc2626' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+          {fmtDate(stay.departure_date)}
+        </td>
+      )
+    }
+    case 'nights': {
+      const n = nightsBetween(stay.arrival_date, stay.departure_date)
+      return (
+        <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b', textAlign: 'center' }}>
+          {n != null ? <span style={{ fontWeight: '700', color: '#0f172a' }}>{n}🌙</span> : '—'}
+        </td>
+      )
+    }
+    case 'status': {
+      const st = getStayStatus(stay.arrival_date, stay.departure_date)
+      return (
+        <td key={field} style={{ padding: '7px 10px', fontSize: '10px' }}>
+          {st ? (
+            <span style={{ fontWeight: '700', padding: '2px 7px', borderRadius: '999px', background: st.style.bg, color: st.style.color, border: `1px solid ${st.style.border}`, whiteSpace: 'nowrap' }}>
+              {st.label}
+            </span>
+          ) : '—'}
+        </td>
+      )
+    }
+    case 'notes':
+      return (
+        <NotesCell key={field}
+          notesEntry={stayNotesMap ? (stayNotesMap[stay.id] || null) : null}
+          unreadCount={stayUnreadMap ? (stayUnreadMap[stay.id] || 0) : 0}
+          onClick={() => onEditRow(stay, 'notes')}
+        />
+      )
+    case 'cost_per_night':
+      return (
+        <ClickableCell key={field}
+          value={stay.cost_per_night != null ? `€${stay.cost_per_night}` : null}
+          onClick={() => onEditRow(stay, 'cost_per_night')}
+          style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }}
+        />
+      )
+    case 'city_tax_total':
+      return (
+        <ClickableCell key={field}
+          value={stay.city_tax_total != null ? `€${stay.city_tax_total}` : null}
+          onClick={() => onEditRow(stay, 'city_tax_total')}
+          style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }}
+        />
+      )
+    case 'total_cost_no_vat':
+      return (
+        <ClickableCell key={field}
+          value={stay.total_cost_no_vat != null ? `€${stay.total_cost_no_vat}` : null}
+          onClick={() => onEditRow(stay, 'total_cost_no_vat')}
+          style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }}
+        />
+      )
+    case 'total_cost_vat':
+      return (
+        <ClickableCell key={field}
+          value={stay.total_cost_vat != null ? `€${stay.total_cost_vat}` : null}
+          onClick={() => onEditRow(stay, 'total_cost_vat')}
+          style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }}
+        />
+      )
+    case 'po_number':
+      return (
+        <ClickableCell key={field}
+          value={stay.po_number}
+          onClick={() => onEditRow(stay, 'po_number')}
+          style={{ fontSize: '11px', color: '#374151' }}
+        />
+      )
+    case 'invoice_number':
+      return (
+        <ClickableCell key={field}
+          value={stay.invoice_number}
+          onClick={() => onEditRow(stay, 'invoice_number')}
+          style={{ fontSize: '11px', color: '#374151' }}
+        />
+      )
+    default:
+      return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
+  }
 }
 
 // ─── StaySidebar ──────────────────────────────────────────────
@@ -491,6 +656,15 @@ export default function AccommodationPage() {
   const [hotels,  setHotels]  = useState([])
   const [loading, setLoading] = useState(true)
 
+  // Columns config
+  const [columnsConfig,      setColumnsConfig]      = useState([])
+  const [columnsEditorOpen,  setColumnsEditorOpen]  = useState(false)
+  const [applyingPreset,     setApplyingPreset]     = useState(false)
+
+  // Date window — mirrors Travel page pattern
+  const [windowStart, setWindowStart] = useState(() => isoAdd(isoToday(), -3))
+  const [windowEnd,   setWindowEnd]   = useState(() => isoAdd(isoToday(), 10))
+
   // Sidebar
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [sidebarMode,   setSidebarMode]   = useState('new')
@@ -523,15 +697,62 @@ export default function AccommodationPage() {
     setSidebarOpen(true)
   }
 
-  // ── Load stays ─────────────────────────────────────────────
-  const loadData = useCallback(async () => {
+  // ── Load columns config ────────────────────────────────────
+  const loadColumnsConfig = useCallback(async () => {
+    if (!PRODUCTION_ID) return
+    const { data } = await supabase
+      .from('accommodation_columns')
+      .select('*')
+      .eq('production_id', PRODUCTION_ID)
+      .order('display_order', { ascending: true })
+      .order('created_at',    { ascending: true })
+    setColumnsConfig(data || [])
+  }, [PRODUCTION_ID])
+
+  // ── Apply default preset ───────────────────────────────────
+  async function applyDefaultPreset() {
+    if (!PRODUCTION_ID || applyingPreset) return
+    setApplyingPreset(true)
+    try {
+      const rows = ACCOMMODATION_DEFAULT_PRESET.map(p => ({ ...p, production_id: PRODUCTION_ID }))
+      const { error } = await supabase.from('accommodation_columns').insert(rows)
+      if (error) throw error
+      await loadColumnsConfig()
+      showToast('Default preset applied')
+    } catch (e) {
+      showToast('Failed to apply preset: ' + (e.message || 'unknown'), 'error')
+    } finally {
+      setApplyingPreset(false)
+    }
+  }
+
+  // ── Date window navigation ─────────────────────────────────
+  function shiftWindow(n) {
+    setWindowStart(s => isoAdd(s, n))
+    setWindowEnd(e   => isoAdd(e, n))
+  }
+  function resetWindow() {
+    setWindowStart(isoAdd(isoToday(), -3))
+    setWindowEnd(isoAdd(isoToday(), 10))
+  }
+  function pickDate(dateStr) {
+    setWindowStart(isoAdd(dateStr, -3))
+    setWindowEnd(isoAdd(dateStr, 10))
+  }
+
+  // ── Load stays (filtered by date window overlap) ───────────
+  const loadData = useCallback(async (start, end) => {
     if (!PRODUCTION_ID) return
     setLoading(true)
+    const s = start || windowStart
+    const e = end   || windowEnd
     const { data } = await supabase
       .from('crew_stays')
       .select(SELECT_FIELDS)
       .eq('production_id', PRODUCTION_ID)
-      .order('hotel_id', { ascending: true })
+      .lte('arrival_date',   e)
+      .gte('departure_date', s)
+      .order('hotel_id',     { ascending: true })
       .order('arrival_date', { ascending: true })
     setStays(data || [])
     setLoading(false)
@@ -601,11 +822,17 @@ export default function AccommodationPage() {
   // ── Initial data load ──────────────────────────────────────
   useEffect(() => {
     if (user) {
-      loadData()
+      loadData(windowStart, windowEnd)
       loadHotels()
+      loadColumnsConfig()
       loadNotesMap(user.id)
     }
-  }, [user, loadData, loadHotels, loadNotesMap])
+  }, [user])
+
+  // ── Reload when window changes ─────────────────────────────
+  useEffect(() => {
+    if (user) loadData(windowStart, windowEnd)
+  }, [windowStart, windowEnd])
 
   // ── Realtime subscription on crew_notes ───────────────────
   useEffect(() => {
@@ -739,13 +966,41 @@ export default function AccommodationPage() {
         }}>
           + Add Stay
         </button>
-        <div style={{ flex: 1 }} />
-        <button onClick={() => loadData()} style={{
-          background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px',
-          padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151',
-        }}>
-          ↺
-        </button>
+
+        {/* Date window navigator — mirrors Travel page */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <button onClick={() => shiftWindow(-7)}
+            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>◀</button>
+          <input type="date"
+            value={windowStart ? isoAdd(windowStart, 3) : today}
+            onChange={e => pickDate(e.target.value)}
+            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }}
+          />
+          <button onClick={() => shiftWindow(7)}
+            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>▶</button>
+          <button onClick={resetWindow}
+            style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#15803d', whiteSpace: 'nowrap' }}>
+            Today
+          </button>
+          <button onClick={() => loadData(windowStart, windowEnd)}
+            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+            ↺
+          </button>
+        </div>
+
+        {/* Columns button — mirrors Travel page */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          {columnsConfig.length === 0 && (
+            <button onClick={applyDefaultPreset} disabled={applyingPreset}
+              style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #15803d', background: applyingPreset ? '#cbd5e1' : '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: applyingPreset ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+              {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
+            </button>
+          )}
+          <button onClick={() => setColumnsEditorOpen(true)}
+            style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            Columns {columnsConfig.length > 0 && `(${columnsConfig.length})`}
+          </button>
+        </div>
       </div>
 
       {/* ── Filter Row ── */}
@@ -851,6 +1106,24 @@ export default function AccommodationPage() {
             <div style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>
               In hotel: <span style={{ fontWeight: '900' }}>{statInHotel}</span>
             </div>
+            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#94a3b8' }}>
+              {windowStart} → {windowEnd}
+            </div>
+          </div>
+        )}
+
+        {/* ── No columns configured banner ── */}
+        {columnsConfig.length === 0 && !loading && (
+          <div style={{ textAlign: 'center', padding: '40px 20px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+            <div style={{ fontSize: '32px', marginBottom: '8px' }}>🗂</div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>No columns configured</div>
+            <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px' }}>
+              Click <strong>Apply Default Columns</strong> to use the standard layout, or click <strong>Columns</strong> to configure manually.
+            </div>
+            <button onClick={applyDefaultPreset} disabled={applyingPreset}
+              style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#15803d', color: 'white', fontSize: '13px', fontWeight: '800', cursor: applyingPreset ? 'default' : 'pointer' }}>
+              {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
+            </button>
           </div>
         )}
 
@@ -899,161 +1172,70 @@ export default function AccommodationPage() {
                   </span>
                 </div>
 
-                {/* Table */}
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{
-                    width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed',
-                    border: '1px solid #e2e8f0', borderTop: '1px solid #86efac',
-                    borderRadius: '0 0 8px 8px', overflow: 'hidden', minWidth: '720px',
-                  }}>
-                    <colgroup>
-                      <col style={{ width: '160px' }} />
-                      <col style={{ width: '100px' }} />
-                      <col style={{ width: '80px' }}  />
-                      <col style={{ width: '120px' }} />
-                      <col style={{ width: '120px' }} />
-                      <col style={{ width: '50px' }}  />
-                      <col style={{ width: '130px' }} />
-                      <col style={{ width: '160px' }} />
-                      <col style={{ width: '50px' }}  />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ background: '#f1f5f9' }}>
-                        {['Name', 'Role', 'Dept', 'Room / Notes', 'Check-in', 'Check-out', 'Nights', 'Status', 'Notes'].map(h => (
-                          <th key={h} style={{
-                            padding: '6px 8px', fontSize: '10px', fontWeight: '800',
-                            color: h === 'Notes' ? '#2563eb' : '#64748b',
-                            textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            letterSpacing: '0.05em', textTransform: 'uppercase',
-                            borderBottom: '1px solid #e2e8f0',
-                          }}>
-                            {h}
-                          </th>
+                {/* Table — data-driven via columnsConfig */}
+                {columnsConfig.length > 0 && (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{
+                      width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed',
+                      border: '1px solid #e2e8f0', borderTop: '1px solid #86efac',
+                      borderRadius: '0 0 8px 8px', overflow: 'hidden',
+                      minWidth: columnsConfig.reduce((sum, c) => sum + parseInt(c.width || '100'), 0) + 'px',
+                    }}>
+                      <colgroup>
+                        {columnsConfig.map(col => (
+                          <col key={col.source_field} style={{ width: col.width }} />
                         ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {hotelStays.map(stay => {
-                        const status   = getStayStatus(stay.arrival_date, stay.departure_date)
-                        const nights   = nightsBetween(stay.arrival_date, stay.departure_date)
-                        const isToday  = stay.arrival_date === today || stay.departure_date === today
-                        const isCI     = stay.arrival_date === today
-                        const isCO     = stay.departure_date === today
-                        const bgColor  = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white'
-
-                        return (
-                          <tr key={stay.id} style={{
-                            background: bgColor,
-                            borderLeft: isCI ? '3px solid #22c55e' : isCO ? '3px solid #ef4444' : '3px solid transparent',
-                            outline: isToday ? '2px solid #fbbf24' : 'none',
-                            outlineOffset: '-2px',
-                          }}>
-                            {/* Name */}
-                            <td
-                              onClick={() => openEdit(stay, 'full_name')}
-                              style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = '' }}
-                            >
-                              {stay.crew?.full_name || '—'}
-                            </td>
-
-                            {/* Role */}
-                            <td style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {stay.crew?.role || '—'}
-                            </td>
-
-                            {/* Dept */}
-                            <td style={{ padding: '7px 10px', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {stay.crew?.department ? (
-                                <span style={{ background: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
-                                  {stay.crew.department}
-                                </span>
-                              ) : '—'}
-                            </td>
-
-                            {/* Room / Notes */}
-                            <td
-                              onClick={() => openEdit(stay, 'room_type_notes')}
-                              style={{ padding: '7px 10px', fontSize: '11px', color: '#374151', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = '' }}
-                            >
-                              {stay.room_type_notes || (
-                                <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '10px' }}>—</span>
+                      </colgroup>
+                      <thead>
+                        <tr style={{ background: '#f1f5f9' }}>
+                          {columnsConfig.map(col => (
+                            <th key={col.source_field} style={{
+                              padding: '6px 8px', fontSize: '10px', fontWeight: '800',
+                              color: col.source_field === 'notes' ? '#2563eb' : '#64748b',
+                              textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              letterSpacing: '0.05em', textTransform: 'uppercase',
+                              borderBottom: '1px solid #e2e8f0',
+                            }}>
+                              {col.header_label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {hotelStays.map(stay => {
+                          const isCI    = stay.arrival_date === today
+                          const isCO    = stay.departure_date === today
+                          const isToday = isCI || isCO
+                          const bgColor = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white'
+                          return (
+                            <tr key={stay.id} style={{
+                              background: bgColor,
+                              borderLeft: isCI ? '3px solid #22c55e' : isCO ? '3px solid #ef4444' : '3px solid transparent',
+                              outline: isToday ? '2px solid #fbbf24' : 'none',
+                              outlineOffset: '-2px',
+                            }}>
+                              {columnsConfig.map(col =>
+                                renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today })
                               )}
-                            </td>
-
-                            {/* Check-in */}
-                            <td
-                              onClick={() => openEdit(stay, 'arrival_date')}
-                              style={{
-                                padding: '7px 10px', fontSize: '11px', cursor: 'pointer',
-                                fontWeight: isCI ? '800' : '500',
-                                color: isCI ? '#15803d' : '#374151',
-                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                              }}
-                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = '' }}
-                            >
-                              {fmtDate(stay.arrival_date)}
-                            </td>
-
-                            {/* Check-out */}
-                            <td
-                              onClick={() => openEdit(stay, 'departure_date')}
-                              style={{
-                                padding: '7px 10px', fontSize: '11px', cursor: 'pointer',
-                                fontWeight: isCO ? '800' : '500',
-                                color: isCO ? '#dc2626' : '#374151',
-                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                              }}
-                              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-                              onMouseLeave={e => { e.currentTarget.style.background = '' }}
-                            >
-                              {fmtDate(stay.departure_date)}
-                            </td>
-
-                            {/* Nights */}
-                            <td style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b', textAlign: 'center' }}>
-                              {nights != null ? (
-                                <span style={{ fontWeight: '700', color: '#0f172a' }}>{nights}🌙</span>
-                              ) : '—'}
-                            </td>
-
-                            {/* Status */}
-                            <td style={{ padding: '7px 10px', fontSize: '10px' }}>
-                              {status ? (
-                                <span style={{
-                                  fontWeight: '700', padding: '2px 7px', borderRadius: '999px',
-                                  background: status.style.bg, color: status.style.color,
-                                  border: `1px solid ${status.style.border}`,
-                                  whiteSpace: 'nowrap',
-                                }}>
-                                  {status.label}
-                                </span>
-                              ) : '—'}
-                            </td>
-
-                            {/* Notes */}
-                            <NotesCell
-                              notesEntry={stayNotesMap[stay.id] || null}
-                              unreadCount={stayUnreadMap[stay.id] || 0}
-                              onClick={() => openEdit(stay, 'notes')}
-                            />
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )
           })
         )}
       </div>
 
-      {/* ── Sidebar & Toast ── */}
+      {/* ── Sidebars & Toast ── */}
+      <AccommodationColumnsEditorSidebar
+        open={columnsEditorOpen}
+        onClose={() => setColumnsEditorOpen(false)}
+        onChanged={loadColumnsConfig}
+      />
       <StaySidebar
         open={sidebarOpen}
         mode={sidebarMode}
