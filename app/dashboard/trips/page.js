@@ -616,8 +616,9 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   }
 
   // Crea draft trip in DB all'apertura della sidebar
+  // Dipende da currentUser per garantire che la sessione sia attiva
   useEffect(() => {
-    if (!open || !PRODUCTION_ID) return
+    if (!open || !PRODUCTION_ID || !currentUser?.id) return
     let cancelled = false
     async function createDraft() {
       const { data, error } = await supabase
@@ -631,12 +632,12 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         })
         .select('id')
         .single()
-      console.log('[TripSidebar] draft created:', data, 'error:', error)
+      if (error) console.error('[TripSidebar] draft error:', error)
       if (!cancelled && data?.id) setDraftTripId(data.id)
     }
     createDraft()
     return () => { cancelled = true }
-  }, [open])
+  }, [open, currentUser?.id])
 
   // Reset on open
   useEffect(() => {
