@@ -601,8 +601,6 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const [savedLegs,         setSavedLegs]         = useState([])
   const [editingLegLocalId, setEditingLegLocalId] = useState(null)
   const [multiSaving,       setMultiSaving]       = useState(false)
-  const [draftTripId,       setDraftTripId]        = useState(null)
-  const [showCloseWarning,  setShowCloseWarning]   = useState(false)
 
   const transferClass = getClass(form.pickup_id, form.dropoff_id)
   const arrMin  = timeStrToMin(form.arr_time)
@@ -615,30 +613,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     return name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'LOC'
   }
 
-  // Crea draft trip in DB all'apertura della sidebar
-  // Dipende da currentUser per garantire che la sessione sia attiva
-  useEffect(() => {
-    if (!open || !PRODUCTION_ID || !currentUser?.id) return
-    let cancelled = false
-    async function createDraft() {
-      const { data, error } = await supabase
-        .from('trips')
-        .insert({
-          production_id: PRODUCTION_ID,
-          trip_id:       'DRAFT_' + Date.now(),
-          date:          defaultDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }),
-          status:        'DRAFT',
-          pax_count:     0,
-        })
-        .select('id')
-        .single()
-      if (error) console.error('[TripSidebar] draft error:', error)
-      if (!cancelled && data?.id) setDraftTripId(data.id)
-    }
-    createDraft()
-    return () => { cancelled = true }
-  }, [open, currentUser?.id])
-
+  
   // Reset on open
   useEffect(() => {
     if (!open) return
@@ -1254,7 +1229,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
   return (
     <>
-      {open && <div onClick={() => draftTripId ? setShowCloseWarning(true) : onClose()} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      {open && <div onClick={() => onClose()} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
       <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: isMobile ? '100vw' : `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${isMobile ? '100vw' : SIDEBAR_W + 'px'})`, transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
         <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
@@ -1284,7 +1259,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             {(!multiMode && form.pickup_id && form.dropoff_id) && (
               <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{transferClass}</span>
             )}
-            <button onClick={() => draftTripId ? setShowCloseWarning(true) : onClose()} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+            <button onClick={() => onClose()} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
           </div>
         </div>
 
@@ -1878,42 +1853,25 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             </div>
           </div>
 
-        {/* Trip Notes — visibile sempre, usa draftTripId in new mode */}
-        {draftTripId && (
-          <div style={{ padding: '0 18px 12px' }}>
-            <TripNotesPanel
-              tripRowId={draftTripId}
-              productionId={PRODUCTION_ID}
-              currentUser={currentUser}
-            />
-          </div>
-        )}
-
-        {/* Warning chiusura senza save */}
-        {showCloseWarning && (
-          <div style={{ margin: '0 18px 12px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', marginBottom: '8px' }}>
-              ⚠ Unsaved trip — notes will be deleted. Close anyway?
+        {/* Trip Notes — disponibile dopo il salvataggio */}
+        <div style={{ padding: '0 18px 12px' }}>
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ padding: '9px 12px', background: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8' }}>📋 Trip Notes</span>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="button" onClick={() => setShowCloseWarning(false)}
-                style={{ flex: 1, padding: '6px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>
-                Cancel
-              </button>
-              <button type="button" onClick={async () => {
-                if (draftTripId) {
-                  await supabase.from('trips').delete().eq('id', draftTripId)
-                  setDraftTripId(null)
-                }
-                setShowCloseWarning(false)
-                onClose()
-              }}
-                style={{ flex: 1, padding: '6px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: '800' }}>
-                Yes, close
-              </button>
+            <div style={{ padding: '10px 12px', background: 'white', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <span style={{ fontSize: '16px', flexShrink: 0 }}>💡</span>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151', marginBottom: '3px' }}>
+                  Save the trip first to unlock notes
+                </div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.5 }}>
+                  Once saved, you can add notes visible to the whole team — including operational details like special requests, animal transport, equipment notes, etc.
+                </div>
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
           {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
           <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, position: 'sticky', bottom: 0, background: 'white' }}>
