@@ -620,7 +620,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     if (!open || !PRODUCTION_ID) return
     let cancelled = false
     async function createDraft() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('trips')
         .insert({
           production_id: PRODUCTION_ID,
@@ -631,6 +631,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         })
         .select('id')
         .single()
+      console.log('[TripSidebar] draft created:', data, 'error:', error)
       if (!cancelled && data?.id) setDraftTripId(data.id)
     }
     createDraft()
