@@ -747,39 +747,45 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     if (!form.travel_date) { setError('Date required'); return }
     if (!form.full_name_raw.trim() && !form.crew_id) { setError('Name required'); return }
     setSaving(true)
-    const row = buildRow()
-    let result
-    if (mode === 'new') {
-      result = await supabase.from('travel_movements').insert(row).select(SELECT_FIELDS).single()
-    } else {
-      result = await supabase.from('travel_movements').update(row)
-        .eq('id', initial.id).select(SELECT_FIELDS).single()
+    try {
+      const row = buildRow()
+      let result
+      if (mode === 'new') {
+        result = await supabase.from('travel_movements').insert(row).select(SELECT_FIELDS).single()
+      } else {
+        result = await supabase.from('travel_movements').update(row)
+          .eq('id', initial.id).select(SELECT_FIELDS).single()
+      }
+      if (result.error) { setError(result.error.message); return }
+      onSaved(result.data, mode)
+      syncCrewDates(form.crew_id, form.direction, form.travel_date)
+      onClose()
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
-    if (result.error) { setError(result.error.message); return }
-    onSaved(result.data, mode)
-    syncCrewDates(form.crew_id, form.direction, form.travel_date)
-    onClose()
   }
 
   async function handleSaveAndAddLeg() {
     if (!form.travel_date) { setError('Date required'); return }
     if (!form.full_name_raw.trim() && !form.crew_id) { setError('Name required'); return }
     setSaving(true)
-    const journeyId = form.journey_id || crypto.randomUUID()
-    const row = { ...buildRow(), journey_id: journeyId }
-    let result
-    if (mode === 'new') {
-      result = await supabase.from('travel_movements').insert(row).select(SELECT_FIELDS).single()
-    } else {
-      result = await supabase.from('travel_movements').update(row)
-        .eq('id', initial.id).select(SELECT_FIELDS).single()
+    try {
+      const journeyId = form.journey_id || crypto.randomUUID()
+      const row = { ...buildRow(), journey_id: journeyId }
+      let result
+      if (mode === 'new') {
+        result = await supabase.from('travel_movements').insert(row).select(SELECT_FIELDS).single()
+      } else {
+        result = await supabase.from('travel_movements').update(row)
+          .eq('id', initial.id).select(SELECT_FIELDS).single()
+      }
+      if (result.error) { setError(result.error.message); return }
+      onSaved(result.data, mode)
+      syncCrewDates(form.crew_id, form.direction, form.travel_date)
+      if (onAddLeg) onAddLeg(result.data)
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
-    if (result.error) { setError(result.error.message); return }
-    onSaved(result.data, mode)
-    syncCrewDates(form.crew_id, form.direction, form.travel_date)
-    if (onAddLeg) onAddLeg(result.data)
   }
 
   async function revertCrewDates(crewId) {
