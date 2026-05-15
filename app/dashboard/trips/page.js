@@ -9,6 +9,7 @@ import { useT } from '../../../lib/i18n'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { TableHeader } from '../../../components/ui/TableHeader'
 import { getProductionId } from '../../../lib/production'
+import TripNotesPanel from '../../../lib/TripNotesPanel'
 
 const SIDEBAR_W = 440
 
@@ -3157,6 +3158,19 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                 </>
               )}
             </div>
+
+            {/* Trip Notes */}
+            {initial?.id ? (
+              <TripNotesPanel
+                tripRowId={initial.id}
+                productionId={PRODUCTION_ID}
+                currentUser={currentUser}
+              />
+            ) : (
+              <div style={{ marginTop: '8px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                📋 Save the trip first to add notes
+              </div>
+            )}
 
             {/* Danger zone */}
             <div style={{ borderTop: '1px solid #fecaca', paddingTop: '12px', marginTop: '4px' }}>
