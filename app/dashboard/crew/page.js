@@ -1191,11 +1191,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
               </div>
             </div>
 
-            {/* Note */}
-            <div style={row}>
-              <label style={lbl}>{t.notesLabel}</label>
-              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, resize: 'vertical', minHeight: '60px' }} placeholder={t.notesPlaceholder} />
-            </div>
+            
 
             {/* Contact Info accordion */}
             <div style={{ marginBottom: '12px' }}>
