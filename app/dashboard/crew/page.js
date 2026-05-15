@@ -871,8 +871,8 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
                   </span>
                   <span style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '10px' }}>{tm.travel_number || '–'}</span>
                   <span style={{ color: '#64748b' }}>{tm.from_location || '–'} → {tm.to_location || '–'}</span>
-                  {tm.direction === 'IN' && tm.to_time && <span style={{ color: '#64748b' }}>arr {tm.to_time}</span>}
-                  {tm.direction === 'OUT' && tm.from_time && <span style={{ color: '#64748b' }}>dep {tm.from_time}</span>}
+                  {tm.direction === 'IN' && tm.to_time && <span style={{ color: '#64748b' }}>arr {tm.to_time.slice(0, 5)}</span>}
+                  {tm.direction === 'OUT' && tm.from_time && <span style={{ color: '#64748b' }}>dep {tm.from_time.slice(0, 5)}</span>}
                   <span style={{ color: '#94a3b8', marginLeft: '2px' }}>{dateStr}</span>
                   {tm.needs_transport && (
                     <span style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 4px' }}>🚐</span>
