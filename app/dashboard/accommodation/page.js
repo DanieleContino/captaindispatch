@@ -1037,7 +1037,7 @@ export default function AccommodationPage() {
           </button>
         </div>
 
-        {/* Columns button — mirrors Travel page */}
+        {/* Columns button + Cost Report link */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
           {columnsConfig.length === 0 && (
             <button onClick={applyDefaultPreset} disabled={applyingPreset}
@@ -1049,6 +1049,10 @@ export default function AccommodationPage() {
             style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             Columns {columnsConfig.length > 0 && `(${columnsConfig.length})`}
           </button>
+          <a href="/dashboard/accommodation/cost-report"
+            style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none' }}>
+            💰 Cost Report
+          </a>
         </div>
       </div>
 
