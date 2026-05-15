@@ -343,11 +343,18 @@ async function processAccommodation(supabase, productionId, updateRows, newLocat
       }
       if (!r.arrival_date || !r.departure_date) continue
       staysToInsert.push({
-        production_id:  productionId,
-        crew_id:        crewId,
-        hotel_id:       hotel_id,
-        arrival_date:   r.arrival_date,
-        departure_date: r.departure_date,
+        production_id:      productionId,
+        crew_id:            crewId,
+        hotel_id:           hotel_id,
+        arrival_date:       r.arrival_date,
+        departure_date:     r.departure_date,
+        room_type_notes:    r.room_type_notes    || null,
+        cost_per_night:     r.cost_per_night     ?? null,
+        city_tax_total:     r.city_tax_total     ?? null,
+        total_cost_no_vat:  r.total_cost_no_vat  ?? null,
+        total_cost_vat:     r.total_cost_vat     ?? null,
+        po_number:          r.po_number          || null,
+        invoice_number:     r.invoice_number     || null,
       })
     }
 
