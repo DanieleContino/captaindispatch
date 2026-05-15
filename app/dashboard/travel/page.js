@@ -246,9 +246,6 @@ function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, 
         )
       }
       const displayName = m.crew?.full_name || m.full_name_raw || '-'
-      // Badge note nel nome: usa i dati per-movimento (linked_movement_id)
-      const unreadCount = movementUnreadMap ? (movementUnreadMap[m.id] || 0) : 0
-      const notesCount  = movementNotesMap  ? (movementNotesMap[m.id]?.count || 0) : 0
       return (
         <td key={field} onClick={() => onEditRow(m, 'full_name')}
           style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700',
@@ -262,22 +259,6 @@ function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, 
               color: '#7c3aed', background: '#f5f3ff', padding: '1px 4px',
               borderRadius: '3px', verticalAlign: 'middle' }}>
               {m.journeySize}{'\u2708'}
-            </span>
-          )}
-          {unreadCount > 0 && (
-            <span title={`${unreadCount} unread note${unreadCount > 1 ? 's' : ''}`}
-              style={{ marginLeft: '4px', fontSize: '9px', fontWeight: '800',
-                color: '#ea580c', background: '#fff7ed', border: '1px solid #fed7aa',
-                padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle' }}>
-              💬
-            </span>
-          )}
-          {notesCount > 0 && unreadCount === 0 && (
-            <span title={`${notesCount} note${notesCount > 1 ? 's' : ''}`}
-              style={{ marginLeft: '4px', fontSize: '9px', fontWeight: '700',
-                color: '#92400e', background: '#fef3c7', border: '1px solid #fcd34d',
-                padding: '1px 4px', borderRadius: '3px', verticalAlign: 'middle' }}>
-              💬
             </span>
           )}
         </td>
