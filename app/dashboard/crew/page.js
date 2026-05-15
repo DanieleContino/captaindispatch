@@ -779,7 +779,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
   }
 
   return (
-    <div style={{ background: selected ? '#eff6ff' : (isRemote ? '#f8fafc' : 'white'), border: `1px solid ${selected ? '#bfdbfe' : (isRemote ? '#cbd5e1' : '#e2e8f0')}`, borderLeft: `4px solid ${selected ? '#3b82f6' : (isRemote ? '#94a3b8' : tc.border)}`, borderRadius: '10px', padding: '12px 14px', display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : undefined, gridTemplateColumns: isMobile ? undefined : '20px 1fr auto auto auto auto auto auto', gap: '8px', alignItems: isMobile ? 'stretch' : 'center' }}>
+    <div style={{ background: selected ? '#eff6ff' : (isRemote ? '#f8fafc' : 'white'), border: `1px solid ${selected ? '#bfdbfe' : (isRemote ? '#cbd5e1' : '#e2e8f0')}`, borderLeft: `4px solid ${selected ? '#3b82f6' : (isRemote ? '#94a3b8' : tc.border)}`, borderRadius: '10px', padding: '12px 14px', display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : undefined, gridTemplateColumns: isMobile ? undefined : '20px 1fr auto auto auto auto auto auto', gap: '8px', alignItems: isMobile ? 'stretch' : 'start' }}>
 
       {/* Checkbox */}
       <input
