@@ -561,6 +561,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
 
 // ─── MovementSidebar ──────────────────────────────────────────
 const EMPTY_MOV = {
+  id: null,
   travel_date: '', direction: 'IN', travel_type: 'FLIGHT',
   full_name_raw: '', crew_id: null,
   travel_number: '', from_location: '', from_time: '',
@@ -594,6 +595,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
 
     if (mode === 'edit' && initial) {
       setForm({
+        id:              initial.id             || null,
         travel_date:     initial.travel_date    || '',
         direction:       initial.direction      || 'IN',
         travel_type:     initial.travel_type    || 'FLIGHT',
@@ -1003,12 +1005,20 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
 
             {/* S59-C/S59-E: NotesPanel accordion — lazy load, solo se crew_id è collegato */}
             {form.crew_id && (
+              form.id ? (
               <NotesPanel
-                accordion
                 crewId={form.crew_id}
                 productionId={PRODUCTION_ID}
                 currentUser={currentUser}
+                linkedMovementId={form.id}
+                onNotesSent={() => {}}
+                accordion={true}
               />
+              ) : (
+                <div style={{ marginTop: '8px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                  💬 Save the movement first to add notes
+                </div>
+              )
             )}
 
             {mode === 'edit' && (
