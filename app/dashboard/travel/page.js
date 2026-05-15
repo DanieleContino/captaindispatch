@@ -85,12 +85,12 @@ function ClickableCell({ value, field, onClick, onContextMenu, style, emptyLabel
 }
 
 // ─── NotesCell ────────────────────────────────────────────────
-function NotesCell({ crewId, notesMap, unreadMap, onClick, onContextMenu, bgColor }) {
-  const entry       = crewId ? (notesMap[crewId] || null) : null
-  const count       = entry?.count || 0
-  const lastNote    = entry?.lastNote || ''
-  const unreadCount = crewId ? (unreadMap[crewId] || 0) : 0
-  const preview     = lastNote.length > 45 ? lastNote.slice(0, 45) + '…' : lastNote
+// notesEntry = { count, lastNote } | null   (già risolto per movement_id nel parent)
+// unreadCount = number
+function NotesCell({ notesEntry, unreadCount = 0, onClick, onContextMenu, bgColor }) {
+  const count    = notesEntry?.count || 0
+  const lastNote = notesEntry?.lastNote || ''
+  const preview  = lastNote.length > 45 ? lastNote.slice(0, 45) + '…' : lastNote
 
   return (
     <td
@@ -211,7 +211,9 @@ function ColorPickerPopover({ field, rowId, currentColor, onColorSaved, onClose 
 }
 
 // ─── renderCell — data-driven cell renderer ────────────────────
-function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, unreadMap, notesMap }) {
+// movementNotesMap  = { [movement_id]: { count, lastNote } }
+// movementUnreadMap = { [movement_id]: unread_count }
+function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, movementNotesMap, movementUnreadMap }) {
   const field = col.source_field
   const base = {
     fontSize: '11px', color: '#374151',
@@ -244,8 +246,9 @@ function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, 
         )
       }
       const displayName = m.crew?.full_name || m.full_name_raw || '-'
-      const unreadCount = (m.crew_id && unreadMap) ? (unreadMap[m.crew_id] || 0) : 0
-      const notesCount  = (m.crew_id && notesMap)  ? (notesMap[m.crew_id]?.count || 0) : 0
+      // Badge note nel nome: usa i dati per-movimento (linked_movement_id)
+      const unreadCount = movementUnreadMap ? (movementUnreadMap[m.id] || 0) : 0
+      const notesCount  = movementNotesMap  ? (movementNotesMap[m.id]?.count || 0) : 0
       return (
         <td key={field} onClick={() => onEditRow(m, 'full_name')}
           style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700',
@@ -381,9 +384,8 @@ function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, 
     case 'notes':
       return (
         <NotesCell key={field}
-          crewId={m.crew_id}
-          notesMap={notesMap}
-          unreadMap={unreadMap}
+          notesEntry={movementNotesMap ? (movementNotesMap[m.id] || null) : null}
+          unreadCount={movementUnreadMap ? (movementUnreadMap[m.id] || 0) : 0}
           onClick={() => onEditRow(m, 'notes')}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'notes', colors['notes'])}
           bgColor={colors['notes'] || bgColor}
@@ -441,7 +443,7 @@ function buildDisplayRows(rows) {
 }
 
 // ─── SectionTable ─────────────────────────────────────────────
-function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor, unreadMap, notesMap }) {
+function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor, movementNotesMap, movementUnreadMap }) {
   const [colorPicker, setColorPicker] = useState(null)
 
   function handleCellRightClick(e, rowId, field, currentColor) {
@@ -531,7 +533,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                   {columnsConfig.map(col =>
                     col.source_field === 'needs_transport'
                       ? <NeedsTransportCell key={col.source_field} value={m.needs_transport} rowId={m.id} onSaved={onCellSaved} />
-                      : renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, unreadMap, notesMap })
+                      : renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, movementNotesMap, movementUnreadMap })
                   )}
                 </tr>
               )
@@ -541,6 +543,13 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
       </div>
     </div>
   )
+}
+
+// ─── normalizeTime ────────────────────────────────────────────
+function normalizeTime(t) {
+  if (!t) return ''
+  const [h, m] = t.slice(0, 5).split(':')
+  return `${(h || '0').padStart(2, '0')}:${(m || '00').padStart(2, '0')}`
 }
 
 // ─── MovementSidebar ──────────────────────────────────────────
@@ -603,9 +612,9 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
         crew_id:         initial.crew_id        || null,
         travel_number:   initial.travel_number  || '',
         from_location:   initial.from_location  || '',
-        from_time:       initial.from_time      ? initial.from_time.slice(0, 5) : '',
+        from_time:       normalizeTime(initial.from_time),
         to_location:     initial.to_location    || '',
-        to_time:         initial.to_time        ? initial.to_time.slice(0, 5) : '',
+        to_time:         normalizeTime(initial.to_time),
         pickup_dep:      initial.pickup_dep     || '',
         pickup_arr:      initial.pickup_arr     || '',
         needs_transport: !!initial.needs_transport,
@@ -636,7 +645,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
         crew_id:         initial.crew_id        || null,
         travel_number:   '',
         from_location:   initial.from_location  || '',
-        from_time:       initial.from_time      || '',
+        from_time:       normalizeTime(initial.from_time),
         to_location:     '',
         to_time:         '',
         pickup_dep:      '',
@@ -1125,9 +1134,14 @@ export default function TravelPage() {
   const [sidebarMode,   setSidebarMode]   = useState('new')
   const [sidebarTarget, setSidebarTarget] = useState(null)
 
-  // S58-C: Crew notes unread map { [crew_id]: unread_count }
-  const [unreadMap, setUnreadMap] = useState({})
-  const [notesMap,  setNotesMap]  = useState({})
+  // S58-C: Crew notes maps
+  // unreadMap / notesMap  — per crew_id (usate nel sidebar full_name badge)
+  // movementNotesMap      — { [movement_id]: { count, lastNote } } per-movement
+  // movementUnreadMap     — { [movement_id]: unread_count }        per-movement
+  const [unreadMap,         setUnreadMap]         = useState({})
+  const [notesMap,          setNotesMap]           = useState({})
+  const [movementNotesMap,  setMovementNotesMap]   = useState({})
+  const [movementUnreadMap, setMovementUnreadMap]  = useState({})
 
   function openNew()   { setSidebarMode('new');  setSidebarTarget(null); setSidebarOpen(true) }
   function openEdit(m, focusField) { setSidebarMode('edit'); setSidebarTarget({ ...m, __focusField: focusField || null }); setSidebarOpen(true) }
@@ -1169,33 +1183,55 @@ export default function TravelPage() {
   }, [PRODUCTION_ID])
 
   // S58-C: Unread notes map loader
+  // Builds both crew-level maps (unreadMap/notesMap) AND per-movement maps
+  // (movementNotesMap/movementUnreadMap) from linked_movement_id
   const loadUnreadMap = useCallback(async (userId) => {
     if (!PRODUCTION_ID || !userId) return
     const { data } = await supabase
       .from('crew_notes')
-      .select('crew_id, author_id, read_by, content, created_at')
+      .select('crew_id, linked_movement_id, author_id, read_by, content, created_at')
       .eq('production_id', PRODUCTION_ID)
       .eq('is_private', false)
       .order('created_at', { ascending: false })
     if (!data) return
+
+    // ── crew-level maps (unchanged) ──────────────────────────
     const unread  = {}
     const total   = {}
     const lastMap = {}
     for (const note of data) {
       total[note.crew_id] = (total[note.crew_id] || 0) + 1
-      // Prima nota incontrata (più recente per via dell'order desc) = ultima nota
       if (!lastMap[note.crew_id]) lastMap[note.crew_id] = note.content || ''
       if (note.author_id === userId) continue
       if ((note.read_by || []).includes(userId)) continue
       unread[note.crew_id] = (unread[note.crew_id] || 0) + 1
     }
     setUnreadMap(unread)
-    // notesMap ora è { [crew_id]: { count, lastNote } }
     const notes = {}
     for (const crewId of Object.keys(total)) {
       notes[crewId] = { count: total[crewId], lastNote: lastMap[crewId] || '' }
     }
     setNotesMap(notes)
+
+    // ── per-movement maps (notes linked to a specific movement) ─
+    const movTotal   = {}
+    const movLastMap = {}
+    const movUnread  = {}
+    for (const note of data) {
+      if (!note.linked_movement_id) continue
+      const mid = note.linked_movement_id
+      movTotal[mid] = (movTotal[mid] || 0) + 1
+      if (!movLastMap[mid]) movLastMap[mid] = note.content || ''
+      if (note.author_id === userId) continue
+      if ((note.read_by || []).includes(userId)) continue
+      movUnread[mid] = (movUnread[mid] || 0) + 1
+    }
+    const movNotes = {}
+    for (const mid of Object.keys(movTotal)) {
+      movNotes[mid] = { count: movTotal[mid], lastNote: movLastMap[mid] || '' }
+    }
+    setMovementNotesMap(movNotes)
+    setMovementUnreadMap(movUnread)
   }, [PRODUCTION_ID])
 
   // ── Section colors loader ──────────────────────────────────
@@ -1643,8 +1679,8 @@ export default function TravelPage() {
                     onColorSaved={handleColorSaved}
                     columnsConfig={columnsConfig}
                     sectionColor={sectionColors[section.key] || null}
-                    unreadMap={unreadMap}
-                    notesMap={notesMap}
+                    movementNotesMap={movementNotesMap}
+                    movementUnreadMap={movementUnreadMap}
                   />
                 )
               })}
