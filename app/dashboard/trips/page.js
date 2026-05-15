@@ -556,7 +556,7 @@ function CrewInfoModal({ crew, productionId, locations, onClose, overlayRight = 
 }
 
 // ─── TripSidebar (CREATE new trip) ────────────────────────────
-function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips, onLocationCreated }) {
+function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips, onLocationCreated, currentUser }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const isMobile = useIsMobile()
@@ -3881,6 +3881,7 @@ function TripsPageInner() {
           const { data } = await supabase.from('locations').select('*').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name')
           if (data) { const m = {}; data.forEach(l => { m[l.id] = l.name }); setLocsMap(m); setLocsList(data) }
         }}
+        currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null}
       />
 
       {/* ── EDIT sidebar ── */}
