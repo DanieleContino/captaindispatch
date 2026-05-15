@@ -1763,10 +1763,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                 {serviceTypes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div>
-              <label style={lbl}>Notes</label>
-              <input value={form.notes} onChange={e => set('notes', e.target.value)} style={inp} />
-            </div>
+            
 
             {/* Passengers */}
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
@@ -2927,10 +2924,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                 {serviceTypes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
-            <div>
-              <label style={lbl}>Notes</label>
-              <input value={form.notes} onChange={e => set('notes', e.target.value)} style={inp} />
-            </div>
+            
 
             {/* ── Passengers ── */}
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
