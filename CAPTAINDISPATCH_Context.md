@@ -1,3 +1,245 @@
+## SESSION S66 — Accommodation: Hotel Subgroups + Cost Report (16 May 2026)
+
+### S66-A ✅ — DB Migration: `hotel_subgroups` + `crew_stays.subgroup_id` — `scripts/migrate-accommodation-subgroups.sql`
+
+**Nuova tabella** `hotel_subgroups`:
+```sql
+CREATE TABLE IF NOT EXISTS hotel_subgroups (
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  production_id uuid        NOT NULL REFERENCES productions(id) ON DELETE CASCADE,
+  hotel_id      text        NOT NULL REFERENCES locations(id)   ON DELETE CASCADE,
+  name          text        NOT NULL,
+  display_order int         NOT NULL DEFAULT 0,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_subgroups_prod_hotel ON hotel_subgroups(production_id, hotel_id);
+```
+
+**Nuova colonna** su `crew_stays`:
+```sql
+ALTER TABLE crew_stays ADD COLUMN IF NOT EXISTS subgroup_id uuid REFERENCES hotel_subgroups(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_crew_stays_subgroup ON crew_stays(subgroup_id);
+```
+
+**RLS** `hotel_subgroups`: SELECT/INSERT/UPDATE/DELETE filtrati per `production_id IN (SELECT production_id FROM user_roles WHERE user_id = auth.uid())`.
+
+**Scopo**: permettere al coordinatore di definire sotto-gruppi per hotel (es. "IT Crew", "US Crew") per suddividere i costi nel cost-report — analogo alla struttura Excel "TOT. US Crew / TOT. IT Crew".
+
+**⚠️ Azione manuale**: eseguire `scripts/migrate-accommodation-subgroups.sql` nel Supabase SQL Editor.
+
+---
+
+### S66-B ✅ — Nuovo componente `lib/SubgroupManagerSidebar.js`
+
+**Export**: `export default function SubgroupManagerSidebar({ open, hotelId, hotelName, productionId, onClose, onChanged })`
+
+**Funzionalità** — sidebar CRUD per i sotto-gruppi di un hotel:
+- Load lazy da `hotel_subgroups` quando si apre
+- **Add**: input nome → INSERT con `display_order = maxOrder + 1`
+- **Edit** (✎): modifica nome inline → UPDATE
+- **Delete** (🗑): DELETE + reload lista + callback `onChanged`
+- Gestione errori: banner rosso se operazione fallisce
+- Pattern: stesso stile delle altre sidebar (header verde `#15803d`, lista rows, form inline)
+
+---
+
+### S66-C ✅ — `/dashboard/accommodation/cost-report` page
+
+**File**: `app/dashboard/accommodation/cost-report/page.js` (367 righe)
+
+**Obiettivo**: riprodurre il COST REPORT sheet dell'Excel Master Rooming — aggregazione costi hotel per sezione ATL/BTL e sotto-gruppo.
+
+**Costanti**:
+```js
+const ATL_DEPTS = new Set(['CAST', 'PRODUCERS'])  // Above The Line
+// Tutti gli altri dept = BTL
+```
+
+**Struttura dati** (caricata da `crew_stays` con JOIN `crew`):
+- Query: `crew_stays` + `crew:crew_id(department)` + `hotel:hotel_id(name)` + `subgroup:subgroup_id(name)` filtrata per `production_id`
+- Aggregazione client-side: per ogni hotel → per ogni sotto-gruppo (ATL/BTL) → somma `total_cost_no_vat`, `total_cost_vat`, `city_tax_total`, `nights`
+- `vat` calcolato come `total_cost_vat - total_cost_no_vat`
+
+**Layout tabella** (6 colonne):
+| Hotel / Group | Tot. W/O VAT | Tot. VAT Incl. | City Tax | VAT | Tot. Nights |
+
+**Componenti**:
+- `DataRow` — riga normale, subtotale (sfondo blu) o hotel-total (sfondo verde)
+- `GrandTotalRow` — sfondo `#0f2340` con totali complessivi
+- `SectionTable` — tabella per sezione ATL o BTL, con intestazione + righe hotel + grand total di sezione
+- Valori monetari in `€` con formato `it-IT` (es. `€1.234,50`); `—` se zero/null
+
+**Navigazione**: link `← Accommodation` in alto a sinistra verso `/dashboard/accommodation`.
+
+---
+
+### Riepilogo file S66
+
+| File | Tipo | Descrizione |
+|------|------|-------------|
+| `scripts/migrate-accommodation-subgroups.sql` | 🆕 Nuovo | hotel_subgroups + crew_stays.subgroup_id |
+| `lib/SubgroupManagerSidebar.js` | 🆕 Nuovo | CRUD sotto-gruppi per hotel |
+| `app/dashboard/accommodation/cost-report/page.js` | 🆕 Nuovo | Cost report ATL/BTL aggregato |
+
+---
+
+## SESSION S65 — `/dashboard/accommodation` — Nuova pagina Accommodation Coordinator (16 May 2026)
+
+### S65-A ✅ — DB: nuovi campi `crew_stays` + tabella `accommodation_columns`
+
+**Nuove colonne su `crew_stays`** (necessarie per costi e note di stanza):
+```sql
+ALTER TABLE crew_stays
+  ADD COLUMN IF NOT EXISTS room_type_notes   TEXT,
+  ADD COLUMN IF NOT EXISTS cost_per_night    NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS city_tax_total    NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS total_cost_no_vat NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS total_cost_vat    NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS po_number         TEXT,
+  ADD COLUMN IF NOT EXISTS invoice_number    TEXT;
+```
+
+**Nuova tabella `accommodation_columns`** (analoga a `travel_columns`):
+```sql
+CREATE TABLE IF NOT EXISTS accommodation_columns (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  production_id  TEXT NOT NULL,
+  source_field   TEXT NOT NULL,
+  header_label   TEXT NOT NULL,
+  width          TEXT NOT NULL DEFAULT '120px',
+  display_order  INTEGER DEFAULT 10,
+  created_at     TIMESTAMPTZ DEFAULT now(),
+  updated_at     TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_accommodation_columns_production ON accommodation_columns(production_id);
+ALTER TABLE accommodation_columns ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "production members can manage accommodation columns" ON accommodation_columns USING (true) WITH CHECK (true);
+```
+
+---
+
+### S65-B ✅ — `lib/accommodationColumnsCatalog.js` — Catalogo 15 campi + preset 9 colonne
+
+**`ACCOMMODATION_COLUMNS_CATALOG`** — 15 campi configurabili:
+
+| source_field | label | defaultWidth |
+|---|---|---|
+| `full_name` | Name | 160px |
+| `role` | Role | 100px |
+| `department` | Dept | 80px |
+| `room_type_notes` | Room / Notes | 160px |
+| `arrival_date` | Check-in | 100px |
+| `departure_date` | Check-out | 100px |
+| `nights` | Nights | 56px |
+| `status` | Status | 130px |
+| `notes` | Notes | 120px |
+| `cost_per_night` | €/night | 76px |
+| `city_tax_total` | City tax | 70px |
+| `total_cost_no_vat` | Tot. no VAT | 90px |
+| `total_cost_vat` | Tot. + VAT | 90px |
+| `po_number` | P.O. | 80px |
+| `invoice_number` | N°Fatt. | 80px |
+
+**`ACCOMMODATION_DEFAULT_PRESET`** — 9 colonne di default (senza costi): `full_name, role, department, room_type_notes, arrival_date, departure_date, nights, status, notes`.
+
+---
+
+### S65-C ✅ — `lib/AccommodationColumnsEditorSidebar.js` — Editor colonne accommodation
+
+**Architettura** speculare a `lib/TravelColumnsEditorSidebar.js`:
+- Drag & drop `@dnd-kit/core` + `@dnd-kit/sortable`
+- Pulsante "Reset to Default" → cancella e reinserisce `ACCOMMODATION_DEFAULT_PRESET`
+- Form add/edit: select campo dal catalogo + header label + width select
+- Persistenza: tabella `accommodation_columns`
+- `onChanged()` callback al parent per reload
+
+---
+
+### S65-D ✅ — `app/api/crew-notes/linked/route.js` — LinkedChip endpoint
+
+**Nuovo endpoint**: `GET /api/crew-notes/linked?type=movement|stay&id=UUID`
+
+Usato da `NotesPanel` per mostrare chip contestuali (LinkedChip) nelle note:
+- `type=movement`: restituisce dati essenziali del `travel_movement` (direction, type, number, rotta, orari, data)
+- `type=stay`: restituisce dati della `crew_stay` + risolve `hotel_name` da `locations` table
+- Risposta: `{ data: {...} }`
+- Pattern `makeSupabase()` async identico agli altri route moderni
+
+---
+
+### S65-E ✅ — `app/dashboard/accommodation/page.js` — Pagina principale (1114 righe)
+
+**Rotta**: `/dashboard/accommodation` | **Ruolo**: ACCOMMODATION (RBAC)
+
+**Due viste** toggle List / Calendar:
+
+#### Vista List (default)
+- Tabella data-driven da `columnsConfig` (tabella `accommodation_columns`)
+- `renderCell(col, stay, ctx)` — switch su `source_field` (15 casi):
+  - Campi testo statici: `full_name`, `role`, `department`
+  - Campi cliccabili (→ apre `StaySidebar`): `room_type_notes`, `arrival_date`, `departure_date`, `cost_per_night`, `city_tax_total`, `total_cost_no_vat`, `total_cost_vat`, `po_number`, `invoice_number`
+  - `nights` → calcolato come `departure - arrival` in giorni (`nightsBetween()`)
+  - `status` → badge colorato (`getStayStatus()`)
+  - `notes` → `<NotesCell>` — mostra count note + preview ultima nota; cliccabile → apre sidebar con focus `notes`
+- Raggruppamento per hotel con section header (verde `#f0fdf4`)
+- Sotto-gruppi visibili: se l'hotel ha subgroups → section separator viola per ogni gruppo + "ungrouped" in fondo
+- Pulsante **⚙ Subgroups** su ogni hotel header → apre `SubgroupManagerSidebar`
+- Placeholder se `columnsConfig.length === 0` con pulsante "Apply Default Preset"
+
+#### Vista Calendar
+- Componente `CalendarView` — Excel-style grid con colonne `[Name | Role | ...days... | 🌙 | Room]`
+- Range date configurabile (`windowStart`/`windowEnd`): default da `oggi - 3` a `oggi + 10`
+- Navigazione: `◀ ▶` a settimane + date-picker centrale + pulsante Today
+- **Cella giorno**: `▶` verde = check-in, verde tenue = in hotel, rosso tenue = check-out, `◀` rosso
+- Weekend: sfondo `#fafafa`; oggi: bordo + sfondo `#f0fdf4`
+- Name column sticky left (`position: sticky, left: 0`)
+- Subgroup sections nel Calendar: stesso raggruppamento della List view
+
+#### StaySidebar
+**Props**: `{ open, mode, initial, onClose, onSaved, onDeleted, currentUser, hotels }`
+
+**Funzionalità**:
+- **Crew search autocomplete**: debounce 300ms su `supabase.ilike('full_name', %q%)` → dropdown risultati con nome + ruolo + dept
+- **Hotel select** → al cambio hotel: carica subgroups da `hotel_subgroups`
+- **Subgroup select**: visibile solo se l'hotel ha sottogruppi
+- **Date** check-in / check-out con preview "🌙 N night(s)"
+- **Room / Notes**: input testo libero
+- **Cost section** (collassabile visivamente): €/night, city tax, total no VAT, total + VAT, P.O., invoice #
+- **NotesPanel** integrato con `linkedStayId={form.id}` e `accordion={true}` — se `form.id === null` mostra placeholder "Save the stay first to add notes"
+- **syncCrewDates** fire-and-forget: dopo ogni save/delete, ricalcola `crew.hotel_id`, `arrival_date`, `departure_date` dall'insieme completo delle stays del crew
+- **Delete 2-step**: prima click → `confirmDel=true` → secondo click → DELETE
+
+#### Toolbar & Filtri
+- **Mini stats**: `🛬 N CHECK-IN TODAY` | `🛫 N CHECK-OUT TODAY` | `🏨 N IN HOTEL`
+- **Filtri**: Search (per nome), Hotel select (per hotel), Status filter (Check-in Today / In Hotel / Check-out Today / Upcoming / Checked Out) + ✕ Clear
+- **Pulsanti**: `+ Add Stay` | `📋 Columns` (→ AccommodationColumnsEditorSidebar) | `📊 Cost Report` (→ `/dashboard/accommodation/cost-report`) | `List` / `Calendar` toggle
+
+#### Notes Map
+- `loadNotesMap(userId)` — carica `crew_notes` con `linked_stay_id IS NOT NULL` per la produzione → costruisce `stayNotesMap[stayId] = { count, lastNote }` e `stayUnreadMap[stayId]`
+- `NotesCell` — mostra badge count + preview ultima nota se `count > 0`; arancio se unread > 0, ambra se tutte lette
+- Realtime: subscription `crew_notes:accommodation:{PRODUCTION_ID}` → reload `loadNotesMap` su ogni evento
+
+#### RBAC
+- `userRole` caricato da `user_roles` DB al login
+- Pagina accessibile al ruolo ACCOMMODATION (via `lib/roleAccess.js`)
+
+---
+
+### Riepilogo file S65
+
+| File | Tipo | Descrizione |
+|------|------|-------------|
+| `app/dashboard/accommodation/page.js` | 🆕 Nuovo | Pagina principale Accommodation (1114 righe) |
+| `lib/accommodationColumnsCatalog.js` | 🆕 Nuovo | Catalogo 15 campi + preset 9 colonne |
+| `lib/AccommodationColumnsEditorSidebar.js` | 🆕 Nuovo | Editor colonne drag&drop |
+| `app/api/crew-notes/linked/route.js` | 🆕 Nuovo | Endpoint LinkedChip per NotesPanel |
+
+**⚠️ Azioni manuali richieste (S65)**:
+1. Eseguire SQL per nuovi campi `crew_stays` (room_type_notes, cost_*, po_number, invoice_number)
+2. Creare tabella `accommodation_columns` (come da struttura sopra)
+
+---
+
 ## SESSION S64 — TripNotesPanel: note sui trip + fix crew sidebar (15 May 2026)
 
 ### Commit range: `62a1454` → `64a2f06` (12 commit totali)

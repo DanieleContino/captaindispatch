@@ -241,6 +241,10 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
     return d === 0 || d === 6
   }
 
+  function countPresent(stayList, dayIso) {
+    return stayList.filter(s => s.arrival_date && s.departure_date && s.arrival_date <= dayIso && dayIso < s.departure_date).length
+  }
+
   const totalWidth = NAME_W + ROLE_W + days.length * DAY_W + NIGHT_W + ROOM_W
   const hotelNameToId = Object.fromEntries((hotels || []).map(h => [h.name, h.id]))
 
@@ -409,8 +413,59 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                       </tr>
                     )}
                     {sectionStays.map(stay => renderStayRow(stay))}
+                    {/* Subgroup total row — only when hotel has subgroups */}
+                    {hasSections && (
+                      <tr style={{ background: sg ? '#f3e8ff' : '#f8fafc', borderTop: '1px solid #d8b4fe' }}>
+                        <td style={{ padding: '4px 8px', fontWeight: '800', fontSize: '10px', color: sg ? '#5b21b6' : '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', position: 'sticky', left: 0, background: sg ? '#f3e8ff' : '#f8fafc', zIndex: 1, borderBottom: '2px solid #d8b4fe' }}>
+                          {sg ? `TOTAL ${sg.name.toUpperCase()}` : 'TOTAL (UNGROUPED)'}
+                        </td>
+                        <td style={{ padding: '4px 8px', fontSize: '9px', color: sg ? '#7c3aed' : '#64748b', borderBottom: '2px solid #d8b4fe' }} />
+                        {days.map(d => {
+                          const n = countPresent(sectionStays, d)
+                          return (
+                            <td key={d} style={{
+                              padding: '2px 0', textAlign: 'center', fontSize: '9px', fontWeight: '800',
+                              color: n > 0 ? (sg ? '#5b21b6' : '#374151') : 'transparent',
+                              background: n > 0 ? (sg ? '#ede9fe' : '#f1f5f9') : (d === today ? '#f0fdf420' : isWeekend(d) ? '#fafafa' : 'transparent'),
+                              borderLeft: d === today ? '1px solid #86efac40' : '1px solid #f1f5f9',
+                              borderBottom: '2px solid #d8b4fe',
+                            }}>
+                              {n > 0 ? n : ''}
+                            </td>
+                          )
+                        })}
+                        <td style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: sg ? '#5b21b6' : '#64748b', borderLeft: '1px solid #e2e8f0', borderBottom: '2px solid #d8b4fe' }}>
+                          {sectionStays.reduce((sum, s) => sum + (nightsBetween(s.arrival_date, s.departure_date) || 0), 0)}
+                        </td>
+                        <td style={{ padding: '4px 8px', borderLeft: '1px solid #e2e8f0', borderBottom: '2px solid #d8b4fe' }} />
+                      </tr>
+                    )}
                   </React.Fragment>
                 ))}
+                {/* Hotel grand total row */}
+                <tr style={{ background: '#14532d', borderTop: '2px solid #166534' }}>
+                  <td style={{ padding: '5px 8px', fontWeight: '900', fontSize: '10px', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', position: 'sticky', left: 0, background: '#14532d', zIndex: 1, letterSpacing: '0.05em' }}>
+                    GRAN TOTAL
+                  </td>
+                  <td style={{ padding: '5px 8px', background: '#14532d' }} />
+                  {days.map(d => {
+                    const n = countPresent(hotelStays, d)
+                    return (
+                      <td key={d} style={{
+                        padding: '2px 0', textAlign: 'center', fontSize: '10px', fontWeight: '900',
+                        color: n > 0 ? 'white' : 'transparent',
+                        background: n > 0 ? '#15803d' : '#14532d',
+                        borderLeft: '1px solid #166534',
+                      }}>
+                        {n > 0 ? n : ''}
+                      </td>
+                    )
+                  })}
+                  <td style={{ padding: '5px 4px', textAlign: 'center', fontSize: '11px', fontWeight: '900', color: 'white', borderLeft: '1px solid #166534', background: '#14532d' }}>
+                    {hotelStays.reduce((sum, s) => sum + (nightsBetween(s.arrival_date, s.departure_date) || 0), 0)}
+                  </td>
+                  <td style={{ padding: '5px 8px', borderLeft: '1px solid #166534', background: '#14532d' }} />
+                </tr>
               </React.Fragment>
             )
           })}
