@@ -968,6 +968,23 @@ export default function AccommodationPage() {
     return () => { supabase.removeChannel(channel) }
   }, [user, PRODUCTION_ID, loadNotesMap])
 
+  useEffect(() => {
+    function updateHeadersHeight() {
+      const navbar    = document.querySelector('nav')
+      const toolbar   = document.querySelector('[data-toolbar="accommodation"]')
+      const filterRow = document.querySelector('[data-filter-row="accommodation"]')
+      const h = (navbar?.offsetHeight || 0) + (toolbar?.offsetHeight || 0) + (filterRow?.offsetHeight || 0)
+      document.documentElement.style.setProperty('--accom-headers-h', h + 'px')
+    }
+    updateHeadersHeight()
+    const ro = new ResizeObserver(updateHeadersHeight)
+    const toolbar   = document.querySelector('[data-toolbar="accommodation"]')
+    const filterRow = document.querySelector('[data-filter-row="accommodation"]')
+    if (toolbar)   ro.observe(toolbar)
+    if (filterRow) ro.observe(filterRow)
+    return () => ro.disconnect()
+  }, [])
+
   function handleStaySaved(saved, mode) {
     if (mode === 'new') {
       setStays(prev => [...prev, saved].sort((a, b) => {
@@ -1134,6 +1151,8 @@ export default function AccommodationPage() {
       {/* ── Content ── S66-J v2: in calendar mode il div outer ha height fisso, no padding, no outer scroll */}
       <div style={{
         padding: viewMode === 'calendar' ? 0 : (isMobile ? '12px' : '16px 24px'),
+        height: viewMode === 'calendar' ? 'calc(100vh - var(--accom-headers-h, 156px))' : 'auto',
+        overflow: viewMode === 'calendar' ? 'hidden' : 'visible',
       }}>
 
         {!PRODUCTION_ID && (
