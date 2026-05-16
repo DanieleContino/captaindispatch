@@ -1161,7 +1161,7 @@ export default function AccommodationPage() {
               subgroupsByHotel={subgroupsByHotel}
               hotels={hotels}
               showCosts={showCosts}
-              stickyTop={28}
+              stickyTop={0}
             />
           </div>
         ) : (
