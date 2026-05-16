@@ -276,7 +276,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
   const hotelNameToId = Object.fromEntries((hotels || []).map(h => [h.name, h.id]))
 
   return (
-    <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
+    <div style={{ overflowX: 'auto', overflowY: 'clip' }}>
       <table style={{
         borderCollapse: 'collapse', tableLayout: 'fixed',
         width: totalWidth + 'px', fontSize: '11px',
@@ -1148,7 +1148,7 @@ export default function AccommodationPage() {
           </div>
         ) : viewMode === 'calendar' ? (
           /* ── CALENDAR VIEW ── */
-          <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px', overflowX: 'auto' }}>
+          <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px', overflowX: 'auto', overflowY: 'clip' }}>
             <CalendarView
               groupedByHotel={groupedByHotel}
               sortedHotels={sortedHotels}
@@ -1203,7 +1203,7 @@ export default function AccommodationPage() {
                     const sections = [...Object.values(sgMap).filter(x => x.stays.length > 0), ...(ungrouped.length > 0 ? [{ sg: null, stays: ungrouped }] : [])]
                     const colMinW = columnsConfig.reduce((s, c) => s + parseInt(c.width || '100'), 0)
                     const renderTable = (stayList, subgroupLabel) => (
-                      <div style={{ overflowX: 'auto' }} key={subgroupLabel || '__ungrouped__'}>
+                      <div style={{ overflowX: 'auto', overflowY: 'clip' }} key={subgroupLabel || '__ungrouped__'}>
                         {subgroupLabel && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 14px', background: '#f8f4ff', borderLeft: '3px solid #7c3aed', fontSize: '11px', fontWeight: '800', color: '#5b21b6' }}>
                             <span>▾ {subgroupLabel}</span>
