@@ -334,10 +334,11 @@ function cellValueToString(val) {
     if (y < 1900 || y > 2100) return null  // data non valida (es. seriale 0 = 1899)
     return val.toISOString().split('T')[0]
   }
-  // Numero: seriale Excel date o valore generico — in entrambi i casi null
+  // Numero: preserva valori numerici validi (costi, notti, ecc.)
+  // Seriale Excel date ≤ 0 → null
   if (typeof val === 'number') {
-    if (val <= 0) return null  // seriale 0 = data non valida
-    return null  // altri numeri (costo, totali) → null
+    if (val <= 0) return null
+    return String(val)  // preserva come stringa — il consumer farà parseFloat se serve
   }
   const s = String(val).trim()
   return s === '' ? null : s
@@ -1088,6 +1089,21 @@ function extractAccommodationFromStructured(structured) {
       headerMap.arrival_date = h
     else if (hl === 'out' || hl === 'departure' || hl === 'dep' || hl === 'check-out' || hl === 'checkout' || hl === 'data partenza')
       headerMap.departure_date = h
+    // Cost columns — mapped from Master Rooming format
+    else if (hl === 'night w/o vat' || hl === 'night w/o iva' || hl === '€/night' || hl === 'night rate')
+      headerMap.cost_per_night = h
+    else if (hl === 'tot w/o vat' || hl === 'tot. w/o vat' || hl === 'total w/o vat' || hl === 'tot senza iva')
+      headerMap.total_cost_no_vat = h
+    else if (hl === 'tot w.vat' || hl === 'tot. w.vat' || hl === 'tot w/ vat' || hl === 'tot. vat incl.' || hl === 'total w vat' || hl === 'night w vat')
+      headerMap.total_cost_vat = h
+    else if (hl === 'city tax' || hl === 'tassa soggiorno' || hl === 'tot w/o vat+tax' || hl === 'tot w/o vat +tax')
+      headerMap.city_tax_total = h
+    else if (hl === 'p.o.' || hl === 'p.o' || hl === 'po' || hl === 'purchase order')
+      headerMap.po_number = h
+    else if (hl === 'n°fatt.' || hl === 'n°fatt' || hl === 'fattura' || hl === 'invoice' || hl === 'n. fatt.')
+      headerMap.invoice_number = h
+    else if (hl === 'nights' || hl === 'notti' || hl === 'tot nights' || hl === 'n. notti')
+      headerMap.nights = h
   }
   console.log('[DEBUG accomm] headers:', JSON.stringify(headers?.slice(0,7)))
   console.log('[DEBUG accomm] headerMap:', JSON.stringify(headerMap))
@@ -1114,15 +1130,28 @@ function extractAccommodationFromStructured(structured) {
     if (nameCheck.includes('tbd') || nameCheck.includes('tba') ||
         nameCheck.startsWith('driver #') || nameCheck.startsWith('tot')) continue
 
+    const costPerNight   = headerMap.cost_per_night    ? parseFloat(row[headerMap.cost_per_night])    : null
+    const totalNoVat     = headerMap.total_cost_no_vat ? parseFloat(row[headerMap.total_cost_no_vat]) : null
+    const totalVat       = headerMap.total_cost_vat    ? parseFloat(row[headerMap.total_cost_vat])    : null
+    const cityTax        = headerMap.city_tax_total    ? parseFloat(row[headerMap.city_tax_total])    : null
+    const poNumber       = headerMap.po_number         ? (row[headerMap.po_number]      || null)      : null
+    const invoiceNumber  = headerMap.invoice_number    ? (row[headerMap.invoice_number] || null)      : null
+
     result.push({
       first_name,
       last_name,
-      role:           headerMap.role        ? (row[headerMap.role]        || null) : null,
-      department:     headerMap.department  ? (row[headerMap.department]  || null) : null,
+      role:              headerMap.role       ? (row[headerMap.role]       || null) : null,
+      department:        headerMap.department ? (row[headerMap.department] || null) : null,
       hotel_name,
       hotel_address,
-      arrival_date:   headerMap.arrival_date   ? (row[headerMap.arrival_date]   || null) : null,
-      departure_date: headerMap.departure_date ? (row[headerMap.departure_date] || null) : null,
+      arrival_date:      headerMap.arrival_date   ? (row[headerMap.arrival_date]   || null) : null,
+      departure_date:    headerMap.departure_date ? (row[headerMap.departure_date] || null) : null,
+      cost_per_night:    isNaN(costPerNight)  ? null : costPerNight,
+      total_cost_no_vat: isNaN(totalNoVat)   ? null : totalNoVat,
+      total_cost_vat:    isNaN(totalVat)     ? null : totalVat,
+      city_tax_total:    isNaN(cityTax)      ? null : cityTax,
+      po_number:         poNumber,
+      invoice_number:    invoiceNumber,
     })
   }
 
