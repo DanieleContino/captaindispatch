@@ -2,8 +2,9 @@
 
 /**
  * /dashboard/accommodation
+ * S65 — 16 May 2026
  * Accommodation Coordinator view — crew_stays grouped by hotel.
- * Architecture mirrors /dashboard/travel/page.js (S55-S59 series).
+ * Two views: List (configurable columns) + Calendar (Excel-style grid).
  */
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
@@ -29,6 +30,11 @@ function fmtDate(s) {
   if (!s) return '–'
   return new Date(s + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+function fmtDayCol(s) {
+  // "16 May" format for calendar columns
+  const d = new Date(s + 'T12:00:00Z')
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
 function nightsBetween(arrival, departure) {
   if (!arrival || !departure) return null
   const a = new Date(arrival + 'T12:00:00Z')
@@ -45,6 +51,16 @@ function getStayStatus(arrival, departure) {
   if (today < arrival)  return { label: '🔜 Upcoming', style: { bg: '#fefce8', color: '#a16207', border: '#fde68a' } }
   if (today >= departure) return { label: '✅ Checked Out', style: { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0' } }
   return null
+}
+// Generate array of ISO date strings between start and end inclusive
+function daysInRange(start, end) {
+  const days = []
+  let cur = start
+  while (cur <= end) {
+    days.push(cur)
+    cur = isoAdd(cur, 1)
+  }
+  return days
 }
 
 // ─── Toast ────────────────────────────────────────────────────
@@ -71,29 +87,18 @@ function NotesCell({ notesEntry, unreadCount = 0, onClick }) {
   const lastNote = notesEntry?.lastNote || ''
   const preview  = lastNote.length > 45 ? lastNote.slice(0, 45) + '…' : lastNote
   return (
-    <td
-      onClick={onClick}
-      title="Click to open notes"
+    <td onClick={onClick} title="Click to open notes"
       style={{ padding: '7px 10px', cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap' }}
       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-      onMouseLeave={e => { e.currentTarget.style.background = '' }}
-    >
+      onMouseLeave={e => { e.currentTarget.style.background = '' }}>
       {count === 0 ? (
         <span style={{ color: '#cbd5e1', fontSize: '11px' }}>💬</span>
       ) : (
         <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <span style={{
-            fontSize: '9px', fontWeight: '800',
-            color: unreadCount > 0 ? '#ea580c' : '#92400e',
-            background: unreadCount > 0 ? '#fff7ed' : '#fef3c7',
-            border: `1px solid ${unreadCount > 0 ? '#fed7aa' : '#fcd34d'}`,
-            padding: '1px 5px', borderRadius: '3px', flexShrink: 0,
-          }}>
+          <span style={{ fontSize: '9px', fontWeight: '800', color: unreadCount > 0 ? '#ea580c' : '#92400e', background: unreadCount > 0 ? '#fff7ed' : '#fef3c7', border: `1px solid ${unreadCount > 0 ? '#fed7aa' : '#fcd34d'}`, padding: '1px 5px', borderRadius: '3px', flexShrink: 0 }}>
             💬 {count}
           </span>
-          <span style={{ fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {preview}
-          </span>
+          <span style={{ fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' }}>{preview}</span>
         </span>
       )}
     </td>
@@ -111,29 +116,18 @@ const SELECT_FIELDS = `
 
 // ─── EMPTY_STAY ────────────────────────────────────────────────
 const EMPTY_STAY = {
-  id: null,
-  crew_id: null,
-  hotel_id: '',
-  arrival_date: '',
-  departure_date: '',
-  room_type_notes: '',
-  cost_per_night: '',
-  city_tax_total: '',
-  total_cost_no_vat: '',
-  total_cost_vat: '',
-  po_number: '',
-  invoice_number: '',
+  id: null, crew_id: null, hotel_id: '', arrival_date: '', departure_date: '',
+  room_type_notes: '', cost_per_night: '', city_tax_total: '',
+  total_cost_no_vat: '', total_cost_vat: '', po_number: '', invoice_number: '',
 }
 
 // ─── ClickableCell ─────────────────────────────────────────────
 function ClickableCell({ value, onClick, style, emptyLabel = '—' }) {
   return (
-    <td
-      onClick={onClick}
+    <td onClick={onClick}
       style={{ padding: '7px 10px', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...style }}
       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-      onMouseLeave={e => { e.currentTarget.style.background = style?.background || '' }}
-    >
+      onMouseLeave={e => { e.currentTarget.style.background = style?.background || '' }}>
       {value || <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '10px' }}>{emptyLabel}</span>}
     </td>
   )
@@ -153,27 +147,15 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }
         </td>
       )
     case 'role':
-      return (
-        <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {stay.crew?.role || '—'}
-        </td>
-      )
+      return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stay.crew?.role || '—'}</td>
     case 'department':
       return (
         <td key={field} style={{ padding: '7px 10px', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {stay.crew?.department
-            ? <span style={{ background: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>{stay.crew.department}</span>
-            : '—'}
+          {stay.crew?.department ? <span style={{ background: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>{stay.crew.department}</span> : '—'}
         </td>
       )
     case 'room_type_notes':
-      return (
-        <ClickableCell key={field}
-          value={stay.room_type_notes}
-          onClick={() => onEditRow(stay, 'room_type_notes')}
-          style={{ fontSize: '11px', color: '#374151' }}
-        />
-      )
+      return <ClickableCell key={field} value={stay.room_type_notes} onClick={() => onEditRow(stay, 'room_type_notes')} style={{ fontSize: '11px', color: '#374151' }} />
     case 'arrival_date': {
       const isCI = stay.arrival_date === today
       return (
@@ -198,83 +180,196 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }
     }
     case 'nights': {
       const n = nightsBetween(stay.arrival_date, stay.departure_date)
-      return (
-        <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b', textAlign: 'center' }}>
-          {n != null ? <span style={{ fontWeight: '700', color: '#0f172a' }}>{n}🌙</span> : '—'}
-        </td>
-      )
+      return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#64748b', textAlign: 'center' }}>{n != null ? <span style={{ fontWeight: '700', color: '#0f172a' }}>{n}🌙</span> : '—'}</td>
     }
     case 'status': {
       const st = getStayStatus(stay.arrival_date, stay.departure_date)
       return (
         <td key={field} style={{ padding: '7px 10px', fontSize: '10px' }}>
-          {st ? (
-            <span style={{ fontWeight: '700', padding: '2px 7px', borderRadius: '999px', background: st.style.bg, color: st.style.color, border: `1px solid ${st.style.border}`, whiteSpace: 'nowrap' }}>
-              {st.label}
-            </span>
-          ) : '—'}
+          {st ? <span style={{ fontWeight: '700', padding: '2px 7px', borderRadius: '999px', background: st.style.bg, color: st.style.color, border: `1px solid ${st.style.border}`, whiteSpace: 'nowrap' }}>{st.label}</span> : '—'}
         </td>
       )
     }
     case 'notes':
-      return (
-        <NotesCell key={field}
-          notesEntry={stayNotesMap ? (stayNotesMap[stay.id] || null) : null}
-          unreadCount={stayUnreadMap ? (stayUnreadMap[stay.id] || 0) : 0}
-          onClick={() => onEditRow(stay, 'notes')}
-        />
-      )
+      return <NotesCell key={field} notesEntry={stayNotesMap ? (stayNotesMap[stay.id] || null) : null} unreadCount={stayUnreadMap ? (stayUnreadMap[stay.id] || 0) : 0} onClick={() => onEditRow(stay, 'notes')} />
     case 'cost_per_night':
-      return (
-        <ClickableCell key={field}
-          value={stay.cost_per_night != null ? `€${stay.cost_per_night}` : null}
-          onClick={() => onEditRow(stay, 'cost_per_night')}
-          style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }}
-        />
-      )
+      return <ClickableCell key={field} value={stay.cost_per_night != null ? `€${stay.cost_per_night}` : null} onClick={() => onEditRow(stay, 'cost_per_night')} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }} />
     case 'city_tax_total':
-      return (
-        <ClickableCell key={field}
-          value={stay.city_tax_total != null ? `€${stay.city_tax_total}` : null}
-          onClick={() => onEditRow(stay, 'city_tax_total')}
-          style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }}
-        />
-      )
+      return <ClickableCell key={field} value={stay.city_tax_total != null ? `€${stay.city_tax_total}` : null} onClick={() => onEditRow(stay, 'city_tax_total')} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }} />
     case 'total_cost_no_vat':
-      return (
-        <ClickableCell key={field}
-          value={stay.total_cost_no_vat != null ? `€${stay.total_cost_no_vat}` : null}
-          onClick={() => onEditRow(stay, 'total_cost_no_vat')}
-          style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }}
-        />
-      )
+      return <ClickableCell key={field} value={stay.total_cost_no_vat != null ? `€${stay.total_cost_no_vat}` : null} onClick={() => onEditRow(stay, 'total_cost_no_vat')} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }} />
     case 'total_cost_vat':
-      return (
-        <ClickableCell key={field}
-          value={stay.total_cost_vat != null ? `€${stay.total_cost_vat}` : null}
-          onClick={() => onEditRow(stay, 'total_cost_vat')}
-          style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }}
-        />
-      )
+      return <ClickableCell key={field} value={stay.total_cost_vat != null ? `€${stay.total_cost_vat}` : null} onClick={() => onEditRow(stay, 'total_cost_vat')} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }} />
     case 'po_number':
-      return (
-        <ClickableCell key={field}
-          value={stay.po_number}
-          onClick={() => onEditRow(stay, 'po_number')}
-          style={{ fontSize: '11px', color: '#374151' }}
-        />
-      )
+      return <ClickableCell key={field} value={stay.po_number} onClick={() => onEditRow(stay, 'po_number')} style={{ fontSize: '11px', color: '#374151' }} />
     case 'invoice_number':
-      return (
-        <ClickableCell key={field}
-          value={stay.invoice_number}
-          onClick={() => onEditRow(stay, 'invoice_number')}
-          style={{ fontSize: '11px', color: '#374151' }}
-        />
-      )
+      return <ClickableCell key={field} value={stay.invoice_number} onClick={() => onEditRow(stay, 'invoice_number')} style={{ fontSize: '11px', color: '#374151' }} />
     default:
       return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
   }
+}
+
+// ─── CalendarView ──────────────────────────────────────────────
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow }) {
+  const NAME_W  = 160
+  const ROLE_W  = 90
+  const DAY_W   = 28
+  const NIGHT_W = 44
+  const ROOM_W  = 120
+
+  // Day-of-week abbreviation
+  function dayLetter(iso) {
+    const d = new Date(iso + 'T12:00:00Z')
+    return ['S','M','T','W','T','F','S'][d.getUTCDay()]
+  }
+
+  function cellStyle(iso, stay) {
+    const inRange = iso >= stay.arrival_date && iso < stay.departure_date
+    const isCI    = iso === stay.arrival_date
+    const isCO    = iso === stay.departure_date
+    if (isCI)    return { background: '#15803d', title: '🛬 Check-in' }
+    if (isCO)    return { background: '#fca5a5', title: '🛫 Check-out' }
+    if (inRange) return { background: '#86efac', title: '🏨 In Hotel' }
+    return null
+  }
+
+  const isWeekend = (iso) => {
+    const d = new Date(iso + 'T12:00:00Z').getUTCDay()
+    return d === 0 || d === 6
+  }
+
+  const totalWidth = NAME_W + ROLE_W + days.length * DAY_W + NIGHT_W + ROOM_W
+
+  return (
+    <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
+      <table style={{
+        borderCollapse: 'collapse', tableLayout: 'fixed',
+        width: totalWidth + 'px', fontSize: '11px',
+      }}>
+        {/* Legend */}
+        <caption style={{ textAlign: 'left', padding: '0 0 6px 0', captionSide: 'top' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', fontSize: '10px', color: '#64748b' }}>
+            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#15803d', borderRadius: '2px', marginRight: '3px' }} />Check-in</span>
+            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#86efac', borderRadius: '2px', marginRight: '3px' }} />In Hotel</span>
+            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#fca5a5', borderRadius: '2px', marginRight: '3px' }} />Check-out</span>
+          </span>
+        </caption>
+
+        <colgroup>
+          <col style={{ width: NAME_W + 'px' }} />
+          <col style={{ width: ROLE_W + 'px' }} />
+          {days.map(d => <col key={d} style={{ width: DAY_W + 'px' }} />)}
+          <col style={{ width: NIGHT_W + 'px' }} />
+          <col style={{ width: ROOM_W + 'px' }} />
+        </colgroup>
+
+        {/* Header — day of week */}
+        <thead>
+          <tr style={{ background: '#f8fafc' }}>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 2 }}>NAME</th>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0' }}>ROLE</th>
+            {days.map(d => (
+              <th key={d} style={{
+                padding: '2px 1px', textAlign: 'center', fontSize: '9px', fontWeight: d === today ? '900' : '600',
+                color: d === today ? '#15803d' : isWeekend(d) ? '#94a3b8' : '#64748b',
+                borderBottom: '1px solid #e2e8f0',
+                background: d === today ? '#f0fdf4' : isWeekend(d) ? '#fafafa' : '#f8fafc',
+                borderLeft: d === today ? '1px solid #86efac' : '1px solid #f1f5f9',
+              }}>
+                <div>{dayLetter(d)}</div>
+                <div style={{ fontSize: '8px', fontWeight: '400' }}>{new Date(d + 'T12:00:00Z').getUTCDate()}</div>
+              </th>
+            ))}
+            <th style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0' }}>🌙</th>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0' }}>ROOM</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {sortedHotels.map(hotelName => {
+            const hotelStays = groupedByHotel[hotelName]
+            return (
+              <React.Fragment key={hotelName}>
+                {/* Hotel section row */}
+                <tr>
+                  <td colSpan={2 + days.length + 2} style={{
+                    padding: '5px 8px', background: '#f0fdf4',
+                    borderTop: '2px solid #86efac', borderBottom: '1px solid #86efac',
+                    fontSize: '11px', fontWeight: '800', color: '#14532d',
+                    textTransform: 'uppercase', letterSpacing: '0.04em',
+                    position: 'sticky', left: 0,
+                  }}>
+                    🏨 {hotelName} <span style={{ fontWeight: '600', color: '#16a34a', marginLeft: '6px' }}>{hotelStays.length} guest{hotelStays.length !== 1 ? 's' : ''}</span>
+                  </td>
+                </tr>
+
+                {/* Guest rows */}
+                {hotelStays.map((stay, ri) => {
+                  const nights = nightsBetween(stay.arrival_date, stay.departure_date)
+                  const isCI   = stay.arrival_date === today
+                  const isCO   = stay.departure_date === today
+                  const rowBg  = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa'
+                  return (
+                    <tr key={stay.id} style={{ background: rowBg }}
+                      onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background === '' && (c.style.background = '#f8fafc')) }}
+                      onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '#f8fafc') c.style.background = '' }) }}>
+
+                      {/* Name — sticky */}
+                      <td onClick={() => onEditRow(stay, 'full_name')}
+                        style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: rowBg, zIndex: 1, borderBottom: '1px solid #f1f5f9' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = rowBg }}>
+                        {stay.crew?.full_name || '—'}
+                      </td>
+
+                      {/* Role */}
+                      <td style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9' }}>
+                        {stay.crew?.role || '—'}
+                      </td>
+
+                      {/* Day cells */}
+                      {days.map(d => {
+                        const cs = cellStyle(d, stay)
+                        return (
+                          <td key={d}
+                            title={cs ? `${stay.crew?.full_name} — ${cs.title}` : ''}
+                            onClick={cs ? () => onEditRow(stay, 'arrival_date') : undefined}
+                            style={{
+                              padding: 0, textAlign: 'center', height: '28px',
+                              background: cs ? cs.background : (d === today ? '#f0fdf420' : isWeekend(d) ? '#fafafa' : 'transparent'),
+                              borderLeft: d === today ? '1px solid #86efac40' : '1px solid #f1f5f9',
+                              borderBottom: '1px solid #f1f5f9',
+                              cursor: cs ? 'pointer' : 'default',
+                            }}>
+                            {cs && <span style={{ fontSize: '8px', color: cs.background === '#15803d' ? 'white' : '#374151', fontWeight: '700' }}>
+                              {cs.background === '#15803d' ? '▶' : cs.background === '#fca5a5' ? '◀' : ''}
+                            </span>}
+                          </td>
+                        )
+                      })}
+
+                      {/* Nights */}
+                      <td style={{ padding: '5px 4px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#0f172a', borderLeft: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9' }}>
+                        {nights != null ? nights : '—'}
+                      </td>
+
+                      {/* Room/Notes */}
+                      <td onClick={() => onEditRow(stay, 'room_type_notes')}
+                        style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderLeft: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+                        {stay.room_type_notes || <span style={{ color: '#cbd5e1' }}>—</span>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </React.Fragment>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 // ─── StaySidebar ──────────────────────────────────────────────
@@ -288,14 +383,11 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   const [crewSearch, setCrewSearch]     = useState('')
   const [crewResults, setCrewResults]   = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
-
   const notesRef = React.useRef(null)
 
   useEffect(() => {
     if (!open) return
-    setError(null)
-    setConfirmDel(false)
-
+    setError(null); setConfirmDel(false)
     if (mode === 'edit' && initial) {
       setForm({
         id:                initial.id                || null,
@@ -313,20 +405,11 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
-
-      // Focus requested field
-      if (initial?.__focusField) {
-        const focusKey = initial.__focusField
-        setTimeout(() => {
-          if (focusKey === 'notes' && notesRef.current) {
-            notesRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          }
-        }, 300)
+      if (initial?.__focusField === 'notes' && notesRef.current) {
+        setTimeout(() => notesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)
       }
     } else {
-      setForm(EMPTY_STAY)
-      setCrewSearch('')
-      setCrewResults([])
+      setForm(EMPTY_STAY); setCrewSearch(''); setCrewResults([])
     }
   }, [open, mode, initial])
 
@@ -335,13 +418,8 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   async function searchCrew(q) {
     if (!q || q.length < 2 || !PRODUCTION_ID) { setCrewResults([]); return }
     setCrewSearching(true)
-    const { data } = await supabase.from('crew')
-      .select('id, full_name, role, department')
-      .eq('production_id', PRODUCTION_ID)
-      .ilike('full_name', `%${q}%`)
-      .limit(8)
-    setCrewResults(data || [])
-    setCrewSearching(false)
+    const { data } = await supabase.from('crew').select('id, full_name, role, department').eq('production_id', PRODUCTION_ID).ilike('full_name', `%${q}%`).limit(8)
+    setCrewResults(data || []); setCrewSearching(false)
   }
 
   useEffect(() => {
@@ -349,67 +427,47 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     return () => clearTimeout(timer)
   }, [crewSearch])
 
-  // ── Sync crew hotel_id, arrival_date, departure_date from all stays ──
   async function syncCrewDates(crewId) {
     if (!crewId || !PRODUCTION_ID) return
-    const { data: allStays } = await supabase
-      .from('crew_stays')
-      .select('arrival_date, departure_date, hotel_id')
-      .eq('crew_id', crewId)
-      .eq('production_id', PRODUCTION_ID)
-      .order('arrival_date', { ascending: true })
+    const { data: allStays } = await supabase.from('crew_stays').select('arrival_date, departure_date, hotel_id').eq('crew_id', crewId).eq('production_id', PRODUCTION_ID).order('arrival_date', { ascending: true })
     if (!allStays || allStays.length === 0) return
     const arrivals   = allStays.map(s => s.arrival_date).filter(Boolean).sort()
     const departures = allStays.map(s => s.departure_date).filter(Boolean).sort()
-    const minArr     = arrivals[0]   || null
-    const maxDep     = departures[departures.length - 1] || null
-    // Use hotel from most recent stay
-    const latestHotel = allStays[allStays.length - 1]?.hotel_id || null
-    await supabase.from('crew').update({
-      hotel_id:       latestHotel,
-      arrival_date:   minArr,
-      departure_date: maxDep,
-    }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    await supabase.from('crew').update({ hotel_id: allStays[allStays.length - 1]?.hotel_id || null, arrival_date: arrivals[0] || null, departure_date: departures[departures.length - 1] || null }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
   }
 
   function buildRow() {
     return {
       production_id:     PRODUCTION_ID,
-      crew_id:           form.crew_id           || null,
-      hotel_id:          form.hotel_id          || null,
-      arrival_date:      form.arrival_date      || null,
-      departure_date:    form.departure_date    || null,
-      room_type_notes:   (form.room_type_notes  || '').trim() || null,
+      crew_id:           form.crew_id || null,
+      hotel_id:          form.hotel_id || null,
+      arrival_date:      form.arrival_date || null,
+      departure_date:    form.departure_date || null,
+      room_type_notes:   (form.room_type_notes || '').trim() || null,
       cost_per_night:    form.cost_per_night    !== '' ? parseFloat(form.cost_per_night)    : null,
       city_tax_total:    form.city_tax_total    !== '' ? parseFloat(form.city_tax_total)    : null,
       total_cost_no_vat: form.total_cost_no_vat !== '' ? parseFloat(form.total_cost_no_vat) : null,
       total_cost_vat:    form.total_cost_vat    !== '' ? parseFloat(form.total_cost_vat)    : null,
-      po_number:         (form.po_number        || '').trim() || null,
-      invoice_number:    (form.invoice_number   || '').trim() || null,
+      po_number:         (form.po_number || '').trim() || null,
+      invoice_number:    (form.invoice_number || '').trim() || null,
     }
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!form.crew_id) { setError('Crew member required'); return }
-    if (!form.arrival_date)   { setError('Arrival date required');   return }
+    if (!form.crew_id)        { setError('Crew member required');   return }
+    if (!form.arrival_date)   { setError('Arrival date required');  return }
     if (!form.departure_date) { setError('Departure date required'); return }
     setSaving(true)
     try {
       const row = buildRow()
       let result
-      if (mode === 'new') {
-        result = await supabase.from('crew_stays').insert(row).select(SELECT_FIELDS).single()
-      } else {
-        result = await supabase.from('crew_stays').update(row).eq('id', initial.id).select(SELECT_FIELDS).single()
-      }
+      if (mode === 'new') result = await supabase.from('crew_stays').insert(row).select(SELECT_FIELDS).single()
+      else                result = await supabase.from('crew_stays').update(row).eq('id', initial.id).select(SELECT_FIELDS).single()
       if (result.error) { setError(result.error.message); return }
       await syncCrewDates(form.crew_id)
-      onSaved(result.data, mode)
-      onClose()
-    } finally {
-      setSaving(false)
-    }
+      onSaved(result.data, mode); onClose()
+    } finally { setSaving(false) }
   }
 
   async function handleDelete() {
@@ -418,145 +476,62 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     await supabase.from('crew_stays').delete().eq('id', initial.id)
     setDeleting(false)
     if (initial.crew_id) await syncCrewDates(initial.crew_id)
-    onDeleted(initial.id)
-    onClose()
+    onDeleted(initial.id); onClose()
   }
 
-  const inp = {
-    width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0',
-    borderRadius: '8px', fontSize: '13px', color: '#0f172a',
-    background: 'white', boxSizing: 'border-box',
-  }
-  const lbl = {
-    fontSize: '10px', fontWeight: '800', color: '#94a3b8',
-    letterSpacing: '0.07em', textTransform: 'uppercase',
-    display: 'block', marginBottom: '3px',
-  }
+  const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
   const rowSt = { marginBottom: '12px' }
 
   return (
     <>
-      {open && (
-        <div
-          onClick={onClose}
-          style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }}
-        />
-      )}
-      <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: '420px',
-        background: 'white', borderLeft: '1px solid #e2e8f0',
-        boxShadow: '-4px 0 24px rgba(0,0,0,0.1)',
-        zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)',
-        transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
-        display: 'flex', flexDirection: 'column',
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '14px 18px', borderBottom: '1px solid #e2e8f0',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: '#15803d', flexShrink: 0,
-        }}>
-          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
-            {mode === 'new' ? '🏨 New Stay' : '✏️ Edit Stay'}
-          </div>
-          <button onClick={onClose} style={{
-            background: 'rgba(255,255,255,0.15)', border: 'none',
-            cursor: 'pointer', color: 'white', fontSize: '16px',
-            lineHeight: 1, borderRadius: '6px', padding: '4px 8px',
-          }}>✕</button>
+      {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '420px', background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#15803d', flexShrink: 0 }}>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>{mode === 'new' ? '🏨 New Stay' : '✏️ Edit Stay'}</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '16px 18px' }}>
 
             {/* Crew search */}
             <div style={rowSt}>
               <label style={lbl}>Crew member *</label>
-              <input
-                value={crewSearch}
-                onChange={e => {
-                  setCrewSearch(e.target.value)
-                  if (!e.target.value) set('crew_id', null)
-                }}
-                style={inp}
-                placeholder="Type name to search crew..."
-                autoComplete="off"
-              />
-              {crewSearching && (
-                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Searching...</div>
-              )}
+              <input value={crewSearch} onChange={e => { setCrewSearch(e.target.value); if (!e.target.value) set('crew_id', null) }} style={inp} placeholder="Type name to search crew..." autoComplete="off" />
+              {crewSearching && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Searching...</div>}
               {crewResults.length > 0 && (
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', overflow: 'hidden' }}>
                   {crewResults.map(c => (
-                    <div key={c.id}
-                      onClick={() => {
-                        set('crew_id', c.id)
-                        setCrewSearch(c.full_name)
-                        setCrewResults([])
-                      }}
+                    <div key={c.id} onClick={() => { set('crew_id', c.id); setCrewSearch(c.full_name); setCrewResults([]) }}
                       style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                    >
+                      onMouseLeave={e => e.currentTarget.style.background = 'white'}>
                       <span style={{ fontWeight: '700', color: '#0f172a' }}>{c.full_name}</span>
                       {c.role && <span style={{ fontSize: '11px', color: '#64748b' }}>{c.role}</span>}
-                      {c.department && (
-                        <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>
-                          {c.department}
-                        </span>
-                      )}
+                      {c.department && <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{c.department}</span>}
                     </div>
                   ))}
                 </div>
               )}
-              {form.crew_id && (
-                <div style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', fontWeight: '600' }}>
-                  ✓ Crew linked
-                </div>
-              )}
+              {form.crew_id && <div style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', fontWeight: '600' }}>✓ Crew linked</div>}
             </div>
 
-            {/* Hotel dropdown */}
+            {/* Hotel */}
             <div style={rowSt}>
-              <label style={lbl}>Hotel *</label>
-              <select
-                value={form.hotel_id}
-                onChange={e => set('hotel_id', e.target.value)}
-                style={{ ...inp, cursor: 'pointer' }}
-              >
+              <label style={lbl}>Hotel</label>
+              <select value={form.hotel_id} onChange={e => set('hotel_id', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
                 <option value="">— Select hotel —</option>
-                {(hotels || []).map(h => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
-                ))}
+                {(hotels || []).map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
               </select>
             </div>
 
             {/* Dates */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-              <div>
-                <label style={lbl}>Check-in *</label>
-                <input
-                  type="date"
-                  value={form.arrival_date}
-                  onChange={e => set('arrival_date', e.target.value)}
-                  style={inp}
-                  required
-                />
-              </div>
-              <div>
-                <label style={lbl}>Check-out *</label>
-                <input
-                  type="date"
-                  value={form.departure_date}
-                  onChange={e => set('departure_date', e.target.value)}
-                  style={inp}
-                  required
-                />
-              </div>
+              <div><label style={lbl}>Check-in *</label><input type="date" value={form.arrival_date} onChange={e => set('arrival_date', e.target.value)} style={inp} required /></div>
+              <div><label style={lbl}>Check-out *</label><input type="date" value={form.departure_date} onChange={e => set('departure_date', e.target.value)} style={inp} required /></div>
             </div>
 
-            {/* Nights preview */}
             {form.arrival_date && form.departure_date && (
               <div style={{ marginBottom: '12px', padding: '8px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', fontSize: '12px', color: '#15803d', fontWeight: '700' }}>
                 🌙 {nightsBetween(form.arrival_date, form.departure_date) ?? 0} night(s)
@@ -566,62 +541,33 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
             {/* Room / Notes */}
             <div style={rowSt}>
               <label style={lbl}>Room / Notes</label>
-              <input
-                value={form.room_type_notes}
-                onChange={e => set('room_type_notes', e.target.value)}
-                style={inp}
-                placeholder="Room type, number, preferences..."
-              />
+              <input value={form.room_type_notes} onChange={e => set('room_type_notes', e.target.value)} style={inp} placeholder="Room type, number, preferences..." />
             </div>
 
             {/* Cost fields */}
             <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Cost (optional)</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
-                <div>
-                  <label style={lbl}>€/night</label>
-                  <input type="number" step="0.01" value={form.cost_per_night} onChange={e => set('cost_per_night', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" />
-                </div>
-                <div>
-                  <label style={lbl}>City tax total</label>
-                  <input type="number" step="0.01" value={form.city_tax_total} onChange={e => set('city_tax_total', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" />
-                </div>
+                <div><label style={lbl}>€/night</label><input type="number" step="0.01" value={form.cost_per_night} onChange={e => set('cost_per_night', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
+                <div><label style={lbl}>City tax total</label><input type="number" step="0.01" value={form.city_tax_total} onChange={e => set('city_tax_total', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
-                <div>
-                  <label style={lbl}>Tot. no VAT</label>
-                  <input type="number" step="0.01" value={form.total_cost_no_vat} onChange={e => set('total_cost_no_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" />
-                </div>
-                <div>
-                  <label style={lbl}>Tot. + VAT</label>
-                  <input type="number" step="0.01" value={form.total_cost_vat} onChange={e => set('total_cost_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" />
-                </div>
+                <div><label style={lbl}>Tot. no VAT</label><input type="number" step="0.01" value={form.total_cost_no_vat} onChange={e => set('total_cost_no_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
+                <div><label style={lbl}>Tot. + VAT</label><input type="number" step="0.01" value={form.total_cost_vat} onChange={e => set('total_cost_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                <div>
-                  <label style={lbl}>P.O.</label>
-                  <input value={form.po_number} onChange={e => set('po_number', e.target.value)} style={inp} placeholder="P.O. number" />
-                </div>
-                <div>
-                  <label style={lbl}>N°Fatt.</label>
-                  <input value={form.invoice_number} onChange={e => set('invoice_number', e.target.value)} style={inp} placeholder="Invoice #" />
-                </div>
+                <div><label style={lbl}>P.O.</label><input value={form.po_number} onChange={e => set('po_number', e.target.value)} style={inp} placeholder="P.O. number" /></div>
+                <div><label style={lbl}>N°Fatt.</label><input value={form.invoice_number} onChange={e => set('invoice_number', e.target.value)} style={inp} placeholder="Invoice #" /></div>
               </div>
             </div>
 
             {/* Notes Panel */}
             {form.crew_id && (
-              <div ref={notesRef}>
+              <div ref={notesRef} style={{ marginTop: '8px' }}>
                 {form.id ? (
-                  <NotesPanel
-                    crewId={form.crew_id}
-                    productionId={PRODUCTION_ID}
-                    currentUser={currentUser}
-                    linkedStayId={form.id}
-                    accordion={true}
-                  />
+                  <NotesPanel crewId={form.crew_id} productionId={PRODUCTION_ID} currentUser={currentUser} linkedStayId={form.id} accordion={true} />
                 ) : (
-                  <div style={{ marginTop: '8px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                  <div style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
                     💬 Save the stay first to add notes
                   </div>
                 )}
@@ -633,22 +579,13 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
               <div style={{ marginTop: '16px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
                 {!confirmDel ? (
-                  <button type="button" onClick={handleDelete} disabled={deleting}
-                    style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
-                    Delete Stay
-                  </button>
+                  <button type="button" onClick={handleDelete} disabled={deleting} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>Delete Stay</button>
                 ) : (
                   <div>
                     <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>Delete this stay? This cannot be undone.</div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button type="button" onClick={() => setConfirmDel(false)}
-                        style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
-                        Cancel
-                      </button>
-                      <button type="button" onClick={handleDelete} disabled={deleting}
-                        style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: deleting ? 'default' : 'pointer', fontSize: '12px', fontWeight: '800' }}>
-                        {deleting ? '...' : 'Confirm Delete'}
-                      </button>
+                      <button type="button" onClick={() => setConfirmDel(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Cancel</button>
+                      <button type="button" onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: deleting ? 'default' : 'pointer', fontSize: '12px', fontWeight: '800' }}>{deleting ? '...' : 'Confirm Delete'}</button>
                     </div>
                   </div>
                 )}
@@ -656,32 +593,13 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
             )}
           </div>
 
-          {error && (
-            <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>
-              {error}
-            </div>
-          )}
+          {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>{error}</div>}
 
-          {/* Footer buttons */}
-          <div style={{
-            padding: '12px 18px', borderTop: '1px solid #e2e8f0', flexShrink: 0,
-            position: 'sticky', bottom: 0, background: 'white', display: 'flex', flexDirection: 'column', gap: '6px',
-          }}>
-            <button type="submit" disabled={saving}
-              style={{
-                padding: '9px', borderRadius: '8px', border: 'none',
-                background: saving ? '#94a3b8' : '#15803d',
-                color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800',
-              }}>
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', flexShrink: 0, position: 'sticky', bottom: 0, background: 'white', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <button type="submit" disabled={saving} style={{ padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#15803d', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
               {saving ? 'Saving...' : mode === 'new' ? '+ Add Stay' : 'Save Changes'}
             </button>
-            <button type="button" onClick={onClose}
-              style={{
-                padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0',
-                background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer', fontWeight: '600',
-              }}>
-              Cancel
-            </button>
+            <button type="button" onClick={onClose} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
           </div>
         </form>
       </div>
@@ -696,69 +614,41 @@ export default function AccommodationPage() {
   const isMobile      = useIsMobile()
   const today         = isoToday()
 
-  // Auth
   const [user, setUser]         = useState(null)
   const [userRole, setUserRole] = useState('ACCOMMODATION')
-
-  // Data
   const [stays,   setStays]   = useState([])
   const [hotels,  setHotels]  = useState([])
   const [loading, setLoading] = useState(true)
-
-  // Columns config
-  const [columnsConfig,      setColumnsConfig]      = useState([])
-  const [columnsEditorOpen,  setColumnsEditorOpen]  = useState(false)
-  const [applyingPreset,     setApplyingPreset]     = useState(false)
-
-  // Date window — mirrors Travel page pattern
+  const [viewMode, setViewMode] = useState('list') // 'list' | 'calendar'
+  const [columnsConfig,     setColumnsConfig]     = useState([])
+  const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
+  const [applyingPreset,    setApplyingPreset]    = useState(false)
   const [windowStart, setWindowStart] = useState(() => isoAdd(isoToday(), -3))
   const [windowEnd,   setWindowEnd]   = useState(() => isoAdd(isoToday(), 10))
-
-  // Sidebar
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [sidebarMode,   setSidebarMode]   = useState('new')
   const [sidebarTarget, setSidebarTarget] = useState(null)
-
-  // Notes maps — keyed by linked_stay_id
   const [stayNotesMap,  setStayNotesMap]  = useState({})
   const [stayUnreadMap, setStayUnreadMap] = useState({})
-
-  // Filters
   const [search,       setSearch]       = useState('')
   const [filterHotel,  setFilterHotel]  = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
-
-  // Toast
   const [toast, setToast] = useState(null)
+
   function showToast(message, type = 'success') {
     setToast({ message, type })
     setTimeout(() => setToast(null), 2500)
   }
 
-  function openNew() {
-    setSidebarMode('new')
-    setSidebarTarget(null)
-    setSidebarOpen(true)
-  }
-  function openEdit(stay, focusField) {
-    setSidebarMode('edit')
-    setSidebarTarget({ ...stay, __focusField: focusField || null })
-    setSidebarOpen(true)
-  }
+  function openNew() { setSidebarMode('new'); setSidebarTarget(null); setSidebarOpen(true) }
+  function openEdit(stay, focusField) { setSidebarMode('edit'); setSidebarTarget({ ...stay, __focusField: focusField || null }); setSidebarOpen(true) }
 
-  // ── Load columns config ────────────────────────────────────
   const loadColumnsConfig = useCallback(async () => {
     if (!PRODUCTION_ID) return
-    const { data } = await supabase
-      .from('accommodation_columns')
-      .select('*')
-      .eq('production_id', PRODUCTION_ID)
-      .order('display_order', { ascending: true })
-      .order('created_at',    { ascending: true })
+    const { data } = await supabase.from('accommodation_columns').select('*').eq('production_id', PRODUCTION_ID).order('display_order', { ascending: true }).order('created_at', { ascending: true })
     setColumnsConfig(data || [])
   }, [PRODUCTION_ID])
 
-  // ── Apply default preset ───────────────────────────────────
   async function applyDefaultPreset() {
     if (!PRODUCTION_ID || applyingPreset) return
     setApplyingPreset(true)
@@ -768,71 +658,35 @@ export default function AccommodationPage() {
       if (error) throw error
       await loadColumnsConfig()
       showToast('Default preset applied')
-    } catch (e) {
-      showToast('Failed to apply preset: ' + (e.message || 'unknown'), 'error')
-    } finally {
-      setApplyingPreset(false)
-    }
+    } catch (e) { showToast('Failed: ' + (e.message || 'unknown'), 'error') }
+    finally { setApplyingPreset(false) }
   }
 
-  // ── Date window navigation ─────────────────────────────────
-  function shiftWindow(n) {
-    setWindowStart(s => isoAdd(s, n))
-    setWindowEnd(e   => isoAdd(e, n))
-  }
-  function resetWindow() {
-    setWindowStart(isoAdd(isoToday(), -3))
-    setWindowEnd(isoAdd(isoToday(), 10))
-  }
-  function pickDate(dateStr) {
-    setWindowStart(isoAdd(dateStr, -3))
-    setWindowEnd(isoAdd(dateStr, 10))
-  }
+  function shiftWindow(n) { setWindowStart(s => isoAdd(s, n)); setWindowEnd(e => isoAdd(e, n)) }
+  function resetWindow() { setWindowStart(isoAdd(isoToday(), -3)); setWindowEnd(isoAdd(isoToday(), 10)) }
+  function pickDate(dateStr) { setWindowStart(isoAdd(dateStr, -3)); setWindowEnd(isoAdd(dateStr, 10)) }
 
-  // ── Load stays (filtered by date window overlap) ───────────
   const loadData = useCallback(async (start, end) => {
     if (!PRODUCTION_ID) return
     setLoading(true)
     const s = start || windowStart
     const e = end   || windowEnd
-    const { data } = await supabase
-      .from('crew_stays')
-      .select(SELECT_FIELDS)
-      .eq('production_id', PRODUCTION_ID)
-      .lte('arrival_date',   e)
-      .gte('departure_date', s)
-      .order('hotel_id',     { ascending: true })
-      .order('arrival_date', { ascending: true })
+    const { data } = await supabase.from('crew_stays').select(SELECT_FIELDS).eq('production_id', PRODUCTION_ID).lte('arrival_date', e).gte('departure_date', s).order('hotel_id', { ascending: true }).order('arrival_date', { ascending: true })
     setStays(data || [])
     setLoading(false)
   }, [PRODUCTION_ID])
 
-  // ── Load hotels (is_hotel = true) ──────────────────────────
   const loadHotels = useCallback(async () => {
     if (!PRODUCTION_ID) return
-    const { data } = await supabase
-      .from('locations')
-      .select('id, name')
-      .eq('production_id', PRODUCTION_ID)
-      .eq('is_hotel', true)
+    const { data } = await supabase.from('locations').select('id, name').eq('production_id', PRODUCTION_ID).eq('is_hotel', true)
     setHotels(data || [])
   }, [PRODUCTION_ID])
 
-  // ── Load notes maps ────────────────────────────────────────
   const loadNotesMap = useCallback(async (userId) => {
     if (!PRODUCTION_ID || !userId) return
-    const { data } = await supabase
-      .from('crew_notes')
-      .select('crew_id, linked_stay_id, author_id, read_by, content, created_at')
-      .eq('production_id', PRODUCTION_ID)
-      .eq('is_private', false)
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('crew_notes').select('crew_id, linked_stay_id, author_id, read_by, content, created_at').eq('production_id', PRODUCTION_ID).eq('is_private', false).order('created_at', { ascending: false })
     if (!data) return
-
-    const stayTotal   = {}
-    const stayLastMap = {}
-    const stayUnread  = {}
-
+    const stayTotal = {}, stayLastMap = {}, stayUnread = {}
     for (const note of data) {
       if (!note.linked_stay_id) continue
       const sid = note.linked_stay_id
@@ -842,83 +696,49 @@ export default function AccommodationPage() {
       if ((note.read_by || []).includes(userId)) continue
       stayUnread[sid] = (stayUnread[sid] || 0) + 1
     }
-
     const notesMap = {}
-    for (const sid of Object.keys(stayTotal)) {
-      notesMap[sid] = { count: stayTotal[sid], lastNote: stayLastMap[sid] || '' }
-    }
-    setStayNotesMap(notesMap)
-    setStayUnreadMap(stayUnread)
+    for (const sid of Object.keys(stayTotal)) notesMap[sid] = { count: stayTotal[sid], lastNote: stayLastMap[sid] || '' }
+    setStayNotesMap(notesMap); setStayUnreadMap(stayUnread)
   }, [PRODUCTION_ID])
 
-  // ── Auth check + load real role ────────────────────────────
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/login'); return }
       setUser(user)
       if (PRODUCTION_ID) {
-        const { data: roleRow } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('production_id', PRODUCTION_ID)
-          .maybeSingle()
+        const { data: roleRow } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('production_id', PRODUCTION_ID).maybeSingle()
         if (roleRow?.role) setUserRole(roleRow.role)
       }
     })
   }, [])
 
-  // ── Initial data load ──────────────────────────────────────
   useEffect(() => {
-    if (user) {
-      loadData(windowStart, windowEnd)
-      loadHotels()
-      loadColumnsConfig()
-      loadNotesMap(user.id)
-    }
+    if (user) { loadData(windowStart, windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id) }
   }, [user])
 
-  // ── Reload when window changes ─────────────────────────────
-  useEffect(() => {
-    if (user) loadData(windowStart, windowEnd)
-  }, [windowStart, windowEnd])
+  useEffect(() => { if (user) loadData(windowStart, windowEnd) }, [windowStart, windowEnd])
 
-  // ── Realtime subscription on crew_notes ───────────────────
   useEffect(() => {
     if (!user || !PRODUCTION_ID) return
-    const channel = supabase
-      .channel(`crew_notes:accommodation:${PRODUCTION_ID}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'crew_notes',
-        filter: `production_id=eq.${PRODUCTION_ID}`,
-      }, () => { loadNotesMap(user.id) })
+    const channel = supabase.channel(`crew_notes:accommodation:${PRODUCTION_ID}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crew_notes', filter: `production_id=eq.${PRODUCTION_ID}` }, () => { loadNotesMap(user.id) })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [user, PRODUCTION_ID, loadNotesMap])
 
-  // ── Stay callbacks ─────────────────────────────────────────
   function handleStaySaved(saved, mode) {
     if (mode === 'new') {
       setStays(prev => [...prev, saved].sort((a, b) => {
-        const ha = a.hotel?.name || ''
-        const hb = b.hotel?.name || ''
+        const ha = a.hotel?.name || '', hb = b.hotel?.name || ''
         if (ha !== hb) return ha.localeCompare(hb)
         return (a.arrival_date || '').localeCompare(b.arrival_date || '')
       }))
-    } else {
-      setStays(prev => prev.map(s => s.id === saved.id ? saved : s))
-    }
+    } else { setStays(prev => prev.map(s => s.id === saved.id ? saved : s)) }
     showToast(mode === 'new' ? 'Stay added' : 'Stay updated')
   }
 
-  function handleStayDeleted(id) {
-    setStays(prev => prev.filter(s => s.id !== id))
-    showToast('Stay deleted')
-  }
+  function handleStayDeleted(id) { setStays(prev => prev.filter(s => s.id !== id)); showToast('Stay deleted') }
 
-  // ── Filtered stays ─────────────────────────────────────────
   const filtered = useMemo(() => {
     return stays.filter(s => {
       const name = (s.crew?.full_name || '').toLowerCase()
@@ -932,7 +752,6 @@ export default function AccommodationPage() {
     })
   }, [stays, search, filterHotel, filterStatus])
 
-  // ── Group by hotel ─────────────────────────────────────────
   const { groupedByHotel, sortedHotels } = useMemo(() => {
     const grouped = {}
     for (const stay of filtered) {
@@ -940,115 +759,86 @@ export default function AccommodationPage() {
       if (!grouped[hotelName]) grouped[hotelName] = []
       grouped[hotelName].push(stay)
     }
-    const sorted = Object.keys(grouped).sort()
-    return { groupedByHotel: grouped, sortedHotels: sorted }
+    return { groupedByHotel: grouped, sortedHotels: Object.keys(grouped).sort() }
   }, [filtered])
 
-  // ── Hotel list for filter pills ────────────────────────────
   const hotelNames = useMemo(() => {
     const names = new Set()
     for (const s of stays) names.add(s.hotel?.name || 'No Hotel')
     return Array.from(names).sort()
   }, [stays])
 
-  // ── Stats ──────────────────────────────────────────────────
+  // Calendar days array
+  const calendarDays = useMemo(() => daysInRange(windowStart, windowEnd), [windowStart, windowEnd])
+
   const statCheckIn  = stays.filter(s => s.arrival_date === today).length
   const statCheckOut = stays.filter(s => s.departure_date === today).length
   const statInHotel  = stays.filter(s => today > s.arrival_date && today < s.departure_date).length
 
-  // ── Pill helper ────────────────────────────────────────────
   function Pill({ active, onClick, children, activeStyle }) {
     return (
       <button onClick={onClick} style={{
-        padding: '3px 10px', borderRadius: '999px', fontSize: '11px',
-        fontWeight: '700', cursor: 'pointer', border: '1px solid',
-        touchAction: 'manipulation',
-        ...(active
-          ? (activeStyle || { background: '#15803d', color: 'white', borderColor: '#15803d' })
-          : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }),
-      }}>
-        {children}
-      </button>
+        padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', touchAction: 'manipulation',
+        ...(active ? (activeStyle || { background: '#15803d', color: 'white', borderColor: '#15803d' }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }),
+      }}>{children}</button>
     )
   }
 
   const isFilterActive = search || filterHotel !== 'ALL' || filterStatus !== 'ALL'
-  function resetFilters() {
-    setSearch('')
-    setFilterHotel('ALL')
-    setFilterStatus('ALL')
-  }
+  function resetFilters() { setSearch(''); setFilterHotel('ALL'); setFilterStatus('ALL') }
 
-  // ── Auth guard ─────────────────────────────────────────────
-  if (!user) return (
-    <div style={{ minHeight: '100vh', background: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-      Loading...
-    </div>
-  )
+  if (!user) return <div style={{ minHeight: '100vh', background: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading...</div>
 
-  // ── Render ─────────────────────────────────────────────────
-  const NAVBAR_H    = 52
-  const TOOLBAR_H   = 52
-  const FILTER_TOP  = NAVBAR_H + TOOLBAR_H
+  const NAVBAR_H   = 52
+  const TOOLBAR_H  = 52
+  const FILTER_TOP = NAVBAR_H + TOOLBAR_H
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-
       <Navbar currentPath="/dashboard/accommodation" />
 
       {/* ── Toolbar ── */}
-      <div style={{
-        background: 'white', borderBottom: '1px solid #e2e8f0',
-        padding: '8px 16px', minHeight: `${TOOLBAR_H}px`,
-        display: 'flex', alignItems: 'center', gap: '8px',
-        position: 'sticky', top: `${NAVBAR_H}px`, zIndex: 21,
-      }}>
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: `${TOOLBAR_H}px`, display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: `${NAVBAR_H}px`, zIndex: 21 }}>
         <span style={{ fontSize: '18px' }}>🏨</span>
-        <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>
-          Accommodation
-        </span>
-        <button onClick={openNew} style={{
-          background: '#15803d', color: 'white', border: 'none',
-          borderRadius: '8px', padding: '6px 14px', fontSize: '12px',
-          fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap',
-          boxShadow: '0 2px 8px rgba(21,128,61,0.3)',
-        }}>
-          + Add Stay
-        </button>
+        <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Accommodation</span>
+        <button onClick={openNew} style={{ background: '#15803d', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(21,128,61,0.3)' }}>+ Add Stay</button>
 
-        {/* Date window navigator — mirrors Travel page */}
+        {/* Date window */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <button onClick={() => shiftWindow(-7)}
-            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>◀</button>
-          <input type="date"
-            value={windowStart ? isoAdd(windowStart, 3) : today}
-            onChange={e => pickDate(e.target.value)}
-            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }}
-          />
-          <button onClick={() => shiftWindow(7)}
-            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>▶</button>
-          <button onClick={resetWindow}
-            style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#15803d', whiteSpace: 'nowrap' }}>
-            Today
-          </button>
-          <button onClick={() => loadData(windowStart, windowEnd)}
-            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
-            ↺
-          </button>
+          <button onClick={() => shiftWindow(-7)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>◀</button>
+          <input type="date" value={windowStart ? isoAdd(windowStart, 3) : today} onChange={e => pickDate(e.target.value)}
+            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
+          <button onClick={() => shiftWindow(7)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>▶</button>
+          <button onClick={resetWindow} style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#15803d', whiteSpace: 'nowrap' }}>Today</button>
+          <button onClick={() => loadData(windowStart, windowEnd)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↺</button>
         </div>
 
-        {/* Columns button + Cost Report link */}
+        {/* View toggle + Columns + Cost Report */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-          {columnsConfig.length === 0 && (
+          {/* View toggle */}
+          <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden' }}>
+            <button onClick={() => setViewMode('list')}
+              style={{ padding: '5px 10px', border: 'none', background: viewMode === 'list' ? '#0f2340' : 'white', color: viewMode === 'list' ? 'white' : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+              ☰ List
+            </button>
+            <button onClick={() => setViewMode('calendar')}
+              style={{ padding: '5px 10px', border: 'none', borderLeft: '1px solid #e2e8f0', background: viewMode === 'calendar' ? '#0f2340' : 'white', color: viewMode === 'calendar' ? 'white' : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+              📅 Calendar
+            </button>
+          </div>
+
+          {viewMode === 'list' && columnsConfig.length === 0 && (
             <button onClick={applyDefaultPreset} disabled={applyingPreset}
               style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #15803d', background: applyingPreset ? '#cbd5e1' : '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: applyingPreset ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
               {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
             </button>
           )}
-          <button onClick={() => setColumnsEditorOpen(true)}
-            style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            Columns {columnsConfig.length > 0 && `(${columnsConfig.length})`}
-          </button>
+          {viewMode === 'list' && (
+            <button onClick={() => setColumnsEditorOpen(true)}
+              style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              Columns {columnsConfig.length > 0 && `(${columnsConfig.length})`}
+            </button>
+          )}
           <a href="/dashboard/accommodation/cost-report"
             style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none' }}>
             💰 Cost Report
@@ -1057,77 +847,27 @@ export default function AccommodationPage() {
       </div>
 
       {/* ── Filter Row ── */}
-      <div style={{
-        background: 'white', borderBottom: '1px solid #e2e8f0',
-        padding: '6px 16px',
-        display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
-        position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20,
-      }}>
-        {/* Search */}
-        <input
-          type="text"
-          placeholder="Search name..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px', minWidth: 0 }}
-        />
-
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20 }}>
+        <input type="text" placeholder="Search name..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px', minWidth: 0 }} />
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
-
-        {/* Hotel pills */}
         <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
           <Pill active={filterHotel === 'ALL'} onClick={() => setFilterHotel('ALL')}>ALL</Pill>
           {hotelNames.map(name => (
-            <Pill
-              key={name}
-              active={filterHotel === name}
-              onClick={() => setFilterHotel(name)}
-              activeStyle={{ background: '#0f2340', color: 'white', borderColor: '#0f2340' }}
-            >
-              🏨 {name}
-            </Pill>
+            <Pill key={name} active={filterHotel === name} onClick={() => setFilterHotel(name)} activeStyle={{ background: '#0f2340', color: 'white', borderColor: '#0f2340' }}>🏨 {name}</Pill>
           ))}
         </div>
-
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
-
-        {/* Status pills */}
         <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
           <Pill active={filterStatus === 'ALL'} onClick={() => setFilterStatus('ALL')}>ALL</Pill>
-          <Pill
-            active={filterStatus === 'In Hotel'}
-            onClick={() => setFilterStatus('In Hotel')}
-            activeStyle={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}
-          >🏨 In Hotel</Pill>
-          <Pill
-            active={filterStatus === 'CHECK-IN TODAY'}
-            onClick={() => setFilterStatus('CHECK-IN TODAY')}
-            activeStyle={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}
-          >🛬 Check-in Today</Pill>
-          <Pill
-            active={filterStatus === 'CHECK-OUT TODAY'}
-            onClick={() => setFilterStatus('CHECK-OUT TODAY')}
-            activeStyle={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}
-          >🛫 Check-out Today</Pill>
-          <Pill
-            active={filterStatus === 'Upcoming'}
-            onClick={() => setFilterStatus('Upcoming')}
-            activeStyle={{ background: '#fefce8', color: '#a16207', borderColor: '#fde68a' }}
-          >🔜 Upcoming</Pill>
-          <Pill
-            active={filterStatus === 'Checked Out'}
-            onClick={() => setFilterStatus('Checked Out')}
-            activeStyle={{ background: '#f1f5f9', color: '#64748b', borderColor: '#e2e8f0' }}
-          >✅ Checked Out</Pill>
+          <Pill active={filterStatus === 'In Hotel'} onClick={() => setFilterStatus('In Hotel')} activeStyle={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>🏨 In Hotel</Pill>
+          <Pill active={filterStatus === 'CHECK-IN TODAY'} onClick={() => setFilterStatus('CHECK-IN TODAY')} activeStyle={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}>🛬 Check-in Today</Pill>
+          <Pill active={filterStatus === 'CHECK-OUT TODAY'} onClick={() => setFilterStatus('CHECK-OUT TODAY')} activeStyle={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>🛫 Check-out Today</Pill>
+          <Pill active={filterStatus === 'Upcoming'} onClick={() => setFilterStatus('Upcoming')} activeStyle={{ background: '#fefce8', color: '#a16207', borderColor: '#fde68a' }}>🔜 Upcoming</Pill>
+          <Pill active={filterStatus === 'Checked Out'} onClick={() => setFilterStatus('Checked Out')} activeStyle={{ background: '#f1f5f9', color: '#64748b', borderColor: '#e2e8f0' }}>✅ Checked Out</Pill>
         </div>
-
         {isFilterActive && (
-          <button onClick={resetFilters} style={{
-            padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer',
-            background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#64748b',
-          }}>
-            ✕ Reset
-          </button>
+          <button onClick={resetFilters} style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#64748b' }}>✕ Reset</button>
         )}
       </div>
 
@@ -1140,165 +880,100 @@ export default function AccommodationPage() {
           </div>
         )}
 
-        {/* ── Stats banner ── */}
+        {/* Stats banner */}
         {!loading && stays.length > 0 && (
-          <div style={{
-            background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px',
-            padding: '12px 20px', marginBottom: '20px',
-            display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
-          }}>
-            <div style={{ fontSize: '12px', color: '#374151', fontWeight: '700' }}>
-              Total: <span style={{ fontWeight: '900', color: '#0f172a' }}>{stays.length}</span> stays
-            </div>
-            <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>
-              Check-in today: <span style={{ fontWeight: '900' }}>{statCheckIn}</span>
-            </div>
-            <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>
-              Check-out today: <span style={{ fontWeight: '900' }}>{statCheckOut}</span>
-            </div>
-            <div style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>
-              In hotel: <span style={{ fontWeight: '900' }}>{statInHotel}</span>
-            </div>
-            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#94a3b8' }}>
-              {windowStart} → {windowEnd}
-            </div>
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ fontSize: '12px', color: '#374151', fontWeight: '700' }}>Total: <span style={{ fontWeight: '900', color: '#0f172a' }}>{stays.length}</span> stays</div>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>Check-in today: <span style={{ fontWeight: '900' }}>{statCheckIn}</span></div>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>Check-out today: <span style={{ fontWeight: '900' }}>{statCheckOut}</span></div>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>In hotel: <span style={{ fontWeight: '900' }}>{statInHotel}</span></div>
+            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#94a3b8' }}>{windowStart} → {windowEnd}</div>
           </div>
         )}
 
-        {/* ── No columns configured banner ── */}
-        {columnsConfig.length === 0 && !loading && (
-          <div style={{ textAlign: 'center', padding: '40px 20px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-            <div style={{ fontSize: '32px', marginBottom: '8px' }}>🗂</div>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>No columns configured</div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px' }}>
-              Click <strong>Apply Default Columns</strong> to use the standard layout, or click <strong>Columns</strong> to configure manually.
-            </div>
-            <button onClick={applyDefaultPreset} disabled={applyingPreset}
-              style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#15803d', color: 'white', fontSize: '13px', fontWeight: '800', cursor: applyingPreset ? 'default' : 'pointer' }}>
-              {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
-            </button>
-          </div>
-        )}
-
-        {/* ── Loading / Empty states ── */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>
-            Loading stays...
-          </div>
-
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading stays...</div>
         ) : stays.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏨</div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>No stays found</div>
-            <button onClick={openNew} style={{
-              marginTop: '14px', padding: '8px 18px', borderRadius: '8px', border: 'none',
-              background: '#15803d', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer',
-            }}>
-              + Add First Stay
-            </button>
+            <button onClick={openNew} style={{ marginTop: '14px', padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#15803d', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>+ Add First Stay</button>
           </div>
-
         ) : sortedHotels.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '14px', color: '#64748b' }}>No results — reset filters</div>
           </div>
-
+        ) : viewMode === 'calendar' ? (
+          /* ── CALENDAR VIEW ── */
+          <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px', overflowX: 'auto' }}>
+            <CalendarView
+              groupedByHotel={groupedByHotel}
+              sortedHotels={sortedHotels}
+              days={calendarDays}
+              today={today}
+              onEditRow={openEdit}
+            />
+          </div>
         ) : (
-          sortedHotels.map(hotelName => {
-            const hotelStays = groupedByHotel[hotelName]
-            return (
-              <div key={hotelName} style={{ marginBottom: '32px' }}>
-
-                {/* Hotel section header */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '8px 14px', marginBottom: '0',
-                  background: '#f0fdf4', border: '1px solid #86efac',
-                  borderRadius: '8px 8px 0 0', borderBottom: 'none',
-                }}>
-                  <span style={{ fontSize: '15px' }}>🏨</span>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#14532d', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                    {hotelName}
-                  </span>
-                  <span style={{ fontSize: '11px', color: '#16a34a', marginLeft: '4px', fontWeight: '600' }}>
-                    {hotelStays.length} guest{hotelStays.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-
-                {/* Table — data-driven via columnsConfig */}
-                {columnsConfig.length > 0 && (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{
-                      width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed',
-                      border: '1px solid #e2e8f0', borderTop: '1px solid #86efac',
-                      borderRadius: '0 0 8px 8px', overflow: 'hidden',
-                      minWidth: columnsConfig.reduce((sum, c) => sum + parseInt(c.width || '100'), 0) + 'px',
-                    }}>
-                      <colgroup>
-                        {columnsConfig.map(col => (
-                          <col key={col.source_field} style={{ width: col.width }} />
-                        ))}
-                      </colgroup>
-                      <thead>
-                        <tr style={{ background: '#f1f5f9' }}>
-                          {columnsConfig.map(col => (
-                            <th key={col.source_field} style={{
-                              padding: '6px 8px', fontSize: '10px', fontWeight: '800',
-                              color: col.source_field === 'notes' ? '#2563eb' : '#64748b',
-                              textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                              letterSpacing: '0.05em', textTransform: 'uppercase',
-                              borderBottom: '1px solid #e2e8f0',
-                            }}>
-                              {col.header_label}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {hotelStays.map(stay => {
-                          const isCI    = stay.arrival_date === today
-                          const isCO    = stay.departure_date === today
-                          const isToday = isCI || isCO
-                          const bgColor = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white'
-                          return (
-                            <tr key={stay.id} style={{
-                              background: bgColor,
-                              borderLeft: isCI ? '3px solid #22c55e' : isCO ? '3px solid #ef4444' : '3px solid transparent',
-                              outline: isToday ? '2px solid #fbbf24' : 'none',
-                              outlineOffset: '-2px',
-                            }}>
-                              {columnsConfig.map(col =>
-                                renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today })
-                              )}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+          /* ── LIST VIEW ── */
+          <>
+            {columnsConfig.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 20px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🗂</div>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>No columns configured</div>
+                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px' }}>Click <strong>Apply Default Columns</strong> to use the standard layout.</div>
+                <button onClick={applyDefaultPreset} disabled={applyingPreset}
+                  style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#15803d', color: 'white', fontSize: '13px', fontWeight: '800', cursor: applyingPreset ? 'default' : 'pointer' }}>
+                  {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
+                </button>
               </div>
-            )
-          })
+            )}
+            {sortedHotels.map(hotelName => {
+              const hotelStays = groupedByHotel[hotelName]
+              return (
+                <div key={hotelName} style={{ marginBottom: '32px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px 8px 0 0', borderBottom: 'none' }}>
+                    <span style={{ fontSize: '15px' }}>🏨</span>
+                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#14532d', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{hotelName}</span>
+                    <span style={{ fontSize: '11px', color: '#16a34a', marginLeft: '4px', fontWeight: '600' }}>{hotelStays.length} guest{hotelStays.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  {columnsConfig.length > 0 && (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', border: '1px solid #e2e8f0', borderTop: '1px solid #86efac', borderRadius: '0 0 8px 8px', overflow: 'hidden', minWidth: columnsConfig.reduce((sum, c) => sum + parseInt(c.width || '100'), 0) + 'px' }}>
+                        <colgroup>{columnsConfig.map(col => <col key={col.source_field} style={{ width: col.width }} />)}</colgroup>
+                        <thead>
+                          <tr style={{ background: '#f1f5f9' }}>
+                            {columnsConfig.map(col => (
+                              <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>
+                                {col.header_label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {hotelStays.map(stay => {
+                            const isCI = stay.arrival_date === today
+                            const isCO = stay.departure_date === today
+                            const isToday = isCI || isCO
+                            return (
+                              <tr key={stay.id} style={{ background: isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white', borderLeft: isCI ? '3px solid #22c55e' : isCO ? '3px solid #ef4444' : '3px solid transparent', outline: isToday ? '2px solid #fbbf24' : 'none', outlineOffset: '-2px' }}>
+                                {columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today }))}
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </>
         )}
       </div>
 
-      {/* ── Sidebars & Toast ── */}
-      <AccommodationColumnsEditorSidebar
-        open={columnsEditorOpen}
-        onClose={() => setColumnsEditorOpen(false)}
-        onChanged={loadColumnsConfig}
-      />
-      <StaySidebar
-        open={sidebarOpen}
-        mode={sidebarMode}
-        initial={sidebarTarget}
-        onClose={() => setSidebarOpen(false)}
-        onSaved={handleStaySaved}
-        onDeleted={handleStayDeleted}
-        hotels={hotels}
-        currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null}
-      />
+      <AccommodationColumnsEditorSidebar open={columnsEditorOpen} onClose={() => setColumnsEditorOpen(false)} onChanged={loadColumnsConfig} />
+      <StaySidebar open={sidebarOpen} mode={sidebarMode} initial={sidebarTarget} onClose={() => setSidebarOpen(false)} onSaved={handleStaySaved} onDeleted={handleStayDeleted} hotels={hotels} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null} />
       <Toast message={toast?.message} type={toast?.type} />
     </div>
   )
