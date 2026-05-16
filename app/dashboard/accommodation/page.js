@@ -808,8 +808,7 @@ export default function AccommodationPage() {
   const isMobile      = useIsMobile()
   const today         = isoToday()
 
-  const filterRowRef = React.useRef(null)
-  const [stickyOffset, setStickyOffset] = useState(160)
+  const [stickyOffset, setStickyOffset] = useState(184)
 
   const [user, setUser]         = useState(null)
   const [userRole, setUserRole] = useState('ACCOMMODATION')
@@ -998,11 +997,15 @@ export default function AccommodationPage() {
   useEffect(() => {
     const el = document.querySelector('[data-filter-row="accommodation"]')
     if (!el) return
-    const update = () => setStickyOffset(Math.round(el.getBoundingClientRect().bottom))
-    update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
-  }, [hotelNames])
+    const ro = new ResizeObserver(() => {
+      const rect = el.getBoundingClientRect()
+      setStickyOffset(Math.round(rect.bottom))
+    })
+    ro.observe(el)
+    // Initial calculation
+    setStickyOffset(Math.round(el.getBoundingClientRect().bottom))
+    return () => ro.disconnect()
+  }, [])
 
   // Calendar days array
   const calendarDays = useMemo(() => daysInRange(windowStart, windowEnd), [windowStart, windowEnd])
@@ -1172,7 +1175,7 @@ export default function AccommodationPage() {
               subgroupsByHotel={subgroupsByHotel}
               hotels={hotels}
               showCosts={showCosts}
-              stickyTop={28}
+              stickyTop={stickyOffset}
             />
           </div>
         ) : (
