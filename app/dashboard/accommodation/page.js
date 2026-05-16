@@ -226,7 +226,7 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
-function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts }) {
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop }) {
   const NAME_W      = 160
   const ROLE_W      = 90
   const DAY_W       = 28
@@ -300,10 +300,10 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
         </colgroup>
 
         {/* Header — day of week */}
-        <thead>
+        <thead style={{ position: 'sticky', top: stickyTop, zIndex: 10 }}>
           <tr style={{ background: '#f8fafc' }}>
-            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 2 }}>NAME</th>
-            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0' }}>ROLE</th>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 12 }}>NAME</th>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>ROLE</th>
             {days.map(d => (
               <th key={d} style={{
                 padding: '2px 1px', textAlign: 'center', fontSize: '9px', fontWeight: d === today ? '900' : '600',
@@ -316,10 +316,10 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                 <div style={{ fontSize: '8px', fontWeight: '400' }}>{new Date(d + 'T12:00:00Z').getUTCDate()}</div>
               </th>
             ))}
-            <th style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0' }}>🌙</th>
-            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0' }}>ROOM</th>
+            <th style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0', background: '#f8fafc' }}>🌙</th>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0', background: '#f8fafc' }}>ROOM</th>
             {costCols.map(c => (
-              <th key={c.key} style={{ padding: '4px 6px', textAlign: 'right', fontSize: '9px', fontWeight: '800', color: '#2563eb', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #dbeafe', whiteSpace: 'nowrap' }}>
+              <th key={c.key} style={{ padding: '4px 6px', textAlign: 'right', fontSize: '9px', fontWeight: '800', color: '#2563eb', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #dbeafe', whiteSpace: 'nowrap', background: '#f8fafc' }}>
                 {c.label}
               </th>
             ))}
@@ -814,6 +814,7 @@ export default function AccommodationPage() {
   const router        = useRouter()
   const isMobile      = useIsMobile()
   const today         = isoToday()
+  const STICKY_TOP    = 144  // navbar(52) + toolbar(52) + filter-row(40)
 
   const [user, setUser]         = useState(null)
   const [userRole, setUserRole] = useState('ACCOMMODATION')
@@ -1157,6 +1158,7 @@ export default function AccommodationPage() {
               subgroupsByHotel={subgroupsByHotel}
               hotels={hotels}
               showCosts={showCosts}
+              stickyTop={STICKY_TOP}
             />
           </div>
         ) : (
@@ -1214,8 +1216,8 @@ export default function AccommodationPage() {
                         )}
                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', border: '1px solid #e2e8f0', borderTop: subgroupLabel ? 'none' : '1px solid #86efac', borderRadius: subgroupLabel ? '0' : '0 0 8px 8px', overflow: 'hidden', minWidth: colMinW + 'px' }}>
                           <colgroup>{columnsConfig.map(col => <col key={col.source_field} style={{ width: col.width }} />)}</colgroup>
-                          {!subgroupLabel && <thead><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>{col.header_label}</th>)}</tr></thead>}
-                          {subgroupLabel && <thead><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff' }}>{col.header_label}</th>)}</tr></thead>}
+                          {!subgroupLabel && <thead style={{ position: 'sticky', top: STICKY_TOP, zIndex: 10 }}><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>{col.header_label}</th>)}</tr></thead>}
+                          {subgroupLabel && <thead style={{ position: 'sticky', top: STICKY_TOP, zIndex: 10 }}><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff', background: '#faf5ff' }}>{col.header_label}</th>)}</tr></thead>}
                           <tbody>
                             {stayList.map(stay => {
                               const isCI = stay.arrival_date === today, isCO = stay.departure_date === today
