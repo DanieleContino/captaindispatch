@@ -2,10 +2,12 @@
 
 /**
  * /dashboard/accommodation/cost-report
- * S65 — 15 May 2026
- * Cost Report — aggregates crew_stays cost fields by hotel and ATL/BTL category.
+ * S65 — 16 May 2026
+ * Cost Report — aggregates crew_stays cost fields by hotel and subgroup.
  * Mirrors the COST REPORT sheet from the Master Rooming Excel.
  * Read-only — data comes from crew_stays cost fields.
+ * Subgroup support: when a hotel has subgroups, rows are broken down by
+ * subgroup name (matching the Excel "TOT. US Crew / TOT. IT Crew" pattern).
  */
 
 import { useEffect, useState, useCallback } from 'react'
@@ -28,42 +30,62 @@ function fmtN(n) {
   return String(n)
 }
 
-function TotRow({ label, row, bold, bg, borderTop }) {
+const COL_HEADERS = ['Hotel / Group', 'Tot. W/O VAT', 'Tot. VAT Incl.', 'City Tax', 'VAT', 'Tot. Nights']
+
+function DataRow({ label, row, indent, isSubtotal, isHotelTotal }) {
+  const bg = isHotelTotal ? '#f0fdf4' : isSubtotal ? '#eff6ff' : 'white'
+  const fw = (isSubtotal || isHotelTotal) ? '800' : '500'
+  const fs = (isSubtotal || isHotelTotal) ? '12px' : '12px'
+  const bt = isSubtotal ? '1px solid #bfdbfe' : isHotelTotal ? '2px solid #15803d' : '1px solid #f1f5f9'
   return (
-    <tr style={{
-      background: bg || (bold ? '#f0fdf4' : 'white'),
-      borderTop: borderTop ? '2px solid #15803d' : '1px solid #e2e8f0',
-    }}>
-      <td style={{ padding: '8px 14px', fontSize: bold ? '12px' : '11px', fontWeight: bold ? '800' : '600', color: '#0f172a' }}>
+    <tr style={{ background: bg, borderTop: bt }}>
+      <td style={{ padding: `7px 14px 7px ${indent ? '28px' : '14px'}`, fontSize: fs, fontWeight: fw, color: '#0f172a' }}>
         {label}
       </td>
-      <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: bold ? '800' : '600', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
+      <td style={{ padding: '7px 14px', fontSize: fs, fontWeight: fw, fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
         {fmt(row.tot_no_vat)}
       </td>
-      <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: bold ? '800' : '600', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
+      <td style={{ padding: '7px 14px', fontSize: fs, fontWeight: fw, fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
         {fmt(row.tot_vat)}
       </td>
-      <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: bold ? '800' : '600', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
+      <td style={{ padding: '7px 14px', fontSize: fs, fontWeight: fw, fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
         {fmt(row.city_tax)}
       </td>
-      <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: bold ? '800' : '600', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
+      <td style={{ padding: '7px 14px', fontSize: fs, fontWeight: fw, fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
         {fmt(row.vat)}
       </td>
-      <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: bold ? '800' : '600', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
+      <td style={{ padding: '7px 14px', fontSize: fs, fontWeight: fw, fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
         {fmtN(row.tot_nights)}
       </td>
     </tr>
   )
 }
 
-function SectionTable({ title, rows, total, borderColor }) {
-  if (rows.length === 0) return null
+function GrandTotalRow({ label, row }) {
+  return (
+    <tr style={{ background: '#0f2340' }}>
+      <td style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '900', color: 'white' }}>{label}</td>
+      {[row.tot_no_vat, row.tot_vat, row.city_tax, row.vat, row.tot_nights].map((v, i) => (
+        <td key={i} style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '900', fontFamily: 'monospace', color: 'white', textAlign: 'right' }}>
+          {i < 4 ? fmt(v) : fmtN(v)}
+        </td>
+      ))}
+    </tr>
+  )
+}
+
+// ── SectionTable: renders one ATL or BTL section ─────────────────────────────
+// rows: array of { label, row, indent?, isSubtotal?, isHotelTotal? }
+function SectionTable({ title, tableRows, total, borderColor }) {
+  if (tableRows.length === 0) return null
   return (
     <div style={{ marginBottom: '32px' }}>
-      {/* Section header */}
       <div style={{
-        padding: '8px 14px', background: borderColor === '#15803d' ? '#f0fdf4' : '#eff6ff',
-        border: `1px solid ${borderColor}`, borderRadius: '8px 8px 0 0', borderBottom: 'none',
+        padding: '8px 14px',
+        background: borderColor === '#15803d' ? '#f0fdf4' : '#eff6ff',
+        border: `1px solid ${borderColor}`,
+        borderRadius: '8px 8px 0 0',
+        borderBottom: 'none',
         display: 'flex', alignItems: 'center', gap: '10px',
       }}>
         <span style={{ fontSize: '13px', fontWeight: '900', color: borderColor === '#15803d' ? '#14532d' : '#1e3a8a', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
@@ -79,7 +101,7 @@ function SectionTable({ title, rows, total, borderColor }) {
         }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>
-              {['Hotel / Category', 'Tot. W/O VAT', 'Tot. VAT Incl.', 'City Tax', 'VAT', 'Tot. Nights'].map((h, i) => (
+              {COL_HEADERS.map((h, i) => (
                 <th key={h} style={{
                   padding: '7px 14px', fontSize: '10px', fontWeight: '800',
                   color: '#64748b', textAlign: i === 0 ? 'left' : 'right',
@@ -92,30 +114,20 @@ function SectionTable({ title, rows, total, borderColor }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
-              <tr key={i} style={{ background: 'white', borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
-                  {row.label}
-                </td>
-                <td style={{ padding: '8px 14px', fontSize: '12px', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
-                  {fmt(row.tot_no_vat)}
-                </td>
-                <td style={{ padding: '8px 14px', fontSize: '12px', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
-                  {fmt(row.tot_vat)}
-                </td>
-                <td style={{ padding: '8px 14px', fontSize: '12px', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
-                  {fmt(row.city_tax)}
-                </td>
-                <td style={{ padding: '8px 14px', fontSize: '12px', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
-                  {fmt(row.vat)}
-                </td>
-                <td style={{ padding: '8px 14px', fontSize: '12px', fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
-                  {fmtN(row.tot_nights)}
-                </td>
-              </tr>
+            {tableRows.map((r, i) => (
+              <DataRow key={i} label={r.label} row={r.row} indent={r.indent} isSubtotal={r.isSubtotal} isHotelTotal={r.isHotelTotal} />
             ))}
             {/* Section total */}
-            <TotRow label={`TOT. ${title}`} row={total} bold bg={borderColor === '#15803d' ? '#f0fdf4' : '#eff6ff'} borderTop />
+            <tr style={{ background: borderColor === '#15803d' ? '#dcfce7' : '#dbeafe', borderTop: `2px solid ${borderColor}` }}>
+              <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '900', color: '#0f172a' }}>
+                TOT. {title.split('—')[0].trim()}
+              </td>
+              {[total.tot_no_vat, total.tot_vat, total.city_tax, total.vat, total.tot_nights].map((v, i) => (
+                <td key={i} style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '900', fontFamily: 'monospace', color: '#0f172a', textAlign: 'right' }}>
+                  {i < 4 ? fmt(v) : fmtN(v)}
+                </td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </div>
@@ -123,6 +135,94 @@ function SectionTable({ title, rows, total, borderColor }) {
   )
 }
 
+// ── Aggregation helpers ───────────────────────────────────────────────────────
+function sumStays(stayList) {
+  let tot_no_vat = 0, tot_vat = 0, city_tax = 0, vat = 0, tot_nights = 0
+  for (const s of stayList) {
+    tot_no_vat += s.total_cost_no_vat || 0
+    tot_vat    += s.total_cost_vat    || 0
+    city_tax   += s.city_tax_total    || 0
+    vat        += (s.total_cost_vat || 0) - (s.total_cost_no_vat || 0)
+    if (s.arrival_date && s.departure_date) {
+      const a = new Date(s.arrival_date + 'T12:00:00Z')
+      const b = new Date(s.departure_date + 'T12:00:00Z')
+      const n = Math.round((b - a) / 86400000)
+      if (n > 0) tot_nights += n
+    }
+  }
+  return {
+    tot_no_vat: tot_no_vat || null,
+    tot_vat:    tot_vat    || null,
+    city_tax:   city_tax   || null,
+    vat:        vat        || null,
+    tot_nights: tot_nights || null,
+  }
+}
+
+/**
+ * Build the flat list of rows for a section.
+ *
+ * Logic (mirrors Excel structure):
+ *   1. Group stays by hotel.
+ *   2. For each hotel:
+ *      a. If ALL its stays have NO subgroup → one plain row "Hotel Name".
+ *      b. If stays have subgroups → for each subgroup in that hotel:
+ *           - One row "Hotel Name (Subgroup Name)" [indented]
+ *         then optionally a hotel-total row if there are >1 subgroups.
+ *   3. After all hotel rows, group by subgroup NAME across hotels and add
+ *      "TOT. SubgroupName" subtotal rows for any named subgroup that appears
+ *      in more than one hotel (or always, for clarity).
+ *
+ * Actually we mirror the Excel exactly:
+ *   - Rows grouped by SUBGROUP NAME (across hotels), then by hotel within each subgroup.
+ *   - Subgroup name = null → plain hotel rows (no subgroup section).
+ *   - Named subgroups get a "TOT. [name]" row.
+ */
+function buildSectionRows(stays) {
+  // key: subgroupName (string | '__none__')
+  const bySubgroupName = {}
+
+  for (const s of stays) {
+    const sgName    = s.subgroup?.name || '__none__'
+    const hotelName = s.hotel?.name   || 'Unknown Hotel'
+    if (!bySubgroupName[sgName]) bySubgroupName[sgName] = {}
+    if (!bySubgroupName[sgName][hotelName]) bySubgroupName[sgName][hotelName] = []
+    bySubgroupName[sgName][hotelName].push(s)
+  }
+
+  const rows = []
+
+  // ── Named subgroups first (sorted by name) ──────────────────────────────
+  const namedGroups = Object.keys(bySubgroupName).filter(k => k !== '__none__').sort()
+  for (const sgName of namedGroups) {
+    const hotelMap = bySubgroupName[sgName]
+    const hotelNames = Object.keys(hotelMap).sort()
+    const allStaysInGroup = []
+    for (const hn of hotelNames) {
+      const stayList = hotelMap[hn]
+      allStaysInGroup.push(...stayList)
+      const label = hotelNames.length > 1
+        ? `${hn} (${sgName})`
+        : `${hn} (${sgName})`
+      rows.push({ label, row: sumStays(stayList), indent: true })
+    }
+    // Subtotal for this subgroup
+    rows.push({ label: `TOT. ${sgName}`, row: sumStays(allStaysInGroup), isSubtotal: true })
+  }
+
+  // ── Unsubgrouped stays: one row per hotel ────────────────────────────────
+  if (bySubgroupName['__none__']) {
+    const hotelMap = bySubgroupName['__none__']
+    const hotelNames = Object.keys(hotelMap).sort()
+    for (const hn of hotelNames) {
+      rows.push({ label: hn, row: sumStays(hotelMap[hn]) })
+    }
+  }
+
+  return rows
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function CostReportPage() {
   const PRODUCTION_ID = getProductionId()
   const router        = useRouter()
@@ -147,9 +247,10 @@ export default function CostReportPage() {
       .from('crew_stays')
       .select(`
         id, hotel_id, arrival_date, departure_date,
-        cost_per_night, city_tax_total, total_cost_no_vat, total_cost_vat,
+        city_tax_total, total_cost_no_vat, total_cost_vat,
         crew:crew_id(department),
-        hotel:hotel_id(id, name)
+        hotel:hotel_id(id, name),
+        subgroup:subgroup_id(id, name)
       `)
       .eq('production_id', PRODUCTION_ID)
       .not('total_cost_no_vat', 'is', null)
@@ -161,69 +262,15 @@ export default function CostReportPage() {
     if (user) loadData()
   }, [user, loadData])
 
-  // ── Aggregation ───────────────────────────────────────────
-  // Build rows grouped by hotel + ATL/BTL
-  // { hotelName, category: 'ATL'|'BTL', tot_no_vat, tot_vat, city_tax, vat, tot_nights }
+  // ── Aggregation ────────────────────────────────────────────────────────────
+  const atlStays = stays.filter(s => ATL_DEPTS.has((s.crew?.department || '').toUpperCase()))
+  const btlStays = stays.filter(s => !ATL_DEPTS.has((s.crew?.department || '').toUpperCase()))
 
-  function sumStays(stayList) {
-    let tot_no_vat = 0, tot_vat = 0, city_tax = 0, vat = 0, tot_nights = 0
-    for (const s of stayList) {
-      tot_no_vat += s.total_cost_no_vat || 0
-      tot_vat    += s.total_cost_vat    || 0
-      city_tax   += s.city_tax_total    || 0
-      // VAT = tot_vat - tot_no_vat
-      vat        += (s.total_cost_vat || 0) - (s.total_cost_no_vat || 0)
-      // nights
-      if (s.arrival_date && s.departure_date) {
-        const a = new Date(s.arrival_date + 'T12:00:00Z')
-        const b = new Date(s.departure_date + 'T12:00:00Z')
-        const n = Math.round((b - a) / 86400000)
-        if (n > 0) tot_nights += n
-      }
-    }
-    return {
-      tot_no_vat: tot_no_vat || null,
-      tot_vat:    tot_vat    || null,
-      city_tax:   city_tax   || null,
-      vat:        vat        || null,
-      tot_nights: tot_nights || null,
-    }
-  }
+  const atlRows   = buildSectionRows(atlStays)
+  const btlRows   = buildSectionRows(btlStays)
 
-  // Group by hotel + category
-  const grouped = {}
-  for (const s of stays) {
-    const hotelName = s.hotel?.name || 'Unknown Hotel'
-    const dept      = (s.crew?.department || '').toUpperCase()
-    const category  = ATL_DEPTS.has(dept) ? 'ATL' : 'BTL'
-    const key       = `${hotelName}|||${category}`
-    if (!grouped[key]) grouped[key] = { hotelName, category, stays: [] }
-    grouped[key].stays.push(s)
-  }
-
-  // Build ATL rows
-  const atlRows = Object.values(grouped)
-    .filter(g => g.category === 'ATL')
-    .sort((a, b) => a.hotelName.localeCompare(b.hotelName))
-    .map(g => ({
-      label: g.hotelName,
-      ...sumStays(g.stays),
-    }))
-
-  // Build BTL rows — split by US Crew (no department or PRODUCTION/CAMERA etc) vs IT Crew (CATERING etc)
-  // For simplicity mirror the Excel: BTL split into two sub-groups
-  // US Crew = non-IT departments (CAST already in ATL, so BTL = everyone else)
-  // We keep it simple: one BTL section, rows by hotel
-  const btlRows = Object.values(grouped)
-    .filter(g => g.category === 'BTL')
-    .sort((a, b) => a.hotelName.localeCompare(b.hotelName))
-    .map(g => ({
-      label: g.hotelName,
-      ...sumStays(g.stays),
-    }))
-
-  const atlTotal = sumStays(stays.filter(s => ATL_DEPTS.has((s.crew?.department || '').toUpperCase())))
-  const btlTotal = sumStays(stays.filter(s => !ATL_DEPTS.has((s.crew?.department || '').toUpperCase())))
+  const atlTotal  = sumStays(atlStays)
+  const btlTotal  = sumStays(btlStays)
   const grandTotal = sumStays(stays)
 
   if (!user) return (
@@ -283,7 +330,7 @@ export default function CostReportPage() {
             {/* ATL Section */}
             <SectionTable
               title="ATL — Above The Line (Cast & Producers)"
-              rows={atlRows}
+              tableRows={atlRows}
               total={atlTotal}
               borderColor="#15803d"
             />
@@ -291,22 +338,17 @@ export default function CostReportPage() {
             {/* BTL Section */}
             <SectionTable
               title="BTL — Below The Line (Crew)"
-              rows={btlRows}
+              tableRows={btlRows}
               total={btlTotal}
               borderColor="#1d4ed8"
             />
 
             {/* Grand Total */}
             {stays.length > 0 && (
-              <div style={{ overflowX: 'auto' }}>
+              <div style={{ overflowX: 'auto', marginTop: '4px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px', border: '2px solid #0f2340', borderRadius: '10px', overflow: 'hidden' }}>
                   <tbody>
-                    <TotRow
-                      label="GRAND TOTAL"
-                      row={grandTotal}
-                      bold
-                      bg="#0f2340"
-                    />
+                    <GrandTotalRow label="GRAND TOTAL" row={grandTotal} />
                   </tbody>
                 </table>
               </div>
@@ -315,6 +357,7 @@ export default function CostReportPage() {
             {/* Note */}
             <div style={{ marginTop: '20px', padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '11px', color: '#94a3b8' }}>
               ℹ️ Only stays with cost data (Tot. W/O VAT) are included. ATL = CAST + PRODUCERS departments. All other departments = BTL.
+              Subgroups are managed per hotel in the Accommodation page (⚙ menu → Manage Subgroups).
             </div>
           </>
         )}

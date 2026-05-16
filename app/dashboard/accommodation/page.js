@@ -16,6 +16,7 @@ import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
 import { AccommodationColumnsEditorSidebar } from '../../../lib/AccommodationColumnsEditorSidebar'
 import { ACCOMMODATION_DEFAULT_PRESET } from '../../../lib/accommodationColumnsCatalog'
+import SubgroupManagerSidebar from '../../../lib/SubgroupManagerSidebar'
 
 // ─── Date helpers ─────────────────────────────────────────────
 function isoToday() {
@@ -109,14 +110,16 @@ function NotesCell({ notesEntry, unreadCount = 0, onClick }) {
 const SELECT_FIELDS = `
   id, production_id, crew_id, hotel_id, arrival_date, departure_date,
   room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
-  total_cost_vat, po_number, invoice_number, created_at,
+  total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
   crew:crew_id(id, full_name, role, department),
-  hotel:hotel_id(id, name)
+  hotel:hotel_id(id, name),
+  subgroup:subgroup_id(id, name)
 `
 
 // ─── EMPTY_STAY ────────────────────────────────────────────────
 const EMPTY_STAY = {
   id: null, crew_id: null, hotel_id: '', arrival_date: '', departure_date: '',
+  subgroup_id: null,
   room_type_notes: '', cost_per_night: '', city_tax_total: '',
   total_cost_no_vat: '', total_cost_vat: '', po_number: '', invoice_number: '',
 }
@@ -383,6 +386,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   const [crewSearch, setCrewSearch]     = useState('')
   const [crewResults, setCrewResults]   = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
+  const [hotelSubgroups, setHotelSubgroups] = useState([])
   const notesRef = React.useRef(null)
 
   useEffect(() => {
@@ -393,6 +397,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         id:                initial.id                || null,
         crew_id:           initial.crew_id           || null,
         hotel_id:          initial.hotel_id          || '',
+        subgroup_id:       initial.subgroup_id       || null,
         arrival_date:      initial.arrival_date      || '',
         departure_date:    initial.departure_date    || '',
         room_type_notes:   initial.room_type_notes   || '',
@@ -436,11 +441,18 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     await supabase.from('crew').update({ hotel_id: allStays[allStays.length - 1]?.hotel_id || null, arrival_date: arrivals[0] || null, departure_date: departures[departures.length - 1] || null }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
   }
 
+  // Load subgroups when hotel changes
+  useEffect(() => {
+    if (!form.hotel_id || !PRODUCTION_ID) { setHotelSubgroups([]); return }
+    supabase.from('hotel_subgroups').select('id, name').eq('production_id', PRODUCTION_ID).eq('hotel_id', form.hotel_id).order('display_order').order('name').then(({ data }) => setHotelSubgroups(data || []))
+  }, [form.hotel_id, PRODUCTION_ID])
+
   function buildRow() {
     return {
       production_id:     PRODUCTION_ID,
       crew_id:           form.crew_id || null,
       hotel_id:          form.hotel_id || null,
+      subgroup_id:       form.subgroup_id || null,
       arrival_date:      form.arrival_date || null,
       departure_date:    form.departure_date || null,
       room_type_notes:   (form.room_type_notes || '').trim() || null,
@@ -520,11 +532,22 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
             {/* Hotel */}
             <div style={rowSt}>
               <label style={lbl}>Hotel</label>
-              <select value={form.hotel_id} onChange={e => set('hotel_id', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+              <select value={form.hotel_id} onChange={e => { set('hotel_id', e.target.value); set('subgroup_id', null) }} style={{ ...inp, cursor: 'pointer' }}>
                 <option value="">— Select hotel —</option>
                 {(hotels || []).map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
               </select>
             </div>
+
+            {/* Subgroup (only if hotel has subgroups) */}
+            {hotelSubgroups.length > 0 && (
+              <div style={rowSt}>
+                <label style={lbl}>Subgroup</label>
+                <select value={form.subgroup_id || ''} onChange={e => set('subgroup_id', e.target.value || null)} style={{ ...inp, cursor: 'pointer' }}>
+                  <option value="">— No subgroup —</option>
+                  {hotelSubgroups.map(sg => <option key={sg.id} value={sg.id}>{sg.name}</option>)}
+                </select>
+              </div>
+            )}
 
             {/* Dates */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
@@ -634,6 +657,22 @@ export default function AccommodationPage() {
   const [filterHotel,  setFilterHotel]  = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [toast, setToast] = useState(null)
+  const [subgroupSidebarOpen,   setSubgroupSidebarOpen]   = useState(false)
+  const [subgroupSidebarHotel,  setSubgroupSidebarHotel]  = useState(null)  // { id, name }
+  const [subgroupsByHotel,      setSubgroupsByHotel]      = useState({})    // { hotelId: [{ id, name }] }
+
+  const loadSubgroupsForHotel = useCallback(async (hotelId) => {
+    if (!PRODUCTION_ID || !hotelId) return []
+    const { data } = await supabase.from('hotel_subgroups').select('id, name, display_order').eq('production_id', PRODUCTION_ID).eq('hotel_id', hotelId).order('display_order').order('name')
+    setSubgroupsByHotel(prev => ({ ...prev, [hotelId]: data || [] }))
+    return data || []
+  }, [PRODUCTION_ID])
+
+  function openSubgroupManager(hotel) {
+    setSubgroupSidebarHotel(hotel)
+    setSubgroupSidebarOpen(true)
+    loadSubgroupsForHotel(hotel.id)
+  }
 
   function showToast(message, type = 'success') {
     setToast({ message, type })
@@ -932,39 +971,73 @@ export default function AccommodationPage() {
               const hotelStays = groupedByHotel[hotelName]
               return (
                 <div key={hotelName} style={{ marginBottom: '32px' }}>
+                  {/* Hotel header */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px 8px 0 0', borderBottom: 'none' }}>
                     <span style={{ fontSize: '15px' }}>🏨</span>
                     <span style={{ fontSize: '13px', fontWeight: '800', color: '#14532d', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{hotelName}</span>
                     <span style={{ fontSize: '11px', color: '#16a34a', marginLeft: '4px', fontWeight: '600' }}>{hotelStays.length} guest{hotelStays.length !== 1 ? 's' : ''}</span>
+                    <button
+                      onClick={() => { const h = hotels.find(h => h.name === hotelName); if (h) openSubgroupManager(h) }}
+                      style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: '6px', border: '1px solid #86efac', background: 'white', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                      ⚙ Subgroups
+                    </button>
                   </div>
-                  {columnsConfig.length > 0 && (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', border: '1px solid #e2e8f0', borderTop: '1px solid #86efac', borderRadius: '0 0 8px 8px', overflow: 'hidden', minWidth: columnsConfig.reduce((sum, c) => sum + parseInt(c.width || '100'), 0) + 'px' }}>
-                        <colgroup>{columnsConfig.map(col => <col key={col.source_field} style={{ width: col.width }} />)}</colgroup>
-                        <thead>
-                          <tr style={{ background: '#f1f5f9' }}>
-                            {columnsConfig.map(col => (
-                              <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>
-                                {col.header_label}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {hotelStays.map(stay => {
-                            const isCI = stay.arrival_date === today
-                            const isCO = stay.departure_date === today
-                            const isToday = isCI || isCO
-                            return (
-                              <tr key={stay.id} style={{ background: isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white', borderLeft: isCI ? '3px solid #22c55e' : isCO ? '3px solid #ef4444' : '3px solid transparent', outline: isToday ? '2px solid #fbbf24' : 'none', outlineOffset: '-2px' }}>
-                                {columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today }))}
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                  {columnsConfig.length > 0 && (() => {
+                    // Group stays by subgroup
+                    const sgs = subgroupsByHotel[hotels.find(h=>h.name===hotelName)?.id] || []
+                    const sgMap = {}
+                    sgs.forEach(sg => { sgMap[sg.id] = { sg, stays: [] } })
+                    const ungrouped = []
+                    hotelStays.forEach(stay => {
+                      if (stay.subgroup_id && sgMap[stay.subgroup_id]) sgMap[stay.subgroup_id].stays.push(stay)
+                      else ungrouped.push(stay)
+                    })
+                    const sections = [...Object.values(sgMap).filter(x => x.stays.length > 0), ...(ungrouped.length > 0 ? [{ sg: null, stays: ungrouped }] : [])]
+                    const colMinW = columnsConfig.reduce((s, c) => s + parseInt(c.width || '100'), 0)
+                    const renderTable = (stayList, subgroupLabel) => (
+                      <div style={{ overflowX: 'auto' }} key={subgroupLabel || '__ungrouped__'}>
+                        {subgroupLabel && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 14px', background: '#f8f4ff', borderLeft: '3px solid #7c3aed', fontSize: '11px', fontWeight: '800', color: '#5b21b6' }}>
+                            <span>▾ {subgroupLabel}</span>
+                            {(() => {
+                              const totNoVat = stayList.reduce((s, st) => s + (st.total_cost_no_vat || 0), 0)
+                              const totVat = stayList.reduce((s, st) => s + (st.total_cost_vat || 0), 0)
+                              return totNoVat > 0 ? <span style={{ marginLeft: 'auto', color: '#7c3aed', fontSize: '11px' }}>€{totNoVat.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} (no VAT) · €{totVat.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} (VAT incl.) · {stayList.length} guest{stayList.length!==1?'s':''}</span> : <span style={{ marginLeft: 'auto', color: '#7c3aed' }}>{stayList.length} guest{stayList.length!==1?'s':''}</span>
+                            })()}
+                          </div>
+                        )}
+                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', border: '1px solid #e2e8f0', borderTop: subgroupLabel ? 'none' : '1px solid #86efac', borderRadius: subgroupLabel ? '0' : '0 0 8px 8px', overflow: 'hidden', minWidth: colMinW + 'px' }}>
+                          <colgroup>{columnsConfig.map(col => <col key={col.source_field} style={{ width: col.width }} />)}</colgroup>
+                          {!subgroupLabel && <thead><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>{col.header_label}</th>)}</tr></thead>}
+                          {subgroupLabel && <thead><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff' }}>{col.header_label}</th>)}</tr></thead>}
+                          <tbody>
+                            {stayList.map(stay => {
+                              const isCI = stay.arrival_date === today, isCO = stay.departure_date === today
+                              return <tr key={stay.id} style={{ background: isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white', borderLeft: isCI ? '3px solid #22c55e' : isCO ? '3px solid #ef4444' : '3px solid transparent' }}>{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today }))}</tr>
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                    const hasSections = sections.some(x => x.sg !== null)
+                    if (!hasSections) return renderTable(hotelStays, null)
+                    return (
+                      <div style={{ border: '1px solid #e2e8f0', borderTop: '1px solid #86efac', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+                        {sections.map(({ sg, stays: sl }) => renderTable(sl, sg ? sg.name : null))}
+                        {/* Grand total row */}
+                        {(() => {
+                          const totNoVat = hotelStays.reduce((s, st) => s + (st.total_cost_no_vat || 0), 0)
+                          const totVat   = hotelStays.reduce((s, st) => s + (st.total_cost_vat   || 0), 0)
+                          return totNoVat > 0 ? (
+                            <div style={{ padding: '6px 14px', background: '#14532d', color: 'white', fontSize: '11px', fontWeight: '800', display: 'flex', gap: '16px' }}>
+                              <span>HOTEL TOTAL</span>
+                              <span style={{ marginLeft: 'auto' }}>€{totNoVat.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} (no VAT) · €{totVat.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} (VAT incl.) · {hotelStays.length} guests</span>
+                            </div>
+                          ) : null
+                        })()}
+                      </div>
+                    )
+                  })()}
                 </div>
               )
             })}
@@ -974,6 +1047,13 @@ export default function AccommodationPage() {
 
       <AccommodationColumnsEditorSidebar open={columnsEditorOpen} onClose={() => setColumnsEditorOpen(false)} onChanged={loadColumnsConfig} />
       <StaySidebar open={sidebarOpen} mode={sidebarMode} initial={sidebarTarget} onClose={() => setSidebarOpen(false)} onSaved={handleStaySaved} onDeleted={handleStayDeleted} hotels={hotels} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null} />
+      <SubgroupManagerSidebar
+        open={subgroupSidebarOpen}
+        hotel={subgroupSidebarHotel}
+        productionId={PRODUCTION_ID}
+        onClose={() => setSubgroupSidebarOpen(false)}
+        onChanged={(hotelId) => loadSubgroupsForHotel(hotelId)}
+      />
       <Toast message={toast?.message} type={toast?.type} />
     </div>
   )
