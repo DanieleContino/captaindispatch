@@ -281,15 +281,6 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
       borderCollapse: 'collapse', tableLayout: 'fixed',
       minWidth: totalWidth + 'px', width: '100%', fontSize: '11px',
     }}>
-        {/* Legend */}
-        <caption style={{ textAlign: 'left', padding: '0 0 6px 0', captionSide: 'top' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', fontSize: '10px', color: '#64748b' }}>
-            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#15803d', borderRadius: '2px', marginRight: '3px' }} />Check-in</span>
-            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#86efac', borderRadius: '2px', marginRight: '3px' }} />In Hotel</span>
-            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#fca5a5', borderRadius: '2px', marginRight: '3px' }} />Check-out</span>
-          </span>
-        </caption>
-
         <colgroup>
           <col style={{ width: NAME_W + 'px' }} />
           <col style={{ width: ROLE_W + 'px' }} />
@@ -1134,8 +1125,12 @@ export default function AccommodationPage() {
         )}
       </div>
 
-      {/* ── Content ── */}
-      <div style={{ padding: isMobile ? '12px' : '16px 24px' }}>
+      {/* ── Content ── S66-J v2: in calendar mode il div outer ha height fisso, no padding, no outer scroll */}
+      <div style={{
+        padding: viewMode === 'calendar' ? 0 : (isMobile ? '12px' : '16px 24px'),
+        height: viewMode === 'calendar' ? `calc(100vh - ${stickyOffset}px)` : 'auto',
+        overflow: viewMode === 'calendar' ? 'hidden' : 'visible',
+      }}>
 
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
@@ -1143,8 +1138,8 @@ export default function AccommodationPage() {
           </div>
         )}
 
-        {/* Stats banner */}
-        {!loading && stays.length > 0 && (
+        {/* Stats banner — solo in list mode */}
+        {!loading && stays.length > 0 && viewMode !== 'calendar' && (
           <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <div style={{ fontSize: '12px', color: '#374151', fontWeight: '700' }}>Total: <span style={{ fontWeight: '900', color: '#0f172a' }}>{stays.length}</span> stays</div>
             <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>Check-in today: <span style={{ fontWeight: '900' }}>{statCheckIn}</span></div>
@@ -1167,11 +1162,14 @@ export default function AccommodationPage() {
             <div style={{ fontSize: '14px', color: '#64748b' }}>No results — reset filters</div>
           </div>
         ) : viewMode === 'calendar' ? (
-          /* ── CALENDAR VIEW ──
-             S66-J fix: overflow-x:auto crea uno scroll container che rompe position:sticky in Y.
-             Soluzione: wrapper scroll container per ENTRAMBI gli assi con maxHeight,
-             così i <th> sticky usano top:0 relativi al contenitore (non al document). */
-<div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px', overflowX: 'auto', overflowY: 'auto', maxHeight: `calc(100vh - ${stickyOffset}px - 32px)` }}>
+          // S66-J: wrapper = scroll container entrambi gli assi, height:100% riempie outer div fisso
+<div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
+            {/* Leggenda sticky inside scroll container — sempre visibile in cima */}
+            <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'white', padding: '4px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '10px', color: '#64748b' }}>
+              <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#15803d', borderRadius: '2px', marginRight: '3px' }} />Check-in</span>
+              <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#86efac', borderRadius: '2px', marginRight: '3px' }} />In Hotel</span>
+              <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#fca5a5', borderRadius: '2px', marginRight: '3px' }} />Check-out</span>
+            </div>
             <CalendarView
               groupedByHotel={groupedByHotel}
               sortedHotels={sortedHotels}
@@ -1181,7 +1179,7 @@ export default function AccommodationPage() {
               subgroupsByHotel={subgroupsByHotel}
               hotels={hotels}
               showCosts={showCosts}
-              stickyTop={0}
+              stickyTop={28}
             />
           </div>
         ) : (
