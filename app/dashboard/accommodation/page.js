@@ -449,14 +449,23 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     {hasSections && sg && (
                       <tr>
                         <td colSpan={2 + days.length + 2} style={{
-                          padding: '4px 8px', background: '#f8f4ff',
+                          padding: 0, background: '#f8f4ff',
                           borderLeft: '3px solid #7c3aed', borderBottom: '1px solid #e9d5ff',
-                          fontSize: '10px', fontWeight: '800', color: '#5b21b6',
                         }}>
-                          ▾ {sg.name}
-                          <span style={{ marginLeft: '8px', fontWeight: '600', color: '#7c3aed' }}>
-                            {sectionStays.length} guest{sectionStays.length !== 1 ? 's' : ''}
-                          </span>
+                          <div style={{
+                            position: 'sticky', left: 0,
+                            display: 'inline-block',
+                            padding: '4px 8px',
+                            fontSize: '10px', fontWeight: '800', color: '#5b21b6',
+                            background: '#f8f4ff',
+                            maxWidth: (NAME_W + ROLE_W) + 'px',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            ▾ {sg.name}
+                            <span style={{ marginLeft: '8px', fontWeight: '600', color: '#7c3aed' }}>
+                              {sectionStays.length} guest{sectionStays.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     )}
