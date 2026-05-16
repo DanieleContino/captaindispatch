@@ -824,7 +824,8 @@ export default function AccommodationPage() {
   const router        = useRouter()
   const isMobile      = useIsMobile()
   const today         = isoToday()
-
+  const toolbarRef   = React.useRef(null)
+  const filterRowRef = React.useRef(null)
 
   const [user, setUser]         = useState(null)
   const [userRole, setUserRole] = useState('ACCOMMODATION')
@@ -969,30 +970,19 @@ export default function AccommodationPage() {
   }, [user, PRODUCTION_ID, loadNotesMap])
 
   useEffect(() => {
-    function updateHeadersHeight() {
-      const navbar    = document.querySelector('nav')
-      const toolbar   = document.querySelector('[data-toolbar="accommodation"]')
-      const filterRow = document.querySelector('[data-filter-row="accommodation"]')
-      if (!toolbar || !filterRow) return
-      const h = (navbar?.offsetHeight || 0) + (toolbar.offsetHeight || 0) + (filterRow.offsetHeight || 0)
-      document.documentElement.style.setProperty('--accom-headers-h', h + 'px')
+    function update() {
+      const navH     = 52
+      const toolbarH = toolbarRef.current?.offsetHeight || 52
+      const filterH  = filterRowRef.current?.offsetHeight || 52
+      const total    = navH + toolbarH + filterH
+      document.documentElement.style.setProperty('--accom-headers-h', total + 'px')
     }
-    // Delay per attendere che il DOM sia completamente montato
-    const t = setTimeout(() => {
-      updateHeadersHeight()
-      const ro = new ResizeObserver(updateHeadersHeight)
-      const toolbar   = document.querySelector('[data-toolbar="accommodation"]')
-      const filterRow = document.querySelector('[data-filter-row="accommodation"]')
-      if (toolbar)   ro.observe(toolbar)
-      if (filterRow) ro.observe(filterRow)
-      // Salva ro per cleanup
-      window.__accomRo = ro
-    }, 100)
-    return () => {
-      clearTimeout(t)
-      window.__accomRo?.disconnect()
-    }
-  }, [])
+    update()
+    const ro = new ResizeObserver(update)
+    if (toolbarRef.current)   ro.observe(toolbarRef.current)
+    if (filterRowRef.current) ro.observe(filterRowRef.current)
+    return () => ro.disconnect()
+  }, [user])
 
   function handleStaySaved(saved, mode) {
     if (mode === 'new') {
@@ -1066,7 +1056,7 @@ export default function AccommodationPage() {
       <Navbar currentPath="/dashboard/accommodation" />
 
       {/* ── Toolbar ── MODIFICA 2: data-toolbar attribute */}
-      <div data-toolbar="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: `${TOOLBAR_H}px`, display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: `${NAVBAR_H}px`, zIndex: 21 }}>
+      <div ref={toolbarRef} data-toolbar="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: `${TOOLBAR_H}px`, display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: `${NAVBAR_H}px`, zIndex: 21 }}>
         <span style={{ fontSize: '18px' }}>🏨</span>
         <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Accommodation</span>
         <button onClick={openNew} style={{ background: '#15803d', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(21,128,61,0.3)' }}>+ Add Stay</button>
@@ -1126,7 +1116,7 @@ export default function AccommodationPage() {
       </div>
 
       {/* ── Filter Row ── MODIFICA 2: data-filter-row attribute */}
-      <div data-filter-row="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20 }}>
+      <div ref={filterRowRef} data-filter-row="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20 }}>
         <input type="text" placeholder="Search name..." value={search} onChange={e => setSearch(e.target.value)}
           style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px', minWidth: 0 }} />
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
@@ -1160,7 +1150,7 @@ export default function AccommodationPage() {
       {/* ── Content ── S66-J v2: in calendar mode il div outer ha height fisso, no padding, no outer scroll */}
       <div style={{
         padding: viewMode === 'calendar' ? 0 : (isMobile ? '12px' : '16px 24px'),
-        height: viewMode === 'calendar' ? 'calc(100vh - var(--accom-headers-h, 156px))' : 'auto',
+        height: viewMode === 'calendar' ? 'calc(100vh - var(--accom-headers-h, 184px))' : 'auto',
         overflow: viewMode === 'calendar' ? 'hidden' : 'visible',
       }}>
 
