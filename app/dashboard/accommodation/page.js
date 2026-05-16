@@ -425,13 +425,21 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                 {/* Hotel section header */}
                 <tr>
                   <td colSpan={2 + days.length + 2} style={{
-                    padding: '5px 8px', background: '#f0fdf4',
+                    padding: 0, background: '#f0fdf4',
                     borderTop: '2px solid #86efac', borderBottom: '1px solid #86efac',
-                    fontSize: '11px', fontWeight: '800', color: '#14532d',
-                    textTransform: 'uppercase', letterSpacing: '0.04em',
-                    position: 'sticky', left: 0,
                   }}>
-                    🏨 {hotelName} <span style={{ fontWeight: '600', color: '#16a34a', marginLeft: '6px' }}>{hotelStays.length} guest{hotelStays.length !== 1 ? 's' : ''}</span>
+                    <div style={{
+                      position: 'sticky', left: 0,
+                      display: 'inline-block',
+                      padding: '5px 8px',
+                      fontSize: '11px', fontWeight: '800', color: '#14532d',
+                      textTransform: 'uppercase', letterSpacing: '0.04em',
+                      background: '#f0fdf4',
+                      maxWidth: (NAME_W + ROLE_W) + 'px',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      🏨 {hotelName} <span style={{ fontWeight: '600', color: '#16a34a', marginLeft: '6px' }}>{hotelStays.length} guest{hotelStays.length !== 1 ? 's' : ''}</span>
+                    </div>
                   </td>
                 </tr>
 
