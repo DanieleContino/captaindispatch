@@ -808,8 +808,8 @@ export default function AccommodationPage() {
   const isMobile      = useIsMobile()
   const today         = isoToday()
 
-  // MODIFICA 1: stickyOffset calcolato dinamicamente
-  const [stickyOffset, setStickyOffset] = useState(144)
+  const filterRowRef = React.useRef(null)
+  const [stickyOffset, setStickyOffset] = useState(160)
 
   const [user, setUser]         = useState(null)
   const [userRole, setUserRole] = useState('ACCOMMODATION')
@@ -995,20 +995,13 @@ export default function AccommodationPage() {
     return Array.from(names).sort()
   }, [stays])
 
-  // MODIFICA 1: Calcola l'offset reale della filter row dinamicamente
   useEffect(() => {
-    function updateOffset() {
-      const navbar = document.querySelector('nav')
-      const toolbar = document.querySelector('[data-toolbar="accommodation"]')
-      const filterRow = document.querySelector('[data-filter-row="accommodation"]')
-      const navH = navbar?.offsetHeight || 52
-      const toolbarH = toolbar?.offsetHeight || 52
-      const filterH = filterRow?.offsetHeight || 40
-      setStickyOffset(navH + toolbarH + filterH)
-    }
-    updateOffset()
-    window.addEventListener('resize', updateOffset)
-    return () => window.removeEventListener('resize', updateOffset)
+    const el = document.querySelector('[data-filter-row="accommodation"]')
+    if (!el) return
+    const update = () => setStickyOffset(Math.round(el.getBoundingClientRect().bottom))
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
   }, [hotelNames])
 
   // Calendar days array
