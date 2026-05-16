@@ -757,6 +757,12 @@ export default function AccommodationPage() {
 
   useEffect(() => { if (user) loadData(windowStart, windowEnd) }, [windowStart, windowEnd])
 
+  // Pre-load subgroups for every hotel so list grouping works immediately on load
+  useEffect(() => {
+    if (hotels.length === 0) return
+    hotels.forEach(h => loadSubgroupsForHotel(h.id))
+  }, [hotels, loadSubgroupsForHotel])
+
   useEffect(() => {
     if (!user || !PRODUCTION_ID) return
     const channel = supabase.channel(`crew_notes:accommodation:${PRODUCTION_ID}`)
@@ -1053,7 +1059,7 @@ export default function AccommodationPage() {
         hotelName={subgroupSidebarHotel?.name}
         productionId={PRODUCTION_ID}
         onClose={() => setSubgroupSidebarOpen(false)}
-        onChanged={() => loadSubgroupsForHotel(subgroupSidebarHotel?.id)}
+        onChanged={() => { loadSubgroupsForHotel(subgroupSidebarHotel?.id); loadData(windowStart, windowEnd) }}
       />
       <Toast message={toast?.message} type={toast?.type} />
     </div>
