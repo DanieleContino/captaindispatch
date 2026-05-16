@@ -276,11 +276,10 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
   const hotelNameToId = Object.fromEntries((hotels || []).map(h => [h.name, h.id]))
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{
-        borderCollapse: 'collapse', tableLayout: 'fixed',
-        width: totalWidth + 'px', fontSize: '11px',
-      }}>
+    <table style={{
+      borderCollapse: 'collapse', tableLayout: 'fixed',
+      minWidth: totalWidth + 'px', width: '100%', fontSize: '11px',
+    }}>
         {/* Legend */}
         <caption style={{ textAlign: 'left', padding: '0 0 6px 0', captionSide: 'top' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', fontSize: '10px', color: '#64748b' }}>
@@ -548,8 +547,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
             )
           })}
         </tbody>
-      </table>
-    </div>
+    </table>
   )
 }
 
