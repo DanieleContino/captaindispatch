@@ -1105,6 +1105,13 @@ export default function AccommodationPage() {
         {isFilterActive && (
           <button onClick={resetFilters} style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#64748b' }}>✕ Reset</button>
         )}
+        {viewMode === 'calendar' && (
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px', color: '#64748b' }}>
+            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#15803d', borderRadius: '2px', marginRight: '3px' }} />Check-in</span>
+            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#86efac', borderRadius: '2px', marginRight: '3px' }} />In Hotel</span>
+            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#fca5a5', borderRadius: '2px', marginRight: '3px' }} />Check-out</span>
+          </div>
+        )}
       </div>
 
       {/* ── Content ── S66-J v2: in calendar mode il div outer ha height fisso, no padding, no outer scroll */}
@@ -1146,12 +1153,6 @@ export default function AccommodationPage() {
         ) : viewMode === 'calendar' ? (
           // S66-J: wrapper = scroll container entrambi gli assi, height:100% riempie outer div fisso
 <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'auto', height: '100%', boxSizing: 'border-box' }}>
-            {/* Leggenda sticky inside scroll container — sempre visibile in cima */}
-            <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'white', padding: '4px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '10px', color: '#64748b' }}>
-              <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#15803d', borderRadius: '2px', marginRight: '3px' }} />Check-in</span>
-              <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#86efac', borderRadius: '2px', marginRight: '3px' }} />In Hotel</span>
-              <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#fca5a5', borderRadius: '2px', marginRight: '3px' }} />Check-out</span>
-            </div>
             <CalendarView
               groupedByHotel={groupedByHotel}
               sortedHotels={sortedHotels}
