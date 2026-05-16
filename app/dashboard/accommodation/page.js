@@ -808,7 +808,7 @@ export default function AccommodationPage() {
   const isMobile      = useIsMobile()
   const today         = isoToday()
 
-  const [stickyOffset, setStickyOffset] = useState(184)
+  const LEGEND_H = 29  // altezza della legend bar dentro il scroll container
 
   const [user, setUser]         = useState(null)
   const [userRole, setUserRole] = useState('ACCOMMODATION')
@@ -994,19 +994,6 @@ export default function AccommodationPage() {
     return Array.from(names).sort()
   }, [stays])
 
-  useEffect(() => {
-    const el = document.querySelector('[data-filter-row="accommodation"]')
-    if (!el) return
-    const ro = new ResizeObserver(() => {
-      const rect = el.getBoundingClientRect()
-      setStickyOffset(Math.round(rect.bottom))
-    })
-    ro.observe(el)
-    // Initial calculation
-    setStickyOffset(Math.round(el.getBoundingClientRect().bottom))
-    return () => ro.disconnect()
-  }, [])
-
   // Calendar days array
   const calendarDays = useMemo(() => daysInRange(windowStart, windowEnd), [windowStart, windowEnd])
 
@@ -1124,7 +1111,7 @@ export default function AccommodationPage() {
       {/* ── Content ── S66-J v2: in calendar mode il div outer ha height fisso, no padding, no outer scroll */}
       <div style={{
         padding: viewMode === 'calendar' ? 0 : (isMobile ? '12px' : '16px 24px'),
-        height: viewMode === 'calendar' ? `calc(100vh - ${stickyOffset}px)` : 'auto',
+        height: viewMode === 'calendar' ? `calc(100vh - 144px)` : 'auto',
         overflow: viewMode === 'calendar' ? 'hidden' : 'visible',
       }}>
 
@@ -1175,7 +1162,7 @@ export default function AccommodationPage() {
               subgroupsByHotel={subgroupsByHotel}
               hotels={hotels}
               showCosts={showCosts}
-              stickyTop={stickyOffset}
+              stickyTop={LEGEND_H}
             />
           </div>
         ) : (
@@ -1234,8 +1221,8 @@ export default function AccommodationPage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', border: '1px solid #e2e8f0', borderTop: subgroupLabel ? 'none' : '1px solid #86efac', borderRadius: subgroupLabel ? '0' : '0 0 8px 8px', overflow: 'hidden', minWidth: colMinW + 'px' }}>
                           <colgroup>{columnsConfig.map(col => <col key={col.source_field} style={{ width: col.width }} />)}</colgroup>
                           {/* MODIFICA 3: use stickyOffset in list view theads */}
-                          {!subgroupLabel && <thead style={{ position: 'sticky', top: stickyOffset, zIndex: 10 }}><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>{col.header_label}</th>)}</tr></thead>}
-                          {subgroupLabel && <thead style={{ position: 'sticky', top: stickyOffset, zIndex: 10 }}><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff', background: '#faf5ff' }}>{col.header_label}</th>)}</tr></thead>}
+                          {!subgroupLabel && <thead style={{ position: 'sticky', top: 144, zIndex: 10 }}><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>{col.header_label}</th>)}</tr></thead>}
+                          {subgroupLabel && <thead style={{ position: 'sticky', top: 144, zIndex: 10 }}><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff', background: '#faf5ff' }}>{col.header_label}</th>)}</tr></thead>}
                           <tbody>
                             {stayList.map(stay => {
                               const isCI = stay.arrival_date === today, isCO = stay.departure_date === today
