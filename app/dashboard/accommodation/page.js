@@ -973,16 +973,25 @@ export default function AccommodationPage() {
       const navbar    = document.querySelector('nav')
       const toolbar   = document.querySelector('[data-toolbar="accommodation"]')
       const filterRow = document.querySelector('[data-filter-row="accommodation"]')
-      const h = (navbar?.offsetHeight || 0) + (toolbar?.offsetHeight || 0) + (filterRow?.offsetHeight || 0)
+      if (!toolbar || !filterRow) return
+      const h = (navbar?.offsetHeight || 0) + (toolbar.offsetHeight || 0) + (filterRow.offsetHeight || 0)
       document.documentElement.style.setProperty('--accom-headers-h', h + 'px')
     }
-    updateHeadersHeight()
-    const ro = new ResizeObserver(updateHeadersHeight)
-    const toolbar   = document.querySelector('[data-toolbar="accommodation"]')
-    const filterRow = document.querySelector('[data-filter-row="accommodation"]')
-    if (toolbar)   ro.observe(toolbar)
-    if (filterRow) ro.observe(filterRow)
-    return () => ro.disconnect()
+    // Delay per attendere che il DOM sia completamente montato
+    const t = setTimeout(() => {
+      updateHeadersHeight()
+      const ro = new ResizeObserver(updateHeadersHeight)
+      const toolbar   = document.querySelector('[data-toolbar="accommodation"]')
+      const filterRow = document.querySelector('[data-filter-row="accommodation"]')
+      if (toolbar)   ro.observe(toolbar)
+      if (filterRow) ro.observe(filterRow)
+      // Salva ro per cleanup
+      window.__accomRo = ro
+    }, 100)
+    return () => {
+      clearTimeout(t)
+      window.__accomRo?.disconnect()
+    }
   }, [])
 
   function handleStaySaved(saved, mode) {
