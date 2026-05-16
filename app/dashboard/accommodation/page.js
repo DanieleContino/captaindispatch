@@ -2,9 +2,10 @@
 
 /**
  * /dashboard/accommodation
- * S65 — 16 May 2026
+ * S66 — 16 May 2026
  * Accommodation Coordinator view — crew_stays grouped by hotel.
  * Two views: List (configurable columns) + Calendar (Excel-style grid).
+ * S66-J: sticky thead + sticky NAME/ROLE columns with dynamic offset
  */
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
@@ -298,11 +299,11 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
           {costCols.map(c => <col key={c.key} style={{ width: c.width + 'px' }} />)}
         </colgroup>
 
-        {/* Header — day of week */}
-        <thead style={{ position: 'sticky', top: stickyTop, zIndex: 10 }}>
-          <tr style={{ background: '#f8fafc' }}>
-            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', position: 'sticky', left: 0, background: '#f8fafc', zIndex: 12 }}>NAME</th>
-            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>ROLE</th>
+        {/* Header — day of week — MODIFICA 4: sticky on individual th, not thead */}
+        <thead>
+          <tr>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: stickyTop, left: 0, background: '#f8fafc', zIndex: 13, boxShadow: '2px 2px 4px rgba(0,0,0,0.08)' }}>NAME</th>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: stickyTop, left: NAME_W, background: '#f8fafc', zIndex: 13, boxShadow: '2px 2px 4px rgba(0,0,0,0.08)' }}>ROLE</th>
             {days.map(d => (
               <th key={d} style={{
                 padding: '2px 1px', textAlign: 'center', fontSize: '9px', fontWeight: d === today ? '900' : '600',
@@ -310,15 +311,16 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                 borderBottom: '1px solid #e2e8f0',
                 background: d === today ? '#f0fdf4' : isWeekend(d) ? '#fafafa' : '#f8fafc',
                 borderLeft: d === today ? '1px solid #86efac' : '1px solid #f1f5f9',
+                position: 'sticky', top: stickyTop, zIndex: 11, boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
               }}>
                 <div>{dayLetter(d)}</div>
                 <div style={{ fontSize: '8px', fontWeight: '400' }}>{new Date(d + 'T12:00:00Z').getUTCDate()}</div>
               </th>
             ))}
-            <th style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0', background: '#f8fafc' }}>🌙</th>
-            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0', background: '#f8fafc' }}>ROOM</th>
+            <th style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0', background: '#f8fafc', position: 'sticky', top: stickyTop, zIndex: 11, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>🌙</th>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0', background: '#f8fafc', position: 'sticky', top: stickyTop, zIndex: 11, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>ROOM</th>
             {costCols.map(c => (
-              <th key={c.key} style={{ padding: '4px 6px', textAlign: 'right', fontSize: '9px', fontWeight: '800', color: '#2563eb', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #dbeafe', whiteSpace: 'nowrap', background: '#f8fafc' }}>
+              <th key={c.key} style={{ padding: '4px 6px', textAlign: 'right', fontSize: '9px', fontWeight: '800', color: '#2563eb', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #dbeafe', whiteSpace: 'nowrap', background: '#f8fafc', position: 'sticky', top: stickyTop, zIndex: 11, boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
                 {c.label}
               </th>
             ))}
@@ -362,16 +364,16 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                   onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background === '' && (c.style.background = '#f8fafc')) }}
                   onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '#f8fafc') c.style.background = '' }) }}>
 
-                  {/* Name — sticky */}
+                  {/* Name — sticky left 0 */}
                   <td onClick={() => onEditRow(stay, 'full_name')}
-                    style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: rowBg, zIndex: 1, borderBottom: '1px solid #f1f5f9' }}
+                    style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: rowBg, zIndex: 2, borderBottom: '1px solid #f1f5f9' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = rowBg }}>
                     {stay.crew?.full_name || '—'}
                   </td>
 
-                  {/* Role */}
-                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9' }}>
+                  {/* Role — sticky left NAME_W */}
+                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9', position: 'sticky', left: NAME_W, background: rowBg, zIndex: 2, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }}>
                     {stay.crew?.role || '—'}
                   </td>
 
@@ -466,7 +468,8 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                         <td style={{ padding: '4px 8px', fontWeight: '800', fontSize: '10px', color: sg ? '#5b21b6' : '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', position: 'sticky', left: 0, background: sg ? '#f3e8ff' : '#f8fafc', zIndex: 1, borderBottom: '2px solid #d8b4fe' }}>
                           {sg ? `TOTAL ${sg.name.toUpperCase()}` : 'TOTAL (UNGROUPED)'}
                         </td>
-                        <td style={{ padding: '4px 8px', fontSize: '9px', color: sg ? '#7c3aed' : '#64748b', borderBottom: '2px solid #d8b4fe' }} />
+                        {/* MODIFICA 8: ROLE cell sticky in subgroup total */}
+                        <td style={{ padding: '4px 8px', fontSize: '9px', color: sg ? '#7c3aed' : '#64748b', borderBottom: '2px solid #d8b4fe', position: 'sticky', left: NAME_W, background: sg ? '#f3e8ff' : '#f8fafc', zIndex: 1, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }} />
                         {days.map(d => {
                           const n = countPresent(sectionStays, d)
                           return (
@@ -509,7 +512,8 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                   <td style={{ padding: '5px 8px', fontWeight: '900', fontSize: '10px', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', position: 'sticky', left: 0, background: '#14532d', zIndex: 1, letterSpacing: '0.05em' }}>
                     GRAN TOTAL
                   </td>
-                  <td style={{ padding: '5px 8px', background: '#14532d' }} />
+                  {/* MODIFICA 8: ROLE cell sticky in GRAN TOTAL */}
+                  <td style={{ padding: '5px 8px', background: '#14532d', position: 'sticky', left: NAME_W, zIndex: 1, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }} />
                   {days.map(d => {
                     const n = countPresent(hotelStays, d)
                     return (
@@ -812,7 +816,9 @@ export default function AccommodationPage() {
   const router        = useRouter()
   const isMobile      = useIsMobile()
   const today         = isoToday()
-  const STICKY_TOP    = 144  // navbar(52) + toolbar(52) + filter-row(40)
+
+  // MODIFICA 1: stickyOffset calcolato dinamicamente
+  const [stickyOffset, setStickyOffset] = useState(144)
 
   const [user, setUser]         = useState(null)
   const [userRole, setUserRole] = useState('ACCOMMODATION')
@@ -998,6 +1004,22 @@ export default function AccommodationPage() {
     return Array.from(names).sort()
   }, [stays])
 
+  // MODIFICA 1: Calcola l'offset reale della filter row dinamicamente
+  useEffect(() => {
+    function updateOffset() {
+      const navbar = document.querySelector('nav')
+      const toolbar = document.querySelector('[data-toolbar="accommodation"]')
+      const filterRow = document.querySelector('[data-filter-row="accommodation"]')
+      const navH = navbar?.offsetHeight || 52
+      const toolbarH = toolbar?.offsetHeight || 52
+      const filterH = filterRow?.offsetHeight || 40
+      setStickyOffset(navH + toolbarH + filterH)
+    }
+    updateOffset()
+    window.addEventListener('resize', updateOffset)
+    return () => window.removeEventListener('resize', updateOffset)
+  }, [hotelNames])
+
   // Calendar days array
   const calendarDays = useMemo(() => daysInRange(windowStart, windowEnd), [windowStart, windowEnd])
 
@@ -1027,8 +1049,8 @@ export default function AccommodationPage() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
       <Navbar currentPath="/dashboard/accommodation" />
 
-      {/* ── Toolbar ── */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: `${TOOLBAR_H}px`, display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: `${NAVBAR_H}px`, zIndex: 21 }}>
+      {/* ── Toolbar ── MODIFICA 2: data-toolbar attribute */}
+      <div data-toolbar="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: `${TOOLBAR_H}px`, display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: `${NAVBAR_H}px`, zIndex: 21 }}>
         <span style={{ fontSize: '18px' }}>🏨</span>
         <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Accommodation</span>
         <button onClick={openNew} style={{ background: '#15803d', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(21,128,61,0.3)' }}>+ Add Stay</button>
@@ -1087,8 +1109,8 @@ export default function AccommodationPage() {
         </div>
       </div>
 
-      {/* ── Filter Row ── */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20 }}>
+      {/* ── Filter Row ── MODIFICA 2: data-filter-row attribute */}
+      <div data-filter-row="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20 }}>
         <input type="text" placeholder="Search name..." value={search} onChange={e => setSearch(e.target.value)}
           style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px', minWidth: 0 }} />
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
@@ -1156,7 +1178,7 @@ export default function AccommodationPage() {
               subgroupsByHotel={subgroupsByHotel}
               hotels={hotels}
               showCosts={showCosts}
-              stickyTop={STICKY_TOP}
+              stickyTop={stickyOffset}
             />
           </div>
         ) : (
@@ -1214,8 +1236,9 @@ export default function AccommodationPage() {
                         )}
                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', border: '1px solid #e2e8f0', borderTop: subgroupLabel ? 'none' : '1px solid #86efac', borderRadius: subgroupLabel ? '0' : '0 0 8px 8px', overflow: 'hidden', minWidth: colMinW + 'px' }}>
                           <colgroup>{columnsConfig.map(col => <col key={col.source_field} style={{ width: col.width }} />)}</colgroup>
-                          {!subgroupLabel && <thead style={{ position: 'sticky', top: STICKY_TOP, zIndex: 10 }}><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>{col.header_label}</th>)}</tr></thead>}
-                          {subgroupLabel && <thead style={{ position: 'sticky', top: STICKY_TOP, zIndex: 10 }}><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff', background: '#faf5ff' }}>{col.header_label}</th>)}</tr></thead>}
+                          {/* MODIFICA 3: use stickyOffset in list view theads */}
+                          {!subgroupLabel && <thead style={{ position: 'sticky', top: stickyOffset, zIndex: 10 }}><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>{col.header_label}</th>)}</tr></thead>}
+                          {subgroupLabel && <thead style={{ position: 'sticky', top: stickyOffset, zIndex: 10 }}><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff', background: '#faf5ff' }}>{col.header_label}</th>)}</tr></thead>}
                           <tbody>
                             {stayList.map(stay => {
                               const isCI = stay.arrival_date === today, isCO = stay.departure_date === today
