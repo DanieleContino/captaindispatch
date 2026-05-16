@@ -228,24 +228,32 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }
 
 // ─── CalendarView ──────────────────────────────────────────────
 function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop }) {
-  const NAME_W      = 180
-  const ROLE_W      = 120
-  const DAY_W       = 28
-  const NIGHT_W     = 44
-  const ROOM_W      = 120
-  const CITYTAX_W   = 70
-  const RATE_W      = 76
-  const TOTNOVÁT_W  = 90
-  const TOTVAT_W    = 90
-  const PO_W        = 80
-  const INV_W       = 80
+  const NAME_W        = 180
+  const ROLE_W        = 120
+  const DAY_W         = 28
+  const NIGHT_W       = 44
+  const ROOM_W        = 120
+  const CITYTAX_W     = 68
+  const RATE_NOVAT_W  = 76
+  const TOTNOVAT_W    = 88
+  const TOTNOVAT_TX_W = 100
+  const RATE_VAT_W    = 76
+  const TOTVAT_W      = 88
+  const TOTVAT_TX_W   = 100
+  const VAT_AMT_W     = 80
+  const PO_W          = 80
+  const INV_W         = 80
   const costCols = showCosts ? [
-    { key: 'city_tax',    label: 'City Tax',     width: CITYTAX_W },
-    { key: 'rate',        label: '€/night',      width: RATE_W },
-    { key: 'tot_no_vat',  label: 'Tot. no VAT',  width: TOTNOVÁT_W },
-    { key: 'tot_vat',     label: 'Tot.+VAT',     width: TOTVAT_W },
-    { key: 'po',          label: 'P.O.',          width: PO_W },
-    { key: 'inv',         label: 'N°Fatt.',       width: INV_W },
+    { key: 'city_tax',      label: 'City Tax',        width: CITYTAX_W },
+    { key: 'rate_novat',    label: 'night w/o VAT',   width: RATE_NOVAT_W },
+    { key: 'tot_no_vat',    label: 'TOT W/O VAT',     width: TOTNOVAT_W },
+    { key: 'tot_novat_tax', label: 'Tot W/O VAT+tax', width: TOTNOVAT_TX_W },
+    { key: 'rate_vat',      label: 'night w VAT',     width: RATE_VAT_W },
+    { key: 'tot_vat',       label: 'TOT W.VAT',       width: TOTVAT_W },
+    { key: 'tot_vat_tax',   label: 'Tot. + City Tax', width: TOTVAT_TX_W },
+    { key: 'vat_amt',       label: 'TOT VAT',         width: VAT_AMT_W },
+    { key: 'po',            label: 'P.O.',            width: PO_W },
+    { key: 'inv',           label: 'N°Fatt.',         width: INV_W },
   ] : []
   const totalWidth = NAME_W + ROLE_W + days.length * DAY_W + NIGHT_W + ROOM_W + costCols.reduce((s, c) => s + c.width, 0)
 
@@ -401,18 +409,32 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     onMouseLeave={e => { e.currentTarget.style.background = '' }}>
                     {stay.room_type_notes || <span style={{ color: '#cbd5e1' }}>—</span>}
                   </td>
-                  {/* Cost columns */}
+                  {/* Cost columns — 10 cols matching Excel */}
                   {showCosts && (() => {
-                    const fmt = v => v != null && v !== '' ? `€${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : <span style={{ color: '#e2e8f0' }}>—</span>
+                    const n    = parseFloat(stay.cost_per_night)    || 0
+                    const ct   = parseFloat(stay.city_tax_total)    || 0
+                    const nv   = parseFloat(stay.total_cost_no_vat) || 0
+                    const tv   = parseFloat(stay.total_cost_vat)    || 0
+                    const nv_t = nv + ct           // Tot W/O VAT + city tax
+                    const nw   = n  ? n * 1.1 : 0  // night w VAT ≈ night w/o VAT × 1.10
+                    const tv_t = tv + ct            // Tot. + City Tax
+                    const vata = tv - nv            // TOT VAT amount
+                    const dash = <span style={{ color: '#e2e8f0' }}>—</span>
+                    const fmt  = (v, raw) => v > 0 || raw > 0 ? `€${Number(raw || v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash
+                    const fmtv = (raw) => raw != null && raw !== '' && Number(raw) !== 0 ? `€${Number(raw).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash
                     const cellSt = { padding: '5px 6px', fontSize: '10px', textAlign: 'right', fontFamily: 'monospace', color: '#374151', borderLeft: '1px solid #dbeafe', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden' }
                     return (
                       <>
-                        <td style={cellSt}>{fmt(stay.city_tax_total)}</td>
-                        <td style={cellSt}>{fmt(stay.cost_per_night)}</td>
-                        <td style={cellSt}>{fmt(stay.total_cost_no_vat)}</td>
-                        <td style={cellSt}>{fmt(stay.total_cost_vat)}</td>
-                        <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.po_number || <span style={{ color: '#e2e8f0' }}>—</span>}</td>
-                        <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.invoice_number || <span style={{ color: '#e2e8f0' }}>—</span>}</td>
+                        <td style={cellSt}>{fmtv(stay.city_tax_total)}</td>
+                        <td style={cellSt}>{fmtv(stay.cost_per_night)}</td>
+                        <td style={cellSt}>{fmtv(stay.total_cost_no_vat)}</td>
+                        <td style={cellSt}>{nv_t > 0 ? `€${nv_t.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash}</td>
+                        <td style={{ ...cellSt, color: '#475569' }}>{nw > 0 ? `€${nw.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash}</td>
+                        <td style={cellSt}>{fmtv(stay.total_cost_vat)}</td>
+                        <td style={cellSt}>{tv_t > 0 ? `€${tv_t.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash}</td>
+                        <td style={{ ...cellSt, color: '#7c3aed' }}>{vata > 0 ? `€${vata.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash}</td>
+                        <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.po_number      || dash}</td>
+                        <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.invoice_number || dash}</td>
                       </>
                     )
                   })()}
@@ -497,17 +519,24 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                         </td>
                         <td style={{ padding: '4px 8px', borderLeft: '1px solid #e2e8f0', borderBottom: '2px solid #d8b4fe' }} />
                         {showCosts && (() => {
-                          const sum = k => sectionStays.reduce((s, st) => s + (st[k] || 0), 0)
-                          const fmt = v => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
-                          const cellSt = { padding: '4px 6px', fontSize: '9px', fontWeight: '800', textAlign: 'right', fontFamily: 'monospace', color: sg ? '#5b21b6' : '#374151', background: sg ? '#ede9fe' : '#f1f5f9', borderLeft: '1px solid #d8b4fe', borderBottom: '2px solid #d8b4fe', whiteSpace: 'nowrap' }
+                          const sumK = (k) => sectionStays.reduce((acc, st) => acc + (parseFloat(st[k]) || 0), 0)
+                          const ct  = sumK('city_tax_total')
+                          const nv  = sumK('total_cost_no_vat')
+                          const tv  = sumK('total_cost_vat')
+                          const f   = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+                          const cs  = { padding: '4px 6px', fontSize: '9px', fontWeight: '800', textAlign: 'right', fontFamily: 'monospace', color: sg ? '#5b21b6' : '#374151', background: sg ? '#ede9fe' : '#f1f5f9', borderLeft: '1px solid #d8b4fe', borderBottom: '2px solid #d8b4fe', whiteSpace: 'nowrap' }
                           return (
                             <>
-                              <td style={cellSt}>{fmt(sum('city_tax_total'))}</td>
-                              <td style={cellSt} />
-                              <td style={cellSt}>{fmt(sum('total_cost_no_vat'))}</td>
-                              <td style={cellSt}>{fmt(sum('total_cost_vat'))}</td>
-                              <td style={cellSt} />
-                              <td style={cellSt} />
+                              <td style={cs}>{f(ct)}</td>
+                              <td style={cs} />
+                              <td style={cs}>{f(nv)}</td>
+                              <td style={cs}>{f(nv + ct)}</td>
+                              <td style={cs} />
+                              <td style={cs}>{f(tv)}</td>
+                              <td style={cs}>{f(tv + ct)}</td>
+                              <td style={cs}>{f(tv - nv)}</td>
+                              <td style={cs} />
+                              <td style={cs} />
                             </>
                           )
                         })()}
@@ -540,17 +569,24 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                   </td>
                   <td style={{ padding: '5px 8px', borderLeft: '1px solid #166534', background: '#14532d' }} />
                   {showCosts && (() => {
-                    const sum = k => hotelStays.reduce((s, st) => s + (st[k] || 0), 0)
-                    const fmt = v => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
-                    const cellSt = { padding: '5px 6px', fontSize: '10px', fontWeight: '900', textAlign: 'right', fontFamily: 'monospace', color: 'white', background: '#14532d', borderLeft: '1px solid #166534', whiteSpace: 'nowrap' }
+                    const sumK = (k) => hotelStays.reduce((acc, st) => acc + (parseFloat(st[k]) || 0), 0)
+                    const ct  = sumK('city_tax_total')
+                    const nv  = sumK('total_cost_no_vat')
+                    const tv  = sumK('total_cost_vat')
+                    const f   = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+                    const cs  = { padding: '5px 6px', fontSize: '10px', fontWeight: '900', textAlign: 'right', fontFamily: 'monospace', color: 'white', background: '#14532d', borderLeft: '1px solid #166534', whiteSpace: 'nowrap' }
                     return (
                       <>
-                        <td style={cellSt}>{fmt(sum('city_tax_total'))}</td>
-                        <td style={cellSt} />
-                        <td style={cellSt}>{fmt(sum('total_cost_no_vat'))}</td>
-                        <td style={cellSt}>{fmt(sum('total_cost_vat'))}</td>
-                        <td style={cellSt} />
-                        <td style={cellSt} />
+                        <td style={cs}>{f(ct)}</td>
+                        <td style={cs} />
+                        <td style={cs}>{f(nv)}</td>
+                        <td style={cs}>{f(nv + ct)}</td>
+                        <td style={cs} />
+                        <td style={cs}>{f(tv)}</td>
+                        <td style={cs}>{f(tv + ct)}</td>
+                        <td style={cs}>{f(tv - nv)}</td>
+                        <td style={cs} />
+                        <td style={cs} />
                       </>
                     )
                   })()}
