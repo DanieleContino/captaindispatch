@@ -1220,7 +1220,11 @@ export default function AccommodationPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px 8px 0 0', borderBottom: 'none' }}>
                     <span style={{ fontSize: '15px' }}>🏨</span>
                     <span style={{ fontSize: '13px', fontWeight: '800', color: '#14532d', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{hotelName}</span>
-                    <span style={{ fontSize: '11px', color: '#16a34a', marginLeft: '4px', fontWeight: '600' }}>{hotelStays.length} guest{hotelStays.length !== 1 ? 's' : ''}</span>
+                    <span style={{ fontSize: '11px', color: '#16a34a', marginLeft: '4px', fontWeight: '600' }}>
+                      {hotelStays.length} guest{hotelStays.length !== 1 ? 's' : ''}
+                      {' · '}
+                      {hotelStays.reduce((sum, s) => sum + (nightsBetween(s.arrival_date, s.departure_date) || 0), 0)}🌙
+                    </span>
                     <button
                       onClick={() => { const h = hotels.find(h => h.name === hotelName); if (h) openSubgroupManager(h) }}
                       style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: '6px', border: '1px solid #86efac', background: 'white', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
@@ -1244,11 +1248,11 @@ export default function AccommodationPage() {
                         {subgroupLabel && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 14px', background: '#f8f4ff', borderLeft: '3px solid #7c3aed', fontSize: '11px', fontWeight: '800', color: '#5b21b6' }}>
                             <span>▾ {subgroupLabel}</span>
-                            {(() => {
-                              const totNoVat = stayList.reduce((s, st) => s + (st.total_cost_no_vat || 0), 0)
-                              const totVat = stayList.reduce((s, st) => s + (st.total_cost_vat || 0), 0)
-                              return totNoVat > 0 ? <span style={{ marginLeft: 'auto', color: '#7c3aed', fontSize: '11px' }}>€{totNoVat.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} (no VAT) · €{totVat.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} (VAT incl.) · {stayList.length} guest{stayList.length!==1?'s':''}</span> : <span style={{ marginLeft: 'auto', color: '#7c3aed' }}>{stayList.length} guest{stayList.length!==1?'s':''}</span>
-                            })()}
+                            <span style={{ fontWeight: '600', color: '#7c3aed', fontSize: '11px' }}>
+                              {stayList.length} guest{stayList.length !== 1 ? 's' : ''}
+                              {' · '}
+                              {stayList.reduce((sum, s) => sum + (nightsBetween(s.arrival_date, s.departure_date) || 0), 0)}🌙
+                            </span>
                           </div>
                         )}
                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', border: '1px solid #e2e8f0', borderTop: subgroupLabel ? 'none' : '1px solid #86efac', borderRadius: subgroupLabel ? '0' : '0 0 8px 8px', overflow: 'hidden', minWidth: colMinW + 'px' }}>
