@@ -1049,10 +1049,11 @@ export default function AccommodationPage() {
       <StaySidebar open={sidebarOpen} mode={sidebarMode} initial={sidebarTarget} onClose={() => setSidebarOpen(false)} onSaved={handleStaySaved} onDeleted={handleStayDeleted} hotels={hotels} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null} />
       <SubgroupManagerSidebar
         open={subgroupSidebarOpen}
-        hotel={subgroupSidebarHotel}
+        hotelId={subgroupSidebarHotel?.id}
+        hotelName={subgroupSidebarHotel?.name}
         productionId={PRODUCTION_ID}
         onClose={() => setSubgroupSidebarOpen(false)}
-        onChanged={(hotelId) => loadSubgroupsForHotel(hotelId)}
+        onChanged={() => loadSubgroupsForHotel(subgroupSidebarHotel?.id)}
       />
       <Toast message={toast?.message} type={toast?.type} />
     </div>
