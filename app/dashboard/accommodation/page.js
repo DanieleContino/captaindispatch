@@ -1253,9 +1253,8 @@ export default function AccommodationPage() {
                         )}
                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', border: '1px solid #e2e8f0', borderTop: subgroupLabel ? 'none' : '1px solid #86efac', borderRadius: subgroupLabel ? '0' : '0 0 8px 8px', overflow: 'hidden', minWidth: colMinW + 'px' }}>
                           <colgroup>{columnsConfig.map(col => <col key={col.source_field} style={{ width: col.width }} />)}</colgroup>
-                          {/* MODIFICA 3: use stickyOffset in list view theads */}
-                          {!subgroupLabel && <thead style={{ position: 'sticky', top: 144, zIndex: 10 }}><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>{col.header_label}</th>)}</tr></thead>}
-                          {subgroupLabel && <thead style={{ position: 'sticky', top: 144, zIndex: 10 }}><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff', background: '#faf5ff' }}>{col.header_label}</th>)}</tr></thead>}
+                          {!subgroupLabel && <thead><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>{col.header_label}</th>)}</tr></thead>}
+                          {subgroupLabel && <thead><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff', background: '#faf5ff' }}>{col.header_label}</th>)}</tr></thead>}
                           <tbody>
                             {stayList.map(stay => {
                               const isCI = stay.arrival_date === today, isCO = stay.departure_date === today
@@ -1270,17 +1269,6 @@ export default function AccommodationPage() {
                     return (
                       <div style={{ border: '1px solid #e2e8f0', borderTop: '1px solid #86efac', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
                         {sections.map(({ sg, stays: sl }) => renderTable(sl, sg ? sg.name : null))}
-                        {/* Grand total row */}
-                        {(() => {
-                          const totNoVat = hotelStays.reduce((s, st) => s + (st.total_cost_no_vat || 0), 0)
-                          const totVat   = hotelStays.reduce((s, st) => s + (st.total_cost_vat   || 0), 0)
-                          return totNoVat > 0 ? (
-                            <div style={{ padding: '6px 14px', background: '#14532d', color: 'white', fontSize: '11px', fontWeight: '800', display: 'flex', gap: '16px' }}>
-                              <span>HOTEL TOTAL</span>
-                              <span style={{ marginLeft: 'auto' }}>€{totNoVat.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} (no VAT) · €{totVat.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} (VAT incl.) · {hotelStays.length} guests</span>
-                            </div>
-                          ) : null
-                        })()}
                       </div>
                     )
                   })()}
