@@ -1134,8 +1134,6 @@ export default function AccommodationPage() {
       {/* ── Content ── S66-J v2: in calendar mode il div outer ha height fisso, no padding, no outer scroll */}
       <div style={{
         padding: viewMode === 'calendar' ? 0 : (isMobile ? '12px' : '16px 24px'),
-        height: viewMode === 'calendar' ? `calc(100vh - 144px)` : 'auto',
-        overflow: viewMode === 'calendar' ? 'hidden' : 'visible',
       }}>
 
         {!PRODUCTION_ID && (
