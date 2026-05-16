@@ -1167,8 +1167,11 @@ export default function AccommodationPage() {
             <div style={{ fontSize: '14px', color: '#64748b' }}>No results — reset filters</div>
           </div>
         ) : viewMode === 'calendar' ? (
-          /* ── CALENDAR VIEW ── */
-<div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px', overflowX: 'auto', overflowY: 'visible' }}>
+          /* ── CALENDAR VIEW ──
+             S66-J fix: overflow-x:auto crea uno scroll container che rompe position:sticky in Y.
+             Soluzione: wrapper scroll container per ENTRAMBI gli assi con maxHeight,
+             così i <th> sticky usano top:0 relativi al contenitore (non al document). */
+<div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '16px', overflowX: 'auto', overflowY: 'auto', maxHeight: `calc(100vh - ${stickyOffset}px - 32px)` }}>
             <CalendarView
               groupedByHotel={groupedByHotel}
               sortedHotels={sortedHotels}
@@ -1178,7 +1181,7 @@ export default function AccommodationPage() {
               subgroupsByHotel={subgroupsByHotel}
               hotels={hotels}
               showCosts={showCosts}
-              stickyTop={stickyOffset}
+              stickyTop={0}
             />
           </div>
         ) : (
