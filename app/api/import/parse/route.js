@@ -1130,12 +1130,32 @@ function extractAccommodationFromStructured(structured) {
     if (nameCheck.includes('tbd') || nameCheck.includes('tba') ||
         nameCheck.startsWith('driver #') || nameCheck.startsWith('tot')) continue
 
-    const costPerNight   = headerMap.cost_per_night    ? parseFloat(row[headerMap.cost_per_night])    : null
-    const totalNoVat     = headerMap.total_cost_no_vat ? parseFloat(row[headerMap.total_cost_no_vat]) : null
-    const totalVat       = headerMap.total_cost_vat    ? parseFloat(row[headerMap.total_cost_vat])    : null
-    const cityTax        = headerMap.city_tax_total    ? parseFloat(row[headerMap.city_tax_total])    : null
-    const poNumber       = headerMap.po_number         ? (row[headerMap.po_number]      || null)      : null
-    const invoiceNumber  = headerMap.invoice_number    ? (row[headerMap.invoice_number] || null)      : null
+    // Leggi valori diretti dal file (night w/o VAT e night w VAT sono valori per notte, non totali)
+    const arrivalDate   = headerMap.arrival_date   ? (row[headerMap.arrival_date]   || null) : null
+    const departureDate = headerMap.departure_date ? (row[headerMap.departure_date] || null) : null
+
+    // Calcola notti da date
+    let nights = 0
+    if (arrivalDate && departureDate) {
+      const a = new Date(arrivalDate + 'T12:00:00Z')
+      const b = new Date(departureDate + 'T12:00:00Z')
+      nights = Math.max(0, Math.round((b - a) / 86400000))
+    }
+
+    // Valori diretti dal file (non formule)
+    const costPerNight  = headerMap.cost_per_night  ? parseFloat(row[headerMap.cost_per_night])  : null
+    const nightWVat     = headerMap.total_cost_vat  ? parseFloat(row[headerMap.total_cost_vat])  : null
+    const cityTax       = headerMap.city_tax_total  ? parseFloat(row[headerMap.city_tax_total])  : null
+    const poNumber      = headerMap.po_number       ? (row[headerMap.po_number]      || null)     : null
+    const invoiceNumber = headerMap.invoice_number  ? (row[headerMap.invoice_number] || null)     : null
+
+    // Calcola totali
+    const totalNoVat = (!isNaN(costPerNight) && costPerNight != null && nights > 0)
+      ? Math.round(costPerNight * nights * 100) / 100
+      : null
+    const totalVat = (!isNaN(nightWVat) && nightWVat != null && nights > 0)
+      ? Math.round(nightWVat * nights * 100) / 100
+      : null
 
     result.push({
       first_name,
@@ -1144,11 +1164,11 @@ function extractAccommodationFromStructured(structured) {
       department:        headerMap.department ? (row[headerMap.department] || null) : null,
       hotel_name,
       hotel_address,
-      arrival_date:      headerMap.arrival_date   ? (row[headerMap.arrival_date]   || null) : null,
-      departure_date:    headerMap.departure_date ? (row[headerMap.departure_date] || null) : null,
-      cost_per_night:    isNaN(costPerNight)  ? null : costPerNight,
-      total_cost_no_vat: isNaN(totalNoVat)   ? null : totalNoVat,
-      total_cost_vat:    isNaN(totalVat)     ? null : totalVat,
+      arrival_date:      arrivalDate,
+      departure_date:    departureDate,
+      cost_per_night:    isNaN(costPerNight) ? null : costPerNight,
+      total_cost_no_vat: totalNoVat,
+      total_cost_vat:    totalVat,
       city_tax_total:    isNaN(cityTax)      ? null : cityTax,
       po_number:         poNumber,
       invoice_number:    invoiceNumber,
