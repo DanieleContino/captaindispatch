@@ -53,6 +53,19 @@ function getStayStatus(arrival, departure) {
   if (today >= departure) return { label: '✅ Checked Out', style: { bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0' } }
   return null
 }
+function startOfMonth(offset = 0) {
+  const d = new Date()
+  d.setDate(1)
+  d.setMonth(d.getMonth() + offset)
+  return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+}
+function endOfMonth(offset = 0) {
+  const d = new Date()
+  d.setDate(1)
+  d.setMonth(d.getMonth() + offset + 1)
+  d.setDate(d.getDate() - 1)
+  return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+}
 // Generate array of ISO date strings between start and end inclusive
 function daysInRange(start, end) {
   const days = []
@@ -867,9 +880,16 @@ export default function AccommodationPage() {
     finally { setApplyingPreset(false) }
   }
 
-  function shiftWindow(n) { setWindowStart(s => isoAdd(s, n)); setWindowEnd(e => isoAdd(e, n)) }
-  function resetWindow() { setWindowStart(isoAdd(isoToday(), -3)); setWindowEnd(isoAdd(isoToday(), 10)) }
-  function pickDate(dateStr) { setWindowStart(isoAdd(dateStr, -3)); setWindowEnd(isoAdd(dateStr, 10)) }
+  function setRange(start, end) { setWindowStart(start); setWindowEnd(end) }
+  function resetWindow() { setRange(isoAdd(isoToday(), -3), isoAdd(isoToday(), 10)) }
+  function setThisMonth() { setRange(startOfMonth(0), endOfMonth(0)) }
+  function setNextMonth() { setRange(startOfMonth(1), endOfMonth(1)) }
+  function setFullPeriod() {
+    if (stays.length === 0) { setRange('2026-01-01', '2026-12-31'); return }
+    const arrivals   = stays.map(s => s.arrival_date).filter(Boolean).sort()
+    const departures = stays.map(s => s.departure_date).filter(Boolean).sort()
+    setRange(arrivals[0], departures[departures.length - 1])
+  }
 
   const loadData = useCallback(async (start, end) => {
     if (!PRODUCTION_ID) return
@@ -1014,14 +1034,19 @@ export default function AccommodationPage() {
         <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Accommodation</span>
         <button onClick={openNew} style={{ background: '#15803d', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(21,128,61,0.3)' }}>+ Add Stay</button>
 
-        {/* Date window */}
+        {/* Date range Dal / Al */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <button onClick={() => shiftWindow(-7)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>◀</button>
-          <input type="date" value={windowStart ? isoAdd(windowStart, 3) : today} onChange={e => pickDate(e.target.value)}
+          <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Dal</span>
+          <input type="date" value={windowStart} onChange={e => e.target.value && setWindowStart(e.target.value)}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
-          <button onClick={() => shiftWindow(7)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>▶</button>
-          <button onClick={resetWindow} style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#15803d', whiteSpace: 'nowrap' }}>Today</button>
-          <button onClick={() => loadData(windowStart, windowEnd)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↺</button>
+          <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Al</span>
+          <input type="date" value={windowEnd} onChange={e => e.target.value && setWindowEnd(e.target.value)}
+            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
+          <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
+          <button onClick={resetWindow} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>↺ Today</button>
+          <button onClick={setThisMonth} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>This month</button>
+          <button onClick={setNextMonth} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>Next month</button>
+          <button onClick={setFullPeriod} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>Full period</button>
         </div>
 
         {/* View toggle + Columns + Cost Report */}
@@ -1104,7 +1129,7 @@ export default function AccommodationPage() {
             <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>Check-in today: <span style={{ fontWeight: '900' }}>{statCheckIn}</span></div>
             <div style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>Check-out today: <span style={{ fontWeight: '900' }}>{statCheckOut}</span></div>
             <div style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>In hotel: <span style={{ fontWeight: '900' }}>{statInHotel}</span></div>
-            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#94a3b8' }}>{windowStart} → {windowEnd}</div>
+            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#94a3b8' }}>{fmtDate(windowStart)} → {fmtDate(windowEnd)}</div>
           </div>
         )}
 
