@@ -213,7 +213,7 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
-function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow }) {
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels }) {
   const NAME_W  = 160
   const ROLE_W  = 90
   const DAY_W   = 28
@@ -242,6 +242,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow }) 
   }
 
   const totalWidth = NAME_W + ROLE_W + days.length * DAY_W + NIGHT_W + ROOM_W
+  const hotelNameToId = Object.fromEntries((hotels || []).map(h => [h.name, h.id]))
 
   return (
     <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
@@ -291,9 +292,93 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow }) 
         <tbody>
           {sortedHotels.map(hotelName => {
             const hotelStays = groupedByHotel[hotelName]
+            const hotelId = hotelNameToId[hotelName]
+            const sgs = (hotelId && subgroupsByHotel && subgroupsByHotel[hotelId]) || []
+
+            // Build sections: each named subgroup then ungrouped at the end
+            let sections
+            if (sgs.length === 0) {
+              sections = [{ sg: null, stays: hotelStays }]
+            } else {
+              const sgMap = Object.fromEntries(sgs.map(sg => [sg.id, { sg, stays: [] }]))
+              const ungrouped = []
+              for (const stay of hotelStays) {
+                if (stay.subgroup_id && sgMap[stay.subgroup_id]) sgMap[stay.subgroup_id].stays.push(stay)
+                else ungrouped.push(stay)
+              }
+              sections = [
+                ...Object.values(sgMap).filter(x => x.stays.length > 0),
+                ...(ungrouped.length > 0 ? [{ sg: null, stays: ungrouped }] : []),
+              ]
+            }
+            const hasSections = sections.some(x => x.sg !== null)
+
+            // Shared row renderer — keeps alternating stripe index across subgroups
+            let rowIndex = 0
+            const renderStayRow = (stay) => {
+              const ri = rowIndex++
+              const nights = nightsBetween(stay.arrival_date, stay.departure_date)
+              const isCI   = stay.arrival_date === today
+              const isCO   = stay.departure_date === today
+              const rowBg  = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa'
+              return (
+                <tr key={stay.id} style={{ background: rowBg }}
+                  onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background === '' && (c.style.background = '#f8fafc')) }}
+                  onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '#f8fafc') c.style.background = '' }) }}>
+
+                  {/* Name — sticky */}
+                  <td onClick={() => onEditRow(stay, 'full_name')}
+                    style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: rowBg, zIndex: 1, borderBottom: '1px solid #f1f5f9' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = rowBg }}>
+                    {stay.crew?.full_name || '—'}
+                  </td>
+
+                  {/* Role */}
+                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9' }}>
+                    {stay.crew?.role || '—'}
+                  </td>
+
+                  {/* Day cells */}
+                  {days.map(d => {
+                    const cs = cellStyle(d, stay)
+                    return (
+                      <td key={d}
+                        title={cs ? `${stay.crew?.full_name} — ${cs.title}` : ''}
+                        onClick={cs ? () => onEditRow(stay, 'arrival_date') : undefined}
+                        style={{
+                          padding: 0, textAlign: 'center', height: '28px',
+                          background: cs ? cs.background : (d === today ? '#f0fdf420' : isWeekend(d) ? '#fafafa' : 'transparent'),
+                          borderLeft: d === today ? '1px solid #86efac40' : '1px solid #f1f5f9',
+                          borderBottom: '1px solid #f1f5f9',
+                          cursor: cs ? 'pointer' : 'default',
+                        }}>
+                        {cs && <span style={{ fontSize: '8px', color: cs.background === '#15803d' ? 'white' : '#374151', fontWeight: '700' }}>
+                          {cs.background === '#15803d' ? '▶' : cs.background === '#fca5a5' ? '◀' : ''}
+                        </span>}
+                      </td>
+                    )
+                  })}
+
+                  {/* Nights */}
+                  <td style={{ padding: '5px 4px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#0f172a', borderLeft: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9' }}>
+                    {nights != null ? nights : '—'}
+                  </td>
+
+                  {/* Room/Notes */}
+                  <td onClick={() => onEditRow(stay, 'room_type_notes')}
+                    style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderLeft: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+                    {stay.room_type_notes || <span style={{ color: '#cbd5e1' }}>—</span>}
+                  </td>
+                </tr>
+              )
+            }
+
             return (
               <React.Fragment key={hotelName}>
-                {/* Hotel section row */}
+                {/* Hotel section header */}
                 <tr>
                   <td colSpan={2 + days.length + 2} style={{
                     padding: '5px 8px', background: '#f0fdf4',
@@ -306,66 +391,26 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow }) 
                   </td>
                 </tr>
 
-                {/* Guest rows */}
-                {hotelStays.map((stay, ri) => {
-                  const nights = nightsBetween(stay.arrival_date, stay.departure_date)
-                  const isCI   = stay.arrival_date === today
-                  const isCO   = stay.departure_date === today
-                  const rowBg  = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa'
-                  return (
-                    <tr key={stay.id} style={{ background: rowBg }}
-                      onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background === '' && (c.style.background = '#f8fafc')) }}
-                      onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '#f8fafc') c.style.background = '' }) }}>
-
-                      {/* Name — sticky */}
-                      <td onClick={() => onEditRow(stay, 'full_name')}
-                        style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: rowBg, zIndex: 1, borderBottom: '1px solid #f1f5f9' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = rowBg }}>
-                        {stay.crew?.full_name || '—'}
-                      </td>
-
-                      {/* Role */}
-                      <td style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9' }}>
-                        {stay.crew?.role || '—'}
-                      </td>
-
-                      {/* Day cells */}
-                      {days.map(d => {
-                        const cs = cellStyle(d, stay)
-                        return (
-                          <td key={d}
-                            title={cs ? `${stay.crew?.full_name} — ${cs.title}` : ''}
-                            onClick={cs ? () => onEditRow(stay, 'arrival_date') : undefined}
-                            style={{
-                              padding: 0, textAlign: 'center', height: '28px',
-                              background: cs ? cs.background : (d === today ? '#f0fdf420' : isWeekend(d) ? '#fafafa' : 'transparent'),
-                              borderLeft: d === today ? '1px solid #86efac40' : '1px solid #f1f5f9',
-                              borderBottom: '1px solid #f1f5f9',
-                              cursor: cs ? 'pointer' : 'default',
-                            }}>
-                            {cs && <span style={{ fontSize: '8px', color: cs.background === '#15803d' ? 'white' : '#374151', fontWeight: '700' }}>
-                              {cs.background === '#15803d' ? '▶' : cs.background === '#fca5a5' ? '◀' : ''}
-                            </span>}
-                          </td>
-                        )
-                      })}
-
-                      {/* Nights */}
-                      <td style={{ padding: '5px 4px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#0f172a', borderLeft: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9' }}>
-                        {nights != null ? nights : '—'}
-                      </td>
-
-                      {/* Room/Notes */}
-                      <td onClick={() => onEditRow(stay, 'room_type_notes')}
-                        style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderLeft: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '' }}>
-                        {stay.room_type_notes || <span style={{ color: '#cbd5e1' }}>—</span>}
-                      </td>
-                    </tr>
-                  )
-                })}
+                {/* Subgroup sections — separator row + guest rows per group */}
+                {sections.map(({ sg, stays: sectionStays }) => (
+                  <React.Fragment key={sg ? sg.id : '__ungrouped__'}>
+                    {hasSections && sg && (
+                      <tr>
+                        <td colSpan={2 + days.length + 2} style={{
+                          padding: '4px 8px', background: '#f8f4ff',
+                          borderLeft: '3px solid #7c3aed', borderBottom: '1px solid #e9d5ff',
+                          fontSize: '10px', fontWeight: '800', color: '#5b21b6',
+                        }}>
+                          ▾ {sg.name}
+                          <span style={{ marginLeft: '8px', fontWeight: '600', color: '#7c3aed' }}>
+                            {sectionStays.length} guest{sectionStays.length !== 1 ? 's' : ''}
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+                    {sectionStays.map(stay => renderStayRow(stay))}
+                  </React.Fragment>
+                ))}
               </React.Fragment>
             )
           })}
@@ -957,6 +1002,8 @@ export default function AccommodationPage() {
               days={calendarDays}
               today={today}
               onEditRow={openEdit}
+              subgroupsByHotel={subgroupsByHotel}
+              hotels={hotels}
             />
           </div>
         ) : (
