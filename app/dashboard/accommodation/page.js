@@ -213,12 +213,27 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
-function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels }) {
-  const NAME_W  = 160
-  const ROLE_W  = 90
-  const DAY_W   = 28
-  const NIGHT_W = 44
-  const ROOM_W  = 120
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts }) {
+  const NAME_W      = 160
+  const ROLE_W      = 90
+  const DAY_W       = 28
+  const NIGHT_W     = 44
+  const ROOM_W      = 120
+  const CITYTAX_W   = 70
+  const RATE_W      = 76
+  const TOTNOVÁT_W  = 90
+  const TOTVAT_W    = 90
+  const PO_W        = 80
+  const INV_W       = 80
+  const costCols = showCosts ? [
+    { key: 'city_tax',    label: 'City Tax',     width: CITYTAX_W },
+    { key: 'rate',        label: '€/night',      width: RATE_W },
+    { key: 'tot_no_vat',  label: 'Tot. no VAT',  width: TOTNOVÁT_W },
+    { key: 'tot_vat',     label: 'Tot.+VAT',     width: TOTVAT_W },
+    { key: 'po',          label: 'P.O.',          width: PO_W },
+    { key: 'inv',         label: 'N°Fatt.',       width: INV_W },
+  ] : []
+  const totalWidth = NAME_W + ROLE_W + days.length * DAY_W + NIGHT_W + ROOM_W + costCols.reduce((s, c) => s + c.width, 0)
 
   // Day-of-week abbreviation
   function dayLetter(iso) {
@@ -245,7 +260,6 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
     return stayList.filter(s => s.arrival_date && s.departure_date && s.arrival_date <= dayIso && dayIso < s.departure_date).length
   }
 
-  const totalWidth = NAME_W + ROLE_W + days.length * DAY_W + NIGHT_W + ROOM_W
   const hotelNameToId = Object.fromEntries((hotels || []).map(h => [h.name, h.id]))
 
   return (
@@ -269,6 +283,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
           {days.map(d => <col key={d} style={{ width: DAY_W + 'px' }} />)}
           <col style={{ width: NIGHT_W + 'px' }} />
           <col style={{ width: ROOM_W + 'px' }} />
+          {costCols.map(c => <col key={c.key} style={{ width: c.width + 'px' }} />)}
         </colgroup>
 
         {/* Header — day of week */}
@@ -290,6 +305,11 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
             ))}
             <th style={{ padding: '4px 4px', textAlign: 'center', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0' }}>🌙</th>
             <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0' }}>ROOM</th>
+            {costCols.map(c => (
+              <th key={c.key} style={{ padding: '4px 6px', textAlign: 'right', fontSize: '9px', fontWeight: '800', color: '#2563eb', borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #dbeafe', whiteSpace: 'nowrap' }}>
+                {c.label}
+              </th>
+            ))}
           </tr>
         </thead>
 
@@ -376,6 +396,21 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     onMouseLeave={e => { e.currentTarget.style.background = '' }}>
                     {stay.room_type_notes || <span style={{ color: '#cbd5e1' }}>—</span>}
                   </td>
+                  {/* Cost columns */}
+                  {showCosts && (() => {
+                    const fmt = v => v != null && v !== '' ? `€${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : <span style={{ color: '#e2e8f0' }}>—</span>
+                    const cellSt = { padding: '5px 6px', fontSize: '10px', textAlign: 'right', fontFamily: 'monospace', color: '#374151', borderLeft: '1px solid #dbeafe', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden' }
+                    return (
+                      <>
+                        <td style={cellSt}>{fmt(stay.city_tax_total)}</td>
+                        <td style={cellSt}>{fmt(stay.cost_per_night)}</td>
+                        <td style={cellSt}>{fmt(stay.total_cost_no_vat)}</td>
+                        <td style={cellSt}>{fmt(stay.total_cost_vat)}</td>
+                        <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.po_number || <span style={{ color: '#e2e8f0' }}>—</span>}</td>
+                        <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.invoice_number || <span style={{ color: '#e2e8f0' }}>—</span>}</td>
+                      </>
+                    )
+                  })()}
                 </tr>
               )
             }
@@ -438,6 +473,21 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                           {sectionStays.reduce((sum, s) => sum + (nightsBetween(s.arrival_date, s.departure_date) || 0), 0)}
                         </td>
                         <td style={{ padding: '4px 8px', borderLeft: '1px solid #e2e8f0', borderBottom: '2px solid #d8b4fe' }} />
+                        {showCosts && (() => {
+                          const sum = k => sectionStays.reduce((s, st) => s + (st[k] || 0), 0)
+                          const fmt = v => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+                          const cellSt = { padding: '4px 6px', fontSize: '9px', fontWeight: '800', textAlign: 'right', fontFamily: 'monospace', color: sg ? '#5b21b6' : '#374151', background: sg ? '#ede9fe' : '#f1f5f9', borderLeft: '1px solid #d8b4fe', borderBottom: '2px solid #d8b4fe', whiteSpace: 'nowrap' }
+                          return (
+                            <>
+                              <td style={cellSt}>{fmt(sum('city_tax_total'))}</td>
+                              <td style={cellSt} />
+                              <td style={cellSt}>{fmt(sum('total_cost_no_vat'))}</td>
+                              <td style={cellSt}>{fmt(sum('total_cost_vat'))}</td>
+                              <td style={cellSt} />
+                              <td style={cellSt} />
+                            </>
+                          )
+                        })()}
                       </tr>
                     )}
                   </React.Fragment>
@@ -465,6 +515,21 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     {hotelStays.reduce((sum, s) => sum + (nightsBetween(s.arrival_date, s.departure_date) || 0), 0)}
                   </td>
                   <td style={{ padding: '5px 8px', borderLeft: '1px solid #166534', background: '#14532d' }} />
+                  {showCosts && (() => {
+                    const sum = k => hotelStays.reduce((s, st) => s + (st[k] || 0), 0)
+                    const fmt = v => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+                    const cellSt = { padding: '5px 6px', fontSize: '10px', fontWeight: '900', textAlign: 'right', fontFamily: 'monospace', color: 'white', background: '#14532d', borderLeft: '1px solid #166534', whiteSpace: 'nowrap' }
+                    return (
+                      <>
+                        <td style={cellSt}>{fmt(sum('city_tax_total'))}</td>
+                        <td style={cellSt} />
+                        <td style={cellSt}>{fmt(sum('total_cost_no_vat'))}</td>
+                        <td style={cellSt}>{fmt(sum('total_cost_vat'))}</td>
+                        <td style={cellSt} />
+                        <td style={cellSt} />
+                      </>
+                    )
+                  })()}
                 </tr>
               </React.Fragment>
             )
@@ -746,8 +811,9 @@ export default function AccommodationPage() {
   const [columnsConfig,     setColumnsConfig]     = useState([])
   const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
   const [applyingPreset,    setApplyingPreset]    = useState(false)
-  const [windowStart, setWindowStart] = useState(() => isoAdd(isoToday(), -3))
-  const [windowEnd,   setWindowEnd]   = useState(() => isoAdd(isoToday(), 10))
+  const [windowStart,  setWindowStart]  = useState(() => isoAdd(isoToday(), -3))
+  const [windowEnd,    setWindowEnd]    = useState(() => isoAdd(isoToday(), 10))
+  const [showCosts,    setShowCosts]    = useState(false)
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [sidebarMode,   setSidebarMode]   = useState('new')
   const [sidebarTarget, setSidebarTarget] = useState(null)
@@ -971,6 +1037,12 @@ export default function AccommodationPage() {
               📅 Calendar
             </button>
           </div>
+          {viewMode === 'calendar' && (
+            <button onClick={() => setShowCosts(v => !v)}
+              style={{ padding: '5px 12px', borderRadius: '7px', border: `1px solid ${showCosts ? '#2563eb' : '#e2e8f0'}`, background: showCosts ? '#eff6ff' : 'white', color: showCosts ? '#1d4ed8' : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              💰 {showCosts ? 'Hide Costs' : 'Show Costs'}
+            </button>
+          )}
 
           {viewMode === 'list' && columnsConfig.length === 0 && (
             <button onClick={applyDefaultPreset} disabled={applyingPreset}
@@ -1059,6 +1131,7 @@ export default function AccommodationPage() {
               onEditRow={openEdit}
               subgroupsByHotel={subgroupsByHotel}
               hotels={hotels}
+              showCosts={showCosts}
             />
           </div>
         ) : (
