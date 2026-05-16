@@ -808,7 +808,6 @@ export default function AccommodationPage() {
   const isMobile      = useIsMobile()
   const today         = isoToday()
 
-  const LEGEND_H = 29  // altezza della legend bar dentro il scroll container
 
   const [user, setUser]         = useState(null)
   const [userRole, setUserRole] = useState('ACCOMMODATION')
@@ -1162,7 +1161,7 @@ export default function AccommodationPage() {
               subgroupsByHotel={subgroupsByHotel}
               hotels={hotels}
               showCosts={showCosts}
-              stickyTop={LEGEND_H}
+              stickyTop={28}
             />
           </div>
         ) : (
