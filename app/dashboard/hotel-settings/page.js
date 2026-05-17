@@ -259,11 +259,13 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
     if (err) { setRoomError(err.message); return }
     setRoomForm(null)
     loadRoomTypes(initial?.hotel_id)
+    onSaved(true)
   }
 
   async function handleRoomDelete(id) {
     await supabase.from('hotel_room_types').delete().eq('id', id)
     loadRoomTypes(initial?.hotel_id)
+    onSaved(true)
   }
 
   // ── Extra cost handlers ──
@@ -291,11 +293,13 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
     if (err) { setExtraError(err.message); return }
     setExtrasForm(null)
     loadExtras(initial?.hotel_id)
+    onSaved(true)
   }
 
   async function handleExtraDelete(id) {
     await supabase.from('hotel_extra_costs').delete().eq('id', id)
     loadExtras(initial?.hotel_id)
+    onSaved(true)
   }
 
   const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
@@ -905,7 +909,7 @@ export default function HotelSettingsPage() {
         mode={sidebarMode}
         initial={sidebarTarget}
         onClose={() => setSidebarOpen(false)}
-        onSaved={() => { setSidebarOpen(false); loadData() }}
+        onSaved={(keepOpen) => { if (!keepOpen) setSidebarOpen(false); loadData() }}
         productionId={PRODUCTION_ID}
       />
     </div>
