@@ -58,6 +58,7 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
         name:          initial.name          || '',
         address:       initial.address       || '',
         city:          initial.city          || '',
+        zip:           initial.zip           || '',
         country:       initial.country       || '',
         phone:         initial.phone         || '',
         email:         initial.email         || '',
@@ -676,6 +677,10 @@ export default function HotelSettingsPage() {
       lat:                  preselectedLocation.lat,
       lng:                  preselectedLocation.lng,
       default_pickup_point: preselectedLocation.default_pickup_point || null,
+      address:              preselectedLocation.address || null,
+      city:                 preselectedLocation.city    || null,
+      zip:                  preselectedLocation.zip     || null,
+      country:              preselectedLocation.country || null,
     } : null)
     setSidebarOpen(true)
   }
