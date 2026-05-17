@@ -411,30 +411,41 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     onMouseLeave={e => { e.currentTarget.style.background = '' }}>
                     {stay.room_type_notes || <span style={{ color: '#cbd5e1' }}>—</span>}
                   </td>
-                  {/* Cost columns — 10 cols matching Excel */}
+                  {/* Cost columns — 10 cols matching Excel, derived from room_type if available */}
                   {showCosts && (() => {
-                    const n    = parseFloat(stay.cost_per_night)    || 0
-                    const ct   = parseFloat(stay.city_tax_total)    || 0
-                    const nv   = parseFloat(stay.total_cost_no_vat) || 0
-                    const tv   = parseFloat(stay.total_cost_vat)    || 0
-                    const nv_t = nv + ct           // Tot W/O VAT + city tax
-                    const nw   = n  ? n * 1.1 : 0  // night w VAT ≈ night w/o VAT × 1.10
-                    const tv_t = tv + ct            // Tot. + City Tax
-                    const vata = tv - nv            // TOT VAT amount
-                    const dash = <span style={{ color: '#e2e8f0' }}>—</span>
-                    const fmt  = (v, raw) => v > 0 || raw > 0 ? `€${Number(raw || v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash
-                    const fmtv = (raw) => raw != null && raw !== '' && Number(raw) !== 0 ? `€${Number(raw).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash
+                    const rt     = stay.room_type || null
+                    const ngts   = nights || 0
+                    // Rate no VAT: from room_type unless override or no room_type
+                    const rateNV = (!stay.rate_override && rt?.rate_no_vat != null)
+                      ? parseFloat(rt.rate_no_vat)
+                      : (parseFloat(stay.cost_per_night) || 0)
+                    const vatPct = (!stay.rate_override && rt?.vat_pct != null)
+                      ? parseFloat(rt.vat_pct)
+                      : null
+                    const ctN    = (!stay.rate_override && rt?.city_tax_night != null)
+                      ? parseFloat(rt.city_tax_night)
+                      : null
+                    // Derived values
+                    const nv     = rateNV > 0 && ngts > 0 ? rateNV * ngts : (parseFloat(stay.total_cost_no_vat) || 0)
+                    const rateV  = rateNV > 0 && vatPct != null ? rateNV * (1 + vatPct / 100) : (rateNV > 0 ? rateNV * 1.10 : 0)
+                    const tv     = rateV  > 0 && ngts > 0 ? rateV  * ngts : (parseFloat(stay.total_cost_vat)    || 0)
+                    const ct     = ctN    != null && ngts > 0 ? ctN * ngts : (parseFloat(stay.city_tax_total)   || 0)
+                    const nv_t   = nv + ct
+                    const tv_t   = tv + ct
+                    const vata   = tv - nv
+                    const dash   = <span style={{ color: '#e2e8f0' }}>—</span>
+                    const fmtE   = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash
                     const cellSt = { padding: '5px 6px', fontSize: '10px', textAlign: 'right', fontFamily: 'monospace', color: '#374151', borderLeft: '1px solid #dbeafe', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden' }
                     return (
                       <>
-                        <td style={cellSt}>{fmtv(stay.city_tax_total)}</td>
-                        <td style={cellSt}>{fmtv(stay.cost_per_night)}</td>
-                        <td style={cellSt}>{fmtv(stay.total_cost_no_vat)}</td>
-                        <td style={cellSt}>{nv_t > 0 ? `€${nv_t.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash}</td>
-                        <td style={{ ...cellSt, color: '#475569' }}>{nw > 0 ? `€${nw.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash}</td>
-                        <td style={cellSt}>{fmtv(stay.total_cost_vat)}</td>
-                        <td style={cellSt}>{tv_t > 0 ? `€${tv_t.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash}</td>
-                        <td style={{ ...cellSt, color: '#7c3aed' }}>{vata > 0 ? `€${vata.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash}</td>
+                        <td style={cellSt}>{fmtE(ct)}</td>
+                        <td style={cellSt}>{fmtE(rateNV)}</td>
+                        <td style={cellSt}>{fmtE(nv)}</td>
+                        <td style={cellSt}>{fmtE(nv_t)}</td>
+                        <td style={{ ...cellSt, color: '#475569' }}>{fmtE(rateV)}</td>
+                        <td style={cellSt}>{fmtE(tv)}</td>
+                        <td style={cellSt}>{fmtE(tv_t)}</td>
+                        <td style={{ ...cellSt, color: '#7c3aed' }}>{fmtE(vata)}</td>
                         <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.po_number      || dash}</td>
                         <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.invoice_number || dash}</td>
                       </>
