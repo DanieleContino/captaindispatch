@@ -73,12 +73,30 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
       loadRoomTypes(initial.hotel_id)
       loadExtras(initial.hotel_id)
     } else {
+      // Parse default_pickup_point into address/city/country
+      const pickup = initial?.default_pickup_point || ''
+      let parsedAddress = pickup, parsedCity = '', parsedCountry = ''
+      if (pickup) {
+        const parts = pickup.split(',').map(p => p.trim()).filter(Boolean)
+        if (parts.length >= 3) {
+          parsedCountry = parts[parts.length - 1]
+          // city part: remove CAP (digits at start) from second-to-last part
+          const cityRaw = parts[parts.length - 2]
+          parsedCity = cityRaw.replace(/^\d+\s*/, '').trim()
+          parsedAddress = parts.slice(0, parts.length - 2).join(', ')
+        } else if (parts.length === 2) {
+          parsedCountry = parts[1]
+          parsedAddress = parts[0]
+        }
+      }
       setForm({
         ...EMPTY_FORM,
         name:    initial?.name || '',
         lat:     initial?.lat  != null ? String(initial.lat)  : '',
         lng:     initial?.lng  != null ? String(initial.lng)  : '',
-        address: initial?.default_pickup_point || '',
+        address: parsedAddress,
+        city:    parsedCity,
+        country: parsedCountry,
       })
       setRoomTypes([])
       setExtras([])
