@@ -1092,13 +1092,7 @@ export default function AccommodationPage() {
   }, [user])
 
   function handleStaySaved(saved, mode) {
-    if (mode === 'new') {
-      setStays(prev => [...prev, saved].sort((a, b) => {
-        const ha = a.hotel?.name || '', hb = b.hotel?.name || ''
-        if (ha !== hb) return ha.localeCompare(hb)
-        return (a.arrival_date || '').localeCompare(b.arrival_date || '')
-      }))
-    } else { setStays(prev => prev.map(s => s.id === saved.id ? saved : s)) }
+    loadData(windowStart, windowEnd)
     showToast(mode === 'new' ? 'Stay added' : 'Stay updated')
   }
 
