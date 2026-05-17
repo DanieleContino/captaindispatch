@@ -228,6 +228,24 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }
   }
 }
 
+// ─── Helper: calcola costi reali di una stay (room_type o legacy) ──
+function stayComputedCosts(stay) {
+  const rt   = stay.room_type || null
+  const ngts = nightsBetween(stay.arrival_date, stay.departure_date) || 0
+  const rateNV = (!stay.rate_override && rt?.rate_no_vat != null)
+    ? parseFloat(rt.rate_no_vat)
+    : (parseFloat(stay.cost_per_night) || 0)
+  const vatPct = (!stay.rate_override && rt?.vat_pct != null)
+    ? parseFloat(rt.vat_pct) : null
+  const ctN = (!stay.rate_override && rt?.city_tax_night != null)
+    ? parseFloat(rt.city_tax_night) : null
+  const nv   = rateNV > 0 && ngts > 0 ? rateNV * ngts : (parseFloat(stay.total_cost_no_vat) || 0)
+  const rateV = rateNV > 0 && vatPct != null ? rateNV * (1 + vatPct / 100) : (rateNV > 0 ? rateNV * 1.10 : 0)
+  const tv   = rateV > 0 && ngts > 0 ? rateV * ngts : (parseFloat(stay.total_cost_vat) || 0)
+  const ct   = ctN != null && ngts > 0 ? ctN * ngts : (parseFloat(stay.city_tax_total) || 0)
+  return { nv, tv, ct }
+}
+
 // ─── CalendarView ──────────────────────────────────────────────
 function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop }) {
   const NAME_W        = 180
@@ -532,12 +550,13 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                         </td>
                         <td style={{ padding: '4px 8px', borderLeft: '1px solid #e2e8f0', borderBottom: '2px solid #d8b4fe' }} />
                         {showCosts && (() => {
-                          const sumK = (k) => sectionStays.reduce((acc, st) => acc + (parseFloat(st[k]) || 0), 0)
-                          const ct  = sumK('city_tax_total')
-                          const nv  = sumK('total_cost_no_vat')
-                          const tv  = sumK('total_cost_vat')
-                          const f   = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
-                          const cs  = { padding: '4px 6px', fontSize: '9px', fontWeight: '800', textAlign: 'right', fontFamily: 'monospace', color: sg ? '#5b21b6' : '#374151', background: sg ? '#ede9fe' : '#f1f5f9', borderLeft: '1px solid #d8b4fe', borderBottom: '2px solid #d8b4fe', whiteSpace: 'nowrap' }
+                          const totals = sectionStays.reduce((acc, st) => {
+                            const c = stayComputedCosts(st)
+                            return { nv: acc.nv + c.nv, tv: acc.tv + c.tv, ct: acc.ct + c.ct }
+                          }, { nv: 0, tv: 0, ct: 0 })
+                          const { nv, tv, ct } = totals
+                          const f  = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+                          const cs = { padding: '4px 6px', fontSize: '9px', fontWeight: '800', textAlign: 'right', fontFamily: 'monospace', color: sg ? '#5b21b6' : '#374151', background: sg ? '#ede9fe' : '#f1f5f9', borderLeft: '1px solid #d8b4fe', borderBottom: '2px solid #d8b4fe', whiteSpace: 'nowrap' }
                           return (
                             <>
                               <td style={cs}>{f(ct)}</td>
@@ -582,12 +601,13 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                   </td>
                   <td style={{ padding: '5px 8px', borderLeft: '1px solid #166534', background: '#14532d' }} />
                   {showCosts && (() => {
-                    const sumK = (k) => hotelStays.reduce((acc, st) => acc + (parseFloat(st[k]) || 0), 0)
-                    const ct  = sumK('city_tax_total')
-                    const nv  = sumK('total_cost_no_vat')
-                    const tv  = sumK('total_cost_vat')
-                    const f   = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
-                    const cs  = { padding: '5px 6px', fontSize: '10px', fontWeight: '900', textAlign: 'right', fontFamily: 'monospace', color: 'white', background: '#14532d', borderLeft: '1px solid #166534', whiteSpace: 'nowrap' }
+                    const totals = hotelStays.reduce((acc, st) => {
+                      const c = stayComputedCosts(st)
+                      return { nv: acc.nv + c.nv, tv: acc.tv + c.tv, ct: acc.ct + c.ct }
+                    }, { nv: 0, tv: 0, ct: 0 })
+                    const { nv, tv, ct } = totals
+                    const f  = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+                    const cs = { padding: '5px 6px', fontSize: '10px', fontWeight: '900', textAlign: 'right', fontFamily: 'monospace', color: 'white', background: '#14532d', borderLeft: '1px solid #166534', whiteSpace: 'nowrap' }
                     return (
                       <>
                         <td style={cs}>{f(ct)}</td>
