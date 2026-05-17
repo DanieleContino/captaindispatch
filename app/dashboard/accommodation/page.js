@@ -125,15 +125,17 @@ const SELECT_FIELDS = `
   id, production_id, crew_id, hotel_id, arrival_date, departure_date,
   room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
   total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
+  room_type_id, rate_override, cost_per_night_vat, vat_pct,
   crew:crew_id(id, full_name, role, department),
   hotel:hotel_id(id, name),
-  subgroup:subgroup_id(id, name)
+  subgroup:subgroup_id(id, name),
+  room_type:room_type_id(id, name, rate_no_vat, vat_pct, city_tax_night)
 `
 
 // ─── EMPTY_STAY ────────────────────────────────────────────────
 const EMPTY_STAY = {
   id: null, crew_id: null, hotel_id: '', arrival_date: '', departure_date: '',
-  subgroup_id: null,
+  subgroup_id: null, room_type_id: null, rate_override: false,
   room_type_notes: '', cost_per_night: '', city_tax_total: '',
   total_cost_no_vat: '', total_cost_vat: '', po_number: '', invoice_number: '',
 }
@@ -611,6 +613,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   const [crewResults, setCrewResults]   = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
   const [hotelSubgroups, setHotelSubgroups] = useState([])
+  const [hotelRoomTypes, setHotelRoomTypes] = useState([])
   const notesRef = React.useRef(null)
 
   useEffect(() => {
@@ -622,6 +625,8 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         crew_id:           initial.crew_id           || null,
         hotel_id:          initial.hotel_id          || '',
         subgroup_id:       initial.subgroup_id       || null,
+        room_type_id:      initial.room_type_id      || null,
+        rate_override:     initial.rate_override     || false,
         arrival_date:      initial.arrival_date      || '',
         departure_date:    initial.departure_date    || '',
         room_type_notes:   initial.room_type_notes   || '',
@@ -665,26 +670,43 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     await supabase.from('crew').update({ hotel_id: allStays[allStays.length - 1]?.hotel_id || null, arrival_date: arrivals[0] || null, departure_date: departures[departures.length - 1] || null }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
   }
 
-  // Load subgroups when hotel changes
+  // Load subgroups + room types when hotel changes
   useEffect(() => {
-    if (!form.hotel_id || !PRODUCTION_ID) { setHotelSubgroups([]); return }
+    if (!form.hotel_id || !PRODUCTION_ID) { setHotelSubgroups([]); setHotelRoomTypes([]); return }
     supabase.from('hotel_subgroups').select('id, name').eq('production_id', PRODUCTION_ID).eq('hotel_id', form.hotel_id).order('display_order').order('name').then(({ data }) => setHotelSubgroups(data || []))
+    // Load room types via hotels table (hotel_id in hotel_room_types is UUID from hotels, not location id)
+    supabase.from('hotels').select('id').eq('production_id', PRODUCTION_ID).eq('location_id', form.hotel_id).maybeSingle().then(({ data: hotelRow }) => {
+      if (!hotelRow) { setHotelRoomTypes([]); return }
+      supabase.from('hotel_room_types').select('id, name, rate_no_vat, vat_pct, city_tax_night').eq('hotel_id', hotelRow.id).order('display_order').order('created_at').then(({ data }) => setHotelRoomTypes(data || []))
+    })
   }, [form.hotel_id, PRODUCTION_ID])
 
   function buildRow() {
+    const rt = hotelRoomTypes.find(r => r.id === form.room_type_id) || null
+    const nights = nightsBetween(form.arrival_date, form.departure_date) || 0
+    // Auto-calculate costs from room type unless rate_override
+    const rateNoVat  = (!form.rate_override && rt) ? rt.rate_no_vat  : (form.cost_per_night    !== '' ? parseFloat(form.cost_per_night)    : null)
+    const vatPct     = (!form.rate_override && rt) ? rt.vat_pct      : null
+    const cityTaxN   = (!form.rate_override && rt) ? rt.city_tax_night : null
+    const totNoVat   = rateNoVat != null && nights > 0 ? rateNoVat * nights : (form.total_cost_no_vat !== '' ? parseFloat(form.total_cost_no_vat) : null)
+    const rateVat    = rateNoVat != null && vatPct != null ? rateNoVat * (1 + vatPct / 100) : null
+    const totVat     = rateVat   != null && nights > 0 ? rateVat * nights : (form.total_cost_vat !== '' ? parseFloat(form.total_cost_vat) : null)
+    const cityTaxTot = cityTaxN  != null && nights > 0 ? cityTaxN * nights : (form.city_tax_total !== '' ? parseFloat(form.city_tax_total) : null)
     return {
       production_id:     PRODUCTION_ID,
-      crew_id:           form.crew_id || null,
-      hotel_id:          form.hotel_id || null,
+      crew_id:           form.crew_id    || null,
+      hotel_id:          form.hotel_id   || null,
       subgroup_id:       form.subgroup_id || null,
-      arrival_date:      form.arrival_date || null,
+      room_type_id:      form.room_type_id || null,
+      rate_override:     form.rate_override || false,
+      arrival_date:      form.arrival_date  || null,
       departure_date:    form.departure_date || null,
       room_type_notes:   (form.room_type_notes || '').trim() || null,
-      cost_per_night:    form.cost_per_night    !== '' ? parseFloat(form.cost_per_night)    : null,
-      city_tax_total:    form.city_tax_total    !== '' ? parseFloat(form.city_tax_total)    : null,
-      total_cost_no_vat: form.total_cost_no_vat !== '' ? parseFloat(form.total_cost_no_vat) : null,
-      total_cost_vat:    form.total_cost_vat    !== '' ? parseFloat(form.total_cost_vat)    : null,
-      po_number:         (form.po_number || '').trim() || null,
+      cost_per_night:    rateNoVat,
+      city_tax_total:    cityTaxTot,
+      total_cost_no_vat: totNoVat,
+      total_cost_vat:    totVat,
+      po_number:         (form.po_number    || '').trim() || null,
       invoice_number:    (form.invoice_number || '').trim() || null,
     }
   }
@@ -791,17 +813,66 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
               <input value={form.room_type_notes} onChange={e => set('room_type_notes', e.target.value)} style={inp} placeholder="Room type, number, preferences..." />
             </div>
 
-            {/* Cost fields */}
+            {/* Room Type + Cost */}
             <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Cost (optional)</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
-                <div><label style={lbl}>€/night</label><input type="number" step="0.01" value={form.cost_per_night} onChange={e => set('cost_per_night', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
-                <div><label style={lbl}>City tax total</label><input type="number" step="0.01" value={form.city_tax_total} onChange={e => set('city_tax_total', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Room Type & Cost</div>
+
+              {/* Room Type dropdown */}
+              <div style={rowSt}>
+                <label style={lbl}>Room Type</label>
+                {hotelRoomTypes.length === 0 ? (
+                  <div style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', padding: '6px 0' }}>
+                    {form.hotel_id ? 'No room types configured for this hotel' : 'Select a hotel first'}
+                  </div>
+                ) : (
+                  <select value={form.room_type_id || ''} onChange={e => { set('room_type_id', e.target.value || null); set('rate_override', false) }} style={{ ...inp, cursor: 'pointer' }}>
+                    <option value="">— No room type —</option>
+                    {hotelRoomTypes.map(rt => <option key={rt.id} value={rt.id}>{rt.name}</option>)}
+                  </select>
+                )}
+                {/* Preview tariffa */}
+                {form.room_type_id && (() => {
+                  const rt = hotelRoomTypes.find(r => r.id === form.room_type_id)
+                  if (!rt) return null
+                  const nights = nightsBetween(form.arrival_date, form.departure_date)
+                  return (
+                    <div style={{ marginTop: '6px', padding: '7px 10px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '7px', fontSize: '11px', color: '#15803d' }}>
+                      <span style={{ fontWeight: '700' }}>€{rt.rate_no_vat}/n</span>
+                      {rt.vat_pct != null && <span style={{ marginLeft: '8px', color: '#64748b' }}>IVA {rt.vat_pct}%</span>}
+                      {rt.city_tax_night != null && <span style={{ marginLeft: '8px', color: '#64748b' }}>city tax €{rt.city_tax_night}/n</span>}
+                      {nights > 0 && rt.rate_no_vat != null && (
+                        <span style={{ marginLeft: '8px', fontWeight: '800' }}>→ TOT €{(rt.rate_no_vat * (1 + (rt.vat_pct || 0) / 100) * nights + (rt.city_tax_night || 0) * nights).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
-                <div><label style={lbl}>Tot. no VAT</label><input type="number" step="0.01" value={form.total_cost_no_vat} onChange={e => set('total_cost_no_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
-                <div><label style={lbl}>Tot. + VAT</label><input type="number" step="0.01" value={form.total_cost_vat} onChange={e => set('total_cost_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
-              </div>
+
+              {/* Override checkbox */}
+              {form.room_type_id && (
+                <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => set('rate_override', !form.rate_override)}>
+                  <div style={{ width: '16px', height: '16px', border: `2px solid ${form.rate_override ? '#2563eb' : '#cbd5e1'}`, borderRadius: '4px', background: form.rate_override ? '#2563eb' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {form.rate_override && <span style={{ color: 'white', fontSize: '10px', fontWeight: '900' }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#374151', fontWeight: '600' }}>Override rate (tariffa diversa dalla room type)</span>
+                </div>
+              )}
+
+              {/* Override fields — solo se rate_override o nessuna room type */}
+              {(form.rate_override || !form.room_type_id) && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+                    <div><label style={lbl}>€/night (no VAT)</label><input type="number" step="0.01" value={form.cost_per_night} onChange={e => set('cost_per_night', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
+                    <div><label style={lbl}>City tax total</label><input type="number" step="0.01" value={form.city_tax_total} onChange={e => set('city_tax_total', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+                    <div><label style={lbl}>Tot. no VAT</label><input type="number" step="0.01" value={form.total_cost_no_vat} onChange={e => set('total_cost_no_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
+                    <div><label style={lbl}>Tot. + VAT</label><input type="number" step="0.01" value={form.total_cost_vat} onChange={e => set('total_cost_vat', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" /></div>
+                  </div>
+                </>
+              )}
+
+              {/* P.O. e N°Fatt. — sempre visibili */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                 <div><label style={lbl}>P.O.</label><input value={form.po_number} onChange={e => set('po_number', e.target.value)} style={inp} placeholder="P.O. number" /></div>
                 <div><label style={lbl}>N°Fatt.</label><input value={form.invoice_number} onChange={e => set('invoice_number', e.target.value)} style={inp} placeholder="Invoice #" /></div>
