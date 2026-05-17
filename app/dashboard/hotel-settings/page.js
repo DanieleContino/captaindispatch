@@ -646,8 +646,10 @@ export default function HotelSettingsPage() {
   const [userRole,   setUserRole]   = useState(null)
   const [locations,  setLocations]  = useState([])   // hotel locations
   const [hotelsMap,  setHotelsMap]  = useState({})   // { location_id: hotels row }
-  const [roomCounts, setRoomCounts] = useState({})   // { hotel_id: count }
-  const [extraCounts,setExtraCounts]= useState({})   // { hotel_id: count }
+  const [roomCounts,   setRoomCounts]   = useState({})  // { hotel_id: count }
+  const [extraCounts,  setExtraCounts]  = useState({})  // { hotel_id: count }
+  const [roomTypesMap, setRoomTypesMap] = useState({})  // { hotel_id: [rt, ...] }
+  const [extrasMap,    setExtrasMap]    = useState({})  // { hotel_id: [ex, ...] }
   const [loading,    setLoading]    = useState(true)
 
   // Sidebar
@@ -688,34 +690,41 @@ export default function HotelSettingsPage() {
       }
     }
 
-    // Load room type counts
+    // Load room types — full data
     const { data: rts } = await supabase.from('hotel_room_types')
-      .select('id, hotel_id')
+      .select('id, hotel_id, name, rate_no_vat, vat_pct, city_tax_night, notes')
       .eq('production_id', PRODUCTION_ID)
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: true })
 
-    const rcMap = {}
+    const rtMap = {}  // { hotel_id: [room_type, ...] }
     if (rts) {
       for (const rt of rts) {
-        rcMap[rt.hotel_id] = (rcMap[rt.hotel_id] || 0) + 1
+        if (!rtMap[rt.hotel_id]) rtMap[rt.hotel_id] = []
+        rtMap[rt.hotel_id].push(rt)
       }
     }
 
-    // Load extra costs counts
+    // Load extra costs — full data
     const { data: exs } = await supabase.from('hotel_extra_costs')
-      .select('id, hotel_id')
+      .select('id, hotel_id, label, amount_no_vat, vat_pct, item_type, notes')
       .eq('production_id', PRODUCTION_ID)
+      .order('created_at', { ascending: true })
 
-    const ecMap = {}
+    const exMap = {}  // { hotel_id: [extra, ...] }
     if (exs) {
       for (const ex of exs) {
-        ecMap[ex.hotel_id] = (ecMap[ex.hotel_id] || 0) + 1
+        if (!exMap[ex.hotel_id]) exMap[ex.hotel_id] = []
+        exMap[ex.hotel_id].push(ex)
       }
     }
 
     setLocations(locs || [])
     setHotelsMap(hMap)
-    setRoomCounts(rcMap)
-    setExtraCounts(ecMap)
+    setRoomCounts(Object.fromEntries(Object.entries(rtMap).map(([k, v]) => [k, v.length])))
+    setExtraCounts(Object.fromEntries(Object.entries(exMap).map(([k, v]) => [k, v.length])))
+    setRoomTypesMap(rtMap)
+    setExtrasMap(exMap)
     setLoading(false)
   }, [PRODUCTION_ID])
 
@@ -766,6 +775,8 @@ export default function HotelSettingsPage() {
       notes_ops:     hotelRow?.notes_ops || null,
       roomCount:     hotelRow ? (roomCounts[hotelRow.id]  || 0) : 0,
       extraCount:    hotelRow ? (extraCounts[hotelRow.id] || 0) : 0,
+      roomTypes:     hotelRow ? (roomTypesMap[hotelRow.id] || []) : [],
+      extras:        hotelRow ? (extrasMap[hotelRow.id]    || []) : [],
     }
   })
 
@@ -823,80 +834,133 @@ export default function HotelSettingsPage() {
             </button>
           </div>
         ) : (
-          /* Hotel cards list */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          /* Hotel cards grid — 3 colonne */
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
             {hotelCards.map(hotel => (
               <div key={hotel.location_id} style={{
-                background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px',
-                borderLeft: '4px solid #15803d',
-                padding: '14px 18px',
-                display: 'flex', alignItems: 'center', gap: '16px',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px',
+                borderTop: '4px solid #15803d',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                display: 'flex', flexDirection: 'column',
+                overflow: 'hidden',
               }}>
-                {/* Left info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* Row 1: icon + name + id badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '16px' }}>🏨</span>
-                    <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>{hotel.name}</span>
-                    <span style={{
-                      fontFamily: 'monospace', fontSize: '10px', fontWeight: '700',
-                      background: '#f1f5f9', color: '#475569',
-                      padding: '2px 7px', borderRadius: '4px', border: '1px solid #e2e8f0',
-                      flexShrink: 0,
-                    }}>
-                      {hotel.location_id}
-                    </span>
-                  </div>
-                  {/* Row 2: address */}
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px', paddingLeft: '24px' }}>
-                    {hotel.address || hotel.city
-                      ? [hotel.address, hotel.city].filter(Boolean).join(', ')
-                      : <span style={{ fontStyle: 'italic', color: '#cbd5e1' }}>—</span>
-                    }
-                  </div>
-                  {/* Row 3: pills */}
-                  <div style={{ display: 'flex', gap: '6px', paddingLeft: '24px', flexWrap: 'wrap' }}>
-                    <span style={{
-                      fontSize: '11px', fontWeight: '700',
-                      background: hotel.roomCount > 0 ? '#f0fdf4' : '#f8fafc',
-                      color: hotel.roomCount > 0 ? '#15803d' : '#94a3b8',
-                      border: `1px solid ${hotel.roomCount > 0 ? '#86efac' : '#e2e8f0'}`,
-                      padding: '2px 8px', borderRadius: '999px',
-                    }}>
-                      🛏 {hotel.roomCount} room type{hotel.roomCount !== 1 ? 's' : ''}
-                    </span>
-                    <span style={{
-                      fontSize: '11px', fontWeight: '700',
-                      background: hotel.extraCount > 0 ? '#eff6ff' : '#f8fafc',
-                      color: hotel.extraCount > 0 ? '#1d4ed8' : '#94a3b8',
-                      border: `1px solid ${hotel.extraCount > 0 ? '#bfdbfe' : '#e2e8f0'}`,
-                      padding: '2px 8px', borderRadius: '999px',
-                    }}>
-                      ➕ {hotel.extraCount} extra{hotel.extraCount !== 1 ? 's' : ''}
-                    </span>
-                    {!hotel.hotel_id && (
-                      <span style={{
-                        fontSize: '11px', fontWeight: '700',
-                        background: '#fef2f2', color: '#dc2626',
-                        border: '1px solid #fecaca',
-                        padding: '2px 8px', borderRadius: '999px',
-                      }}>
-                        ⚠ No hotel record
+                {/* Card header */}
+                <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '15px' }}>🏨</span>
+                        <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a', lineHeight: 1.3 }}>{hotel.name}</span>
+                      </div>
+                      <span style={{ fontFamily: 'monospace', fontSize: '10px', fontWeight: '700', background: '#f1f5f9', color: '#475569', padding: '1px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                        {hotel.location_id}
                       </span>
-                    )}
+                    </div>
+                    <button onClick={() => hotel.hotel_id ? openEdit(hotel) : openNew(hotel)} style={{
+                      padding: '5px 10px', borderRadius: '7px', border: '1px solid #e2e8f0',
+                      background: 'white', color: '#374151', fontSize: '12px', fontWeight: '700',
+                      cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
+                    }}>✎ Edit</button>
                   </div>
+
+                  {/* Indirizzo */}
+                  {(hotel.address || hotel.city) && (
+                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>
+                      📍 {[hotel.address, hotel.city, hotel.country].filter(Boolean).join(', ')}
+                    </div>
+                  )}
+                  {/* Contatti */}
+                  {hotel.phone && <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>📞 {hotel.phone}</div>}
+                  {hotel.email && <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>✉ {hotel.email}</div>}
+                  {hotel.contact_name && (
+                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>
+                      👤 {hotel.contact_name}{hotel.contact_phone ? ` · ${hotel.contact_phone}` : ''}
+                    </div>
+                  )}
+                  {hotel.maps_url && (
+                    <a href={hotel.maps_url} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', display: 'inline-block', marginTop: '2px' }}>
+                      🗺 Google Maps
+                    </a>
+                  )}
+                  {!hotel.hotel_id && (
+                    <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '3px 8px', borderRadius: '6px', display: 'inline-block' }}>
+                      ⚠ No hotel record — click Edit to configure
+                    </div>
+                  )}
                 </div>
 
-                {/* Edit button */}
-                <button onClick={() => hotel.hotel_id ? openEdit(hotel) : openNew(hotel)} style={{
-                  padding: '7px 14px', borderRadius: '8px',
-                  border: '1px solid #e2e8f0', background: 'white',
-                  color: '#374151', fontSize: '13px', fontWeight: '700',
-                  cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
-                }}>
-                  ✎ Edit
-                </button>
+                {/* Room Types */}
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9', flex: 1 }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                    🛏 Room Types {hotel.roomCount > 0 && <span style={{ fontWeight: '600', color: '#64748b' }}>({hotel.roomCount})</span>}
+                  </div>
+                  {hotel.roomTypes.length === 0 ? (
+                    <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>No room types configured</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {hotel.roomTypes.map(rt => (
+                        <div key={rt.id} style={{ padding: '7px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px' }}>
+                          <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{rt.name}</div>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {rt.rate_no_vat != null && (
+                              <span style={{ fontSize: '11px', fontWeight: '700', color: '#15803d', fontFamily: 'monospace' }}>
+                                €{rt.rate_no_vat}/n
+                              </span>
+                            )}
+                            {rt.vat_pct != null && (
+                              <span style={{ fontSize: '10px', color: '#64748b' }}>IVA {rt.vat_pct}%</span>
+                            )}
+                            {rt.city_tax_night != null && (
+                              <span style={{ fontSize: '10px', color: '#64748b' }}>city tax €{rt.city_tax_night}/n</span>
+                            )}
+                            {rt.rate_no_vat != null && rt.vat_pct != null && (
+                              <span style={{ fontSize: '10px', color: '#475569', fontFamily: 'monospace' }}>
+                                → €{(rt.rate_no_vat * (1 + rt.vat_pct / 100)).toFixed(2)}/n VAT incl.
+                              </span>
+                            )}
+                          </div>
+                          {rt.notes && <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px', fontStyle: 'italic' }}>{rt.notes}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Extras */}
+                <div style={{ padding: '10px 16px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                    ➕ Extras {hotel.extraCount > 0 && <span style={{ fontWeight: '600', color: '#64748b' }}>({hotel.extraCount})</span>}
+                  </div>
+                  {hotel.extras.length === 0 ? (
+                    <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>No extras configured</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {hotel.extras.map(ex => (
+                        <div key={ex.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: '4px', flexShrink: 0 }}>
+                            {ex.item_type}
+                          </span>
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#0f172a', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.label}</span>
+                          {ex.amount_no_vat != null && (
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: '#374151', fontFamily: 'monospace', flexShrink: 0 }}>€{ex.amount_no_vat}</span>
+                          )}
+                          {ex.vat_pct != null && (
+                            <span style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0 }}>+{ex.vat_pct}%</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes operative */}
+                {hotel.notes_ops && (
+                  <div style={{ padding: '8px 16px', background: '#fffbeb', borderTop: '1px solid #fde68a' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px' }}>📋 Notes</div>
+                    <div style={{ fontSize: '11px', color: '#78350f', lineHeight: 1.4 }}>{hotel.notes_ops}</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
