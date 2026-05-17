@@ -17,7 +17,7 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
 
   // INFO form state
   const EMPTY_FORM = {
-    name: '', address: '', city: '', country: '', phone: '', email: '',
+    name: '', address: '', city: '', zip: '', country: '', phone: '', email: '',
     website: '', contact_name: '', contact_phone: '', notes_ops: '',
     lat: '', lng: '', place_id: '', maps_url: '',
   }
@@ -73,30 +73,15 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
       loadRoomTypes(initial.hotel_id)
       loadExtras(initial.hotel_id)
     } else {
-      // Parse default_pickup_point into address/city/country
-      const pickup = initial?.default_pickup_point || ''
-      let parsedAddress = pickup, parsedCity = '', parsedCountry = ''
-      if (pickup) {
-        const parts = pickup.split(',').map(p => p.trim()).filter(Boolean)
-        if (parts.length >= 3) {
-          parsedCountry = parts[parts.length - 1]
-          // city part: remove CAP (digits at start) from second-to-last part
-          const cityRaw = parts[parts.length - 2]
-          parsedCity = cityRaw.replace(/^\d+\s*/, '').trim()
-          parsedAddress = parts.slice(0, parts.length - 2).join(', ')
-        } else if (parts.length === 2) {
-          parsedCountry = parts[1]
-          parsedAddress = parts[0]
-        }
-      }
       setForm({
         ...EMPTY_FORM,
-        name:    initial?.name || '',
-        lat:     initial?.lat  != null ? String(initial.lat)  : '',
-        lng:     initial?.lng  != null ? String(initial.lng)  : '',
-        address: parsedAddress,
-        city:    parsedCity,
-        country: parsedCountry,
+        name:    initial?.name    || '',
+        lat:     initial?.lat     != null ? String(initial.lat) : '',
+        lng:     initial?.lng     != null ? String(initial.lng) : '',
+        address: initial?.address || '',
+        city:    initial?.city    || '',
+        zip:     initial?.zip     || '',
+        country: initial?.country || '',
       })
       setRoomTypes([])
       setExtras([])
@@ -242,12 +227,15 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
           .update(hotelRow)
           .eq('id', initial.hotel_id)
         if (hotelErr) { setError(hotelErr.message); return }
-        // If lat/lng updated via Places, also update location
-        if (lat != null && lng != null) {
-          await supabase.from('locations')
-            .update({ lat, lng })
-            .eq('id', initial.location_id)
+        // Always sync address/city/zip/country + lat/lng to locations
+        const locUpdate = {
+          address: form.address.trim() || null,
+          city:    form.city.trim()    || null,
+          zip:     form.zip.trim()     || null,
+          country: form.country.trim() || null,
         }
+        if (lat != null && lng != null) { locUpdate.lat = lat; locUpdate.lng = lng }
+        await supabase.from('locations').update(locUpdate).eq('id', initial.location_id)
       }
       onSaved()
     } finally { setSaving(false) }
@@ -417,11 +405,15 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
                   <input value={form.address} onChange={e => set('address', e.target.value)} style={inp} placeholder="Via della Repubblica, 42" />
                 </div>
 
-                {/* City + Country */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                {/* City + ZIP + Country */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr', gap: '8px', marginBottom: '12px' }}>
                   <div>
                     <label style={lbl}>City</label>
-                    <input value={form.city} onChange={e => set('city', e.target.value)} style={inp} placeholder="Roma" />
+                    <input value={form.city} onChange={e => set('city', e.target.value)} style={inp} placeholder="Monopoli" />
+                  </div>
+                  <div>
+                    <label style={lbl}>ZIP</label>
+                    <input value={form.zip} onChange={e => set('zip', e.target.value)} style={inp} placeholder="70043" />
                   </div>
                   <div>
                     <label style={lbl}>Country</label>
@@ -697,7 +689,7 @@ export default function HotelSettingsPage() {
 
     // Load hotel locations
     const { data: locs } = await supabase.from('locations')
-      .select('id, name, lat, lng, default_pickup_point')
+      .select('id, name, lat, lng, default_pickup_point, address, city, zip, country')
       .eq('production_id', PRODUCTION_ID)
       .eq('is_hotel', true)
       .order('name', { ascending: true })
@@ -787,11 +779,12 @@ export default function HotelSettingsPage() {
       lat:                  loc.lat,
       lng:                  loc.lng,
       default_pickup_point: loc.default_pickup_point || null,
+      address:              loc.address  || hotelRow?.address || null,
+      city:                 loc.city     || hotelRow?.city    || null,
+      zip:                  loc.zip      || null,
+      country:              loc.country  || hotelRow?.country || null,
       hotel_id:             hotelRow?.id      || null,
-      address:       hotelRow?.address || null,
-      city:          hotelRow?.city    || null,
-      country:       hotelRow?.country || null,
-      phone:         hotelRow?.phone   || null,
+      phone:                hotelRow?.phone   || null,
       email:         hotelRow?.email   || null,
       website:       hotelRow?.website || null,
       contact_name:  hotelRow?.contact_name  || null,
@@ -892,7 +885,7 @@ export default function HotelSettingsPage() {
                   {/* Indirizzo */}
                   {(hotel.address || hotel.city) && (
                     <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>
-                      📍 {[hotel.address, hotel.city, hotel.country].filter(Boolean).join(', ')}
+                      📍 {[hotel.address, [hotel.zip, hotel.city].filter(Boolean).join(' '), hotel.country].filter(Boolean).join(', ')}
                     </div>
                   )}
                   {/* Contatti */}
