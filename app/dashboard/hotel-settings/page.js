@@ -75,9 +75,10 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
     } else {
       setForm({
         ...EMPTY_FORM,
-        name: initial?.name || '',
-        lat:  initial?.lat  != null ? String(initial.lat)  : '',
-        lng:  initial?.lng  != null ? String(initial.lng)  : '',
+        name:    initial?.name || '',
+        lat:     initial?.lat  != null ? String(initial.lat)  : '',
+        lng:     initial?.lng  != null ? String(initial.lng)  : '',
+        address: initial?.default_pickup_point || '',
       })
       setRoomTypes([])
       setExtras([])
@@ -659,7 +660,13 @@ export default function HotelSettingsPage() {
 
   function openNew(preselectedLocation) {
     setSidebarMode('new')
-    setSidebarTarget(preselectedLocation ? { location_id: preselectedLocation.location_id, name: preselectedLocation.name, lat: preselectedLocation.lat, lng: preselectedLocation.lng } : null)
+    setSidebarTarget(preselectedLocation ? {
+      location_id:          preselectedLocation.location_id,
+      name:                 preselectedLocation.name,
+      lat:                  preselectedLocation.lat,
+      lng:                  preselectedLocation.lng,
+      default_pickup_point: preselectedLocation.default_pickup_point || null,
+    } : null)
     setSidebarOpen(true)
   }
   function openEdit(hotelData) {
@@ -672,7 +679,7 @@ export default function HotelSettingsPage() {
 
     // Load hotel locations
     const { data: locs } = await supabase.from('locations')
-      .select('id, name, lat, lng')
+      .select('id, name, lat, lng, default_pickup_point')
       .eq('production_id', PRODUCTION_ID)
       .eq('is_hotel', true)
       .order('name', { ascending: true })
@@ -757,11 +764,12 @@ export default function HotelSettingsPage() {
   const hotelCards = locations.map(loc => {
     const hotelRow = hotelsMap[loc.id] || null
     return {
-      location_id:   loc.id,
-      name:          loc.name,
-      lat:           loc.lat,
-      lng:           loc.lng,
-      hotel_id:      hotelRow?.id      || null,
+      location_id:          loc.id,
+      name:                 loc.name,
+      lat:                  loc.lat,
+      lng:                  loc.lng,
+      default_pickup_point: loc.default_pickup_point || null,
+      hotel_id:             hotelRow?.id      || null,
       address:       hotelRow?.address || null,
       city:          hotelRow?.city    || null,
       country:       hotelRow?.country || null,
