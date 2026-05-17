@@ -73,7 +73,12 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
       loadRoomTypes(initial.hotel_id)
       loadExtras(initial.hotel_id)
     } else {
-      setForm(EMPTY_FORM)
+      setForm({
+        ...EMPTY_FORM,
+        name: initial?.name || '',
+        lat:  initial?.lat  != null ? String(initial.lat)  : '',
+        lng:  initial?.lng  != null ? String(initial.lng)  : '',
+      })
       setRoomTypes([])
       setExtras([])
     }
@@ -180,17 +185,19 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
       const lng = form.lng !== '' ? parseFloat(form.lng) : null
 
       if (mode === 'new') {
-        // Check if location already exists
-        const { data: existing } = await supabase.from('locations')
-          .select('id, name')
-          .eq('production_id', productionId)
-          .ilike('name', form.name.trim())
-          .maybeSingle()
-
         let location_id
-        if (existing) {
-          location_id = existing.id
+        if (initial?.location_id) {
+          // Location already exists — just create the hotels row
+          location_id = initial.location_id
         } else {
+          const { data: existing } = await supabase.from('locations')
+            .select('id, name')
+            .eq('production_id', productionId)
+            .ilike('name', form.name.trim())
+            .maybeSingle()
+          if (existing) {
+            location_id = existing.id
+          } else {
           const genId = form.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 20)
           const { error: locErr } = await supabase.from('locations').insert({
             id:           genId,
@@ -202,6 +209,7 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
           })
           if (locErr) { setError(locErr.message); return }
           location_id = genId
+          }
         }
 
         const { error: hotelErr } = await supabase.from('hotels').insert({
@@ -643,8 +651,10 @@ export default function HotelSettingsPage() {
   const [sidebarMode,   setSidebarMode]   = useState('new')
   const [sidebarTarget, setSidebarTarget] = useState(null)
 
-  function openNew() {
-    setSidebarMode('new'); setSidebarTarget(null); setSidebarOpen(true)
+  function openNew(preselectedLocation) {
+    setSidebarMode('new')
+    setSidebarTarget(preselectedLocation ? { location_id: preselectedLocation.location_id, name: preselectedLocation.name, lat: preselectedLocation.lat, lng: preselectedLocation.lng } : null)
+    setSidebarOpen(true)
   }
   function openEdit(hotelData) {
     setSidebarMode('edit'); setSidebarTarget(hotelData); setSidebarOpen(true)
@@ -875,7 +885,7 @@ export default function HotelSettingsPage() {
                 </div>
 
                 {/* Edit button */}
-                <button onClick={() => openEdit(hotel)} style={{
+                <button onClick={() => hotel.hotel_id ? openEdit(hotel) : openNew(hotel)} style={{
                   padding: '7px 14px', borderRadius: '8px',
                   border: '1px solid #e2e8f0', background: 'white',
                   color: '#374151', fontSize: '13px', fontWeight: '700',

@@ -1148,6 +1148,10 @@ export default function AccommodationPage() {
             style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none' }}>
             💰 Cost Report
           </a>
+          <a href="/dashboard/hotel-settings"
+            style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none' }}>
+            🏨 Hotel Settings
+          </a>
         </div>
       </div>
 
