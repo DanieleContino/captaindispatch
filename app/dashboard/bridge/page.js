@@ -253,11 +253,35 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
 
       // Multi-stay mode: create crew_stays for both date ranges
       if (Object.values(multiStay).some(Boolean)) {
-        const staysToCreate = mergeCtx.selCrew
-          .filter(c => c.arrival_date || c.departure_date)
-          .map(c => ({ crew_id: primaryId, production_id: productionId, hotel_id: c.hotel_id || null, arrival_date: c.arrival_date || null, departure_date: c.departure_date || null }))
-        if (staysToCreate.length > 0) {
-          await supabase.from('crew_stays').upsert(staysToCreate, { ignoreDuplicates: true })
+        // Se "Keep both hotels" è selezionato, crea una stay per ciascun crew
+        // usando hotel e date specifici di ciascuno
+        if (multiStay.hotel_id) {
+          const staysToCreate = mergeCtx.selCrew
+            .filter(c => c.hotel_id || c.arrival_date || c.departure_date)
+            .map(c => ({
+              crew_id:        primaryId,
+              production_id:  productionId,
+              hotel_id:       c.hotel_id       || null,
+              arrival_date:   c.arrival_date   || null,
+              departure_date: c.departure_date || null,
+            }))
+          if (staysToCreate.length > 0) {
+            await supabase.from('crew_stays').upsert(staysToCreate, { ignoreDuplicates: true })
+          }
+        } else {
+          // Logica originale — solo multi-date senza hotel diversi
+          const staysToCreate = mergeCtx.selCrew
+            .filter(c => c.arrival_date || c.departure_date)
+            .map(c => ({
+              crew_id:        primaryId,
+              production_id:  productionId,
+              hotel_id:       c.hotel_id       || null,
+              arrival_date:   c.arrival_date   || null,
+              departure_date: c.departure_date || null,
+            }))
+          if (staysToCreate.length > 0) {
+            await supabase.from('crew_stays').upsert(staysToCreate, { ignoreDuplicates: true })
+          }
         }
       }
 
@@ -447,6 +471,12 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
                           {multiStay[key] ? '✓' : '○'} 📅 Keep both dates → creates 2 separate stays for this person
                         </div>
                       )}
+                      {key === 'hotel_id' && !isIdentical && (
+                        <div onClick={() => setMultiStay(p => ({ ...p, hotel_id: !p.hotel_id }))}
+                          style={{ padding: '5px 10px 5px 110px', fontSize: '11px', cursor: 'pointer', background: multiStay.hotel_id ? '#f0fdf4' : '#fafafa', borderBottom: '1px solid #f1f5f9', color: multiStay.hotel_id ? '#15803d' : '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px', userSelect: 'none', boxShadow: multiStay.hotel_id ? 'inset 3px 0 0 #15803d' : 'none' }}>
+                          {multiStay.hotel_id ? '✓' : '○'} 🏨 Keep both hotels → creates 2 separate stays (hotel transfer)
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -458,6 +488,11 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
               {/* Info box */}
               <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 14px', marginBottom: '12px', fontSize: '12px', color: '#1d4ed8' }}>
                 ℹ️ <strong>Travel movements</strong> and <strong>accommodation stays</strong> from all selected records will be reassigned to the primary record.
+                {multiStay.hotel_id && (
+                  <div style={{ marginTop: '6px', color: '#15803d', fontWeight: '700' }}>
+                    🏨 Two separate stays will be created — one per hotel.
+                  </div>
+                )}
               </div>
 
               {/* Warning — with real names, not IDs */}
