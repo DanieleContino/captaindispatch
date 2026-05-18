@@ -36,11 +36,13 @@ function isTomorrow(s) {
 }
 function isToday(s) { return s === isoToday() }
 
-function hotelOccupancy(arrival, departure) {
+function hotelOccupancy(arrival, departure, stillInTransit = false) {
   const today = isoToday()
   if (!arrival && !departure) return null
   if (departure && isToday(departure))    return { label: '🏁 CHK OUT TODAY',    style: { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' } }
   if (departure && isTomorrow(departure)) return { label: '🏁 CHK OUT TOMORROW', style: { bg: '#fff7ed', color: '#c2410c', border: '#fdba74' } }
+  // Se il volo/treno arriva oggi ma non è ancora atterrato → non è ancora in hotel
+  if (arrival && today === arrival && stillInTransit) return { label: '🛬 Arriving Today', style: { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd' } }
   if (arrival && today >= arrival && (!departure || today < departure)) return { label: '🏨 In Hotel', style: { bg: '#f0fdf4', color: '#15803d', border: '#86efac' } }
   if (arrival && today < arrival)         return { label: '🔜 Arriving ' + fmtDate(arrival), style: { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd' } }
   if (departure && today >= departure)    return { label: '🧳 Checked Out', style: { bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' } }
@@ -770,6 +772,17 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
   const [confirmDel, setConfirmDel] = useState(false)
   const [deleting, setDeleting]     = useState(false)
 
+  // Calcola se il membro è ancora in transito oggi (volo non ancora atterrato)
+  // → usato da hotelOccupancy per non mostrare "In Hotel" prima dell'arrivo
+  const todayStr = isoToday()
+  const _nowRome = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' }))
+  const _nowTime = `${String(_nowRome.getHours()).padStart(2, '0')}:${String(_nowRome.getMinutes()).padStart(2, '0')}`
+  const stillInTransit = travelInfo.some(tm =>
+    tm.travel_date === todayStr &&
+    tm.direction === 'IN' &&
+    (!tm.to_time || tm.to_time.slice(0, 5) > _nowTime)
+  )
+
   async function handleDeleteClick() {
     if (!confirmDel) { setConfirmDel(true); return }
     setDeleting(true)
@@ -822,7 +835,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
           {stays.filter(s => s.hotel_id && s.arrival_date && s.departure_date).length > 1 ? (
             stays.filter(s => s.hotel_id && s.arrival_date && s.departure_date).map((s, i) => {
               const sHotel = locations[s.hotel_id] || s.hotel_id || '–'
-              const occ = hotelOccupancy(s.arrival_date, s.departure_date)
+              const occ = hotelOccupancy(s.arrival_date, s.departure_date, s.arrival_date === todayStr && stillInTransit)
               const sDepToday    = isToday(s.departure_date)
               const sDepTomorrow = isTomorrow(s.departure_date)
               return (
@@ -843,7 +856,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
                 </span>
               )}
               {(() => {
-                const occ = hotelOccupancy(member.arrival_date, member.departure_date)
+                const occ = hotelOccupancy(member.arrival_date, member.departure_date, stillInTransit)
                 return occ ? (
                   <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '6px', background: occ.style.bg, color: occ.style.color, border: `1px solid ${occ.style.border}` }}>
                     {occ.label}
