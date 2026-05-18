@@ -1924,11 +1924,6 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                       )
                     })}
                   </div>
-                  <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px', padding: '4px 6px', background: cls.bg, borderRadius: '5px', border: `1px solid ${cls.border}` }}>
-                    {transferClass === 'ARRIVAL'   && `ARRIVAL: hotel=${form.dropoff_id} · arrival_date=date`}
-                    {transferClass === 'DEPARTURE' && `DEPARTURE: hotel=${form.pickup_id} · departure_date=date`}
-                    {transferClass === 'STANDARD'  && `STANDARD: hotel=${form.pickup_id} · arrival<=date<=departure`}
-                  </div>
                 </>
               ) : (
                 <div style={{ padding: '10px', textAlign: 'center', color: '#cbd5e1', fontSize: '12px', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
