@@ -342,7 +342,8 @@ function stayComputedCosts(stay) {
 // ─── CalendarView ──────────────────────────────────────────────
 function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop }) {
   const NAME_W        = 180
-  const ROLE_W        = 120
+  const ROLE_W        = 100
+  const DEPT_W        = 90
   const DAY_W         = 28
   const NIGHT_W       = 44
   const ROOM_W        = 120
@@ -368,7 +369,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
     { key: 'po',            label: 'P.O.',            width: PO_W },
     { key: 'inv',           label: 'N°Fatt.',         width: INV_W },
   ] : []
-  const totalWidth = NAME_W + ROLE_W + days.length * DAY_W + NIGHT_W + ROOM_W + costCols.reduce((s, c) => s + c.width, 0)
+  const totalWidth = NAME_W + ROLE_W + DEPT_W + days.length * DAY_W + NIGHT_W + ROOM_W + costCols.reduce((s, c) => s + c.width, 0)
 
   // Day-of-week abbreviation
   function dayLetter(iso) {
@@ -405,6 +406,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
         <colgroup>
           <col style={{ width: NAME_W + 'px' }} />
           <col style={{ width: ROLE_W + 'px' }} />
+          <col style={{ width: DEPT_W + 'px' }} />
           {days.map(d => <col key={d} style={{ width: DAY_W + 'px' }} />)}
           <col style={{ width: NIGHT_W + 'px' }} />
           <col style={{ width: ROOM_W + 'px' }} />
@@ -416,6 +418,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
           <tr>
             <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: stickyTop, left: 0, background: '#f8fafc', zIndex: 13, boxShadow: '2px 2px 4px rgba(0,0,0,0.08)' }}>NAME</th>
             <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: stickyTop, left: NAME_W, background: '#f8fafc', zIndex: 13, boxShadow: '2px 2px 4px rgba(0,0,0,0.08)' }}>ROLE</th>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '800', color: '#64748b', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: stickyTop, left: NAME_W + ROLE_W, background: '#f8fafc', zIndex: 13, boxShadow: '2px 2px 4px rgba(0,0,0,0.08)' }}>DEPT</th>
             {days.map(d => (
               <th key={d} style={{
                 padding: '2px 1px', textAlign: 'center', fontSize: '9px', fontWeight: d === today ? '900' : '600',
@@ -470,23 +473,29 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
               const nights = nightsBetween(stay.arrival_date, stay.departure_date)
               const isCI   = stay.arrival_date === today
               const isCO   = stay.departure_date === today
-              const rowBg  = stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa')
+              const labelBg = stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa')
+              const rowBg   = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa'
               return (
                 <tr key={stay.id} style={{ background: rowBg }}
                   onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background === '' && (c.style.background = '#f8fafc')) }}
                   onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '#f8fafc') c.style.background = '' }) }}>
 
-                  {/* Name — sticky left 0 */}
+                  {/* Name — sticky left 0, colored */}
                   <td onClick={() => onEditRow(stay, 'full_name')}
-                    style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: rowBg, zIndex: 2, borderBottom: '1px solid #f1f5f9' }}
+                    style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: labelBg, zIndex: 2, borderBottom: '1px solid #f1f5f9', borderLeft: stay.row_color ? `3px solid rgba(0,0,0,0.15)` : 'none' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = rowBg }}>
+                    onMouseLeave={e => { e.currentTarget.style.background = labelBg }}>
                     {stay.crew?.full_name || '—'}
                   </td>
 
-                  {/* Role — sticky left NAME_W */}
-                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9', position: 'sticky', left: NAME_W, background: rowBg, zIndex: 2, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }}>
+                  {/* Role — sticky left NAME_W, colored */}
+                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9', position: 'sticky', left: NAME_W, background: labelBg, zIndex: 2 }}>
                     {stay.crew?.role || '—'}
+                  </td>
+
+                  {/* Dept — sticky left NAME_W + ROLE_W, colored */}
+                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #e2e8f0', position: 'sticky', left: NAME_W + ROLE_W, background: labelBg, zIndex: 2, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }}>
+                    {stay.crew?.department || '—'}
                   </td>
 
                   {/* Day cells */}
@@ -623,7 +632,8 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                           {sg ? `TOTAL ${sg.name.toUpperCase()}` : 'TOTAL (UNGROUPED)'}
                         </td>
                         {/* MODIFICA 8: ROLE cell sticky in subgroup total */}
-                        <td style={{ padding: '4px 8px', fontSize: '9px', color: sg ? '#7c3aed' : '#64748b', borderBottom: '2px solid #d8b4fe', position: 'sticky', left: NAME_W, background: sg ? '#f3e8ff' : '#f8fafc', zIndex: 1, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }} />
+                        <td style={{ padding: '4px 8px', fontSize: '9px', color: sg ? '#7c3aed' : '#64748b', borderBottom: '2px solid #d8b4fe', position: 'sticky', left: NAME_W, background: sg ? '#f3e8ff' : '#f8fafc', zIndex: 1 }} />
+                        <td style={{ padding: '4px 8px', borderBottom: '2px solid #d8b4fe', position: 'sticky', left: NAME_W + ROLE_W, background: sg ? '#f3e8ff' : '#f8fafc', zIndex: 1, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }} />
                         {days.map(d => {
                           const n = countPresent(sectionStays, d)
                           return (
@@ -675,7 +685,8 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     GRAN TOTAL
                   </td>
                   {/* MODIFICA 8: ROLE cell sticky in GRAN TOTAL */}
-                  <td style={{ padding: '5px 8px', background: '#14532d', position: 'sticky', left: NAME_W, zIndex: 1, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }} />
+                  <td style={{ padding: '5px 8px', background: '#14532d', position: 'sticky', left: NAME_W, zIndex: 1 }} />
+                  <td style={{ padding: '5px 8px', background: '#14532d', position: 'sticky', left: NAME_W + ROLE_W, zIndex: 1, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }} />
                   {days.map(d => {
                     const n = countPresent(hotelStays, d)
                     return (
