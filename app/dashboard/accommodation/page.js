@@ -633,6 +633,98 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
 }
 
 // ─── LinkedMovements ──────────────────────────────────────────
+function CrewMovementsPreview({ movements }) {
+  const TYPE_ICONS  = { FLIGHT: '✈️', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴️' }
+  const TYPE_LABELS = { FLIGHT: 'Flight', TRAIN: 'Train', OA: 'OA', SELF: 'Self', GROUND: 'Ground', FERRY: 'Ferry' }
+
+  return (
+    <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+      <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+        ✈️ Travel Movements
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {movements.map(m => {
+          const isIN = m.direction === 'IN'
+          const isLinked = !!m.linked_stay_id
+          return (
+            <div key={m.id} style={{
+              borderRadius: '8px',
+              border: `1px solid ${isIN ? '#86efac' : '#fdba74'}`,
+              overflow: 'hidden',
+              opacity: isLinked ? 0.5 : 1,
+            }}>
+              <div style={{
+                padding: '6px 10px',
+                background: isIN ? '#15803d' : '#c2410c',
+                display: 'flex', alignItems: 'center', gap: '8px',
+              }}>
+                <span style={{ fontSize: '13px' }}>{isIN ? '🛬' : '🛫'}</span>
+                <span style={{ fontSize: '12px', fontWeight: '900', color: 'white', letterSpacing: '0.04em' }}>
+                  {isIN ? 'ARRIVAL' : 'DEPARTURE'}
+                </span>
+                {isLinked && (
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
+                    (already linked)
+                  </span>
+                )}
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', marginLeft: 'auto' }}>
+                  {m.travel_date}
+                </span>
+              </div>
+              <div style={{
+                padding: '8px 10px',
+                background: isIN ? '#f0fdf4' : '#fff7ed',
+                display: 'flex', flexDirection: 'column', gap: '4px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '14px' }}>{TYPE_ICONS[m.travel_type] || '🚐'}</span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#374151' }}>
+                    {TYPE_LABELS[m.travel_type] || m.travel_type}
+                  </span>
+                  {m.travel_number && (
+                    <span style={{
+                      fontFamily: 'monospace', fontSize: '13px', fontWeight: '900',
+                      color: '#2563eb', background: '#eff6ff',
+                      padding: '1px 8px', borderRadius: '5px', border: '1px solid #bfdbfe',
+                    }}>
+                      {m.travel_number}
+                    </span>
+                  )}
+                </div>
+                {(m.from_location || m.to_location) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a' }}>
+                        {m.from_location || '?'}
+                      </span>
+                      {m.from_time && (
+                        <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748b' }}>
+                          {m.from_time.slice(0, 5)}
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontSize: '14px', color: '#94a3b8' }}>→</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a' }}>
+                        {m.to_location || '?'}
+                      </span>
+                      {m.to_time && (
+                        <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748b' }}>
+                          {m.to_time.slice(0, 5)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function LinkedMovements({ stayId, productionId }) {
   const [movements, setMovements] = useState([])
   const [loading,   setLoading]   = useState(true)
@@ -753,7 +845,8 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   const [crewResults, setCrewResults]   = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
   const [hotelSubgroups, setHotelSubgroups] = useState([])
-  const [hotelRoomTypes, setHotelRoomTypes] = useState([])
+  const [hotelRoomTypes,  setHotelRoomTypes]  = useState([])
+  const [crewMovements,   setCrewMovements]   = useState([])
   const notesRef = React.useRef(null)
 
   useEffect(() => {
@@ -856,6 +949,17 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       supabase.from('hotel_room_types').select('id, name, rate_no_vat, vat_pct, city_tax_night').eq('hotel_id', hotelRow.id).order('display_order').order('created_at').then(({ data }) => setHotelRoomTypes(data || []))
     })
   }, [form.hotel_id, PRODUCTION_ID])
+
+  // Carica movimenti del crew member quando crew_id cambia (per anteprima in new mode)
+  useEffect(() => {
+    if (!form.crew_id || !PRODUCTION_ID) { setCrewMovements([]); return }
+    supabase.from('travel_movements')
+      .select('id, direction, travel_date, travel_type, travel_number, from_location, from_time, to_location, to_time, linked_stay_id')
+      .eq('crew_id', form.crew_id)
+      .eq('production_id', PRODUCTION_ID)
+      .order('travel_date', { ascending: true })
+      .then(({ data }) => setCrewMovements(data || []))
+  }, [form.crew_id, PRODUCTION_ID])
 
   function buildRow() {
     const rt = hotelRoomTypes.find(r => r.id === form.room_type_id) || null
@@ -1056,9 +1160,13 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
               </div>
             </div>
 
-            {/* Movimenti di viaggio collegati */}
-            {form.id && form.crew_id && (
-              <LinkedMovements stayId={form.id} productionId={PRODUCTION_ID} />
+            {/* Movimenti di viaggio */}
+            {form.crew_id && (
+              form.id ? (
+                <LinkedMovements stayId={form.id} productionId={PRODUCTION_ID} />
+              ) : crewMovements.length > 0 ? (
+                <CrewMovementsPreview movements={crewMovements} />
+              ) : null
             )}
 
             {/* Notes Panel */}
