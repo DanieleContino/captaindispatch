@@ -931,7 +931,12 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         setTimeout(() => notesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)
       }
     } else {
-      setForm(EMPTY_STAY); setCrewSearch(''); setCrewResults([])
+      setForm({
+        ...EMPTY_STAY,
+        crew_id: initial?.__fromMovement ? (initial.crew_id || null) : null,
+      })
+      setCrewSearch(initial?.__fromMovement ? (initial.crew_full_name || '') : '')
+      setCrewResults([])
     }
   }, [open, mode, initial])
 
@@ -1323,7 +1328,15 @@ export default function AccommodationPage() {
     setTimeout(() => setToast(null), 2500)
   }
 
-  function openNew() { setSidebarMode('new'); setSidebarTarget(null); setSidebarOpen(true) }
+  function openNew(movement) {
+    setSidebarMode('new')
+    setSidebarTarget(movement ? {
+      __fromMovement: true,
+      crew_id:        movement.crew_id        || null,
+      crew_full_name: movement.crew?.full_name || movement.full_name_raw || '',
+    } : null)
+    setSidebarOpen(true)
+  }
   function openEdit(stay, focusField) { setSidebarMode('edit'); setSidebarTarget({ ...stay, __focusField: focusField || null }); setSidebarOpen(true) }
 
   const loadColumnsConfig = useCallback(async () => {
