@@ -86,22 +86,20 @@ function crewWords(name) {
 }
 
 function wordSimilar(a, b) {
-  // Exact match
   if (a === b) return true
-  // One contains the other (giles / gilles)
-  if (a.includes(b) || b.includes(a)) return true
-  // Levenshtein distance ≤ 1 for short words, ≤ 2 for longer
-  const maxDist = Math.max(a.length, b.length) <= 5 ? 1 : 2
-  if (Math.abs(a.length - b.length) > maxDist) return false
+  // Solo fuzzy su parole di almeno 4 caratteri e lunghezza simile (±1)
+  if (a.length < 4 || b.length < 4) return false
+  if (Math.abs(a.length - b.length) > 1) return false
+  // Levenshtein distance ≤ 1 only
   let dist = 0
   const longer = a.length >= b.length ? a : b
   const shorter = a.length < b.length ? a : b
   for (let i = 0, j = 0; i < longer.length; i++) {
     if (longer[i] !== shorter[j]) dist++
     else j++
-    if (dist > maxDist) return false
+    if (dist > 1) return false
   }
-  return dist <= maxDist
+  return dist <= 1
 }
 
 function crewSimilarity(a, b) {
