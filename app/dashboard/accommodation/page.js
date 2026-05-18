@@ -212,7 +212,7 @@ const EMPTY_STAY = {
   room_type_notes: '', cost_per_night: '', city_tax_total: '',
   total_cost_no_vat: '', total_cost_vat: '', po_number: '', invoice_number: '',
   hotel_status: 'PENDING',
-  row_color: '#fde68a',
+  row_color: null,
 }
 
 // ─── ClickableCell ─────────────────────────────────────────────
@@ -963,7 +963,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         po_number:         initial.po_number         || '',
         invoice_number:    initial.invoice_number    || '',
         hotel_status:      initial.hotel_status      || 'PENDING',
-        row_color:         initial.row_color         || '#fde68a',
+        row_color:         initial.row_color         || null,
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
@@ -1102,7 +1102,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       po_number:         (form.po_number    || '').trim() || null,
       invoice_number:    (form.invoice_number || '').trim() || null,
       hotel_status:      form.hotel_status || 'PENDING',
-      row_color:         form.row_color    || '#fde68a',
+      row_color:         form.row_color    || null,
     }
   }
 
