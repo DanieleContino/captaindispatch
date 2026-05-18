@@ -180,7 +180,7 @@ const SELECT_FIELDS = `
   id, production_id, crew_id, hotel_id, arrival_date, departure_date,
   room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
   total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
-  room_type_id, rate_override, cost_per_night_vat, vat_pct,
+  room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status,
   crew:crew_id(id, full_name, role, department),
   hotel:hotel_id(id, name),
   subgroup:subgroup_id(id, name),
@@ -193,6 +193,7 @@ const EMPTY_STAY = {
   subgroup_id: null, room_type_id: null, rate_override: false,
   room_type_notes: '', cost_per_night: '', city_tax_total: '',
   total_cost_no_vat: '', total_cost_vat: '', po_number: '', invoice_number: '',
+  hotel_status: 'PENDING',
 }
 
 // ─── ClickableCell ─────────────────────────────────────────────
@@ -924,6 +925,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         total_cost_vat:    initial.total_cost_vat    ?? '',
         po_number:         initial.po_number         || '',
         invoice_number:    initial.invoice_number    || '',
+        hotel_status:      initial.hotel_status      || 'PENDING',
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
@@ -992,11 +994,24 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
 
   async function syncCrewDates(crewId) {
     if (!crewId || !PRODUCTION_ID) return
-    const { data: allStays } = await supabase.from('crew_stays').select('arrival_date, departure_date, hotel_id').eq('crew_id', crewId).eq('production_id', PRODUCTION_ID).order('arrival_date', { ascending: true })
-    if (!allStays || allStays.length === 0) return
+    const { data: allStays } = await supabase.from('crew_stays').select('arrival_date, departure_date, hotel_id, hotel_status').eq('crew_id', crewId).eq('production_id', PRODUCTION_ID).order('arrival_date', { ascending: true })
+    if (!allStays || allStays.length === 0) {
+      await supabase.from('crew').update({ hotel_status: 'PENDING', hotel_id: null, arrival_date: null, departure_date: null }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+      return
+    }
     const arrivals   = allStays.map(s => s.arrival_date).filter(Boolean).sort()
     const departures = allStays.map(s => s.departure_date).filter(Boolean).sort()
-    await supabase.from('crew').update({ hotel_id: allStays[allStays.length - 1]?.hotel_id || null, arrival_date: arrivals[0] || null, departure_date: departures[departures.length - 1] || null }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    const today      = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+    // Stay attiva = quella che copre oggi, altrimenti la più prossima futura, altrimenti l'ultima
+    const activeStay = allStays.find(s => s.arrival_date <= today && s.departure_date >= today)
+      || allStays.find(s => s.arrival_date > today)
+      || allStays[allStays.length - 1]
+    await supabase.from('crew').update({
+      hotel_id:       activeStay.hotel_id     || null,
+      hotel_status:   activeStay.hotel_status || 'PENDING',
+      arrival_date:   arrivals[0]             || null,
+      departure_date: departures[departures.length - 1] || null,
+    }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
   }
 
   // Load subgroups + room types when hotel changes
@@ -1048,6 +1063,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       total_cost_vat:    totVat,
       po_number:         (form.po_number    || '').trim() || null,
       invoice_number:    (form.invoice_number || '').trim() || null,
+      hotel_status:      form.hotel_status || 'PENDING',
     }
   }
 
@@ -1147,6 +1163,25 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
                 🌙 {nightsBetween(form.arrival_date, form.departure_date) ?? 0} night(s)
               </div>
             )}
+
+            {/* Hotel Status */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={lbl}>Accommodation Status</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {['CONFIRMED', 'PENDING'].map(s => {
+                  const active = form.hotel_status === s
+                  const styles = s === 'CONFIRMED'
+                    ? { bg: '#f0fdf4', color: '#15803d', border: '#86efac' }
+                    : { bg: '#fefce8', color: '#a16207', border: '#fde68a' }
+                  return (
+                    <button key={s} type="button" onClick={() => set('hotel_status', s)}
+                      style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? styles.border : '#e2e8f0'}`, background: active ? styles.bg : 'white', color: active ? styles.color : '#94a3b8' }}>
+                      {s === 'CONFIRMED' ? '✅ Confirmed' : '⏳ Pending'}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
 
             {/* Room / Notes */}
             <div style={rowSt}>
