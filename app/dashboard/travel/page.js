@@ -352,15 +352,24 @@ function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, 
         // NeedsTransportCell richiede onSaved — gestito separatamente in SectionTable
       }} />
 
-    case 'accommodation':
+    case 'accommodation': {
+      const hasLinkedStay = !!m.linked_stay_id
+      const displayValue = hasLinkedStay
+        ? (m.linked_stay?.hotel?.name || m.accommodation || '🔗 Stay')
+        : m.accommodation
       return (
         <ClickableCell key={field}
-          value={m.accommodation} field="accommodation"
+          value={displayValue} field="accommodation"
           onClick={() => onEditRow(m, 'accommodation')}
-          style={{ ...base, color: '#374151' }}
+          style={{
+            ...base,
+            color: hasLinkedStay ? '#15803d' : '#374151',
+            fontWeight: hasLinkedStay ? '700' : '400',
+          }}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'accommodation', colors['accommodation'])}
         />
       )
+    }
 
     case 'notes':
       return (
@@ -541,6 +550,7 @@ const EMPTY_MOV = {
   travel_number: '', from_location: '', from_time: '',
   to_location: '', to_time: '', pickup_dep: '', pickup_arr: '',
   needs_transport: false, accommodation: '', notes: '', journey_id: null,
+  linked_stay_id: null,
 }
 
 const SELECT_FIELDS = `
@@ -548,7 +558,9 @@ const SELECT_FIELDS = `
   travel_type, travel_number, from_location, from_time,
   to_location, to_time, needs_transport, match_status,
   pickup_dep, pickup_arr, accommodation, notes, cell_colors, journey_id,
-  crew:crew_id(full_name, role, department)
+  linked_stay_id,
+  crew:crew_id(full_name, role, department),
+  linked_stay:linked_stay_id(id, arrival_date, departure_date, hotel:hotel_id(name), room_type:room_type_id(name))
 `
 
 // S59-C: currentUser now carries the real DB role (not always 'CAPTAIN')
@@ -562,6 +574,8 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
   const [crewSearch, setCrewSearch]     = useState('')
   const [crewResults, setCrewResults]   = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
+  const [crewStays,     setCrewStays]     = useState([])
+  const [linkedStay,    setLinkedStay]    = useState(null)
 
   const fieldRefs = {
     travel_date:    React.useRef(null),
@@ -602,6 +616,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
         accommodation:   initial.accommodation  || '',
         notes:           initial.notes          || '',
         journey_id:      initial.journey_id     || null,
+        linked_stay_id:  initial.linked_stay_id || null,
       })
       setCrewSearch(initial.full_name_raw || initial.crew?.full_name || '')
       setCrewResults([])
@@ -664,6 +679,24 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     const timer = setTimeout(() => searchCrew(crewSearch), 300)
     return () => clearTimeout(timer)
   }, [crewSearch])
+
+  // Carica stay del crew member quando crew_id cambia
+  useEffect(() => {
+    if (!form.crew_id || !PRODUCTION_ID) { setCrewStays([]); return }
+    supabase.from('crew_stays')
+      .select('id, arrival_date, departure_date, hotel:hotel_id(name), room_type:room_type_id(name)')
+      .eq('crew_id', form.crew_id)
+      .eq('production_id', PRODUCTION_ID)
+      .order('arrival_date', { ascending: true })
+      .then(({ data }) => setCrewStays(data || []))
+  }, [form.crew_id, PRODUCTION_ID])
+
+  // Risolvi linked stay
+  useEffect(() => {
+    if (!form.linked_stay_id) { setLinkedStay(null); return }
+    const stay = crewStays.find(s => s.id === form.linked_stay_id) || null
+    setLinkedStay(stay || (initial?.linked_stay || null))
+  }, [form.linked_stay_id, crewStays])
 
   // ── Auto-sync crew.arrival_date / departure_date / travel_status ──────────
   async function syncCrewDates(crewId, direction, travelDate) {
@@ -729,7 +762,8 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
       accommodation:   (form.accommodation  || '').trim() || null,
       notes:           (form.notes          || '').trim() || null,
       match_status:    form.crew_id ? 'matched' : 'unmatched',
-      journey_id:      form.journey_id || null,
+      journey_id:      form.journey_id   || null,
+      linked_stay_id:  form.linked_stay_id || null,
     }
   }
 
@@ -999,10 +1033,61 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
               </button>
             </div>
 
-            <div style={rowSt}>
-              <label style={lbl}>Accommodation</label>
-              <input ref={fieldRefs.accommodation} value={form.accommodation} onChange={e => set('accommodation', e.target.value)}
-                style={inp} placeholder="Hotel name, room number..." />
+            {/* ── Accommodation — smart field ── */}
+            <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>🏨 Accommodation</div>
+
+              {/* Stay collegata */}
+              {linkedStay ? (
+                <div style={{ marginBottom: '8px', padding: '8px 10px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '7px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '12px', fontWeight: '800', color: '#15803d' }}>
+                        🔗 {linkedStay.hotel?.name || 'Hotel'}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+                        {linkedStay.arrival_date} → {linkedStay.departure_date}
+                        {linkedStay.room_type?.name && ` · ${linkedStay.room_type.name}`}
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => { set('linked_stay_id', null); setLinkedStay(null) }}
+                      style={{ padding: '3px 8px', borderRadius: '5px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: '11px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>
+                      ✕ Rimuovi
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Dropdown per collegare stay */
+                crewStays.length > 0 && (
+                  <div style={{ marginBottom: '8px' }}>
+                    <label style={lbl}>Collega a stay esistente</label>
+                    <select
+                      value={form.linked_stay_id || ''}
+                      onChange={e => set('linked_stay_id', e.target.value || null)}
+                      style={{ ...inp, cursor: 'pointer' }}>
+                      <option value="">— Nessun link —</option>
+                      {crewStays.map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.hotel?.name || 'Hotel'} · {s.arrival_date} → {s.departure_date}
+                          {s.room_type?.name ? ` · ${s.room_type.name}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              )}
+
+              {/* Testo libero — sempre visibile */}
+              <div>
+                <label style={lbl}>Note / Testo libero</label>
+                <input
+                  ref={fieldRefs.accommodation}
+                  value={form.accommodation}
+                  onChange={e => set('accommodation', e.target.value)}
+                  style={inp}
+                  placeholder="Indirizzo casa, note aggiuntive..."
+                />
+              </div>
             </div>
 
             {/* S59-C/S59-E: NotesPanel accordion — lazy load, solo se crew_id è collegato */}
