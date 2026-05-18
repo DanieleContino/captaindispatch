@@ -1088,6 +1088,7 @@ export default function AccommodationPage() {
   const [filterHotel,  setFilterHotel]  = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [toast, setToast] = useState(null)
+  const [mismatches,            setMismatches]            = useState([])
   const [subgroupSidebarOpen,   setSubgroupSidebarOpen]   = useState(false)
   const [subgroupSidebarHotel,  setSubgroupSidebarHotel]  = useState(null)  // { id, name }
   const [subgroupsByHotel,      setSubgroupsByHotel]      = useState({})    // { hotelId: [{ id, name }] }
@@ -1159,6 +1160,25 @@ export default function AccommodationPage() {
     setHotels(data || [])
   }, [PRODUCTION_ID])
 
+  const loadMismatches = useCallback(async () => {
+    if (!PRODUCTION_ID) return
+    const { data } = await supabase
+      .from('travel_movements')
+      .select('id, crew_id, full_name_raw, travel_date, direction, travel_type, travel_number, crew:crew_id(full_name, department)')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('match_status', 'matched')
+      .is('linked_stay_id', null)
+      .order('travel_date', { ascending: true })
+    // Deduplica per crew_id
+    const seen = new Set()
+    const deduped = (data || []).filter(m => {
+      if (!m.crew_id || seen.has(m.crew_id)) return false
+      seen.add(m.crew_id)
+      return true
+    })
+    setMismatches(deduped)
+  }, [PRODUCTION_ID])
+
   const loadNotesMap = useCallback(async (userId) => {
     if (!PRODUCTION_ID || !userId) return
     const { data } = await supabase.from('crew_notes').select('crew_id, linked_stay_id, author_id, read_by, content, created_at').eq('production_id', PRODUCTION_ID).eq('is_private', false).order('created_at', { ascending: false })
@@ -1190,7 +1210,7 @@ export default function AccommodationPage() {
   }, [])
 
   useEffect(() => {
-    if (user) { loadData(windowStart, windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id) }
+    if (user) { loadData(windowStart, windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id); loadMismatches() }
   }, [user])
 
   useEffect(() => { if (user) loadData(windowStart, windowEnd) }, [windowStart, windowEnd])
@@ -1395,6 +1415,42 @@ export default function AccommodationPage() {
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
             NEXT_PUBLIC_PRODUCTION_ID not set in .env.local
+          </div>
+        )}
+
+        {/* Banner accommodation missing */}
+        {mismatches.length > 0 && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: mismatches.length > 0 ? '8px' : 0 }}>
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626' }}>
+                ⚠ {mismatches.length} crew {mismatches.length === 1 ? 'member has' : 'members have'} travel movements but no accommodation stay
+              </div>
+              <button
+                onClick={() => setMismatches([])}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', lineHeight: 1, padding: '2px 4px' }}>
+                ✕
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {mismatches.map(m => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', background: 'white', borderRadius: '7px', border: '1px solid #fecaca' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: m.direction === 'IN' ? '#15803d' : '#c2410c' }}>
+                    {m.direction === 'IN' ? '🛬' : '🛫'}
+                  </span>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {m.crew?.full_name || m.full_name_raw}
+                    {m.crew?.department && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#64748b', fontWeight: '400' }}>{m.crew.department}</span>}
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#64748b', flexShrink: 0 }}>{m.travel_date}</span>
+                  {m.travel_number && <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#2563eb', flexShrink: 0 }}>{m.travel_number}</span>}
+                  <button
+                    onClick={() => openNew()}
+                    style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                    + Add Stay
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
