@@ -354,20 +354,29 @@ function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, 
 
     case 'accommodation': {
       const hasLinkedStay = !!m.linked_stay_id
-      const displayValue = hasLinkedStay
-        ? (m.linked_stay?.hotel?.name || m.accommodation || '🔗 Stay')
-        : m.accommodation
+      const hasCrew       = !!m.crew_id
+      const displayValue  = hasLinkedStay
+        ? `✅ ${m.linked_stay?.hotel?.name || 'Hotel'} · ${m.linked_stay?.arrival_date || ''} → ${m.linked_stay?.departure_date || ''}`
+        : hasCrew
+          ? '⚠ Accommodation missing'
+          : (m.accommodation || null)
+      const cellColor = hasLinkedStay ? '#15803d' : hasCrew ? '#c2410c' : '#374151'
+      const cellBg    = hasLinkedStay ? '#f0fdf4'  : hasCrew ? '#fff7ed'  : (colors[field] || bgColor)
       return (
-        <ClickableCell key={field}
-          value={displayValue} field="accommodation"
+        <td key={field}
           onClick={() => onEditRow(m, 'accommodation')}
-          style={{
-            ...base,
-            color: hasLinkedStay ? '#15803d' : '#374151',
-            fontWeight: hasLinkedStay ? '700' : '400',
-          }}
           onContextMenu={(e) => handleCellRightClick(e, m.id, 'accommodation', colors['accommodation'])}
-        />
+          title="Click to edit"
+          style={{
+            padding: '7px 10px', cursor: 'pointer',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            fontSize: '11px', fontWeight: hasLinkedStay || hasCrew ? '700' : '400',
+            color: cellColor, background: cellBg,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = cellBg }}>
+          {displayValue || <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '10px' }}>—</span>}
+        </td>
       )
     }
 
@@ -1033,53 +1042,27 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
               </button>
             </div>
 
-            {/* ── Accommodation — smart field ── */}
+            {/* ── Accommodation — automatico ── */}
             <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>🏨 Accommodation</div>
 
-              {/* Stay collegata */}
-              {linkedStay ? (
-                <div style={{ marginBottom: '8px', padding: '8px 10px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '7px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', fontWeight: '800', color: '#15803d' }}>
-                        🔗 {linkedStay.hotel?.name || 'Hotel'}
-                      </div>
-                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
-                        {linkedStay.arrival_date} → {linkedStay.departure_date}
-                        {linkedStay.room_type?.name && ` · ${linkedStay.room_type.name}`}
-                      </div>
-                    </div>
-                    <button type="button" onClick={() => { set('linked_stay_id', null); setLinkedStay(null) }}
-                      style={{ padding: '3px 8px', borderRadius: '5px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: '11px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}>
-                      ✕ Rimuovi
-                    </button>
-                  </div>
+              {/* Stay collegata automaticamente */}
+              {form.crew_id && linkedStay && (
+                <div style={{ marginBottom: '8px', padding: '8px 10px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '7px', fontSize: '12px', fontWeight: '700', color: '#15803d' }}>
+                  ✅ {linkedStay.hotel?.name || 'Hotel'} · {linkedStay.arrival_date} → {linkedStay.departure_date}
                 </div>
-              ) : (
-                /* Dropdown per collegare stay */
-                crewStays.length > 0 && (
-                  <div style={{ marginBottom: '8px' }}>
-                    <label style={lbl}>Collega a stay esistente</label>
-                    <select
-                      value={form.linked_stay_id || ''}
-                      onChange={e => set('linked_stay_id', e.target.value || null)}
-                      style={{ ...inp, cursor: 'pointer' }}>
-                      <option value="">— Nessun link —</option>
-                      {crewStays.map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.hotel?.name || 'Hotel'} · {s.arrival_date} → {s.departure_date}
-                          {s.room_type?.name ? ` · ${s.room_type.name}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )
               )}
 
-              {/* Testo libero — sempre visibile */}
+              {/* Warning: crew linkato ma nessuna stay trovata */}
+              {form.crew_id && !linkedStay && (
+                <div style={{ marginBottom: '8px', padding: '8px 10px', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: '7px', fontSize: '11px', fontWeight: '700', color: '#c2410c' }}>
+                  ⚠ Accommodation missing — nessuna stay trovata per questa data
+                </div>
+              )}
+
+              {/* Testo libero — sempre disponibile per note/indirizzo casa */}
               <div>
-                <label style={lbl}>Note / Testo libero</label>
+                <label style={lbl}>Note / Indirizzo</label>
                 <input
                   ref={fieldRefs.accommodation}
                   value={form.accommodation}

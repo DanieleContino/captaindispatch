@@ -633,6 +633,66 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
 }
 
 // ─── StaySidebar ──────────────────────────────────────────────
+function LinkedMovements({ stayId, productionId }) {
+  const [movements, setMovements] = useState([])
+  const [loading,   setLoading]   = useState(true)
+
+  useEffect(() => {
+    if (!stayId || !productionId) return
+    supabase.from('travel_movements')
+      .select('id, direction, travel_date, travel_type, travel_number, from_location, from_time, to_location, to_time')
+      .eq('linked_stay_id', stayId)
+      .order('travel_date', { ascending: true })
+      .then(({ data }) => { setMovements(data || []); setLoading(false) })
+  }, [stayId, productionId])
+
+  const TYPE_ICONS = { FLIGHT: '✈️', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴️' }
+
+  return (
+    <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+      <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+        ✈️ Movimenti di viaggio
+      </div>
+      {loading ? (
+        <div style={{ fontSize: '11px', color: '#94a3b8' }}>Loading...</div>
+      ) : movements.length === 0 ? (
+        <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>
+          ⚠ Nessun movimento collegato
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {movements.map(m => (
+            <div key={m.id} style={{
+              padding: '7px 10px', borderRadius: '7px',
+              background: m.direction === 'IN' ? '#f0fdf4' : '#fff7ed',
+              border: `1px solid ${m.direction === 'IN' ? '#86efac' : '#fdba74'}`,
+              fontSize: '11px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: '800', color: m.direction === 'IN' ? '#15803d' : '#c2410c' }}>
+                  {m.direction === 'IN' ? '🛬 IN' : '🛫 OUT'}
+                </span>
+                <span style={{ color: '#64748b' }}>{m.travel_date}</span>
+                <span>{TYPE_ICONS[m.travel_type] || ''}</span>
+                {m.travel_number && (
+                  <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#2563eb' }}>{m.travel_number}</span>
+                )}
+                {m.from_location && (
+                  <span style={{ color: '#374151' }}>
+                    {m.from_location}{m.from_time ? ` ${m.from_time.slice(0,5)}` : ''}
+                    {' → '}
+                    {m.to_location || '?'}{m.to_time ? ` ${m.to_time.slice(0,5)}` : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, currentUser, hotels }) {
   const PRODUCTION_ID = getProductionId()
   const [form, setForm]             = useState(EMPTY_STAY)
@@ -946,6 +1006,11 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
                 <div><label style={lbl}>N°Fatt.</label><input value={form.invoice_number} onChange={e => set('invoice_number', e.target.value)} style={inp} placeholder="Invoice #" /></div>
               </div>
             </div>
+
+            {/* Movimenti di viaggio collegati */}
+            {form.id && form.crew_id && (
+              <LinkedMovements stayId={form.id} productionId={PRODUCTION_ID} />
+            )}
 
             {/* Notes Panel */}
             {form.crew_id && (
