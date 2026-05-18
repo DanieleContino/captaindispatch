@@ -707,6 +707,17 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     setLinkedStay(stay || (initial?.linked_stay || null))
   }, [form.linked_stay_id, crewStays])
 
+  // Auto-match: se crew ha stay e travel_date è impostata, pre-seleziona quella che copre la data
+  useEffect(() => {
+    if (form.linked_stay_id || !form.travel_date || crewStays.length === 0) return
+    const match = crewStays.find(s =>
+      s.arrival_date && s.departure_date &&
+      s.arrival_date <= form.travel_date &&
+      form.travel_date < s.departure_date
+    )
+    if (match) set('linked_stay_id', match.id)
+  }, [crewStays, form.travel_date])
+
   // ── Auto-sync crew.arrival_date / departure_date / travel_status ──────────
   async function syncCrewDates(crewId, direction, travelDate) {
     if (!crewId || !travelDate || !PRODUCTION_ID) return
@@ -1057,6 +1068,25 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
               {form.crew_id && !linkedStay && (
                 <div style={{ marginBottom: '8px', padding: '8px 10px', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: '7px', fontSize: '11px', fontWeight: '700', color: '#c2410c' }}>
                   ⚠ Accommodation missing — nessuna stay trovata per questa data
+                </div>
+              )}
+
+              {/* Dropdown per collegare/cambiare stay manualmente */}
+              {form.crew_id && crewStays.length > 0 && (
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={lbl}>Link stay</label>
+                  <select
+                    value={form.linked_stay_id || ''}
+                    onChange={e => set('linked_stay_id', e.target.value || null)}
+                    style={{ ...inp, cursor: 'pointer' }}
+                  >
+                    <option value="">— No stay linked —</option>
+                    {crewStays.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.hotel?.name || 'Hotel'} · {s.arrival_date} → {s.departure_date}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 
