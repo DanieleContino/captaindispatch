@@ -632,7 +632,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
   )
 }
 
-// ─── StaySidebar ──────────────────────────────────────────────
+// ─── LinkedMovements ──────────────────────────────────────────
 function LinkedMovements({ stayId, productionId }) {
   const [movements, setMovements] = useState([])
   const [loading,   setLoading]   = useState(true)
@@ -647,46 +647,95 @@ function LinkedMovements({ stayId, productionId }) {
   }, [stayId, productionId])
 
   const TYPE_ICONS = { FLIGHT: '✈️', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴️' }
+  const TYPE_LABELS = { FLIGHT: 'Flight', TRAIN: 'Train', OA: 'OA', SELF: 'Self', GROUND: 'Ground', FERRY: 'Ferry' }
 
   return (
     <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
       <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
-        ✈️ Movimenti di viaggio
+        ✈️ Travel Movements
       </div>
       {loading ? (
         <div style={{ fontSize: '11px', color: '#94a3b8' }}>Loading...</div>
       ) : movements.length === 0 ? (
-        <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>
-          ⚠ Nessun movimento collegato
+        <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700', padding: '6px 8px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px' }}>
+          ⚠ No travel movements linked
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {movements.map(m => (
-            <div key={m.id} style={{
-              padding: '7px 10px', borderRadius: '7px',
-              background: m.direction === 'IN' ? '#f0fdf4' : '#fff7ed',
-              border: `1px solid ${m.direction === 'IN' ? '#86efac' : '#fdba74'}`,
-              fontSize: '11px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: '800', color: m.direction === 'IN' ? '#15803d' : '#c2410c' }}>
-                  {m.direction === 'IN' ? '🛬 IN' : '🛫 OUT'}
-                </span>
-                <span style={{ color: '#64748b' }}>{m.travel_date}</span>
-                <span>{TYPE_ICONS[m.travel_type] || ''}</span>
-                {m.travel_number && (
-                  <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#2563eb' }}>{m.travel_number}</span>
-                )}
-                {m.from_location && (
-                  <span style={{ color: '#374151' }}>
-                    {m.from_location}{m.from_time ? ` ${m.from_time.slice(0,5)}` : ''}
-                    {' → '}
-                    {m.to_location || '?'}{m.to_time ? ` ${m.to_time.slice(0,5)}` : ''}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {movements.map(m => {
+            const isIN = m.direction === 'IN'
+            return (
+              <div key={m.id} style={{
+                borderRadius: '8px',
+                border: `1px solid ${isIN ? '#86efac' : '#fdba74'}`,
+                overflow: 'hidden',
+              }}>
+                {/* Header row */}
+                <div style={{
+                  padding: '6px 10px',
+                  background: isIN ? '#15803d' : '#c2410c',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}>
+                  <span style={{ fontSize: '13px' }}>{isIN ? '🛬' : '🛫'}</span>
+                  <span style={{ fontSize: '12px', fontWeight: '900', color: 'white', letterSpacing: '0.04em' }}>
+                    {isIN ? 'ARRIVAL' : 'DEPARTURE'}
                   </span>
-                )}
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', marginLeft: 'auto' }}>
+                    {m.travel_date}
+                  </span>
+                </div>
+                {/* Detail row */}
+                <div style={{
+                  padding: '8px 10px',
+                  background: isIN ? '#f0fdf4' : '#fff7ed',
+                  display: 'flex', flexDirection: 'column', gap: '4px',
+                }}>
+                  {/* Tipo + numero volo */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '14px' }}>{TYPE_ICONS[m.travel_type] || '🚐'}</span>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#374151' }}>
+                      {TYPE_LABELS[m.travel_type] || m.travel_type}
+                    </span>
+                    {m.travel_number && (
+                      <span style={{
+                        fontFamily: 'monospace', fontSize: '13px', fontWeight: '900',
+                        color: '#2563eb', background: '#eff6ff',
+                        padding: '1px 8px', borderRadius: '5px', border: '1px solid #bfdbfe',
+                      }}>
+                        {m.travel_number}
+                      </span>
+                    )}
+                  </div>
+                  {/* From → To */}
+                  {(m.from_location || m.to_location) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a' }}>
+                          {m.from_location || '?'}
+                        </span>
+                        {m.from_time && (
+                          <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748b' }}>
+                            {m.from_time.slice(0, 5)}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '14px', color: '#94a3b8' }}>→</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a' }}>
+                          {m.to_location || '?'}
+                        </span>
+                        {m.to_time && (
+                          <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#64748b' }}>
+                            {m.to_time.slice(0, 5)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
