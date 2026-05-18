@@ -1133,63 +1133,74 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
               </button>
             </div>
 
-            {/* Hotel */}
-            <div style={row}>
-              <label style={lbl}>{t.hotelLocationLabel}</label>
-              <select value={form.hotel_id} onChange={e => set('hotel_id', e.target.value)} style={inp}>
-                <option value="">– No hotel –</option>
-                {locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name} ({l.id})</option>)}
-                {locations.filter(l => l.is_hub).length > 0 && (
-                  <optgroup label="Hubs">
-                    {locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name} ({l.id})</option>)}
-                  </optgroup>
-                )}
-              </select>
-            </div>
+            {/* Hotel — solo in edit mode (gestito da AccommodationAccordion) */}
+            {mode === 'edit' && (
+              <div style={row}>
+                <label style={lbl}>{t.hotelLocationLabel}</label>
+                <select value={form.hotel_id} onChange={e => set('hotel_id', e.target.value)} style={inp}>
+                  <option value="">– No hotel –</option>
+                  {locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name} ({l.id})</option>)}
+                  {locations.filter(l => l.is_hub).length > 0 && (
+                    <optgroup label="Hubs">
+                      {locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name} ({l.id})</option>)}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+            )}
 
-            {/* Hotel Status + Travel Status */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-              <div>
-                <label style={lbl}>{t.hotelStatusLabel}</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {['CONFIRMED', 'PENDING', 'CHECKED_OUT'].map(s => {
-                    const c = HC[s]; const active = form.hotel_status === s
-                    return (
-                      <button key={s} type="button" onClick={() => set('hotel_status', s)}
-                        style={{ padding: '5px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', textAlign: 'left' }}>
-                        {s}
-                      </button>
-                    )
-                  })}
+            {/* Hotel Status + Travel Status + Date — solo in edit mode */}
+            {mode === 'edit' && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                  <div>
+                    <label style={lbl}>{t.hotelStatusLabel}</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {['CONFIRMED', 'PENDING', 'CHECKED_OUT'].map(s => {
+                        const c = HC[s]; const active = form.hotel_status === s
+                        return (
+                          <button key={s} type="button" onClick={() => set('hotel_status', s)}
+                            style={{ padding: '5px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', textAlign: 'left' }}>
+                            {s}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={lbl}>{t.travelStatusLabel}</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {['IN', 'PRESENT', 'OUT'].map(s => {
+                        const c = TC[s]; const active = form.travel_status === s
+                        return (
+                          <button key={s} type="button" onClick={() => set('travel_status', s)}
+                            style={{ padding: '5px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', textAlign: 'left' }}>
+                            {s}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label style={lbl}>{t.travelStatusLabel}</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {['IN', 'PRESENT', 'OUT'].map(s => {
-                    const c = TC[s]; const active = form.travel_status === s
-                    return (
-                      <button key={s} type="button" onClick={() => set('travel_status', s)}
-                        style={{ padding: '5px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', textAlign: 'left' }}>
-                        {s}
-                      </button>
-                    )
-                  })}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                  <div>
+                    <label style={lbl}>🏨 Check-in</label>
+                    <input type="date" value={form.arrival_date} onChange={e => set('arrival_date', e.target.value)} style={inp} />
+                  </div>
+                  <div>
+                    <label style={lbl}>🏁 Check-out</label>
+                    <input type="date" value={form.departure_date} onChange={e => set('departure_date', e.target.value)} style={inp} />
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
 
-            {/* Date */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-              <div>
-                <label style={lbl}>🏨 Check-in</label>
-                <input type="date" value={form.arrival_date} onChange={e => set('arrival_date', e.target.value)} style={inp} />
+            {/* Info box — new mode: accommodation e travel gestiti separatamente */}
+            {mode === 'new' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', fontSize: '11px', color: '#15803d' }}>
+                🏨 <strong>Accommodation</strong> e <strong>Travel</strong> si configurano dopo il salvataggio — direttamente dalle pagine dedicate.
               </div>
-              <div>
-                <label style={lbl}>🏁 Check-out</label>
-                <input type="date" value={form.departure_date} onChange={e => set('departure_date', e.target.value)} style={inp} />
-              </div>
-            </div>
+            )}
 
             
 
