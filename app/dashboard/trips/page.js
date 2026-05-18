@@ -565,8 +565,7 @@ function AssignCtxTravelNotes({ crewId, productionId }) {
     fetch(`/api/crew-notes?crew_id=${crewId}&production_id=${productionId}`)
       .then(r => r.json())
       .then(json => {
-        const travel = (json.notes || []).filter(n => n.context === 'travel')
-        setNotes(travel)
+        setNotes(json.notes || [])
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -577,7 +576,7 @@ function AssignCtxTravelNotes({ crewId, productionId }) {
   )
   if (notes.length === 0) return (
     <div style={{ padding: '10px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
-      ✈️ No travel notes for this crew member
+      💬 No notes for this crew member
     </div>
   )
 
@@ -1366,7 +1365,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             {assignCtx && (
               <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderLeft: '3px solid #0369a1', borderRadius: '10px', padding: '10px 12px' }}>
                 <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '7px' }}>
-                  ✈️ Travel Notes — {assignCtx.name.split(' ')[0]}
+                  💬 Notes — {assignCtx.name.split(' ')[0]}
                 </div>
                 <AssignCtxTravelNotes crewId={assignCtx.id} productionId={PRODUCTION_ID} />
               </div>
