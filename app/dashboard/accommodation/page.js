@@ -78,7 +78,62 @@ function daysInRange(start, end) {
   return days
 }
 
-// ─── Toast ────────────────────────────────────────────────────
+// ─── MismatchBanner ───────────────────────────────────────────
+function MismatchBanner({ mismatches, onAddStay, onDismiss }) {
+  const [expanded, setExpanded] = React.useState(false)
+  return (
+    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '16px', overflow: 'hidden' }}>
+      {/* Header — sempre visibile */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer' }}
+        onClick={() => setExpanded(v => !v)}>
+        <span style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626', flex: 1 }}>
+          ⚠ {mismatches.length} crew {mismatches.length === 1 ? 'member has' : 'members have'} travel movements but no accommodation stay
+        </span>
+        <span style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', whiteSpace: 'nowrap' }}>
+          {expanded ? '▲ Hide' : '▼ Show'}
+        </span>
+        <button
+          onClick={e => { e.stopPropagation(); onDismiss() }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}>
+          ✕
+        </button>
+      </div>
+      {/* Lista — visibile solo se expanded */}
+      {expanded && (
+        <div style={{ borderTop: '1px solid #fecaca', maxHeight: '320px', overflowY: 'auto' }}>
+          {mismatches.map((m, i) => (
+            <div key={m.id} style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '8px 16px',
+              borderBottom: i < mismatches.length - 1 ? '1px solid #fef2f2' : 'none',
+              background: 'white',
+            }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: m.direction === 'IN' ? '#15803d' : '#c2410c', flexShrink: 0 }}>
+                {m.direction === 'IN' ? '🛬' : '🛫'}
+              </span>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {m.crew?.full_name || m.full_name_raw}
+                {m.crew?.department && (
+                  <span style={{ marginLeft: '6px', fontSize: '10px', color: '#64748b', fontWeight: '400' }}>{m.crew.department}</span>
+                )}
+              </span>
+              <span style={{ fontSize: '11px', color: '#64748b', flexShrink: 0 }}>{m.travel_date}</span>
+              {m.travel_number && (
+                <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#2563eb', flexShrink: 0 }}>{m.travel_number}</span>
+              )}
+              <button
+                onClick={() => onAddStay(m)}
+                style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                + Add Stay
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Toast({ message, type }) {
   if (!message) return null
   return (
@@ -1575,40 +1630,9 @@ export default function AccommodationPage() {
           </div>
         )}
 
-        {/* Banner accommodation missing */}
+        {/* Banner accommodation missing — collassato di default */}
         {mismatches.length > 0 && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: mismatches.length > 0 ? '8px' : 0 }}>
-              <div style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626' }}>
-                ⚠ {mismatches.length} crew {mismatches.length === 1 ? 'member has' : 'members have'} travel movements but no accommodation stay
-              </div>
-              <button
-                onClick={() => setMismatches([])}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', lineHeight: 1, padding: '2px 4px' }}>
-                ✕
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {mismatches.map(m => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', background: 'white', borderRadius: '7px', border: '1px solid #fecaca' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: m.direction === 'IN' ? '#15803d' : '#c2410c' }}>
-                    {m.direction === 'IN' ? '🛬' : '🛫'}
-                  </span>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {m.crew?.full_name || m.full_name_raw}
-                    {m.crew?.department && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#64748b', fontWeight: '400' }}>{m.crew.department}</span>}
-                  </span>
-                  <span style={{ fontSize: '11px', color: '#64748b', flexShrink: 0 }}>{m.travel_date}</span>
-                  {m.travel_number && <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#2563eb', flexShrink: 0 }}>{m.travel_number}</span>}
-                  <button
-                    onClick={() => openNew()}
-                    style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                    + Add Stay
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+          <MismatchBanner mismatches={mismatches} onAddStay={openNew} onDismiss={() => setMismatches([])} />
         )}
 
         {/* Stats banner — solo in list mode */}
