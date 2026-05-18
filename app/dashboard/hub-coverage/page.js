@@ -53,7 +53,7 @@ const CLS_DOT = {
 }
 
 // ─── CrewInfoMiniModal ─────────────────────────────────────
-function CrewInfoMiniModal({ member, locsMap, onClose }) {
+function CrewInfoMiniModal({ member, locsMap, onClose, currentUser }) {
   const PRODUCTION_ID = getProductionId()
   const [details,   setDetails]   = useState(null)
   const [movements, setMovements] = useState([])
@@ -151,6 +151,14 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
               </div>
             )}
           </div>
+          {currentUser && (
+            <NotesPanel
+              crewId={member.id}
+              productionId={PRODUCTION_ID}
+              currentUser={currentUser}
+              accordion={true}
+            />
+          )}
         </div>
       )}
     </div>
@@ -158,7 +166,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
 }
 
 // ─── Riga crew COVERED ──────────────────────────────────────
-function CoveredRow({ member, trips, locsMap, travelInfo, currentUser, productionId }) {
+function CoveredRow({ member, trips, locsMap, travelInfo, currentUser, productionId, unreadCount = 0, notesCount = 0 }) {
   const tc = TC[member.travel_status] || TC.IN
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
   const dateLabel = member.travel_status === 'IN'
@@ -183,6 +191,12 @@ function CoveredRow({ member, trips, locsMap, travelInfo, currentUser, productio
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
           <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{member.full_name}</span>
           <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{member.department || 'N/A'}</span>
+          {unreadCount > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: 'white', background: '#f97316', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', border: '2px solid white', lineHeight: 1 }}>❗</span>
+          )}
+          {notesCount > 0 && unreadCount === 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 3px', border: '1px solid #fcd34d', lineHeight: 1 }}>💬</span>
+          )}
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
             {member.travel_status === 'IN' ? '✈ IN' : '✈ OUT'}
           </span>
@@ -238,20 +252,12 @@ function CoveredRow({ member, trips, locsMap, travelInfo, currentUser, productio
         ✅ {trips.length} trip{trips.length > 1 ? 's' : ''}
       </div>
     </div>
-    {currentUser && (
-      <NotesPanel
-        crewId={member.id}
-        productionId={productionId}
-        currentUser={currentUser}
-        accordion={true}
-      />
-    )}
     </>
   )
 }
 
 // ─── Riga crew MISSING ──────────────────────────────────────
-function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, productionId }) {
+function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, productionId, unreadCount = 0, notesCount = 0 }) {
   const t = useT()
   const tc = TC[member.travel_status] || TC.IN
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
@@ -265,7 +271,7 @@ function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, produc
     {showInfo && (
       <>
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,35,64,0.5)' }} />
-        <CrewInfoMiniModal member={member} locsMap={locsMap} onClose={() => setShowInfo(false)} />
+        <CrewInfoMiniModal member={member} locsMap={locsMap} onClose={() => setShowInfo(false)} currentUser={currentUser} />
       </>
     )}
     <div style={{
@@ -283,6 +289,12 @@ function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, produc
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
           <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{member.full_name}</span>
           <button onClick={() => setShowInfo(true)} style={{ background: 'none', border: '1px solid #bfdbfe', borderRadius: '50%', width: '18px', height: '18px', cursor: 'pointer', fontSize: '10px', color: '#2563eb', fontWeight: '800', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>i</button>
+          {unreadCount > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: 'white', background: '#f97316', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', border: '2px solid white', lineHeight: 1 }}>❗</span>
+          )}
+          {notesCount > 0 && unreadCount === 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 3px', border: '1px solid #fcd34d', lineHeight: 1 }}>💬</span>
+          )}
           <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{member.department || 'N/A'}</span>
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
             {member.travel_status === 'IN' ? '✈ IN' : '✈ OUT'}
@@ -327,20 +339,12 @@ function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, produc
         {t.assignBtn}
       </button>
     </div>
-    {currentUser && (
-      <NotesPanel
-        crewId={member.id}
-        productionId={productionId}
-        currentUser={currentUser}
-        accordion={true}
-      />
-    )}
     </>
   )
 }
 
 // ─── Riga crew NTN (No Transport Needed) ───────────────────
-function NtnRow({ member, locsMap, travelInfo, currentUser, productionId }) {
+function NtnRow({ member, locsMap, travelInfo, currentUser, productionId, unreadCount = 0, notesCount = 0 }) {
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
   const tc = TC[member.travel_status] || TC.OUT
   const dateLabel = member.travel_status === 'IN'
@@ -364,6 +368,12 @@ function NtnRow({ member, locsMap, travelInfo, currentUser, productionId }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
           <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{member.full_name}</span>
           <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{member.department || 'N/A'}</span>
+          {unreadCount > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: 'white', background: '#f97316', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', border: '2px solid white', lineHeight: 1 }}>❗</span>
+          )}
+          {notesCount > 0 && unreadCount === 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 3px', border: '1px solid #fcd34d', lineHeight: 1 }}>💬</span>
+          )}
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
             {member.travel_status === 'IN' ? '✈ IN' : '✈ OUT'}
           </span>
@@ -398,14 +408,6 @@ function NtnRow({ member, locsMap, travelInfo, currentUser, productionId }) {
         🚗 Self Drive
       </div>
     </div>
-    {currentUser && (
-      <NotesPanel
-        crewId={member.id}
-        productionId={productionId}
-        currentUser={currentUser}
-        accordion={true}
-      />
-    )}
     </>
   )
 }
@@ -552,6 +554,9 @@ export default function HubCoveragePage() {
   const [assignMap, setAssignMap] = useState({})
   // crewId → [travel_movements] per la data selezionata
   const [travelMap, setTravelMap] = useState({})
+  // crewId → contatori note
+  const [unreadMap, setUnreadMap] = useState({})
+  const [notesMap,  setNotesMap]  = useState({})
 
   // Filtri
   const [filterTS,    setFTS]    = useState('ALL')   // IN / OUT / ALL
@@ -577,6 +582,27 @@ export default function HubCoveragePage() {
       }
     })
   }, [])
+
+  async function loadNotesMap(userId) {
+    if (!PRODUCTION_ID || !userId) return
+    const { data } = await supabase
+      .from('crew_notes')
+      .select('crew_id, read_by, author_id')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('is_private', false)
+    if (!data) return
+    const unread = {}
+    const total  = {}
+    for (const n of data) {
+      total[n.crew_id] = (total[n.crew_id] || 0) + 1
+      if (n.author_id === userId) continue
+      if (!(n.read_by || []).includes(userId)) {
+        unread[n.crew_id] = (unread[n.crew_id] || 0) + 1
+      }
+    }
+    setUnreadMap(unread)
+    setNotesMap(total)
+  }
 
   const loadData = useCallback(async d => {
     if (!PRODUCTION_ID) return
@@ -684,7 +710,12 @@ export default function HubCoveragePage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { if (user) loadData(date) }, [user, date, loadData])
+  useEffect(() => {
+    if (user) {
+      loadData(date)
+      loadNotesMap(user.id)
+    }
+  }, [user, date, loadData])
 
   // ── Filtri applicati ──────────────────────────────────────
   const departments = [...new Set(crew.map(c => c.department || 'N/A'))].sort()
@@ -961,7 +992,7 @@ export default function HubCoveragePage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               {ntnCrew.map(c => (
-                <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} />
+                <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} />
               ))}
             </div>
           </div>
@@ -988,7 +1019,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {missing.map(c => (
-                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} onAssign={() => {
+                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} onAssign={() => {
                       const params = new URLSearchParams({
                         assignCrewId:   c.id,
                         assignCrewName: c.full_name,
@@ -1015,7 +1046,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {covered.map(c => (
-                    <CoveredRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} />
+                    <CoveredRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} />
                   ))}
                 </div>
               </div>
@@ -1032,7 +1063,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {noInfo.map(c => (
-                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={[]} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} onAssign={() => {
+                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={[]} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} onAssign={() => {
                       const params = new URLSearchParams({
                         assignCrewId:   c.id,
                         assignCrewName: c.full_name,
@@ -1060,7 +1091,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {ntnCrew.map(c => (
-                    <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} />
+                    <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} />
                   ))}
                 </div>
               </div>
