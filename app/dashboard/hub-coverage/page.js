@@ -21,6 +21,7 @@ import { useT } from '../../../lib/i18n'
 
 import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
+import NotesPanel from '../../../lib/NotesPanel'
 
 function isoToday() {
   const d = new Date()
@@ -157,7 +158,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
 }
 
 // ─── Riga crew COVERED ──────────────────────────────────────
-function CoveredRow({ member, trips, locsMap, travelInfo }) {
+function CoveredRow({ member, trips, locsMap, travelInfo, currentUser, productionId }) {
   const tc = TC[member.travel_status] || TC.IN
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
   const dateLabel = member.travel_status === 'IN'
@@ -165,6 +166,7 @@ function CoveredRow({ member, trips, locsMap, travelInfo }) {
     : member.departure_date
 
   return (
+    <>
     <div style={{
       background: 'white',
       border: '1px solid #e2e8f0',
@@ -236,11 +238,20 @@ function CoveredRow({ member, trips, locsMap, travelInfo }) {
         ✅ {trips.length} trip{trips.length > 1 ? 's' : ''}
       </div>
     </div>
+    {currentUser && (
+      <NotesPanel
+        crewId={member.id}
+        productionId={productionId}
+        currentUser={currentUser}
+        accordion={true}
+      />
+    )}
+    </>
   )
 }
 
 // ─── Riga crew MISSING ──────────────────────────────────────
-function MissingRow({ member, locsMap, onAssign, travelInfo }) {
+function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, productionId }) {
   const t = useT()
   const tc = TC[member.travel_status] || TC.IN
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
@@ -316,12 +327,20 @@ function MissingRow({ member, locsMap, onAssign, travelInfo }) {
         {t.assignBtn}
       </button>
     </div>
+    {currentUser && (
+      <NotesPanel
+        crewId={member.id}
+        productionId={productionId}
+        currentUser={currentUser}
+        accordion={true}
+      />
+    )}
     </>
   )
 }
 
 // ─── Riga crew NTN (No Transport Needed) ───────────────────
-function NtnRow({ member, locsMap, travelInfo }) {
+function NtnRow({ member, locsMap, travelInfo, currentUser, productionId }) {
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
   const tc = TC[member.travel_status] || TC.OUT
   const dateLabel = member.travel_status === 'IN'
@@ -329,6 +348,7 @@ function NtnRow({ member, locsMap, travelInfo }) {
     : member.departure_date
 
   return (
+    <>
     <div style={{
       background: '#faf5ff',
       border: '1px solid #e9d5ff',
@@ -378,6 +398,15 @@ function NtnRow({ member, locsMap, travelInfo }) {
         🚗 Self Drive
       </div>
     </div>
+    {currentUser && (
+      <NotesPanel
+        crewId={member.id}
+        productionId={productionId}
+        currentUser={currentUser}
+        accordion={true}
+      />
+    )}
+    </>
   )
 }
 
@@ -932,7 +961,7 @@ export default function HubCoveragePage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               {ntnCrew.map(c => (
-                <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} />
+                <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} />
               ))}
             </div>
           </div>
@@ -959,7 +988,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {missing.map(c => (
-                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} onAssign={() => {
+                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} onAssign={() => {
                       const params = new URLSearchParams({
                         assignCrewId:   c.id,
                         assignCrewName: c.full_name,
@@ -986,7 +1015,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {covered.map(c => (
-                    <CoveredRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} travelInfo={travelMap[c.id] || []} />
+                    <CoveredRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} />
                   ))}
                 </div>
               </div>
@@ -1003,7 +1032,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {noInfo.map(c => (
-                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={[]} onAssign={() => {
+                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={[]} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} onAssign={() => {
                       const params = new URLSearchParams({
                         assignCrewId:   c.id,
                         assignCrewName: c.full_name,
@@ -1031,7 +1060,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {ntnCrew.map(c => (
-                    <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} />
+                    <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} />
                   ))}
                 </div>
               </div>
