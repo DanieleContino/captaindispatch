@@ -265,6 +265,24 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }
         </td>
       )
     }
+    case 'booking_status': {
+      const bs = stay.hotel_status || 'PENDING'
+      const confirmed = bs === 'CONFIRMED'
+      return (
+        <td key={field} onClick={() => onEditRow(stay, 'booking_status')}
+          style={{ padding: '7px 10px', fontSize: '10px', cursor: 'pointer' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+          <span style={{ fontWeight: '700', padding: '2px 7px', borderRadius: '999px', whiteSpace: 'nowrap',
+            background: confirmed ? '#f0fdf4' : '#fefce8',
+            color:      confirmed ? '#15803d' : '#a16207',
+            border:     `1px solid ${confirmed ? '#86efac' : '#fde68a'}`,
+          }}>
+            {confirmed ? '✅ Confirmed' : '⏳ Pending'}
+          </span>
+        </td>
+      )
+    }
     case 'notes':
       return <NotesCell key={field} notesEntry={stayNotesMap ? (stayNotesMap[stay.id] || null) : null} unreadCount={stayUnreadMap ? (stayUnreadMap[stay.id] || 0) : 0} onClick={() => onEditRow(stay, 'notes')} />
     case 'cost_per_night':
