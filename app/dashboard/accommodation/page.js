@@ -692,6 +692,42 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     return () => clearTimeout(timer)
   }, [crewSearch])
 
+  async function autoLinkMovements(crewId, stayId, arrivalDate, departureDate) {
+    if (!crewId || !stayId || !arrivalDate || !departureDate || !PRODUCTION_ID) return
+    // Cerca movimenti IN del crew member con travel_date vicino ad arrival_date (±2 giorni)
+    const arrFrom = isoAdd(arrivalDate, -2)
+    const arrTo   = isoAdd(arrivalDate, 1)
+    const { data: inMovements } = await supabase
+      .from('travel_movements')
+      .select('id')
+      .eq('crew_id', crewId)
+      .eq('production_id', PRODUCTION_ID)
+      .eq('direction', 'IN')
+      .gte('travel_date', arrFrom)
+      .lte('travel_date', arrTo)
+    if (inMovements && inMovements.length > 0) {
+      await supabase.from('travel_movements')
+        .update({ linked_stay_id: stayId })
+        .in('id', inMovements.map(m => m.id))
+    }
+    // Cerca movimenti OUT del crew member con travel_date vicino a departure_date (±2 giorni)
+    const depFrom = isoAdd(departureDate, -1)
+    const depTo   = isoAdd(departureDate, 2)
+    const { data: outMovements } = await supabase
+      .from('travel_movements')
+      .select('id')
+      .eq('crew_id', crewId)
+      .eq('production_id', PRODUCTION_ID)
+      .eq('direction', 'OUT')
+      .gte('travel_date', depFrom)
+      .lte('travel_date', depTo)
+    if (outMovements && outMovements.length > 0) {
+      await supabase.from('travel_movements')
+        .update({ linked_stay_id: stayId })
+        .in('id', outMovements.map(m => m.id))
+    }
+  }
+
   async function syncCrewDates(crewId) {
     if (!crewId || !PRODUCTION_ID) return
     const { data: allStays } = await supabase.from('crew_stays').select('arrival_date, departure_date, hotel_id').eq('crew_id', crewId).eq('production_id', PRODUCTION_ID).order('arrival_date', { ascending: true })
@@ -755,6 +791,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       else                result = await supabase.from('crew_stays').update(row).eq('id', initial.id).select(SELECT_FIELDS).single()
       if (result.error) { setError(result.error.message); return }
       await syncCrewDates(form.crew_id)
+      await autoLinkMovements(form.crew_id, result.data.id, form.arrival_date, form.departure_date)
       onSaved(result.data, mode); onClose()
     } finally { setSaving(false) }
   }
