@@ -555,6 +555,82 @@ function CrewInfoModal({ crew, productionId, locations, onClose, overlayRight = 
   )
 }
 
+// ─── AssignCtxTravelNotes — read-only travel notes per crew assegnato ──────────
+function AssignCtxTravelNotes({ crewId, productionId }) {
+  const [notes, setNotes] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!crewId || !productionId) return
+    fetch(`/api/crew-notes?crew_id=${crewId}&production_id=${productionId}`)
+      .then(r => r.json())
+      .then(json => {
+        const travel = (json.notes || []).filter(n => n.context === 'travel')
+        setNotes(travel)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [crewId, productionId])
+
+  if (loading) return (
+    <div style={{ padding: '10px 12px', fontSize: '11px', color: '#94a3b8' }}>Loading travel notes…</div>
+  )
+  if (notes.length === 0) return (
+    <div style={{ padding: '10px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
+      ✈️ No travel notes for this crew member
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {notes.map(n => {
+        const hasMovement = !!n.linked_movement_id
+        return (
+          <div key={n.id} style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '8px 10px' }}>
+            {/* LinkedChip inline — mostra volo/treno collegato */}
+            {hasMovement && <LinkedMovementChip movementId={n.linked_movement_id} />}
+            <div style={{ fontSize: '12px', color: '#0f172a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: hasMovement ? '4px' : 0 }}>
+              {n.content}
+            </div>
+            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
+              {n.author_name} · {n.author_role}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── LinkedMovementChip — versione standalone per TripSidebar ──
+function LinkedMovementChip({ movementId }) {
+  const [data, setData] = useState(null)
+  useEffect(() => {
+    if (!movementId) return
+    fetch(`/api/crew-notes/linked?type=movement&id=${movementId}`)
+      .then(r => r.json())
+      .then(json => { if (json.data) setData(json.data) })
+      .catch(() => {})
+  }, [movementId])
+  if (!data) return null
+  const dirIcon  = data.direction === 'IN' ? '↓' : '↑'
+  const dirColor = data.direction === 'IN' ? '#15803d' : '#b45309'
+  const typeIcon = data.travel_type === 'FLIGHT' ? '✈️' : data.travel_type === 'TRAIN' ? '🚂' : '🚐'
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap', background: '#e0f2fe', border: '1px solid #7dd3fc', borderRadius: '5px', padding: '3px 8px', fontSize: '11px' }}>
+      <span>{typeIcon}</span>
+      {data.travel_number && <span style={{ fontWeight: '700', color: '#0369a1' }}>{data.travel_number}</span>}
+      {data.from_location && <span style={{ color: '#0f172a' }}>{data.from_location}</span>}
+      {data.from_time     && <span style={{ color: '#475569' }}>{String(data.from_time).slice(0,5)}</span>}
+      {(data.from_location || data.from_time) && (data.to_location || data.to_time) && <span style={{ color: '#94a3b8' }}>→</span>}
+      {data.to_location   && <span style={{ fontWeight: '700', color: '#0f172a' }}>{data.to_location}</span>}
+      {data.to_time       && <span style={{ color: '#475569' }}>{String(data.to_time).slice(0,5)}</span>}
+      {data.travel_date   && <span style={{ color: '#64748b', borderLeft: '1px solid #7dd3fc', paddingLeft: '5px' }}>{data.travel_date}</span>}
+      <span style={{ fontWeight: '700', color: dirColor, borderLeft: '1px solid #7dd3fc', paddingLeft: '5px' }}>{dirIcon} {data.direction}</span>
+    </div>
+  )
+}
+
 // ─── TripSidebar (CREATE new trip) ────────────────────────────
 function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceTypes, onSaved, assignCtx, trips, onLocationCreated, currentUser }) {
   const t = useT()
@@ -1285,6 +1361,16 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               )}
               {crewLookupQ.length >= 2 && crewLookupResults.length === 0 && <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', padding: '6px 0 2px', fontStyle: 'italic' }}>No results</div>}
             </div>
+
+            {/* ── Travel Notes del crew assegnato (read-only, solo con assignCtx) ── */}
+            {assignCtx && (
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderLeft: '3px solid #0369a1', borderRadius: '10px', padding: '10px 12px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '7px' }}>
+                  ✈️ Travel Notes — {assignCtx.name.split(' ')[0]}
+                </div>
+                <AssignCtxTravelNotes crewId={assignCtx.id} productionId={PRODUCTION_ID} />
+              </div>
+            )}
 
             {/* ── Multi-trip: type selector + saved legs ── */}
             {multiMode && (
