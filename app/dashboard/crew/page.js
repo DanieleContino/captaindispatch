@@ -1166,18 +1166,13 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
             {mode === 'edit' && (
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-                  <div>
+                <div>
                     <label style={lbl}>{t.hotelStatusLabel}</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {['CONFIRMED', 'PENDING', 'CHECKED_OUT'].map(s => {
-                        const c = HC[s]; const active = form.hotel_status === s
-                        return (
-                          <button key={s} type="button" onClick={() => set('hotel_status', s)}
-                            style={{ padding: '5px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', textAlign: 'left' }}>
-                            {s}
-                          </button>
-                        )
-                      })}
+                    <div style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '12px', fontWeight: '700' }}>
+                      {form.hotel_status === 'CONFIRMED'
+                        ? <span style={{ color: '#15803d' }}>✅ Confirmed</span>
+                        : <span style={{ color: '#a16207' }}>⏳ Pending</span>}
+                      <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '400', marginLeft: '8px' }}>Managed from Accommodation</span>
                     </div>
                   </div>
                   <div>
