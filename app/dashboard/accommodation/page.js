@@ -78,6 +78,24 @@ function daysInRange(start, end) {
   return days
 }
 
+// ─── Color palette ────────────────────────────────────────────
+const ACCOMMODATION_PALETTE = [
+  null,
+  '#bbf7d0', '#fde68a', '#fca5a5', '#93c5fd',
+  '#f9a8d4', '#d8b4fe', '#fdba74', '#e2e8f0',
+]
+
+const DEFAULT_LEGEND = {
+  '#bbf7d0': 'Confirmed',
+  '#fde68a': 'Pending',
+  '#fca5a5': 'Issue',
+  '#93c5fd': 'VIP',
+  '#f9a8d4': 'Special',
+  '#d8b4fe': 'Upgrade',
+  '#fdba74': 'Expiring',
+  '#e2e8f0': 'Unconfirmed',
+}
+
 // ─── MismatchBanner ───────────────────────────────────────────
 function MismatchBanner({ mismatches, onAddStay, onDismiss }) {
   const [expanded, setExpanded] = React.useState(false)
@@ -180,7 +198,7 @@ const SELECT_FIELDS = `
   id, production_id, crew_id, hotel_id, arrival_date, departure_date,
   room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
   total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
-  room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status,
+  room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status, row_color,
   crew:crew_id(id, full_name, role, department),
   hotel:hotel_id(id, name),
   subgroup:subgroup_id(id, name),
@@ -194,6 +212,7 @@ const EMPTY_STAY = {
   room_type_notes: '', cost_per_night: '', city_tax_total: '',
   total_cost_no_vat: '', total_cost_vat: '', po_number: '', invoice_number: '',
   hotel_status: 'PENDING',
+  row_color: '#fde68a',
 }
 
 // ─── ClickableCell ─────────────────────────────────────────────
@@ -451,7 +470,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
               const nights = nightsBetween(stay.arrival_date, stay.departure_date)
               const isCI   = stay.arrival_date === today
               const isCO   = stay.departure_date === today
-              const rowBg  = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa'
+              const rowBg  = stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa')
               return (
                 <tr key={stay.id} style={{ background: rowBg }}
                   onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background === '' && (c.style.background = '#f8fafc')) }}
@@ -908,7 +927,7 @@ function LinkedMovements({ stayId, productionId }) {
   )
 }
 
-function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, currentUser, hotels }) {
+function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, currentUser, hotels, colorLegend }) {
   const PRODUCTION_ID = getProductionId()
   const [form, setForm]             = useState(EMPTY_STAY)
   const [saving, setSaving]         = useState(false)
@@ -944,6 +963,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         po_number:         initial.po_number         || '',
         invoice_number:    initial.invoice_number    || '',
         hotel_status:      initial.hotel_status      || 'PENDING',
+        row_color:         initial.row_color         || '#fde68a',
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
@@ -1082,6 +1102,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       po_number:         (form.po_number    || '').trim() || null,
       invoice_number:    (form.invoice_number || '').trim() || null,
       hotel_status:      form.hotel_status || 'PENDING',
+      row_color:         form.row_color    || '#fde68a',
     }
   }
 
@@ -1198,6 +1219,31 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
                     </button>
                   )
                 })}
+              </div>
+            </div>
+
+            {/* Row Color */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={lbl}>Row Color</label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {ACCOMMODATION_PALETTE.map((color, i) => (
+                  <button key={i} type="button" onClick={() => set('row_color', color)}
+                    title={color ? (colorLegend?.[color] || color) : 'No color'}
+                    style={{
+                      width: '28px', height: '28px', borderRadius: '6px',
+                      background: color || 'white',
+                      border: form.row_color === color ? '2px solid #0f2340' : '1px solid rgba(0,0,0,0.15)',
+                      cursor: 'pointer', padding: 0, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#94a3b8',
+                    }}>
+                    {color === null && '✕'}
+                  </button>
+                ))}
+                {form.row_color && colorLegend?.[form.row_color] && (
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#374151', padding: '2px 8px', borderRadius: '999px', background: form.row_color, border: '1px solid rgba(0,0,0,0.12)' }}>
+                    {colorLegend[form.row_color]}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1358,6 +1404,8 @@ export default function AccommodationPage() {
   const [filterHotel,  setFilterHotel]  = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [toast, setToast] = useState(null)
+  const [colorLegend,      setColorLegend]      = useState(DEFAULT_LEGEND)
+  const [legendEditorOpen, setLegendEditorOpen] = useState(false)
   const [mismatches,            setMismatches]            = useState([])
   const [subgroupSidebarOpen,   setSubgroupSidebarOpen]   = useState(false)
   const [subgroupSidebarHotel,  setSubgroupSidebarHotel]  = useState(null)  // { id, name }
@@ -1374,6 +1422,16 @@ export default function AccommodationPage() {
     setSubgroupSidebarHotel(hotel)
     setSubgroupSidebarOpen(true)
     loadSubgroupsForHotel(hotel.id)
+  }
+
+  async function saveColorLegend(newLegend) {
+    setColorLegend(newLegend)
+    await supabase.from('productions').update({ accommodation_color_legend: newLegend }).eq('id', PRODUCTION_ID)
+  }
+
+  async function handleRowColorChange(stayId, color) {
+    await supabase.from('crew_stays').update({ row_color: color }).eq('id', stayId)
+    setStays(prev => prev.map(s => s.id === stayId ? { ...s, row_color: color } : s))
   }
 
   function showToast(message, type = 'success') {
@@ -1483,6 +1541,10 @@ export default function AccommodationPage() {
       if (PRODUCTION_ID) {
         const { data: roleRow } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('production_id', PRODUCTION_ID).maybeSingle()
         if (roleRow?.role) setUserRole(roleRow.role)
+        const { data: prod } = await supabase.from('productions').select('accommodation_color_legend').eq('id', PRODUCTION_ID).single()
+        if (prod?.accommodation_color_legend && Object.keys(prod.accommodation_color_legend).length > 0) {
+          setColorLegend(prod.accommodation_color_legend)
+        }
       }
     })
   }, [])
@@ -1648,8 +1710,37 @@ export default function AccommodationPage() {
             style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none' }}>
             🏨 Hotel Settings
           </a>
+          <button onClick={() => setLegendEditorOpen(v => !v)}
+            style={{ padding: '6px 12px', borderRadius: '7px', border: `1px solid ${legendEditorOpen ? '#a855f7' : '#e2e8f0'}`, background: legendEditorOpen ? '#faf5ff' : 'white', color: legendEditorOpen ? '#7c3aed' : '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            🎨 Legend
+          </button>
         </div>
       </div>
+
+      {/* ── Legend Editor ── */}
+      {legendEditorOpen && (
+        <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '800', color: '#7c3aed', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '2px' }}>
+            🎨 Row Color Legend — click a color to edit its label
+          </div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {ACCOMMODATION_PALETTE.filter(c => c !== null).map(color => (
+              <div key={color} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: color, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
+                <input
+                  value={colorLegend[color] || ''}
+                  onChange={e => saveColorLegend({ ...colorLegend, [color]: e.target.value })}
+                  placeholder="Label..."
+                  style={{ width: '110px', padding: '3px 7px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px', color: '#0f172a', background: color, fontWeight: '600' }}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+            Labels are saved automatically. Assign colors to rows by right-clicking any row in the list or calendar view.
+          </div>
+        </div>
+      )}
 
       {/* ── Filter Row ── MODIFICA 2: data-filter-row attribute */}
       <div ref={filterRowRef} data-filter-row="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20 }}>
@@ -1674,6 +1765,13 @@ export default function AccommodationPage() {
         {isFilterActive && (
           <button onClick={resetFilters} style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#64748b' }}>✕ Reset</button>
         )}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {ACCOMMODATION_PALETTE.filter(c => c !== null && colorLegend[c]).map(color => (
+            <span key={color} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', background: color, border: '1px solid rgba(0,0,0,0.12)', fontSize: '10px', fontWeight: '700', color: '#374151', whiteSpace: 'nowrap' }}>
+              {colorLegend[color]}
+            </span>
+          ))}
+        </div>
         {viewMode === 'calendar' && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px', color: '#64748b' }}>
             <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#15803d', borderRadius: '2px', marginRight: '3px' }} />Check-in</span>
@@ -1803,7 +1901,12 @@ export default function AccommodationPage() {
                           <tbody>
                             {stayList.map(stay => {
                               const isCI = stay.arrival_date === today, isCO = stay.departure_date === today
-                              return <tr key={stay.id} style={{ background: isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white', borderLeft: isCI ? '3px solid #22c55e' : isCO ? '3px solid #ef4444' : '3px solid transparent' }}>{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today }))}</tr>
+                              const rowBg = stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white')
+                              const borderColor = isCI ? '#22c55e' : isCO ? '#ef4444' : (stay.row_color ? 'rgba(0,0,0,0.15)' : 'transparent')
+                              return <tr key={stay.id}
+                                style={{ background: rowBg, borderLeft: `3px solid ${borderColor}`, cursor: 'context-menu' }}
+                                onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
+                              >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today }))}</tr>
                             })}
                           </tbody>
                         </table>
@@ -1825,7 +1928,7 @@ export default function AccommodationPage() {
       </div>
 
       <AccommodationColumnsEditorSidebar open={columnsEditorOpen} onClose={() => setColumnsEditorOpen(false)} onChanged={loadColumnsConfig} />
-      <StaySidebar open={sidebarOpen} mode={sidebarMode} initial={sidebarTarget} onClose={() => setSidebarOpen(false)} onSaved={handleStaySaved} onDeleted={handleStayDeleted} hotels={hotels} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null} />
+      <StaySidebar open={sidebarOpen} mode={sidebarMode} initial={sidebarTarget} onClose={() => setSidebarOpen(false)} onSaved={handleStaySaved} onDeleted={handleStayDeleted} hotels={hotels} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null} colorLegend={colorLegend} />
       <SubgroupManagerSidebar
         open={subgroupSidebarOpen}
         hotelId={subgroupSidebarHotel?.id}
