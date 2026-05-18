@@ -664,6 +664,89 @@ function DriveSyncWidget({ productionId, onPreview, refreshKey }) {
   )
 }
 
+// ── Accommodation Mismatch Widget ────────────────────────
+function AccommodationMismatchWidget({ productionId }) {
+  const [missing, setMissing] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!productionId) return
+    // Crew con travel_movements (matched) ma senza stay collegata
+    supabase
+      .from('travel_movements')
+      .select('id, crew_id, full_name_raw, travel_date, direction, travel_type, travel_number, from_location, to_location, linked_stay_id, crew:crew_id(full_name, department)')
+      .eq('production_id', productionId)
+      .eq('match_status', 'matched')
+      .is('linked_stay_id', null)
+      .order('travel_date', { ascending: true })
+      .then(({ data }) => {
+        // Deduplica per crew_id — mostra una riga per persona
+        const seen = new Set()
+        const deduped = (data || []).filter(m => {
+          if (!m.crew_id || seen.has(m.crew_id)) return false
+          seen.add(m.crew_id)
+          return true
+        })
+        setMissing(deduped)
+        setLoading(false)
+      })
+  }, [productionId])
+
+  if (loading || missing.length === 0) return null
+
+  const TYPE_ICONS = { FLIGHT: '✈️', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴️' }
+
+  return (
+    <div style={{ background: 'white', border: '1px solid #fecaca', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
+      <div style={{ padding: '12px 20px', background: '#fef2f2', borderBottom: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626' }}>
+          🏨 Accommodation Missing
+        </div>
+        <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700' }}>
+          {missing.length} crew {missing.length === 1 ? 'member' : 'members'} without stay
+        </div>
+      </div>
+      <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+        {missing.map((m, i) => {
+          const name = m.crew?.full_name || m.full_name_raw || '—'
+          return (
+            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', borderBottom: i < missing.length - 1 ? '1px solid #f8fafc' : 'none' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '3px' }}>
+                  {name}
+                  {m.crew?.department && (
+                    <span style={{ marginLeft: '8px', fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>
+                      {m.crew.department}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: '700', color: m.direction === 'IN' ? '#15803d' : '#c2410c' }}>
+                    {m.direction === 'IN' ? '🛬 IN' : '🛫 OUT'}
+                  </span>
+                  <span>{m.travel_date}</span>
+                  <span>{TYPE_ICONS[m.travel_type] || ''}</span>
+                  {m.travel_number && (
+                    <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#2563eb' }}>{m.travel_number}</span>
+                  )}
+                  {m.from_location && (
+                    <span>{m.from_location} → {m.to_location || '?'}</span>
+                  )}
+                </div>
+              </div>
+              <a
+                href="/dashboard/accommodation"
+                style={{ padding: '5px 12px', borderRadius: '7px', background: '#15803d', color: 'white', textDecoration: 'none', fontSize: '11px', fontWeight: '700', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                + Add Stay
+              </a>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Travel Discrepancies Widget ──────────────────────────
 function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
   const [items, setItems] = useState([])
@@ -2597,6 +2680,7 @@ export default function BridgePage() {
               onPreview={ctx => setImportCtx({ ...ctx, locations })}
             />
             <TravelDiscrepanciesWidget productionId={productionId} refreshKey={refreshKey} />
+            <AccommodationMismatchWidget productionId={productionId} />
             <CrewDuplicatesWidget
               productionId={productionId}
               locations={locations}
