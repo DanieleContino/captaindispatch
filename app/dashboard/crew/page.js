@@ -994,7 +994,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
 function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose, onSaved, currentUser, onNotesChanged }) {
   const t = useT()
-  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '', is_local: false }
+  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '', is_local: false, person_type: 'CREW', linked_crew_id: null }
   const PRODUCTION_ID = getProductionId()
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -1002,6 +1002,9 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
   const [error, setError]   = useState(null)
   const [confirmDel, setConfirmDel] = useState(false)
   const [contactOpen, setContactOpen] = useState(false)
+  const [linkedCrewSearch,   setLinkedCrewSearch]   = useState('')
+  const [linkedCrewResults,  setLinkedCrewResults]  = useState([])
+  const [linkedCrewSearching, setLinkedCrewSearching] = useState(false)
   const [editKey, setEditKey] = useState(0)
 
   // Incrementa editKey ogni volta che la sidebar si apre in modalità edit
@@ -1032,11 +1035,16 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
         email:                initial.email || '',
         phone:                initial.phone || '',
         is_local:             initial.is_local || false,
+        person_type:          initial.person_type    || 'CREW',
+        linked_crew_id:       initial.linked_crew_id || null,
       })
     } else {
       // Auto-genera Crew ID: prende il più alto CR#### esistente e incrementa
       // Spread initial (se presente) per pre-popolare name/hotel/date dal banner "Yes, add"
-      setForm({ ...EMPTY, ...(initial || {}) })
+      setForm({ ...EMPTY, ...(initial || {}), person_type: initial?.person_type || 'CREW', linked_crew_id: initial?.linked_crew_id || null })
+      if (initial?.linked_crew_name) setLinkedCrewSearch(initial.linked_crew_name)
+      else setLinkedCrewSearch('')
+      setLinkedCrewResults([])
       if (PRODUCTION_ID) {
         supabase.from('crew').select('id').eq('production_id', PRODUCTION_ID)
           .then(({ data }) => {
@@ -1054,6 +1062,20 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
   }, [open, mode, initial])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  async function searchLinkedCrew(q) {
+    if (!q || q.length < 2 || !PRODUCTION_ID) { setLinkedCrewResults([]); return }
+    setLinkedCrewSearching(true)
+    const { data } = await supabase.from('crew').select('id, full_name, role, department').eq('production_id', PRODUCTION_ID).eq('person_type', 'CREW').ilike('full_name', `%${q}%`).limit(8)
+    setLinkedCrewResults(data || [])
+    setLinkedCrewSearching(false)
+  }
+
+  useEffect(() => {
+    if (form.linked_crew_id) return
+    const timer = setTimeout(() => searchLinkedCrew(linkedCrewSearch), 300)
+    return () => clearTimeout(timer)
+  }, [linkedCrewSearch, form.linked_crew_id])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -1078,6 +1100,8 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
       email:                 form.email.trim() || null,
       phone:                 form.phone.trim() || null,
       is_local:              form.is_local || false,
+      person_type:           form.person_type    || 'CREW',
+      linked_crew_id:        form.linked_crew_id || null,
     }
 
     let error
@@ -1175,6 +1199,60 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                 {deptOptions.map(d => <option key={d} value={d} />)}
               </datalist>
             </div>
+
+            {/* Person Type selector */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={lbl}>Person Type</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {['CREW', 'FAMILY'].map(pt => (
+                  <button key={pt} type="button" onClick={() => { set('person_type', pt); if (pt === 'CREW') { set('linked_crew_id', null); setLinkedCrewSearch(''); setLinkedCrewResults([]) } }}
+                    style={{ flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: '1px solid', transition: 'all 0.15s',
+                      ...(form.person_type === pt
+                        ? pt === 'CREW'
+                          ? { background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }
+                          : { background: '#fefce8', color: '#92400e', borderColor: '#fde68a' }
+                        : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                    {pt === 'CREW' ? '👤 Crew' : '👨‍👩‍👧 Family'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Linked crew search — only when FAMILY */}
+            {form.person_type === 'FAMILY' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '8px' }}>
+                <label style={{ ...lbl, color: '#92400e' }}>Linked to crew member *</label>
+                <input
+                  value={linkedCrewSearch}
+                  onChange={e => { setLinkedCrewSearch(e.target.value); if (!e.target.value) set('linked_crew_id', null) }}
+                  style={{ width: '100%', padding: '7px 10px', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }}
+                  placeholder="Type name to search crew..."
+                  autoComplete="off"
+                />
+                {linkedCrewSearching && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Searching...</div>}
+                {linkedCrewResults.length > 0 && (
+                  <div style={{ border: '1px solid #fde68a', borderRadius: '8px', marginTop: '4px', overflow: 'hidden' }}>
+                    {linkedCrewResults.map(c => (
+                      <div key={c.id}
+                        onClick={() => { set('linked_crew_id', c.id); setLinkedCrewSearch(c.full_name); setLinkedCrewResults([]) }}
+                        style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #fef9c3', display: 'flex', gap: '8px', alignItems: 'center', background: 'white' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#fefce8'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                        <span style={{ fontWeight: '700', color: '#0f172a' }}>{c.full_name}</span>
+                        {c.role && <span style={{ fontSize: '11px', color: '#64748b' }}>{c.role}</span>}
+                        {c.department && <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{c.department}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {form.linked_crew_id && (
+                  <div style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', fontWeight: '600' }}>✓ Linked to {linkedCrewSearch}</div>
+                )}
+                <div style={{ fontSize: '10px', color: '#92400e', marginTop: '6px', lineHeight: 1.5 }}>
+                  ℹ Family members are linked to a crew member for accommodation and transport tracking. They will appear in the crew list only when "Show Family" is enabled.
+                </div>
+              </div>
+            )}
 
             {/* NTN / Self Drive toggle */}
             <div style={{ marginBottom: '8px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
