@@ -759,7 +759,7 @@ function TravelAccordion({ crewId }) {
 }
 
 // ─── Crew card compatta ──────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0 }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0, isLocal = false }) {
   const t = useT()
   const isMobile = useIsMobile()
   const tc = TC[member.travel_status] || TC.PRESENT
@@ -823,10 +823,15 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
             <span style={{ fontSize: '11px', color: '#374151', background: '#f1f5f9', padding: '1px 7px', borderRadius: '5px', fontWeight: '600' }}>{member.role}</span>
           )}
           <span style={{ fontSize: '11px', color: '#64748b', background: '#e2e8f0', padding: '1px 7px', borderRadius: '5px' }}>{member.department || 'NO DEPT'}</span>
-          <Badge label={member.hotel_status} style={hc} />
+          {!isLocal && <Badge label={member.hotel_status} style={hc} />}
           {isRemote && (
             <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #94a3b8' }}>
               🏠 Remote
+            </span>
+          )}
+          {isLocal && (
+            <span style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', background: '#fef9c3', padding: '2px 8px', borderRadius: '6px', border: '1px solid #fde68a' }}>
+              📍 Local
             </span>
           )}
         </div>
@@ -1877,7 +1882,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} stays={staysMap[m.id] || []} unreadCount={unreadMap[m.id] || 0} notesCount={notesMap[m.id] || 0} />
+                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} stays={staysMap[m.id] || []} unreadCount={unreadMap[m.id] || 0} notesCount={notesMap[m.id] || 0} isLocal={m.is_local || false} />
                   ))}
                 </div>
               </div>
