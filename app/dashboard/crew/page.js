@@ -1426,6 +1426,7 @@ export default function CrewPage() {
   const [notesMap,  setNotesMap]        = useState({})  // total notes per crew_id (incl. authored by self)
   const [userRole,  setUserRole]        = useState('CAPTAIN')
   const [familyCountMap,  setFamilyCountMap]  = useState({})
+  const [showFamily, setShowFamily] = useState(false)
   const [familyModalCrew, setFamilyModalCrew] = useState(null)
 
   async function loadUnreadMap(userId) {
@@ -1674,6 +1675,7 @@ export default function CrewPage() {
 
   // Filtri
   const filtered = crew.filter(c => {
+    if (c.person_type === 'FAMILY') return false
     if (filterTravel === 'NTN') { if (!c.no_transport_needed) return false }
     else if (filterTravel === 'REMOTE') { if (c.on_location !== false) return false }
     else if (filterTravel === 'LOCAL') { if (!c.is_local) return false }
@@ -1686,6 +1688,8 @@ export default function CrewPage() {
     }
     return true
   })
+
+  const familyFiltered = crew.filter(c => c.person_type === 'FAMILY')
 
   const departments = [...new Set(crew.map(c => (c.department || '').trim().toUpperCase() || 'NO DEPT'))].sort()
   const counts = {
@@ -1835,6 +1839,10 @@ export default function CrewPage() {
               {departments.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           )}
+          <button onClick={() => setShowFamily(p => !p)}
+            style={{ padding: '3px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', border: '1px solid', ...(showFamily ? { background: '#fefce8', color: '#92400e', borderColor: '#fde68a' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+            👨‍👩‍👧 Family {familyFiltered.length > 0 ? `(${familyFiltered.length})` : ''}
+          </button>
           <button onClick={() => setGD(p => !p)}
             style={{ padding: '3px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', border: '1px solid #e2e8f0', background: groupByDept ? '#eff6ff' : 'white', color: groupByDept ? '#1d4ed8' : '#64748b' }}>
             {groupByDept ? '▾ Dept' : '≡ Lista'}
@@ -1953,6 +1961,53 @@ export default function CrewPage() {
                 </div>
               </div>
             ))}
+          {showFamily && familyFiltered.length > 0 && (
+            <div style={{ marginTop: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#92400e', letterSpacing: '0.08em', textTransform: 'uppercase' }}>👨‍👩‍👧 Family Members</div>
+                <div style={{ flex: 1, height: '1px', background: '#fde68a' }} />
+                <div style={{ fontSize: '11px', color: '#92400e' }}>{familyFiltered.length} member{familyFiltered.length !== 1 ? 's' : ''}</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {familyFiltered.map(m => {
+                  const linkedCrew = crew.find(c => c.id === m.linked_crew_id)
+                  return (
+                    <div key={m.id} style={{ background: '#fefce8', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: '700', fontSize: '14px', color: '#0f172a' }}>{m.full_name}</span>
+                          <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 7px', borderRadius: '999px', background: '#FAEEDA', color: '#633806', border: '1px solid #FAC775' }}>FAMILY</span>
+                          {m.role && <span style={{ fontSize: '11px', color: '#92400e' }}>{m.role}</span>}
+                        </div>
+                        {linkedCrew && (
+                          <div style={{ fontSize: '11px', color: '#92400e' }}>
+                            of <strong>{linkedCrew.full_name}</strong>
+                            {linkedCrew.role ? ` (${linkedCrew.role})` : ''}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '11px', color: '#a16207', marginTop: '3px' }}>
+                          {m.no_transport_needed ? '🚐 NTN' : '🚐 Transport needed'}
+                          {m.phone && <span style={{ marginLeft: '10px' }}>📱 {m.phone}</span>}
+                        </div>
+                      </div>
+                      <button onClick={() => openEdit(m)}
+                        style={{ background: 'white', border: '1px solid #fde68a', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#92400e', whiteSpace: 'nowrap' }}>
+                        ✎ Edit
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {showFamily && familyFiltered.length === 0 && (
+            <div style={{ marginTop: '24px', padding: '20px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '10px', textAlign: 'center' }}>
+              <div style={{ fontSize: '13px', color: '#92400e', fontWeight: '600' }}>No family members added yet</div>
+              <div style={{ fontSize: '11px', color: '#a16207', marginTop: '4px' }}>Use + Add Crew and set person type to Family</div>
+            </div>
+          )}
+
           </div>
         )}
       </div>
