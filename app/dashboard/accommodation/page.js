@@ -1403,8 +1403,20 @@ export default function AccommodationPage() {
   const [columnsConfig,     setColumnsConfig]     = useState([])
   const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
   const [applyingPreset,    setApplyingPreset]    = useState(false)
-  const [windowStart,  setWindowStart]  = useState(() => isoAdd(isoToday(), -3))
-  const [windowEnd,    setWindowEnd]    = useState(() => isoAdd(isoToday(), 10))
+  const [windowStart,  setWindowStart]  = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('accom_window_start')
+      if (saved) return saved
+    }
+    return isoAdd(isoToday(), -3)
+  })
+  const [windowEnd,    setWindowEnd]    = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('accom_window_end')
+      if (saved) return saved
+    }
+    return isoAdd(isoToday(), 10)
+  })
   const [showCosts,    setShowCosts]    = useState(false)
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [sidebarMode,   setSidebarMode]   = useState('new')
@@ -1480,7 +1492,14 @@ export default function AccommodationPage() {
     finally { setApplyingPreset(false) }
   }
 
-  function setRange(start, end) { setWindowStart(start); setWindowEnd(end) }
+  function setRange(start, end) {
+    setWindowStart(start)
+    setWindowEnd(end)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('accom_window_start', start)
+      localStorage.setItem('accom_window_end', end)
+    }
+  }
   function resetWindow() { setRange(isoAdd(isoToday(), -3), isoAdd(isoToday(), 10)) }
   function setThisMonth() { setRange(startOfMonth(0), endOfMonth(0)) }
   function setNextMonth() { setRange(startOfMonth(1), endOfMonth(1)) }
@@ -1668,11 +1687,11 @@ export default function AccommodationPage() {
 
         {/* Date range Dal / Al */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Dal</span>
-          <input type="date" value={windowStart} onChange={e => e.target.value && setWindowStart(e.target.value)}
+          <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>From</span>
+          <input type="date" value={windowStart} onChange={e => e.target.value && setRange(e.target.value, windowEnd)}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
-          <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Al</span>
-          <input type="date" value={windowEnd} onChange={e => e.target.value && setWindowEnd(e.target.value)}
+          <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>To</span>
+          <input type="date" value={windowEnd} onChange={e => e.target.value && setRange(windowStart, e.target.value)}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
           <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
           <button onClick={resetWindow} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>↺ Today</button>
