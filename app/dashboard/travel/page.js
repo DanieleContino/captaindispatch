@@ -1210,8 +1210,20 @@ export default function TravelPage() {
   const [sectionColorOpen,  setSectionColorOpen]  = useState(null)
 
   // Date window
-  const [windowStart, setWindowStart] = useState(() => isoAdd(isoToday(), -3))
-  const [windowEnd,   setWindowEnd]   = useState(() => isoAdd(isoToday(), 10))
+  const [windowStart, setWindowStart] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('travel_window_start')
+      if (saved) return saved
+    }
+    return isoAdd(isoToday(), -3)
+  })
+  const [windowEnd,   setWindowEnd]   = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('travel_window_end')
+      if (saved) return saved
+    }
+    return isoAdd(isoToday(), 10)
+  })
 
   // Movement sidebar
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
@@ -1422,16 +1434,32 @@ export default function TravelPage() {
 
   // ── Window navigation ──────────────────────────────────────
   function shiftWindow(n) {
-    setWindowStart(s => isoAdd(s, n))
-    setWindowEnd(e   => isoAdd(e, n))
+    const newStart = isoAdd(windowStart, n)
+    const newEnd   = isoAdd(windowEnd, n)
+    setWindowStart(newStart)
+    setWindowEnd(newEnd)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('travel_window_start', newStart)
+      localStorage.setItem('travel_window_end', newEnd)
+    }
   }
   function resetWindow() {
-    setWindowStart(isoAdd(isoToday(), -3))
-    setWindowEnd(isoAdd(isoToday(), 10))
+    const s = isoAdd(isoToday(), -3)
+    const e = isoAdd(isoToday(), 10)
+    setWindowStart(s); setWindowEnd(e)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('travel_window_start', s)
+      localStorage.setItem('travel_window_end', e)
+    }
   }
   function pickDate(dateStr) {
-    setWindowStart(isoAdd(dateStr, -3))
-    setWindowEnd(isoAdd(dateStr, 10))
+    const s = isoAdd(dateStr, -3)
+    const e = isoAdd(dateStr, 10)
+    setWindowStart(s); setWindowEnd(e)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('travel_window_start', s)
+      localStorage.setItem('travel_window_end', e)
+    }
   }
 
   // ── Movement callbacks ─────────────────────────────────────
