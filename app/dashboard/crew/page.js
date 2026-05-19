@@ -1615,6 +1615,7 @@ export default function CrewPage() {
   const filtered = crew.filter(c => {
     if (filterTravel === 'NTN') { if (!c.no_transport_needed) return false }
     else if (filterTravel === 'REMOTE') { if (c.on_location !== false) return false }
+    else if (filterTravel === 'LOCAL') { if (!c.is_local) return false }
     else if (filterTravel !== 'ALL' && c.travel_status !== filterTravel) return false
     if (filterHotel  !== 'ALL' && c.hotel_status  !== filterHotel)  return false
     if (filterDept   !== 'ALL' && ((c.department || '').trim().toUpperCase() || 'NO DEPT') !== filterDept) return false
@@ -1748,6 +1749,10 @@ export default function CrewPage() {
             <button onClick={() => setFT(filterTravel === 'REMOTE' ? 'ALL' : 'REMOTE')}
               style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterTravel === 'REMOTE' ? { background: '#f1f5f9', color: '#475569', borderColor: '#94a3b8' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
               🏠 Remote
+            </button>
+            <button onClick={() => setFT(filterTravel === 'LOCAL' ? 'ALL' : 'LOCAL')}
+              style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterTravel === 'LOCAL' ? { background: '#fef9c3', color: '#92400e', borderColor: '#fde68a' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+              📍 Local
             </button>
           </div>
           {/* Hotel filter — riga propria su mobile */}
