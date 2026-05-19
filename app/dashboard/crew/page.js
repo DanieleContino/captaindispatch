@@ -1179,26 +1179,30 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
             </div>
 
             {/* Ruolo */}
-            <div style={row}>
-              <label style={lbl}>{t.roleLabel}</label>
-              <input value={form.role} onChange={e => set('role', e.target.value)} style={inp} placeholder="Director of Photography, Gaffer, 1st AC…" />
-            </div>
+            {form.person_type !== 'FAMILY' && (
+              <div style={row}>
+                <label style={lbl}>{t.roleLabel}</label>
+                <input value={form.role} onChange={e => set('role', e.target.value)} style={inp} placeholder="Director of Photography, Gaffer, 1st AC…" />
+              </div>
+            )}
 
             {/* Dipartimento */}
-            <div style={row}>
-              <label style={lbl}>{t.departmentLabel}</label>
-              <input
-                list="crew-dept-suggestions"
-                value={form.department}
-                onChange={e => set('department', e.target.value)}
-                style={inp}
-                placeholder="GRIP, CAMERA, PRODUCTION…"
-                autoComplete="off"
-              />
-              <datalist id="crew-dept-suggestions">
-                {deptOptions.map(d => <option key={d} value={d} />)}
-              </datalist>
-            </div>
+            {form.person_type !== 'FAMILY' && (
+              <div style={row}>
+                <label style={lbl}>{t.departmentLabel}</label>
+                <input
+                  list="crew-dept-suggestions"
+                  value={form.department}
+                  onChange={e => set('department', e.target.value)}
+                  style={inp}
+                  placeholder="GRIP, CAMERA, PRODUCTION…"
+                  autoComplete="off"
+                />
+                <datalist id="crew-dept-suggestions">
+                  {deptOptions.map(d => <option key={d} value={d} />)}
+                </datalist>
+              </div>
+            )}
 
             {/* Person Type selector */}
             <div style={{ marginBottom: '12px' }}>
@@ -1267,16 +1271,18 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
             </div>
 
             {/* Remote / Non in Set toggle */}
-            <div style={{ marginBottom: '12px', padding: '10px 12px', background: form.on_location === false ? '#f1f5f9' : '#f8fafc', border: `1px solid ${form.on_location === false ? '#94a3b8' : '#e2e8f0'}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: form.on_location === false ? '#475569' : '#374151' }}>🏠 Non in Set — Remoto</div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Lavora da casa o albergo. Pre-escluso da Rocket.</div>
+            {form.person_type !== 'FAMILY' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: form.on_location === false ? '#f1f5f9' : '#f8fafc', border: `1px solid ${form.on_location === false ? '#94a3b8' : '#e2e8f0'}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: form.on_location === false ? '#475569' : '#374151' }}>🏠 Non in Set — Remoto</div>
+                  <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Lavora da casa o albergo. Pre-escluso da Rocket.</div>
+                </div>
+                <button type="button" onClick={() => set('on_location', !form.on_location)}
+                  style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.on_location === false ? '#94a3b8' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
+                  <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.on_location === false ? '20px' : '2px', display: 'block' }} />
+                </button>
               </div>
-              <button type="button" onClick={() => set('on_location', !form.on_location)}
-                style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.on_location === false ? '#94a3b8' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
-                <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.on_location === false ? '20px' : '2px', display: 'block' }} />
-              </button>
-            </div>
+            )}
 
             {/* Hotel — solo in edit mode (gestito da AccommodationAccordion) */}
             {mode === 'edit' && (
@@ -1336,19 +1342,21 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
             )}
 
             {/* Local / No Accommodation toggle */}
-            <div style={{ marginBottom: '12px', padding: '10px 12px', background: form.is_local ? '#fef9c3' : '#f8fafc', border: `1px solid ${form.is_local ? '#fde68a' : '#e2e8f0'}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: form.is_local ? '#92400e' : '#374151' }}>📍 Local — No Accommodation</div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Lives locally. Excluded from accommodation tracking.</div>
+            {form.person_type !== 'FAMILY' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: form.is_local ? '#fef9c3' : '#f8fafc', border: `1px solid ${form.is_local ? '#fde68a' : '#e2e8f0'}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: form.is_local ? '#92400e' : '#374151' }}>📍 Local — No Accommodation</div>
+                  <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Lives locally. Excluded from accommodation tracking.</div>
+                </div>
+                <button type="button" onClick={() => set('is_local', !form.is_local)}
+                  style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.is_local ? '#f59e0b' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
+                  <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.is_local ? '20px' : '2px', display: 'block' }} />
+                </button>
               </div>
-              <button type="button" onClick={() => set('is_local', !form.is_local)}
-                style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.is_local ? '#f59e0b' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
-                <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.is_local ? '20px' : '2px', display: 'block' }} />
-              </button>
-            </div>
+            )}
 
             {/* Info box — new mode: accommodation e travel gestiti separatamente */}
-            {mode === 'new' && (
+            {mode === 'new' && form.person_type !== 'FAMILY' && (
               <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', fontSize: '11px', color: '#15803d' }}>
                 🏨 <strong>Accommodation</strong> e <strong>Travel</strong> si configurano dopo il salvataggio — direttamente dalle pagine dedicate.
               </div>
