@@ -959,6 +959,12 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   const [roommateSearching, setRoommateSearching] = useState(false)
   const [roommateSearchOpen, setRoommateSearchOpen] = useState(false)
 
+  const [familyMembers,    setFamilyMembers]    = useState([])
+  const [familyFormOpen,   setFamilyFormOpen]   = useState(false)
+  const [familyForm,       setFamilyForm]       = useState({ full_name: '', role: '', phone: '', no_transport_needed: true })
+  const [familySaving,     setFamilySaving]     = useState(false)
+  const [familyError,      setFamilyError]      = useState(null)
+
   useEffect(() => {
     if (!open) return
     setError(null); setConfirmDel(false)
@@ -996,6 +1002,19 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       setRoommateSearch('')
       setRoommateResults([])
       setRoommateSearchOpen(false)
+      if (initial?.crew_id) {
+        supabase.from('crew')
+          .select('id, full_name, role, phone, no_transport_needed')
+          .eq('production_id', PRODUCTION_ID)
+          .eq('person_type', 'FAMILY')
+          .eq('linked_crew_id', initial.crew_id)
+          .then(({ data }) => setFamilyMembers(data || []))
+      } else {
+        setFamilyMembers([])
+      }
+      setFamilyFormOpen(false)
+      setFamilyForm({ full_name: '', role: '', phone: '', no_transport_needed: true })
+      setFamilyError(null)
       if (initial?.__focusField === 'notes' && notesRef.current) {
         setTimeout(() => notesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)
       }
@@ -1043,6 +1062,60 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     const timer = setTimeout(() => searchRoommate(roommateSearch), 300)
     return () => clearTimeout(timer)
   }, [roommateSearch, roommateSearchOpen])
+
+  async function handleSaveFamilyMember() {
+    if (!familyForm.full_name.trim()) { setFamilyError('Name is required'); return }
+    if (!form.crew_id || !PRODUCTION_ID) return
+    setFamilySaving(true)
+    setFamilyError(null)
+    const { data: crewList } = await supabase.from('crew')
+      .select('id').eq('production_id', PRODUCTION_ID)
+    let max = 0
+    if (crewList) {
+      crewList.forEach(row => {
+        const m = row.id.match(/^CR(\d+)$/i)
+        if (m) max = Math.max(max, parseInt(m[1]))
+      })
+    }
+    const newId = 'CR' + String(max + 1).padStart(4, '0')
+    const { data: newCrew, error } = await supabase.from('crew').insert({
+      id:                  newId,
+      production_id:       PRODUCTION_ID,
+      full_name:           familyForm.full_name.trim(),
+      role:                familyForm.role.trim() || null,
+      phone:               familyForm.phone.trim() || null,
+      no_transport_needed: familyForm.no_transport_needed,
+      person_type:         'FAMILY',
+      linked_crew_id:      form.crew_id,
+      is_local:            true,
+      hotel_status:        'PENDING',
+      travel_status:       'IN',
+      on_location:         true,
+    }).select('id, full_name, role, phone, no_transport_needed').single()
+    setFamilySaving(false)
+    if (error) { setFamilyError(error.message); return }
+    if (initial?.room_assignment_id && newCrew) {
+      await supabase.from('crew_stays').insert({
+        production_id:      PRODUCTION_ID,
+        crew_id:            newCrew.id,
+        hotel_id:           form.hotel_id || null,
+        room_assignment_id: initial.room_assignment_id,
+        arrival_date:       form.arrival_date || null,
+        departure_date:     form.departure_date || null,
+        hotel_status:       'PENDING',
+      })
+    }
+    setFamilyMembers(prev => [...prev, newCrew])
+    setFamilyFormOpen(false)
+    setFamilyForm({ full_name: '', role: '', phone: '', no_transport_needed: true })
+  }
+
+  async function handleRemoveFamilyMember(memberId) {
+    if (!PRODUCTION_ID) return
+    await supabase.from('crew_stays').update({ room_assignment_id: null }).eq('crew_id', memberId).eq('production_id', PRODUCTION_ID)
+    await supabase.from('crew').delete().eq('id', memberId).eq('production_id', PRODUCTION_ID)
+    setFamilyMembers(prev => prev.filter(m => m.id !== memberId))
+  }
 
   async function handleAddRoommate(crewMember) {
     if (!PRODUCTION_ID || !initial?.id) return
@@ -1350,6 +1423,98 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
                   <button type="button" onClick={() => setRoommateSearchOpen(true)}
                     style={{ width: '100%', padding: '7px', borderRadius: '8px', border: '1px dashed #e2e8f0', background: 'none', cursor: 'pointer', fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                     + Add roommate
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Family section — only in edit mode */}
+            {mode === 'edit' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '8px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                  👨‍👩‍👧 Family members in same room
+                </div>
+
+                {familyMembers.length === 0 && !familyFormOpen && (
+                  <div style={{ padding: '10px 12px', background: 'white', border: '1px solid #fde68a', borderRadius: '8px', marginBottom: '8px', fontSize: '11px', color: '#92400e', lineHeight: 1.6 }}>
+                    ℹ Family members must be added to the crew list first. This ensures they can be included in transport assignments (hub pickups, set transfers) if needed. Once added, they will appear here linked to this stay.
+                  </div>
+                )}
+
+                {familyMembers.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                    {familyMembers.map(m => (
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'white', border: '1px solid #fde68a', borderRadius: '8px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#FAEEDA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#633806', flexShrink: 0 }}>
+                          {m.full_name.split(' ').map(p => p[0]).slice(0, 2).join('')}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: '700', fontSize: '12px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
+                          <div style={{ fontSize: '11px', color: '#92400e' }}>
+                            {m.role || 'Family'} · {m.no_transport_needed ? 'NTN' : 'Transport needed'}
+                            {m.phone && <span style={{ marginLeft: '8px' }}>📱 {m.phone}</span>}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '999px', background: '#FAEEDA', color: '#633806', border: '1px solid #FAC775', flexShrink: 0 }}>FAMILY</span>
+                        <button type="button" onClick={() => handleRemoveFamilyMember(m.id)}
+                          style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fde68a', background: 'none', cursor: 'pointer', fontSize: '11px', color: '#92400e' }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {familyFormOpen ? (
+                  <div style={{ background: 'white', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>New family member</div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '3px' }}>Full name *</label>
+                      <input value={familyForm.full_name} onChange={e => setFamilyForm(f => ({ ...f, full_name: e.target.value }))}
+                        style={{ width: '100%', padding: '7px 10px', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }}
+                        placeholder="Sarah Smith" autoFocus />
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '3px' }}>Relation</label>
+                      <input value={familyForm.role} onChange={e => setFamilyForm(f => ({ ...f, role: e.target.value }))}
+                        style={{ width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }}
+                        placeholder="Wife, Son, Daughter..." />
+                    </div>
+                    <div style={{ marginBottom: '8px' }}>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '3px' }}>Phone</label>
+                      <input value={familyForm.phone} onChange={e => setFamilyForm(f => ({ ...f, phone: e.target.value }))}
+                        style={{ width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }}
+                        placeholder="+39 333..." type="tel" />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '6px' }}>Transport</label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button type="button" onClick={() => setFamilyForm(f => ({ ...f, no_transport_needed: true }))}
+                          style={{ flex: 1, padding: '7px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(familyForm.no_transport_needed ? { background: '#f1f5f9', color: '#475569', borderColor: '#94a3b8' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                          🚐 NTN
+                        </button>
+                        <button type="button" onClick={() => setFamilyForm(f => ({ ...f, no_transport_needed: false }))}
+                          style={{ flex: 1, padding: '7px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(!familyForm.no_transport_needed ? { background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                          🚐 Needs Transport
+                        </button>
+                      </div>
+                    </div>
+                    {familyError && (
+                      <div style={{ marginBottom: '8px', padding: '6px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '11px', color: '#dc2626' }}>{familyError}</div>
+                    )}
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button type="button" onClick={() => { setFamilyFormOpen(false); setFamilyForm({ full_name: '', role: '', phone: '', no_transport_needed: true }); setFamilyError(null) }}
+                        style={{ flex: 1, padding: '7px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'none', cursor: 'pointer', fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+                        Cancel
+                      </button>
+                      <button type="button" onClick={handleSaveFamilyMember} disabled={familySaving}
+                        style={{ flex: 2, padding: '7px', borderRadius: '8px', border: 'none', background: familySaving ? '#94a3b8' : '#f59e0b', color: 'white', cursor: familySaving ? 'default' : 'pointer', fontSize: '12px', fontWeight: '800' }}>
+                        {familySaving ? 'Saving...' : '+ Add Family Member'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setFamilyFormOpen(true)}
+                    style={{ width: '100%', padding: '7px', borderRadius: '8px', border: '1px dashed #fde68a', background: 'none', cursor: 'pointer', fontSize: '12px', color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '600' }}>
+                    + Add family member
                   </button>
                 )}
               </div>
