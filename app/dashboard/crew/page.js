@@ -942,7 +942,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
 function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose, onSaved, currentUser, onNotesChanged }) {
   const t = useT()
-  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '' }
+  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '', is_local: false }
   const PRODUCTION_ID = getProductionId()
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -979,6 +979,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
         on_location:          initial.on_location !== false,
         email:                initial.email || '',
         phone:                initial.phone || '',
+        is_local:             initial.is_local || false,
       })
     } else {
       // Auto-genera Crew ID: prende il più alto CR#### esistente e incrementa
@@ -1024,6 +1025,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
       on_location:           form.on_location,
       email:                 form.email.trim() || null,
       phone:                 form.phone.trim() || null,
+      is_local:              form.is_local || false,
     }
 
     let error
@@ -1202,6 +1204,18 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                 </div>
               </>
             )}
+
+            {/* Local / No Accommodation toggle */}
+            <div style={{ marginBottom: '12px', padding: '10px 12px', background: form.is_local ? '#fef9c3' : '#f8fafc', border: `1px solid ${form.is_local ? '#fde68a' : '#e2e8f0'}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: form.is_local ? '#92400e' : '#374151' }}>📍 Local — No Accommodation</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Lives locally. Excluded from accommodation tracking and Hub Coverage.</div>
+              </div>
+              <button type="button" onClick={() => set('is_local', !form.is_local)}
+                style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.is_local ? '#f59e0b' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
+                <span style={{ position: 'absolute', top: '2px', width: '18px', height: '18px', borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s', left: form.is_local ? '20px' : '2px', display: 'block' }} />
+              </button>
+            </div>
 
             {/* Info box — new mode: accommodation e travel gestiti separatamente */}
             {mode === 'new' && (
