@@ -31,6 +31,20 @@ function isoAdd(dateStr, n) {
   dt.setUTCDate(dt.getUTCDate() + n)
   return dt.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
 }
+function startOfMonth(offset = 0) {
+  const d = new Date()
+  d.setDate(1)
+  d.setMonth(d.getMonth() + offset)
+  return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+}
+function endOfMonth(offset = 0) {
+  const d = new Date()
+  d.setDate(1)
+  d.setMonth(d.getMonth() + offset + 1)
+  d.setDate(d.getDate() - 1)
+  return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+}
+
 function fmtDateHeader(dateStr) {
   return new Date(dateStr + 'T12:00:00Z').toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -1452,9 +1466,9 @@ export default function TravelPage() {
       localStorage.setItem('travel_window_end', e)
     }
   }
-  function pickDate(dateStr) {
-    const s = isoAdd(dateStr, -3)
-    const e = isoAdd(dateStr, 10)
+  function pickDate(start, end) {
+    const s = end !== undefined ? start : isoAdd(start, -3)
+    const e = end !== undefined ? end   : isoAdd(start, 10)
     setWindowStart(s); setWindowEnd(e)
     if (typeof window !== 'undefined') {
       localStorage.setItem('travel_window_start', s)
@@ -1579,23 +1593,18 @@ export default function TravelPage() {
         </button>
 
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <button onClick={() => shiftWindow(-7)}
-            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>◀</button>
-          <input type="date"
-            value={windowStart ? isoAdd(windowStart, 3) : today}
-            onChange={e => pickDate(e.target.value)}
-            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }}
-          />
-          <button onClick={() => shiftWindow(7)}
-            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>▶</button>
-          <button onClick={resetWindow}
-            style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8', whiteSpace: 'nowrap' }}>
-            Today
-          </button>
+          <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>From</span>
+          <input type="date" value={windowStart} onChange={e => e.target.value && pickDate(e.target.value, windowEnd)}
+            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
+          <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>To</span>
+          <input type="date" value={windowEnd} onChange={e => e.target.value && pickDate(windowStart, e.target.value)}
+            style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
+          <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
+          <button onClick={resetWindow} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>↺ Today</button>
+          <button onClick={() => { const s = startOfMonth(0); const e = endOfMonth(0); pickDate(s, e) }} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>This month</button>
+          <button onClick={() => { const s = startOfMonth(1); const e = endOfMonth(1); pickDate(s, e) }} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>Next month</button>
           <button onClick={() => loadData(windowStart, windowEnd)}
-            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
-            &#8635;
-          </button>
+            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
