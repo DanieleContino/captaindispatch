@@ -758,8 +758,47 @@ function TravelAccordion({ crewId }) {
   )
 }
 
+// ─── FamilyModal ─────────────────────────────────────────────
+function FamilyModal({ crew, onClose, onEdit }) {
+  if (!crew) return null
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,35,64,0.2)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 61, background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', width: '340px', padding: '20px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>👨‍👩‍👧 Family — {crew.crewName}</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', lineHeight: 1, padding: '2px' }}>✕</button>
+        </div>
+        {crew.members.length === 0 ? (
+          <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: '16px 0' }}>No family members found</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+            {crew.members.map(m => (
+              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '8px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#FAEEDA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#633806', flexShrink: 0 }}>
+                  {m.full_name.split(' ').map(p => p[0]).slice(0, 2).join('')}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
+                  <div style={{ fontSize: '11px', color: '#92400e' }}>{m.role || 'Family'}{m.no_transport_needed ? ' · NTN' : ' · Transport needed'}</div>
+                </div>
+                <button onClick={() => onEdit(m)} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>
+                  ✎
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ fontSize: '11px', color: '#94a3b8', padding: '8px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', lineHeight: 1.5 }}>
+          ℹ To add a family member, use <strong>+ Add Crew</strong> and set person type to <strong>Family</strong>, linked to this crew member.
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Crew card compatta ──────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0, isLocal = false }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0, isLocal = false, familyCount = 0, onFamilyClick }) {
   const t = useT()
   const isMobile = useIsMobile()
   const tc = TC[member.travel_status] || TC.PRESENT
@@ -818,6 +857,14 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
               style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 3px', border: '1px solid #fcd34d', lineHeight: 1 }}>
               💬
             </span>
+          )}
+          {familyCount > 0 && (
+            <button
+              onClick={e => { e.stopPropagation(); onFamilyClick && onFamilyClick() }}
+              title={`${familyCount} family member${familyCount > 1 ? 's' : ''}`}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', padding: '2px 7px', borderRadius: '999px', background: '#FAEEDA', color: '#633806', border: '1px solid #FAC775', cursor: 'pointer', lineHeight: 1 }}>
+              F {familyCount > 1 ? familyCount : ''}
+            </button>
           )}
           {member.role && (
             <span style={{ fontSize: '11px', color: '#374151', background: '#f1f5f9', padding: '1px 7px', borderRadius: '5px', fontWeight: '600' }}>{member.role}</span>
@@ -1378,6 +1425,8 @@ export default function CrewPage() {
   const [unreadMap, setUnreadMap]       = useState({})
   const [notesMap,  setNotesMap]        = useState({})  // total notes per crew_id (incl. authored by self)
   const [userRole,  setUserRole]        = useState('CAPTAIN')
+  const [familyCountMap,  setFamilyCountMap]  = useState({})
+  const [familyModalCrew, setFamilyModalCrew] = useState(null)
 
   async function loadUnreadMap(userId) {
     if (!PRODUCTION_ID || !userId) return
@@ -1504,6 +1553,13 @@ export default function CrewPage() {
       ? (vData || []).map(c => { const u = toUpdate.find(x => x.id === c.id); return u ? { ...c, travel_status: u.travel_status } : c })
       : (vData || [])
     setCrew(finalCrew)
+    const fMap = {}
+    for (const c of finalCrew) {
+      if (c.person_type === 'FAMILY' && c.linked_crew_id) {
+        fMap[c.linked_crew_id] = (fMap[c.linked_crew_id] || 0) + 1
+      }
+    }
+    setFamilyCountMap(fMap)
     const tMap = {}
     for (const tm of travelData || []) {
       if (!tMap[tm.crew_id]) tMap[tm.crew_id] = []
@@ -1537,6 +1593,11 @@ export default function CrewPage() {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [user])
+
+  function openFamilyModal(crewId, crewName) {
+    const members = crew.filter(c => c.person_type === 'FAMILY' && c.linked_crew_id === crewId)
+    setFamilyModalCrew({ crewId, crewName, members })
+  }
 
   function handleStatusChange(id, s)            { setCrew(p => p.map(c => c.id === id ? { ...c, travel_status: s } : c)) }
   function handleNTNChange(id, val)             { setCrew(p => p.map(c => c.id === id ? { ...c, no_transport_needed: val } : c)) }
@@ -1887,7 +1948,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} stays={staysMap[m.id] || []} unreadCount={unreadMap[m.id] || 0} notesCount={notesMap[m.id] || 0} isLocal={m.is_local || false} />
+                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} stays={staysMap[m.id] || []} unreadCount={unreadMap[m.id] || 0} notesCount={notesMap[m.id] || 0} isLocal={m.is_local || false} familyCount={familyCountMap[m.id] || 0} onFamilyClick={() => openFamilyModal(m.id, m.full_name)} />
                   ))}
                 </div>
               </div>
@@ -1895,6 +1956,12 @@ export default function CrewPage() {
           </div>
         )}
       </div>
+
+      <FamilyModal
+        crew={familyModalCrew}
+        onClose={() => setFamilyModalCrew(null)}
+        onEdit={(member) => { setFamilyModalCrew(null); openEdit(member) }}
+      />
 
       {/* Sidebar */}
       <CrewSidebar
