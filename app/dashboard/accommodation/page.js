@@ -198,7 +198,7 @@ const SELECT_FIELDS = `
   id, production_id, crew_id, hotel_id, arrival_date, departure_date,
   room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
   total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
-  room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status, row_color,
+  room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status, row_color, room_assignment_id,
   crew:crew_id(id, full_name, role, department),
   hotel:hotel_id(id, name),
   subgroup:subgroup_id(id, name),
@@ -228,7 +228,7 @@ function ClickableCell({ value, onClick, style, emptyLabel = '—' }) {
 }
 
 // ─── renderCell — data-driven ──────────────────────────────────
-function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }) {
+function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, roommateMap }) {
   const field = col.source_field
   switch (field) {
     case 'full_name':
@@ -316,6 +316,25 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today }
       return <ClickableCell key={field} value={stay.po_number} onClick={() => onEditRow(stay, 'po_number')} style={{ fontSize: '11px', color: '#374151' }} />
     case 'invoice_number':
       return <ClickableCell key={field} value={stay.invoice_number} onClick={() => onEditRow(stay, 'invoice_number')} style={{ fontSize: '11px', color: '#374151' }} />
+    case 'sharing_with': {
+      const assignId = stay.room_assignment_id
+      if (!assignId) return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
+      const roommates = (roommateMap[assignId] || []).filter(r => r.crew_id !== stay.crew_id)
+      if (roommates.length === 0) return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
+      return (
+        <td key={field} style={{ padding: '7px 10px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            {roommates.map(r => (
+              <span key={r.crew_id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', color: '#374151', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '10px', color: '#64748b' }}>👤</span>
+                <span style={{ fontWeight: '600' }}>{r.full_name}</span>
+                {r.role && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{r.role}</span>}
+              </span>
+            ))}
+          </div>
+        </td>
+      )
+    }
     default:
       return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
   }
@@ -1727,6 +1746,7 @@ export default function AccommodationPage() {
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [sidebarMode,   setSidebarMode]   = useState('new')
   const [sidebarTarget, setSidebarTarget] = useState(null)
+  const [roommateMap, setRoommateMap] = useState({})
   const [stayNotesMap,  setStayNotesMap]  = useState({})
   const [stayUnreadMap, setStayUnreadMap] = useState({})
   const [search,       setSearch]       = useState('')
@@ -1822,7 +1842,15 @@ export default function AccommodationPage() {
     const s = start || windowStart
     const e = end   || windowEnd
     const { data } = await supabase.from('crew_stays').select(SELECT_FIELDS).eq('production_id', PRODUCTION_ID).lte('arrival_date', e).gte('departure_date', s).order('hotel_id', { ascending: true }).order('arrival_date', { ascending: true })
-    setStays(data || [])
+    const staysData = data || []
+    const rMap = {}
+    for (const stay of staysData) {
+      if (!stay.room_assignment_id) continue
+      if (!rMap[stay.room_assignment_id]) rMap[stay.room_assignment_id] = []
+      rMap[stay.room_assignment_id].push({ crew_id: stay.crew_id, full_name: stay.crew?.full_name || '—', role: stay.crew?.role || '', department: stay.crew?.department || '' })
+    }
+    setRoommateMap(rMap)
+    setStays(staysData)
     setLoading(false)
   }, [PRODUCTION_ID])
 
@@ -2243,7 +2271,7 @@ export default function AccommodationPage() {
                               return <tr key={stay.id}
                                 style={{ background: rowBg, borderLeft: `3px solid ${borderColor}`, cursor: 'context-menu' }}
                                 onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
-                              >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today }))}</tr>
+              >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap }))}</tr>
                             })}
                           </tbody>
                         </table>
