@@ -1531,7 +1531,7 @@ export default function AccommodationPage() {
     if (!PRODUCTION_ID) return
     const { data } = await supabase
       .from('travel_movements')
-      .select('id, crew_id, full_name_raw, travel_date, direction, travel_type, travel_number, crew:crew_id(full_name, department)')
+      .select('id, crew_id, full_name_raw, travel_date, direction, travel_type, travel_number, crew:crew_id(full_name, department, is_local)')
       .eq('production_id', PRODUCTION_ID)
       .eq('match_status', 'matched')
       .is('linked_stay_id', null)
@@ -1540,6 +1540,7 @@ export default function AccommodationPage() {
     const seen = new Set()
     const deduped = (data || []).filter(m => {
       if (!m.crew_id || seen.has(m.crew_id)) return false
+      if (m.crew?.is_local) return false
       seen.add(m.crew_id)
       return true
     })
