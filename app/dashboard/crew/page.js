@@ -1185,6 +1185,12 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                 <input value={form.role} onChange={e => set('role', e.target.value)} style={inp} placeholder="Director of Photography, Gaffer, 1st AC…" />
               </div>
             )}
+            {form.person_type === 'FAMILY' && (
+              <div style={row}>
+                <label style={lbl}>Relation</label>
+                <input value={form.role} onChange={e => set('role', e.target.value)} style={inp} placeholder="Wife, Husband, Son, Daughter, Infant…" autoComplete="off" />
+              </div>
+            )}
 
             {/* Dipartimento */}
             {form.person_type !== 'FAMILY' && (
