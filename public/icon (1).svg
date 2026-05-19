@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="42" fill="#0f2340"/>
+  <!-- Rocket nose -->
+  <polygon points="96,22 68,68 124,68" fill="#fbbf24"/>
+  <!-- Rocket body -->
+  <rect x="68" y="65" width="56" height="63" rx="8" fill="#fbbf24"/>
+  <!-- Window -->
+  <circle cx="96" cy="88" r="11" fill="#0f2340"/>
+  <circle cx="96" cy="88" r="7" fill="#93c5fd"/>
+  <!-- Left fin -->
+  <polygon points="68,100 48,130 68,128" fill="#fbbf24"/>
+  <!-- Right fin -->
+  <polygon points="124,100 144,130 124,128" fill="#fbbf24"/>
+  <!-- Flame outer -->
+  <polygon points="82,128 110,128 104,158 96,166 88,158" fill="#fb7124"/>
+  <!-- Flame inner -->
+  <polygon points="89,128 103,128 96,150" fill="#fed764"/>
+</svg>
