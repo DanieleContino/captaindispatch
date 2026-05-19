@@ -1001,9 +1001,10 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   }
 
   useEffect(() => {
+    if (form.crew_id) return
     const timer = setTimeout(() => searchCrew(crewSearch), 300)
     return () => clearTimeout(timer)
-  }, [crewSearch])
+  }, [crewSearch, form.crew_id])
 
   async function autoLinkMovements(crewId, stayId, arrivalDate, departureDate) {
     if (!crewId || !stayId || !arrivalDate || !departureDate || !PRODUCTION_ID) return
