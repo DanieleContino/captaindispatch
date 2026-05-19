@@ -1214,7 +1214,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
             <div style={{ marginBottom: '12px', padding: '10px 12px', background: form.is_local ? '#fef9c3' : '#f8fafc', border: `1px solid ${form.is_local ? '#fde68a' : '#e2e8f0'}`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
               <div>
                 <div style={{ fontSize: '12px', fontWeight: '700', color: form.is_local ? '#92400e' : '#374151' }}>📍 Local — No Accommodation</div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Lives locally. Excluded from accommodation tracking and Hub Coverage.</div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Lives locally. Excluded from accommodation tracking.</div>
               </div>
               <button type="button" onClick={() => set('is_local', !form.is_local)}
                 style={{ width: '40px', height: '22px', borderRadius: '999px', border: 'none', cursor: 'pointer', background: form.is_local ? '#f59e0b' : '#e2e8f0', position: 'relative', transition: 'background 0.2s', flexShrink: 0, padding: 0 }}>
