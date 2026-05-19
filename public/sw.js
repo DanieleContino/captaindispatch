@@ -1,5 +1,28 @@
+// CaptainDispatch Service Worker — minimal PWA support
+const CACHE_NAME = 'captaindispatch-v1'
+
+self.addEventListener('install', (event) => {
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim())
+})
+
+// Network-first strategy — sempre dati freschi, nessun caching aggressivo
+self.addEventListener('fetch', (event) => {
+  // Solo richieste GET, skip API e Supabase
+  if (event.request.method !== 'GET') return
+  const url = new URL(event.request.url)
+  if (url.hostname.includes('supabase') || url.pathname.startsWith('/api/')) return
+
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
+  )
+})
+
 /**
- * public/sw.js — Service Worker per Web Push (S11 TASK 1)
+ * Web Push — gestione notifiche (S11 TASK 1)
  *
  * Gestisce:
  *  - 'push'              → mostra la notifica al ricevimento del push
