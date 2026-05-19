@@ -953,6 +953,12 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   const [crewMovements,   setCrewMovements]   = useState([])
   const notesRef = React.useRef(null)
 
+  const [roommates,        setRoomates]        = useState([])
+  const [roommateSearch,   setRoommateSearch]  = useState('')
+  const [roommateResults,  setRoommateResults] = useState([])
+  const [roommateSearching, setRoommateSearching] = useState(false)
+  const [roommateSearchOpen, setRoommateSearchOpen] = useState(false)
+
   useEffect(() => {
     if (!open) return
     setError(null); setConfirmDel(false)
@@ -978,6 +984,18 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
+      if (initial?.id && initial?.room_assignment_id) {
+        supabase.from('crew_stays')
+          .select('id, crew_id, crew:crew_id(id, full_name, role, department, person_type)')
+          .eq('room_assignment_id', initial.room_assignment_id)
+          .neq('crew_id', initial.crew_id)
+          .then(({ data }) => setRoomates(data || []))
+      } else {
+        setRoomates([])
+      }
+      setRoommateSearch('')
+      setRoommateResults([])
+      setRoommateSearchOpen(false)
       if (initial?.__focusField === 'notes' && notesRef.current) {
         setTimeout(() => notesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)
       }
@@ -1005,6 +1023,64 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     const timer = setTimeout(() => searchCrew(crewSearch), 300)
     return () => clearTimeout(timer)
   }, [crewSearch, form.crew_id])
+
+  async function searchRoommate(q) {
+    if (!q || q.length < 2 || !PRODUCTION_ID) { setRoommateResults([]); return }
+    setRoommateSearching(true)
+    const { data } = await supabase.from('crew')
+      .select('id, full_name, role, department')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('person_type', 'CREW')
+      .neq('id', form.crew_id || '')
+      .ilike('full_name', `%${q}%`)
+      .limit(8)
+    setRoommateResults(data || [])
+    setRoommateSearching(false)
+  }
+
+  useEffect(() => {
+    if (!roommateSearchOpen) return
+    const timer = setTimeout(() => searchRoommate(roommateSearch), 300)
+    return () => clearTimeout(timer)
+  }, [roommateSearch, roommateSearchOpen])
+
+  async function handleAddRoommate(crewMember) {
+    if (!PRODUCTION_ID || !initial?.id) return
+    let assignmentId = form.room_assignment_id || initial?.room_assignment_id
+    if (!assignmentId) {
+      const { data: newAssignment } = await supabase.from('room_assignments').insert({
+        production_id: PRODUCTION_ID,
+        hotel_id: form.hotel_id || null,
+        room_type_id: form.room_type_id || null,
+        room_number: form.room_type_notes || null,
+      }).select('id').single()
+      if (!newAssignment) return
+      assignmentId = newAssignment.id
+      await supabase.from('crew_stays').update({ room_assignment_id: assignmentId }).eq('id', initial.id)
+    }
+    const { data: roommateStay } = await supabase.from('crew_stays')
+      .select('id')
+      .eq('crew_id', crewMember.id)
+      .eq('production_id', PRODUCTION_ID)
+      .order('arrival_date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (roommateStay) {
+      await supabase.from('crew_stays').update({ room_assignment_id: assignmentId }).eq('id', roommateStay.id)
+    }
+    setRoomates(prev => [...prev, { id: roommateStay?.id, crew_id: crewMember.id, crew: crewMember }])
+    setRoommateSearch('')
+    setRoommateResults([])
+    setRoommateSearchOpen(false)
+  }
+
+  async function handleRemoveRoommate(roommateStayCrewId) {
+    if (!PRODUCTION_ID) return
+    const roommate = roommates.find(r => r.crew_id === roommateStayCrewId)
+    if (!roommate) return
+    await supabase.from('crew_stays').update({ room_assignment_id: null }).eq('id', roommate.id)
+    setRoomates(prev => prev.filter(r => r.crew_id !== roommateStayCrewId))
+  }
 
   async function autoLinkMovements(crewId, stayId, arrivalDate, departureDate) {
     if (!crewId || !stayId || !arrivalDate || !departureDate || !PRODUCTION_ID) return
@@ -1212,6 +1288,70 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
             {form.arrival_date && form.departure_date && (
               <div style={{ marginBottom: '12px', padding: '8px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', fontSize: '12px', color: '#15803d', fontWeight: '700' }}>
                 🌙 {nightsBetween(form.arrival_date, form.departure_date) ?? 0} night(s)
+              </div>
+            )}
+
+            {/* Roommate section — only in edit mode */}
+            {mode === 'edit' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                  👥 Sharing room with
+                </div>
+                {roommates.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                    {roommates.map(r => (
+                      <div key={r.crew_id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#E6F1FB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#0C447C', flexShrink: 0 }}>
+                          {(r.crew?.full_name || '?').split(' ').map(p => p[0]).slice(0, 2).join('')}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: '700', fontSize: '12px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.crew?.full_name || '—'}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>{r.crew?.role || ''}{r.crew?.department ? ` · ${r.crew.department}` : ''}</div>
+                        </div>
+                        <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '999px', background: '#E6F1FB', color: '#0C447C', border: '1px solid #B5D4F4' }}>CREW</span>
+                        <button type="button" onClick={() => handleRemoveRoommate(r.crew_id)}
+                          style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'none', cursor: 'pointer', fontSize: '11px', color: '#94a3b8' }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {roommateSearchOpen ? (
+                  <div>
+                    <input
+                      value={roommateSearch}
+                      onChange={e => setRoommateSearch(e.target.value)}
+                      style={{ width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box', marginBottom: '4px' }}
+                      placeholder="Search crew to add as roommate..."
+                      autoFocus
+                      autoComplete="off"
+                    />
+                    {roommateSearching && <div style={{ fontSize: '11px', color: '#94a3b8' }}>Searching...</div>}
+                    {roommateResults.length > 0 && (
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginBottom: '4px' }}>
+                        {roommateResults.map(c => (
+                          <div key={c.id}
+                            onClick={() => handleAddRoommate(c)}
+                            style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center', background: 'white' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                            <span style={{ fontWeight: '700', color: '#0f172a' }}>{c.full_name}</span>
+                            {c.role && <span style={{ fontSize: '11px', color: '#64748b' }}>{c.role}</span>}
+                            {c.department && <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{c.department}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button type="button" onClick={() => { setRoommateSearchOpen(false); setRoommateSearch(''); setRoommateResults([]) }}
+                      style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'none', cursor: 'pointer', fontSize: '11px', color: '#94a3b8' }}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setRoommateSearchOpen(true)}
+                    style={{ width: '100%', padding: '7px', borderRadius: '8px', border: '1px dashed #e2e8f0', background: 'none', cursor: 'pointer', fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    + Add roommate
+                  </button>
+                )}
               </div>
             )}
 
