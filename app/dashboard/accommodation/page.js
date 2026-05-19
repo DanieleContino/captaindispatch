@@ -1539,6 +1539,21 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
               </div>
             )}
 
+            {/* Roommate + Family info box — only in new mode */}
+            {mode === 'new' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ fontSize: '16px', flexShrink: 0 }}>💡</span>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151', marginBottom: '3px' }}>
+                    Save the stay first to add roommates and family members
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.5 }}>
+                    Once saved, you can link crew members sharing the same room and manage family members staying together.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Hotel Status */}
             <div style={{ marginBottom: '12px' }}>
               <label style={lbl}>Accommodation Status</label>
