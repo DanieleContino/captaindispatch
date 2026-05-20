@@ -1600,9 +1600,7 @@ export default function TravelPage() {
           <input type="date" value={windowEnd} onChange={e => e.target.value && pickDate(windowStart, e.target.value)}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
           <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
-          <button onClick={resetWindow} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>↺ Today</button>
-          <button onClick={() => { const s = startOfMonth(0); const e = endOfMonth(0); pickDate(s, e) }} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>This month</button>
-          <button onClick={() => { const s = startOfMonth(1); const e = endOfMonth(1); pickDate(s, e) }} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>Next month</button>
+          <button onClick={resetWindow} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>↺ Reset</button>
           <button onClick={() => loadData(windowStart, windowEnd)}
             style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
