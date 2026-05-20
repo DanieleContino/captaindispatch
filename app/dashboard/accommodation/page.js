@@ -2320,10 +2320,11 @@ export default function AccommodationPage() {
                                 // Insert separator row between two roommates of the same assignment
                                 if (isShared && prevAssignId && prevAssignId === stay.room_assignment_id) {
                                   rows.push(
-                                    <tr key={`sep-${stay.id}`} style={{ background: '#bae6fd' }}>
-                                      <td colSpan={columnsConfig.length} style={{ padding: '1px 0', textAlign: 'center', fontSize: '10px', color: '#0369a1', borderLeft: '3px solid #0ea5e9', letterSpacing: '0.1em' }}>
-                                        ↕
-                                      </td>
+                                    <tr key={`sep-${stay.id}`} style={{ background: '#e0f2fe' }}>
+                                      <td style={{ padding: '0 8px', lineHeight: '10px', fontSize: '10px', color: '#0369a1', borderLeft: '3px solid #0ea5e9' }}>↕</td>
+                                      {columnsConfig.slice(1).map((col, i) => (
+                                        <td key={i} style={{ padding: 0, lineHeight: '10px', background: '#e0f2fe' }} />
+                                      ))}
                                     </tr>
                                   )
                                 }
