@@ -1058,7 +1058,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
           .select('id, crew_id, crew:crew_id(id, full_name, role, department, person_type)')
           .eq('room_assignment_id', initial.room_assignment_id)
           .neq('crew_id', initial.crew_id)
-          .then(({ data }) => setRoomates(data || []))
+          .then(({ data }) => setRoomates((data || []).filter(r => r.crew?.person_type !== 'FAMILY')))
       } else {
         setRoomates([])
       }
