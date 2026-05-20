@@ -599,6 +599,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
   const [crewSearching, setCrewSearching] = useState(false)
   const [crewStays,     setCrewStays]     = useState([])
   const [linkedStay,    setLinkedStay]    = useState(null)
+  const [showStayOverride, setShowStayOverride] = useState(false)
 
   const fieldRefs = {
     travel_date:    React.useRef(null),
@@ -1085,13 +1086,11 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
                 </div>
               )}
 
-              {/* Dropdown manuale — solo se link automatico mancante o crew ha più stay */}
-              {form.crew_id && crewStays.length > 0 && (!form.linked_stay_id || crewStays.length > 1) && (
+              {/* Dropdown manuale — solo se link automatico mancante */}
+              {form.crew_id && crewStays.length > 0 && !form.linked_stay_id && (
                 <div style={{ marginBottom: '8px' }}>
                   <div style={{ fontSize: '10px', color: '#92400e', background: '#fff7ed', border: '1px solid #fde68a', borderRadius: '6px', padding: '5px 8px', marginBottom: '6px', lineHeight: 1.4 }}>
-                    {!form.linked_stay_id
-                      ? '⚠ No stay was automatically linked. Select one manually to connect this movement to an accommodation.'
-                      : 'ℹ This crew member has multiple stays. The link was set automatically — override below only if incorrect.'}
+                    ⚠ No stay was automatically linked. Select one manually to connect this movement to an accommodation.
                   </div>
                   <label style={lbl}>Link stay</label>
                   <select
@@ -1106,6 +1105,39 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+              {form.crew_id && crewStays.length > 1 && !!form.linked_stay_id && (
+                <div style={{ marginBottom: '8px' }}>
+                  {!showStayOverride ? (
+                    <button type="button" onClick={() => setShowStayOverride(true)}
+                      style={{ fontSize: '10px', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', padding: '0', textDecoration: 'underline' }}>
+                      ✎ Override linked stay
+                    </button>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: '10px', color: '#92400e', background: '#fff7ed', border: '1px solid #fde68a', borderRadius: '6px', padding: '5px 8px', marginBottom: '6px', lineHeight: 1.4 }}>
+                        ℹ Multiple stays found. The link was set automatically — change only if incorrect.
+                      </div>
+                      <label style={lbl}>Link stay</label>
+                      <select
+                        value={form.linked_stay_id || ''}
+                        onChange={e => set('linked_stay_id', e.target.value || null)}
+                        style={{ ...inp, cursor: 'pointer' }}
+                      >
+                        <option value="">— No stay linked —</option>
+                        {crewStays.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.hotel?.name || 'Hotel'} · {s.arrival_date} → {s.departure_date}
+                          </option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={() => setShowStayOverride(false)}
+                        style={{ fontSize: '10px', color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0 0', textDecoration: 'underline' }}>
+                        Cancel override
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
 
