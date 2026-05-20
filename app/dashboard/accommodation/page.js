@@ -199,7 +199,7 @@ const SELECT_FIELDS = `
   room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
   total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
   room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status, row_color, room_assignment_id,
-  crew:crew_id(id, full_name, role, department),
+  crew:crew_id(id, full_name, role, department, person_type),
   hotel:hotel_id(id, name),
   subgroup:subgroup_id(id, name),
   room_type:room_type_id(id, name, rate_no_vat, vat_pct, city_tax_night)
@@ -1941,7 +1941,7 @@ export default function AccommodationPage() {
     const s = start || windowStart
     const e = end   || windowEnd
     const { data } = await supabase.from('crew_stays').select(SELECT_FIELDS).eq('production_id', PRODUCTION_ID).lte('arrival_date', e).gte('departure_date', s).order('hotel_id', { ascending: true }).order('arrival_date', { ascending: true })
-    const staysData = data || []
+    const staysData = (data || []).filter(s => s.crew?.person_type !== 'FAMILY')
     const rMap = {}
     for (const stay of staysData) {
       if (!stay.room_assignment_id) continue
