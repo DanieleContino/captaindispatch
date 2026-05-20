@@ -550,8 +550,8 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                           borderBottom: '1px solid #f1f5f9',
                           cursor: cs ? 'pointer' : 'default',
                         }}>
-                        {cs && <span style={{ fontSize: '8px', color: cs.background === '#15803d' ? 'white' : '#374151', fontWeight: '700' }}>
-                          {cs.background === '#15803d' ? '▶' : cs.background === '#fca5a5' ? '◀' : ''}
+                        {cs && <span style={{ fontSize: '9px', color: cs.background === '#15803d' ? 'white' : '#374151', fontWeight: '700', lineHeight: 1 }}>
+                          {cs.background === '#15803d' ? '→🏨' : cs.background === '#fca5a5' ? '🧳' : ''}
                         </span>}
                       </td>
                     )
@@ -1853,6 +1853,8 @@ export default function AccommodationPage() {
   const [colorLegend,      setColorLegend]      = useState(DEFAULT_LEGEND)
   const [legendEditorOpen, setLegendEditorOpen] = useState(false)
   const [mismatches,            setMismatches]            = useState([])
+  const [hotelAccordionOpen,    setHotelAccordionOpen]    = useState(false)
+  const [selectedHotels,        setSelectedHotels]        = useState(new Set(['ALL']))
   const [subgroupSidebarOpen,   setSubgroupSidebarOpen]   = useState(false)
   const [subgroupSidebarHotel,  setSubgroupSidebarHotel]  = useState(null)  // { id, name }
   const [subgroupsByHotel,      setSubgroupsByHotel]      = useState({})    // { hotelId: [{ id, name }] }
@@ -2083,14 +2085,14 @@ export default function AccommodationPage() {
     return stays.filter(s => {
       const name = (s.crew?.full_name || '').toLowerCase()
       if (search && !name.includes(search.toLowerCase())) return false
-      if (filterHotel !== 'ALL' && (s.hotel?.name || 'No Hotel') !== filterHotel) return false
+      if (!selectedHotels.has('ALL') && !selectedHotels.has(s.hotel?.name || 'No Hotel')) return false
       if (filterStatus !== 'ALL') {
         const st = getStayStatus(s.arrival_date, s.departure_date)
         if (!st || !st.label.includes(filterStatus)) return false
       }
       return true
     })
-  }, [stays, search, filterHotel, filterStatus])
+  }, [stays, search, selectedHotels, filterStatus])
 
   const { groupedByHotel, sortedHotels } = useMemo(() => {
     const grouped = {}
@@ -2124,8 +2126,8 @@ export default function AccommodationPage() {
     )
   }
 
-  const isFilterActive = search || filterHotel !== 'ALL' || filterStatus !== 'ALL'
-  function resetFilters() { setSearch(''); setFilterHotel('ALL'); setFilterStatus('ALL') }
+  const isFilterActive = search || !selectedHotels.has('ALL') || filterStatus !== 'ALL'
+  function resetFilters() { setSearch(''); setSelectedHotels(new Set(['ALL'])); setFilterStatus('ALL') }
 
   if (!user) return <div style={{ minHeight: '100vh', background: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading...</div>
 
@@ -2152,9 +2154,7 @@ export default function AccommodationPage() {
           <input type="date" value={windowEnd} onChange={e => e.target.value && setRange(windowStart, e.target.value)}
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
           <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
-          <button onClick={resetWindow} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>↺ Today</button>
-          <button onClick={setThisMonth} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>This month</button>
-          <button onClick={setNextMonth} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>Next month</button>
+          <button onClick={resetWindow} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>↺ Reset</button>
           <button onClick={setFullPeriod} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>Full period</button>
         </div>
 
@@ -2234,12 +2234,69 @@ export default function AccommodationPage() {
       <div ref={filterRowRef} data-filter-row="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20 }}>
         <input type="text" placeholder="Search name..." value={search} onChange={e => setSearch(e.target.value)}
           style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px', minWidth: 0 }} />
-        <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
-        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
-          <Pill active={filterHotel === 'ALL'} onClick={() => setFilterHotel('ALL')}>ALL</Pill>
-          {hotelNames.map(name => (
-            <Pill key={name} active={filterHotel === name} onClick={() => setFilterHotel(name)} activeStyle={{ background: '#0f2340', color: 'white', borderColor: '#0f2340' }}>🏨 {name}</Pill>
-          ))}
+        {/* Hotel accordion */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setHotelAccordionOpen(v => !v)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '5px 10px', borderRadius: '7px', fontSize: '12px', fontWeight: '600',
+              cursor: 'pointer', border: '1px solid',
+              ...(hotelAccordionOpen || !selectedHotels.has('ALL')
+                ? { background: '#f8fafc', borderColor: '#94a3b8', color: '#374151' }
+                : { background: 'white', borderColor: '#e2e8f0', color: '#374151' }),
+              whiteSpace: 'nowrap',
+            }}>
+            🏨
+            <span>
+              {selectedHotels.has('ALL')
+                ? `All hotels (${hotelNames.length})`
+                : `${selectedHotels.size} hotel${selectedHotels.size > 1 ? 's' : ''}`}
+            </span>
+            <span style={{ fontSize: '10px', color: '#94a3b8', transform: hotelAccordionOpen ? 'rotate(180deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▾</span>
+          </button>
+          {hotelAccordionOpen && (
+            <>
+              <div onClick={() => setHotelAccordionOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 18 }} />
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', left: 0,
+                background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px',
+                padding: '10px', minWidth: '240px', zIndex: 19,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>Select hotels</span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={() => setSelectedHotels(new Set(['ALL']))}
+                      style={{ padding: '2px 8px', borderRadius: '5px', border: '1px solid #e2e8f0', background: 'white', fontSize: '11px', cursor: 'pointer', color: '#374151' }}>All</button>
+                    <button onClick={() => setSelectedHotels(new Set())}
+                      style={{ padding: '2px 8px', borderRadius: '5px', border: '1px solid #e2e8f0', background: 'white', fontSize: '11px', cursor: 'pointer', color: '#374151' }}>None</button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '240px', overflowY: 'auto' }}>
+                  {hotelNames.map(name => {
+                    const checked = selectedHotels.has('ALL') || selectedHotels.has(name)
+                    return (
+                      <label key={name} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#374151' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                        onMouseLeave={e => e.currentTarget.style.background = ''}>
+                        <input type="checkbox" checked={checked}
+                          onChange={e => {
+                            const next = new Set(selectedHotels.has('ALL') ? hotelNames : [...selectedHotels])
+                            next.delete('ALL')
+                            if (e.target.checked) next.add(name); else next.delete(name)
+                            if (next.size === hotelNames.length || next.size === 0) setSelectedHotels(new Set(['ALL']))
+                            else setSelectedHotels(next)
+                          }}
+                          style={{ width: '14px', height: '14px', accentColor: '#0f2340', cursor: 'pointer', flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
         <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
@@ -2253,18 +2310,20 @@ export default function AccommodationPage() {
         {isFilterActive && (
           <button onClick={resetFilters} style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#64748b' }}>✕ Reset</button>
         )}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-          {ACCOMMODATION_PALETTE.filter(c => c !== null && colorLegend[c]).map(color => (
-            <span key={color} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', background: color, border: '1px solid rgba(0,0,0,0.12)', fontSize: '10px', fontWeight: '700', color: '#374151', whiteSpace: 'nowrap' }}>
-              {colorLegend[color]}
-            </span>
-          ))}
-        </div>
         {viewMode === 'calendar' && (
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '10px', color: '#64748b' }}>
-            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#15803d', borderRadius: '2px', marginRight: '3px' }} />Check-in</span>
-            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#86efac', borderRadius: '2px', marginRight: '3px' }} />In Hotel</span>
-            <span><span style={{ display: 'inline-block', width: '10px', height: '10px', background: '#fca5a5', borderRadius: '2px', marginRight: '3px' }} />Check-out</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11px', color: '#64748b' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ display: 'inline-block', width: '12px', height: '12px', background: '#15803d', borderRadius: '2px', flexShrink: 0 }} />
+              {'\u2192\uD83C\uDFE8'} Check-in
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ display: 'inline-block', width: '12px', height: '12px', background: '#86efac', borderRadius: '2px', flexShrink: 0 }} />
+              {'\uD83C\uDFE8'} In Hotel
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ display: 'inline-block', width: '12px', height: '12px', background: '#fca5a5', borderRadius: '2px', flexShrink: 0 }} />
+              {'\uD83E\uDDF3'} Check-out
+            </span>
           </div>
         )}
       </div>
