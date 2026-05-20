@@ -1149,6 +1149,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       if (!newAssignment) return
       assignmentId = newAssignment.id
       await supabase.from('crew_stays').update({ room_assignment_id: assignmentId }).eq('id', initial.id)
+        setForm(f => ({ ...f, room_assignment_id: assignmentId }))
     }
     const { data: roommateStay } = await supabase.from('crew_stays')
       .select('id')
