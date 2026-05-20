@@ -2302,8 +2302,8 @@ export default function AccommodationPage() {
         <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
           <Pill active={filterStatus === 'ALL'} onClick={() => setFilterStatus('ALL')}>ALL</Pill>
           <Pill active={filterStatus === 'In Hotel'} onClick={() => setFilterStatus('In Hotel')} activeStyle={{ background: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}>🏨 In Hotel</Pill>
-          <Pill active={filterStatus === 'CHECK-IN TODAY'} onClick={() => setFilterStatus('CHECK-IN TODAY')} activeStyle={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}>🛬 Check-in Today</Pill>
-          <Pill active={filterStatus === 'CHECK-OUT TODAY'} onClick={() => setFilterStatus('CHECK-OUT TODAY')} activeStyle={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>🛫 Check-out Today</Pill>
+          <Pill active={filterStatus === 'CHECK-IN TODAY'} onClick={() => setFilterStatus('CHECK-IN TODAY')} activeStyle={{ background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }}>→🏨 Check-in Today</Pill>
+          <Pill active={filterStatus === 'CHECK-OUT TODAY'} onClick={() => setFilterStatus('CHECK-OUT TODAY')} activeStyle={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>🧳 Check-out Today</Pill>
           <Pill active={filterStatus === 'Upcoming'} onClick={() => setFilterStatus('Upcoming')} activeStyle={{ background: '#fefce8', color: '#a16207', borderColor: '#fde68a' }}>🔜 Upcoming</Pill>
           <Pill active={filterStatus === 'Checked Out'} onClick={() => setFilterStatus('Checked Out')} activeStyle={{ background: '#f1f5f9', color: '#64748b', borderColor: '#e2e8f0' }}>✅ Checked Out</Pill>
         </div>
