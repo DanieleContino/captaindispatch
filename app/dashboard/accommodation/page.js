@@ -501,8 +501,8 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
               const rowBg   = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa'
               return (
                 <tr key={stay.id} style={{ background: rowBg }}
-                  onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => c.style.background === '' && (c.style.background = '#f8fafc')) }}
-                  onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '#f8fafc') c.style.background = '' }) }}>
+                  onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '' || c.style.background === 'transparent') c.style.background = isShared ? '#bae6fd' : '#f8fafc' }) }}
+                  onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '#f8fafc' || c.style.background === '#bae6fd') c.style.background = '' }) }}>
 
                   {/* Name — sticky left 0, colored */}
                   <td onClick={() => onEditRow(stay, 'full_name')}
@@ -513,12 +513,12 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                   </td>
 
                   {/* Role — sticky left NAME_W, colored */}
-                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9', position: 'sticky', left: NAME_W, background: labelBg, zIndex: 2 }}>
+                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9', position: 'sticky', left: NAME_W, background: labelBg, zIndex: 2, borderLeft: isShared ? '1px solid #bae6fd' : 'none' }}>
                     {stay.crew?.role || '—'}
                   </td>
 
                   {/* Dept — sticky left NAME_W + ROLE_W, colored */}
-                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #e2e8f0', position: 'sticky', left: NAME_W + ROLE_W, background: labelBg, zIndex: 2, boxShadow: '2px 0 4px rgba(0,0,0,0.06)' }}>
+                  <td style={{ padding: '5px 8px', fontSize: '10px', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #e2e8f0', position: 'sticky', left: NAME_W + ROLE_W, background: labelBg, zIndex: 2, boxShadow: isShared ? '2px 0 4px rgba(14,165,233,0.15)' : '2px 0 4px rgba(0,0,0,0.06)' }}>
                     {stay.crew?.department || '—'}
                   </td>
 
