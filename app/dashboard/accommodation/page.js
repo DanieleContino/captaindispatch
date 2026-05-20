@@ -366,7 +366,7 @@ function stayComputedCosts(stay) {
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
-function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop }) {
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {} }) {
   const NAME_W        = 180
   const ROLE_W        = 100
   const DEPT_W        = 90
@@ -516,7 +516,12 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: labelBg, zIndex: 2, borderBottom: '1px solid #f1f5f9', borderLeft: sharedBorderLeft }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = labelBg }}>
-                    {stay.crew?.full_name || '—'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      {stay.crew?.full_name || '—'}
+                      {stay.room_assignment_id && (roommateMap[stay.room_assignment_id] || []).some(r => r.is_family) && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', borderRadius: '50%', background: '#FAEEDA', color: '#633806', fontSize: '9px', fontWeight: '800', border: '1px solid #FAC775', flexShrink: 0 }}>F</span>
+                      )}
+                    </span>
                   </td>
 
                   {/* Role — sticky left NAME_W, colored */}
@@ -2312,6 +2317,7 @@ export default function AccommodationPage() {
               hotels={hotels}
               showCosts={showCosts}
               stickyTop={0}
+              roommateMap={roommateMap}
             />
           </div>
         ) : (
