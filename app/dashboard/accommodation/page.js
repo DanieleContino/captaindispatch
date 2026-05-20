@@ -325,7 +325,13 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       return (
         <td key={field} style={{ padding: '7px 10px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            {roommates.map(r => (
+            {roommates.map(r => r.is_family ? (
+              <span key={r.crew_id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', color: '#92400e', whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', borderRadius: '50%', background: '#FAEEDA', color: '#633806', fontSize: '9px', fontWeight: '800', border: '1px solid #FAC775', flexShrink: 0 }}>F</span>
+                <span style={{ fontWeight: '600' }}>{r.full_name}</span>
+                {r.role && <span style={{ fontSize: '10px', color: '#a16207' }}>{r.role}</span>}
+              </span>
+            ) : (
               <span key={r.crew_id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', color: '#374151', whiteSpace: 'nowrap' }}>
                 <span style={{ fontSize: '10px', color: '#64748b' }}>👤</span>
                 <span style={{ fontWeight: '600' }}>{r.full_name}</span>
