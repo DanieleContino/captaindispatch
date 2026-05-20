@@ -249,8 +249,10 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
           {stay.crew?.department ? <span style={{ background: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>{stay.crew.department}</span> : '—'}
         </td>
       )
-    case 'room_type_notes':
-      return <ClickableCell key={field} value={stay.room_type_notes} onClick={() => onEditRow(stay, 'room_type_notes')} style={{ fontSize: '11px', color: '#374151' }} />
+    case 'room_type_notes': {
+      const roomLabel = stay.room_type?.name || stay.room_type_notes || null
+      return <ClickableCell key={field} value={roomLabel} onClick={() => onEditRow(stay, 'room_type_notes')} style={{ fontSize: '11px', color: '#374151' }} />
+    }
     case 'arrival_date': {
       const isCI = stay.arrival_date === today
       return (
