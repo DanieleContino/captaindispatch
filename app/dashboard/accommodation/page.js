@@ -500,11 +500,10 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
               const labelBg = isShared ? '#e0f2fe' : (stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa'))
               const rowBg   = isShared ? '#e0f2fe' : (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa')
               const sharedBorderLeft = isShared ? '3px solid #0ea5e9' : (stay.row_color ? '3px solid rgba(0,0,0,0.15)' : 'none')
-              const hoverBg = isShared ? '#bae6fd' : '#f8fafc'
               return (
-                <tr key={stay.id} style={{ background: rowBg }}
-                  onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '' || c.style.background === 'transparent') c.style.background = hoverBg }) }}
-                  onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === hoverBg) c.style.background = '' }) }}>
+                <tr key={stay.id} style={{ background: isShared ? 'transparent' : rowBg }}
+                  onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '' || c.style.background === 'transparent') c.style.background = '#f8fafc' }) }}
+                  onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '#f8fafc') c.style.background = '' }) }}>
 
                   {/* Name — sticky left 0, colored */}
                   <td onClick={() => onEditRow(stay, 'full_name')}
