@@ -213,6 +213,7 @@ const EMPTY_STAY = {
   total_cost_no_vat: '', total_cost_vat: '', po_number: '', invoice_number: '',
   hotel_status: 'PENDING',
   row_color: null,
+  room_assignment_id: null,
 }
 
 // ─── ClickableCell ─────────────────────────────────────────────
@@ -1005,7 +1006,8 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         po_number:         initial.po_number         || '',
         invoice_number:    initial.invoice_number    || '',
         hotel_status:      initial.hotel_status      || 'PENDING',
-        row_color:         initial.row_color         || null,
+        row_color:            initial.row_color            || null,
+        room_assignment_id:   initial.room_assignment_id   || null,
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
