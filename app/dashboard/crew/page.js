@@ -758,6 +758,112 @@ function TravelAccordion({ crewId }) {
   )
 }
 
+// ─── Family Accordion (CrewSidebar) ─────────────────────────
+function FamilyAccordion({ crewId, personType, linkedCrewId }) {
+  const PRODUCTION_ID = getProductionId()
+  const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [members, setMembers] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  async function load() {
+    setLoading(true)
+    if (personType === 'FAMILY') {
+      // Mostra il crew di riferimento
+      if (!linkedCrewId) { setMembers([]); setLoading(false); setLoaded(true); return }
+      const { data } = await supabase
+        .from('crew')
+        .select('id, full_name, role, department')
+        .eq('id', linkedCrewId)
+        .single()
+      setMembers(data ? [data] : [])
+    } else {
+      // Mostra i family member collegati a questo crew
+      const { data } = await supabase
+        .from('crew')
+        .select('id, full_name, role, no_transport_needed, phone')
+        .eq('production_id', PRODUCTION_ID)
+        .eq('person_type', 'FAMILY')
+        .eq('linked_crew_id', crewId)
+    setMembers(data || [])
+    }
+    setLoading(false)
+    setLoaded(true)
+  }
+
+  function toggle() {
+    const next = !open
+    setOpen(next)
+    if (next && !loaded) load()
+  }
+
+  const isFamilyMember = personType === 'FAMILY'
+  const accentColor = '#92400e'
+  const bgOpen = '#fefce8'
+  const bgClosed = '#f8fafc'
+  const borderColor = '#fde68a'
+
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <button type="button" onClick={toggle}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: open ? '8px 8px 0 0' : '8px', border: `1px solid ${open ? borderColor : '#e2e8f0'}`, background: open ? bgOpen : bgClosed, cursor: 'pointer', transition: 'background 0.15s' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', fontWeight: '700', color: open ? accentColor : '#374151' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '999px', background: '#FAEEDA', color: '#633806', fontSize: '10px', fontWeight: '800', border: '1px solid #FAC775', flexShrink: 0 }}>F</span>
+          {isFamilyMember ? 'Linked Crew Member' : 'Family Members'}
+          {!loading && members.length > 0 && (
+            <span style={{ fontSize: '10px', fontWeight: '700', color: accentColor, background: '#fef9c3', padding: '1px 6px', borderRadius: '999px', border: `1px solid ${borderColor}` }}>
+              {members.length}
+            </span>
+          )}
+        </span>
+        <span style={{ fontSize: '12px', color: '#94a3b8', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{ border: `1px solid ${borderColor}`, borderTop: 'none', borderRadius: '0 0 8px 8px', background: bgOpen, padding: '10px 12px 8px' }}>
+          {loading ? (
+            <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', padding: '8px' }}>Loading…</div>
+          ) : members.length === 0 ? (
+            <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+              {isFamilyMember ? 'No linked crew member found' : 'No family members linked'}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {members.map(m => (
+                <div key={m.id} style={{ background: 'white', border: `1px solid ${borderColor}`, borderRadius: '7px', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#FAEEDA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '700', color: '#633806', flexShrink: 0 }}>
+                    {m.full_name.split(' ').map(p => p[0]).slice(0, 2).join('')}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.full_name}</div>
+                    <div style={{ fontSize: '11px', color: '#92400e', marginTop: '1px' }}>
+                      {m.role || (isFamilyMember ? 'Crew' : 'Family')}
+                      {!isFamilyMember && (
+                        <span style={{ marginLeft: '8px', color: '#64748b' }}>
+                          {m.no_transport_needed ? '🚐 NTN' : '🚐 Transport needed'}
+                        </span>
+                      )}
+                      {m.department && (
+                        <span style={{ marginLeft: '8px', fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>{m.department}</span>
+                      )}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '2px 6px', borderRadius: '5px', flexShrink: 0 }}>{m.id}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {!isFamilyMember && (
+            <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '8px', lineHeight: 1.5 }}>
+              ℹ To add family members, use Accommodation → Stay Sidebar.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── FamilyModal ─────────────────────────────────────────────
 function FamilyModal({ crew, onClose, onEdit }) {
   if (!crew) return null
@@ -1433,6 +1539,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                   }}
                 />
                 <TravelAccordion key={`travel-${initial.id}-${editKey}`} crewId={initial.id} />
+                <FamilyAccordion key={`family-${initial.id}-${editKey}`} crewId={initial.id} personType={form.person_type} linkedCrewId={form.linked_crew_id} />
                 <NotesPanel accordion key={`notes-${initial.id}-${editKey}`} crewId={initial.id} productionId={PRODUCTION_ID} currentUser={currentUser} onNotesChanged={onNotesChanged} />
               </>
             )}
