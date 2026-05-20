@@ -466,6 +466,10 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
           {sortedHotels.map(hotelName => {
             const hotelStays = groupedByHotel[hotelName]
             const hotelId = hotelNameToId[hotelName]
+            const hotelAssignCounts = {}
+            for (const s of hotelStays) {
+              if (s.room_assignment_id) hotelAssignCounts[s.room_assignment_id] = (hotelAssignCounts[s.room_assignment_id] || 0) + 1
+            }
             const sgs = (hotelId && subgroupsByHotel && subgroupsByHotel[hotelId]) || []
 
             // Build sections: each named subgroup then ungrouped at the end
@@ -644,7 +648,38 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                         </td>
                       </tr>
                     )}
-                    {sectionStays.map(stay => renderStayRow(stay))}
+                    {(() => {
+                      const sorted = [...sectionStays].sort((a, b) => {
+                        const aId = a.room_assignment_id || ''
+                        const bId = b.room_assignment_id || ''
+                        if (aId && bId && aId === bId) return 0
+                        if (aId && !bId) return -1
+                        if (!aId && bId) return 1
+                        if (aId && bId) return aId.localeCompare(bId)
+                        return 0
+                      })
+                      const calRows = []
+                      let prevCalAssignId = null
+                      sorted.forEach((stay) => {
+                        const isShared = !!stay.room_assignment_id && (hotelAssignCounts[stay.room_assignment_id] || 0) > 1
+                        if (isShared && prevCalAssignId && prevCalAssignId === stay.room_assignment_id) {
+                          const totalCols = 3 + days.length + 2 + (showCosts ? 10 : 0)
+                          calRows.push(
+                            <tr key={`sep-cal-${stay.id}`} style={{ background: '#e0f2fe' }}>
+                              <td style={{ padding: '0 8px', lineHeight: '10px', fontSize: '10px', color: '#0369a1', borderLeft: '3px solid #0ea5e9', position: 'sticky', left: 0, background: '#e0f2fe', zIndex: 2 }}>↕</td>
+                              <td style={{ padding: 0, lineHeight: '10px', background: '#e0f2fe', position: 'sticky', left: 180, zIndex: 2 }} />
+                              <td style={{ padding: 0, lineHeight: '10px', background: '#e0f2fe', position: 'sticky', left: 280, zIndex: 2 }} />
+                              {Array.from({ length: totalCols - 3 }).map((_, i) => (
+                                <td key={i} style={{ padding: 0, lineHeight: '10px', background: '#e0f2fe' }} />
+                              ))}
+                            </tr>
+                          )
+                        }
+                        prevCalAssignId = stay.room_assignment_id || null
+                        calRows.push(renderStayRow(stay))
+                      })
+                      return calRows
+                    })()}
                     {/* Subgroup total row — only when hotel has subgroups */}
                     {hasSections && (
                       <tr style={{ background: sg ? '#f3e8ff' : '#f8fafc', borderTop: '1px solid #d8b4fe' }}>
