@@ -1956,14 +1956,18 @@ export default function AccommodationPage() {
         if (!fs.crew || fs.crew.person_type !== 'FAMILY') continue
         if (!rMap[fs.room_assignment_id]) continue
         const already = rMap[fs.room_assignment_id].find(r => r.crew_id === fs.crew_id)
-        if (already) continue
-        rMap[fs.room_assignment_id].push({
-          crew_id:   fs.crew_id,
-          full_name: fs.crew.full_name || '—',
-          role:      fs.crew.role || '',
-          department: '',
-          is_family: true,
-        })
+        if (already) {
+          // Aggiorna is_family anche se era già presente (stay nel range)
+          already.is_family = true
+        } else {
+          rMap[fs.room_assignment_id].push({
+            crew_id:    fs.crew_id,
+            full_name:  fs.crew.full_name || '—',
+            role:       fs.crew.role || '',
+            department: '',
+            is_family:  true,
+          })
+        }
       }
     }
     setRoommateMap(rMap)
