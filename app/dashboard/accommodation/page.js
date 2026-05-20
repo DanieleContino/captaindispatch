@@ -1157,12 +1157,26 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     }).select('id, full_name, role, phone, no_transport_needed').single()
     setFamilySaving(false)
     if (error) { setFamilyError(error.message); return }
-    if (initial?.room_assignment_id && newCrew) {
+    if (newCrew) {
+      // Usa room_assignment_id dal form (aggiornato se era stato appena creato) o da initial
+      let assignId = form.room_assignment_id || initial?.room_assignment_id
+      // Se non esiste ancora, crea un room_assignment
+      if (!assignId && initial?.id) {
+        const { data: newAssignment } = await supabase.from('room_assignments').insert({
+          production_id: PRODUCTION_ID,
+          hotel_id:      form.hotel_id || null,
+        }).select('id').single()
+        if (newAssignment) {
+          assignId = newAssignment.id
+          await supabase.from('crew_stays').update({ room_assignment_id: assignId }).eq('id', initial.id)
+          setForm(f => ({ ...f, room_assignment_id: assignId }))
+        }
+      }
       await supabase.from('crew_stays').insert({
         production_id:      PRODUCTION_ID,
         crew_id:            newCrew.id,
         hotel_id:           form.hotel_id || null,
-        room_assignment_id: initial.room_assignment_id,
+        room_assignment_id: assignId || null,
         arrival_date:       form.arrival_date || null,
         departure_date:     form.departure_date || null,
         hotel_status:       'PENDING',
@@ -1924,6 +1938,28 @@ export default function AccommodationPage() {
       if (!stay.room_assignment_id) continue
       if (!rMap[stay.room_assignment_id]) rMap[stay.room_assignment_id] = []
       rMap[stay.room_assignment_id].push({ crew_id: stay.crew_id, full_name: stay.crew?.full_name || '—', role: stay.crew?.role || '', department: stay.crew?.department || '' })
+    }
+    // Carica family member per gli stessi room_assignment_id — senza filtro date
+    const assignmentIds = Object.keys(rMap)
+    if (assignmentIds.length > 0) {
+      const { data: familyStays } = await supabase
+        .from('crew_stays')
+        .select('room_assignment_id, crew_id, crew:crew_id(id, full_name, role, person_type)')
+        .eq('production_id', PRODUCTION_ID)
+        .in('room_assignment_id', assignmentIds)
+      for (const fs of familyStays || []) {
+        if (!fs.crew || fs.crew.person_type !== 'FAMILY') continue
+        if (!rMap[fs.room_assignment_id]) continue
+        const already = rMap[fs.room_assignment_id].find(r => r.crew_id === fs.crew_id)
+        if (already) continue
+        rMap[fs.room_assignment_id].push({
+          crew_id:   fs.crew_id,
+          full_name: fs.crew.full_name || '—',
+          role:      fs.crew.role || '',
+          department: '',
+          is_family: true,
+        })
+      }
     }
     setRoommateMap(rMap)
     setStays(staysData)
