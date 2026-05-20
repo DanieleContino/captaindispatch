@@ -1160,10 +1160,23 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       .order('arrival_date', { ascending: false })
       .limit(1)
       .maybeSingle()
+    let savedStayId = roommateStay?.id
     if (roommateStay) {
       await supabase.from('crew_stays').update({ room_assignment_id: assignmentId }).eq('id', roommateStay.id)
+    } else {
+      // Roommate has no existing stay — create one linked to the same room assignment
+      const { data: newStay } = await supabase.from('crew_stays').insert({
+        production_id:      PRODUCTION_ID,
+        crew_id:            crewMember.id,
+        hotel_id:           form.hotel_id    || null,
+        room_assignment_id: assignmentId,
+        arrival_date:       form.arrival_date   || null,
+        departure_date:     form.departure_date  || null,
+        hotel_status:       'PENDING',
+      }).select('id').single()
+      savedStayId = newStay?.id
     }
-    setRoomates(prev => [...prev, { id: roommateStay?.id, crew_id: crewMember.id, crew: crewMember }])
+    setRoomates(prev => [...prev, { id: savedStayId, crew_id: crewMember.id, crew: crewMember }])
     setRoommateSearch('')
     setRoommateResults([])
     setRoommateSearchOpen(false)
