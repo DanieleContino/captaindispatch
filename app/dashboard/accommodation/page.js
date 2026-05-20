@@ -492,21 +492,23 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
 
             // Shared row renderer — keeps alternating stripe index across subgroups
             let rowIndex = 0
-            const renderStayRow = (stay) => {
+            const renderStayRow = (stay, isShared = false) => {
               const ri = rowIndex++
               const nights = nightsBetween(stay.arrival_date, stay.departure_date)
               const isCI   = stay.arrival_date === today
               const isCO   = stay.departure_date === today
-              const labelBg = stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa')
-              const rowBg   = isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa'
+              const labelBg = isShared ? '#e0f2fe' : (stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa'))
+              const rowBg   = isShared ? '#e0f2fe' : (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : ri % 2 === 0 ? 'white' : '#fafafa')
+              const sharedBorderLeft = isShared ? '3px solid #0ea5e9' : (stay.row_color ? '3px solid rgba(0,0,0,0.15)' : 'none')
+              const hoverBg = isShared ? '#bae6fd' : '#f8fafc'
               return (
                 <tr key={stay.id} style={{ background: rowBg }}
-                  onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '' || c.style.background === 'transparent') c.style.background = isShared ? '#bae6fd' : '#f8fafc' }) }}
-                  onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '#f8fafc' || c.style.background === '#bae6fd') c.style.background = '' }) }}>
+                  onMouseEnter={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === '' || c.style.background === 'transparent') c.style.background = hoverBg }) }}
+                  onMouseLeave={e => { Array.from(e.currentTarget.cells).forEach(c => { if (c.style.background === hoverBg) c.style.background = '' }) }}>
 
                   {/* Name — sticky left 0, colored */}
                   <td onClick={() => onEditRow(stay, 'full_name')}
-                    style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: labelBg, zIndex: 2, borderBottom: '1px solid #f1f5f9', borderLeft: stay.row_color ? `3px solid rgba(0,0,0,0.15)` : 'none' }}
+                    style={{ padding: '5px 8px', fontWeight: '700', fontSize: '11px', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: labelBg, zIndex: 2, borderBottom: '1px solid #f1f5f9', borderLeft: sharedBorderLeft }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = labelBg }}>
                     {stay.crew?.full_name || '—'}
@@ -676,7 +678,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                           )
                         }
                         prevCalAssignId = stay.room_assignment_id || null
-                        calRows.push(renderStayRow(stay))
+                        calRows.push(renderStayRow(stay, isShared))
                       })
                       return calRows
                     })()}
