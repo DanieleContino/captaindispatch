@@ -1601,8 +1601,6 @@ export default function TravelPage() {
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
           <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
           <button onClick={resetWindow} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>↺ Reset</button>
-          <button onClick={() => loadData(windowStart, windowEnd)}
-            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
@@ -1621,6 +1619,8 @@ export default function TravelPage() {
               cursor: 'pointer', whiteSpace: 'nowrap' }}>
             Columns {columnsConfig.length > 0 && `(${columnsConfig.length})`}
           </button>
+          <button onClick={() => loadData(windowStart, windowEnd)}
+            style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }} title="Reload data">↻</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
             {[
               { key: 'FLIGHT', icon: '✈️' },
