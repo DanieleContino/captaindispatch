@@ -2298,15 +2298,45 @@ export default function AccommodationPage() {
                           {!subgroupLabel && <thead><tr style={{ background: '#f1f5f9' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: col.source_field === 'notes' ? '#2563eb' : '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>{col.header_label}</th>)}</tr></thead>}
                           {subgroupLabel && <thead><tr style={{ background: '#faf5ff' }}>{columnsConfig.map(col => <th key={col.source_field} style={{ padding: '5px 8px', fontSize: '9px', fontWeight: '700', color: '#7c3aed', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e9d5ff', background: '#faf5ff' }}>{col.header_label}</th>)}</tr></thead>}
                           <tbody>
-                            {stayList.map(stay => {
-                              const isCI = stay.arrival_date === today, isCO = stay.departure_date === today
-                              const rowBg = stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white')
-                              const borderColor = isCI ? '#22c55e' : isCO ? '#ef4444' : (stay.row_color ? 'rgba(0,0,0,0.15)' : 'transparent')
-                              return <tr key={stay.id}
-                                style={{ background: rowBg, borderLeft: `3px solid ${borderColor}`, cursor: 'context-menu' }}
-                                onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
-              >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap }))}</tr>
-                            })}
+                            {(() => {
+                              // Sort: shared rooms grouped together, singles at end
+                              const sorted = [...stayList].sort((a, b) => {
+                                const aId = a.room_assignment_id || ''
+                                const bId = b.room_assignment_id || ''
+                                if (aId && bId && aId === bId) return 0
+                                if (aId && !bId) return -1
+                                if (!aId && bId) return 1
+                                if (aId && bId) return aId.localeCompare(bId)
+                                return 0
+                              })
+                              const rows = []
+                              let prevAssignId = null
+                              sorted.forEach((stay, idx) => {
+                                const isCI = stay.arrival_date === today
+                                const isCO = stay.departure_date === today
+                                const isShared = !!stay.room_assignment_id && (roommateMap[stay.room_assignment_id] || []).length > 1
+                                const rowBg = isShared ? '#e0f2fe' : (stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white'))
+                                const borderColor = isShared ? '#0ea5e9' : (isCI ? '#22c55e' : isCO ? '#ef4444' : (stay.row_color ? 'rgba(0,0,0,0.15)' : 'transparent'))
+                                // Insert separator row between two roommates of the same assignment
+                                if (isShared && prevAssignId && prevAssignId === stay.room_assignment_id) {
+                                  rows.push(
+                                    <tr key={`sep-${stay.id}`} style={{ background: '#bae6fd' }}>
+                                      <td colSpan={columnsConfig.length} style={{ padding: '1px 0', textAlign: 'center', fontSize: '10px', color: '#0369a1', borderLeft: '3px solid #0ea5e9', letterSpacing: '0.1em' }}>
+                                        ↕
+                                      </td>
+                                    </tr>
+                                  )
+                                }
+                                prevAssignId = stay.room_assignment_id || null
+                                rows.push(
+                                  <tr key={stay.id}
+                                    style={{ background: rowBg, borderLeft: `3px solid ${borderColor}`, cursor: 'context-menu' }}
+                                    onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
+                                  >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap }))}</tr>
+                                )
+                              })
+                              return rows
+                            })()}
                           </tbody>
                         </table>
                       </div>
