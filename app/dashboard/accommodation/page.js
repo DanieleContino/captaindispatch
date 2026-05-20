@@ -1284,6 +1284,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       invoice_number:    (form.invoice_number || '').trim() || null,
       hotel_status:      form.hotel_status || 'PENDING',
       row_color:         form.row_color    || null,
+      room_assignment_id: form.room_assignment_id || null,
     }
   }
 
