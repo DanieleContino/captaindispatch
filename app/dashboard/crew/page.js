@@ -927,28 +927,17 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
     setConfirmDel(false)
   }
 
-  // Avatar color based on travel status
-  const avatarColors = {
-    IN:      { bg: '#dcfce7', color: '#15803d' },
-    OUT:     { bg: '#fff7ed', color: '#c2410c' },
-    PRESENT: { bg: '#eff6ff', color: '#1d4ed8' },
-  }
-  const av = member.person_type === 'FAMILY'
-    ? { bg: '#FAEEDA', color: '#633806' }
-    : (avatarColors[member.travel_status] || avatarColors.PRESENT)
-
-  const initials = member.full_name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()
-
-  // Border-top color
   const borderTopColor = isRemote ? '#94a3b8'
     : member.person_type === 'FAMILY' ? '#FAC775'
     : member.hotel_status === 'CONFIRMED' ? '#86efac'
-    : tc.border
+    : TC[member.travel_status]?.border || '#fdba74'
 
-  // Stays chips
   const validStays = stays.filter(s => s.arrival_date && s.departure_date)
 
-  const travelChips = travelInfo
+  const accomStatusLabel = member.hotel_status === 'CONFIRMED' ? '✅ Confirmed' : '⏳ Pending'
+  const accomStatusTitle = member.hotel_status === 'CONFIRMED'
+    ? 'Accommodation booking confirmed by the hotel'
+    : 'Accommodation booking not yet confirmed'
 
   return (
     <div style={{
@@ -962,25 +951,25 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
       gap: '8px',
     }}>
 
-      {/* Header: avatar + nome + checkbox */}
+      {/* Header: checkbox + nome */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
         <input type="checkbox" checked={selected} onChange={() => onToggleSelect(member.id)}
           onClick={e => e.stopPropagation()}
-          style={{ width: '14px', height: '14px', accentColor: '#2563eb', cursor: 'pointer', flexShrink: 0, marginTop: '2px' }} />
-        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: av.bg, color: av.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
-          {initials}
-        </div>
+          style={{ width: '14px', height: '14px', accentColor: '#2563eb', cursor: 'pointer', flexShrink: 0, marginTop: '3px' }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.full_name}</span>
             {unreadCount > 0 && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '800', color: 'white', background: '#f97316', borderRadius: '999px', minWidth: '16px', height: '16px', padding: '0 3px', flexShrink: 0 }}>❗</span>
+              <span title={`${unreadCount} unread note${unreadCount > 1 ? 's' : ''}`}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '800', color: 'white', background: '#f97316', borderRadius: '999px', minWidth: '16px', height: '16px', padding: '0 3px', flexShrink: 0 }}>❗</span>
             )}
             {notesCount > 0 && unreadCount === 0 && (
-              <span style={{ fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fcd34d', flexShrink: 0 }}>💬</span>
+              <span title={`${notesCount} note${notesCount > 1 ? 's' : ''}`}
+                style={{ fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fcd34d', flexShrink: 0 }}>💬</span>
             )}
             {familyCount > 0 && (
               <button onClick={e => { e.stopPropagation(); onFamilyClick && onFamilyClick() }}
+                title={`${familyCount} family member${familyCount > 1 ? 's' : ''} sharing room`}
                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '800', padding: '1px 5px', borderRadius: '999px', background: '#FAEEDA', color: '#633806', border: '1px solid #FAC775', cursor: 'pointer', flexShrink: 0 }}>
                 F{familyCount > 1 ? familyCount : ''}
               </button>
@@ -994,83 +983,94 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
 
       {/* Badges */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-        {member.department && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: '#f1f5f9', color: '#475569' }}>
-            {member.department}
-          </span>
-        )}
-        {!isLocal && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: hc.bg, color: hc.color, border: `1px solid ${hc.border}` }}>
-            {member.hotel_status === 'CONFIRMED' ? '✅' : '⏳'} {member.hotel_status}
-          </span>
-        )}
-        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '600', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
+        <span title={`Travel status: ${member.travel_status === 'IN' ? 'Crew has not yet arrived on location' : member.travel_status === 'PRESENT' ? 'Crew is currently on location' : 'Crew has departed'}`}
+          style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '600', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`, cursor: 'help' }}>
           {member.travel_status === 'IN' ? '↓' : member.travel_status === 'OUT' ? '↑' : '●'} {member.travel_status}
         </span>
         {isRemote && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: '#f1f5f9', color: '#475569', border: '1px solid #94a3b8' }}>🏠 Remote</span>
+          <span title="Works remotely — not on set. Excluded from Rocket assignments."
+            style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: '#f1f5f9', color: '#475569', border: '1px solid #94a3b8', cursor: 'help' }}>🏠 Remote</span>
         )}
         {isLocal && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: '#fef9c3', color: '#92400e', border: '1px solid #fde68a' }}>📍 Local</span>
+          <span title="Lives locally — no accommodation needed. Excluded from accommodation tracking."
+            style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: '#fef9c3', color: '#92400e', border: '1px solid #fde68a', cursor: 'help' }}>📍 Local</span>
         )}
         {member.no_transport_needed && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1' }}>🚐 NTN</span>
+          <span title="No Transport Needed — excluded from hub pickup/dropoff assignments."
+            style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1', cursor: 'help' }}>🚐 NTN</span>
         )}
       </div>
 
       {/* Accommodation */}
-      <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
-        <div style={{ fontSize: '10px', fontWeight: '500', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>🏨 Accommodation</div>
-        {validStays.length === 0 ? (
-          <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>No stays recorded</div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-            {validStays.map((s, i) => {
-              const hotelName = locations[s.hotel_id] || s.hotel_id || '–'
-              const occ = hotelOccupancy(s.arrival_date, s.departure_date, s.arrival_date === todayStr && stillInTransit)
-              const isActive = occ && (occ.label.includes('Hotel') || occ.label.includes('Today'))
-              const sDepToday = isToday(s.departure_date)
-              const sDepTomorrow = isTomorrow(s.departure_date)
-              return (
-                <span key={i} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '3px',
-                  padding: '2px 7px', borderRadius: '5px', fontSize: '10px', whiteSpace: 'nowrap',
-                  background: isActive ? '#f0fdf4' : '#f1f5f9',
-                  border: `1px solid ${isActive ? '#86efac' : '#e2e8f0'}`,
-                  color: sDepToday || sDepTomorrow ? '#dc2626' : (isActive ? '#15803d' : '#64748b'),
-                  fontWeight: isActive ? '500' : '400',
-                  maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}>
-                  {hotelName} · {fmtDate(s.arrival_date)}→{fmtDate(s.departure_date)}
-                  {occ && <span style={{ marginLeft: '4px', fontWeight: '600', color: occ.style.color }}>· {occ.label}</span>}
-                </span>
-              )
-            })}
+      {!isLocal && (
+        <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+            <span>🏨 Accommodation</span>
+            <span title={accomStatusTitle}
+              style={{ fontSize: '10px', fontWeight: '500', padding: '1px 7px', borderRadius: '999px', background: hc.bg, color: hc.color, border: `1px solid ${hc.border}`, cursor: 'help' }}>
+              {accomStatusLabel}
+            </span>
           </div>
-        )}
-      </div>
+          {validStays.length === 0 ? (
+            <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>No stays recorded</div>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+              {validStays.map((s, i) => {
+                const hotelName = locations[s.hotel_id] || s.hotel_id || '–'
+                const occ = hotelOccupancy(s.arrival_date, s.departure_date, s.arrival_date === todayStr && stillInTransit)
+                const isActive = occ && (occ.label.includes('Hotel') || occ.label.includes('Today') || occ.label.includes('Arriving'))
+                const sDepToday = isToday(s.departure_date)
+                const sDepTomorrow = isTomorrow(s.departure_date)
+                const tooltipText = `${hotelName} · Check-in ${fmtDate(s.arrival_date)} → Check-out ${fmtDate(s.departure_date)}${occ ? ' · ' + occ.label : ''}`
+                return (
+                  <span key={i} title={tooltipText}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '3px',
+                      padding: '2px 7px', borderRadius: '5px', fontSize: '10px',
+                      background: isActive ? '#f0fdf4' : '#f1f5f9',
+                      border: `1px solid ${isActive ? '#86efac' : '#e2e8f0'}`,
+                      color: sDepToday || sDepTomorrow ? '#dc2626' : (isActive ? '#15803d' : '#64748b'),
+                      fontWeight: isActive ? '500' : '400',
+                      cursor: 'help', maxWidth: '100%',
+                    }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px', display: 'inline-block' }}>{hotelName}</span>
+                    <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>· {fmtDate(s.arrival_date)}→{fmtDate(s.departure_date)}{occ ? ' · ' + occ.label : ''}</span>
+                  </span>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Travel */}
       <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
-        <div style={{ fontSize: '10px', fontWeight: '500', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>✈️ Travel</div>
-        {travelChips.length === 0 ? (
+        <div style={{ fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>✈️ Travel</div>
+        {travelInfo.length === 0 ? (
           <div style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>No movements recorded</div>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-            {travelChips.map((tm, idx) => {
+            {travelInfo.map((tm, idx) => {
               const isIN = tm.direction === 'IN'
               const icon = tm.travel_type === 'FLIGHT' ? '✈️' : tm.travel_type === 'TRAIN' ? '🚂' : '🚐'
-              const timeStr = isIN ? (tm.to_time ? `arr ${tm.to_time.slice(0,5)}` : '') : (tm.from_time ? `dep ${tm.from_time.slice(0,5)}` : '')
+              const timeStr = isIN
+                ? (tm.to_time   ? `arr ${tm.to_time.slice(0,5)}`   : '')
+                : (tm.from_time ? `dep ${tm.from_time.slice(0,5)}` : '')
               const dateStr = new Date(tm.travel_date + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+              const from = tm.from_location || '?'
+              const to   = tm.to_location   || '?'
+              const tooltipText = `${tm.travel_type}${tm.travel_number ? ' ' + tm.travel_number : ''} · ${from} → ${to}${tm.from_time ? ' dep ' + tm.from_time.slice(0,5) : ''}${tm.to_time ? ' arr ' + tm.to_time.slice(0,5) : ''} · ${dateStr}${tm.needs_transport ? ' · 🚐 Needs transport' : ''}`
               return (
-                <span key={idx} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '3px',
-                  padding: '2px 7px', borderRadius: '5px', fontSize: '10px', whiteSpace: 'nowrap',
-                  background: isIN ? '#f0fdf4' : '#fff7ed',
-                  border: `1px solid ${isIN ? '#86efac' : '#fdba74'}`,
-                  color: isIN ? '#15803d' : '#c2410c',
-                }}>
-                  {icon} {isIN ? '↓' : '↑'} {tm.travel_number || '–'} {timeStr} · {dateStr}
+                <span key={idx} title={tooltipText}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '3px',
+                    padding: '2px 7px', borderRadius: '5px', fontSize: '10px', whiteSpace: 'nowrap',
+                    background: isIN ? '#f0fdf4' : '#fff7ed',
+                    border: `1px solid ${isIN ? '#86efac' : '#fdba74'}`,
+                    color: isIN ? '#15803d' : '#c2410c',
+                    cursor: 'help',
+                  }}>
+                  {icon} {isIN ? '↓' : '↑'} {from}→{to} {timeStr} · {dateStr}
                   {tm.needs_transport && <span style={{ fontSize: '9px', background: '#eff6ff', color: '#1d4ed8', borderRadius: '3px', padding: '0 3px', border: '1px solid #bfdbfe', marginLeft: '2px' }}>🚐</span>}
                 </span>
               )
