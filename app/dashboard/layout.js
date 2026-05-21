@@ -69,11 +69,11 @@ export default function DashboardLayout({ children }) {
   }, [pathname, router])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+    <div className="dashboard-root" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
       {/* Navbar fuori dal contenitore scrollabile: la scrollbar parte sotto di essa */}
       <Navbar currentPath={pathname} className="no-print" />
       {/* Area contenuto scrollabile — la scrollbar inizia qui, sotto la navbar */}
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <div className="dashboard-content" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         {children}
       </div>
     </div>

@@ -2139,8 +2139,6 @@ export default function AccommodationPage() {
 
       <style>{`
         @media print {
-          .no-print { display: none !important; }
-
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -2150,12 +2148,47 @@ export default function AccommodationPage() {
             background: white !important;
             margin: 0 !important;
             padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
           }
 
+          /* Contenitore principale lista */
           .accom-print-wrap {
-            padding: 0 !important;
+            padding: 8px !important;
             background: white !important;
             max-width: none !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          /* Tutti i div dentro l'area di stampa devono espandersi */
+          .accom-print-wrap div {
+            overflow: visible !important;
+            overflow-x: visible !important;
+            height: auto !important;
+          }
+
+          /* Wrapper tabella — deve espandersi invece di scrollare */
+          .accom-table-wrapper {
+            overflow: visible !important;
+            height: auto !important;
+          }
+
+          /* Le tabelle si adattano alla larghezza pagina */
+          .accom-table-wrapper table,
+          .accom-print-wrap table {
+            table-layout: auto !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
+          /* Celle — font ridotto e testo a capo per far stare tutto */
+          .accom-print-wrap td,
+          .accom-print-wrap th {
+            overflow: visible !important;
+            white-space: normal !important;
+            text-overflow: clip !important;
+            font-size: 8px !important;
           }
 
           .accom-table-row {
@@ -2168,45 +2201,7 @@ export default function AccommodationPage() {
             padding: 4px 10px !important;
           }
 
-          .accom-print-wrap div {
-            overflow: visible !important;
-            overflow-x: visible !important;
-          }
-
-          .accom-table-wrapper {
-            overflow: visible !important;
-          }
-
-          .accom-table-wrapper table {
-            table-layout: auto !important;
-            width: 100% !important;
-            min-width: 0 !important;
-          }
-
-          .accom-print-wrap table {
-            table-layout: auto !important;
-            width: 100% !important;
-            min-width: 0 !important;
-          }
-
-          .accom-print-wrap td,
-          .accom-print-wrap th {
-            overflow: visible !important;
-            white-space: normal !important;
-            text-overflow: clip !important;
-            font-size: 8px !important;
-          }
-
           .no-print-inline { display: none !important; }
-
-          .accom-print-wrap table {
-            min-width: 0 !important;
-            width: 100% !important;
-          }
-
-          .accom-print-wrap div[style*="overflowX"] {
-            overflow: visible !important;
-          }
 
           .show-only-on-print { display: block !important; }
           .accom-calendar-only { display: none !important; }

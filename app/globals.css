@@ -91,3 +91,35 @@ body {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch; /* momentum scroll iOS */
 }
+
+/* ─── Global print reset ─────────────────────────────────────────────────────── */
+/* Rimuove i constraint del dashboard layout (height:100dvh, overflow:hidden)    */
+/* così il contenuto può fluire su più pagine durante la stampa / export PDF     */
+@media print {
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Dashboard outer wrapper — rimuove height:100dvh e overflow:hidden */
+  .dashboard-root {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Dashboard inner scroll area — rimuove overflowY:auto e minHeight:0 */
+  .dashboard-content {
+    display: block !important;
+    flex: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    min-height: 0 !important;
+  }
+
+  /* Nascondi elementi marcati no-print (Navbar, toolbar, filtri, ecc.) */
+  .no-print {
+    display: none !important;
+  }
+}
