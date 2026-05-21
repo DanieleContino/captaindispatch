@@ -597,6 +597,9 @@ export default function LocationsPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>📍</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Locations</span>
+          <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
+            {t.addLocationBtn}
+          </button>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>{locs.length} totale</span>
           <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
             <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#d97706', background: '#fefce8', border: '1px solid #fde68a' }}>{hubs} hub</span>
@@ -616,9 +619,6 @@ export default function LocationsPage() {
           <button onClick={handleRefreshRoutes} disabled={routeRefreshing}
             style={{ background: routeRefreshing ? '#f1f5f9' : 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: routeRefreshing ? 'default' : 'pointer', fontSize: '12px', fontWeight: '700', color: routeRefreshing ? '#94a3b8' : '#374151', whiteSpace: 'nowrap' }}>
             {routeRefreshing ? '⏳ Ricalcolo…' : '🔄 Ricalcola Rotte'}
-          </button>
-          <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-            {t.addLocationBtn}
           </button>
         </div>}
       />
