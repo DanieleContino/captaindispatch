@@ -2241,6 +2241,26 @@ export default function AccommodationPage() {
             style={{ padding: '6px 12px', borderRadius: '7px', border: `1px solid ${legendEditorOpen ? '#a855f7' : '#e2e8f0'}`, background: legendEditorOpen ? '#faf5ff' : 'white', color: legendEditorOpen ? '#7c3aed' : '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
             🎨 Legend
           </button>
+          {viewMode === 'list' && (
+            <button
+              onClick={() => window.print()}
+              style={{
+                background: '#0f2340',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '6px 14px',
+                fontSize: '12px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+              🖨 Print / PDF
+            </button>
+          )}
         </div>
       </div>
 
