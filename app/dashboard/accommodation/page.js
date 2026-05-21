@@ -2399,7 +2399,7 @@ export default function AccommodationPage() {
       </div>
 
       {/* ── Content ── S66-J v2: in calendar mode il div outer ha height fisso, no padding, no outer scroll */}
-      <div style={{
+      <div className="accom-print-wrap" style={{
         padding: viewMode === 'calendar' ? 0 : (isMobile ? '12px' : '16px 24px'),
         height: viewMode === 'calendar' ? 'calc(100vh - var(--accom-headers-h, 184px))' : 'auto',
         overflow: viewMode === 'calendar' ? 'hidden' : 'visible',
