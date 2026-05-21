@@ -2168,6 +2168,25 @@ export default function AccommodationPage() {
             padding: 4px 10px !important;
           }
 
+          .accom-print-wrap div {
+            overflow: visible !important;
+            overflow-x: visible !important;
+          }
+
+          .accom-print-wrap table {
+            table-layout: auto !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
+          .accom-print-wrap td,
+          .accom-print-wrap th {
+            overflow: visible !important;
+            white-space: normal !important;
+            text-overflow: clip !important;
+            font-size: 8px !important;
+          }
+
           .no-print-inline { display: none !important; }
 
           .accom-print-wrap table {
