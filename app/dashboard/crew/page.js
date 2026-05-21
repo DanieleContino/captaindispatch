@@ -1039,6 +1039,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
                   border: `1px solid ${isActive ? '#86efac' : '#e2e8f0'}`,
                   color: sDepToday || sDepTomorrow ? '#dc2626' : (isActive ? '#15803d' : '#64748b'),
                   fontWeight: isActive ? '500' : '400',
+                  maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
                   {hotelName} · {fmtDate(s.arrival_date)}→{fmtDate(s.departure_date)}
                   {occ && <span style={{ marginLeft: '4px', fontWeight: '600', color: occ.style.color }}>· {occ.label}</span>}
