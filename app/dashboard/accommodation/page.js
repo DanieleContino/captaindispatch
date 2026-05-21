@@ -2574,17 +2574,19 @@ export default function AccommodationPage() {
         )}
       </div>
 
-      <AccommodationColumnsEditorSidebar open={columnsEditorOpen} onClose={() => setColumnsEditorOpen(false)} onChanged={loadColumnsConfig} />
-      <StaySidebar open={sidebarOpen} mode={sidebarMode} initial={sidebarTarget} onClose={() => setSidebarOpen(false)} onSaved={handleStaySaved} onDeleted={handleStayDeleted} hotels={hotels} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null} colorLegend={colorLegend} onRoommateChanged={() => loadData(windowStart, windowEnd)} />
-      <SubgroupManagerSidebar
-        open={subgroupSidebarOpen}
-        hotelId={subgroupSidebarHotel?.id}
-        hotelName={subgroupSidebarHotel?.name}
-        productionId={PRODUCTION_ID}
-        onClose={() => setSubgroupSidebarOpen(false)}
-        onChanged={() => { loadSubgroupsForHotel(subgroupSidebarHotel?.id); loadData(windowStart, windowEnd) }}
-      />
-      <Toast message={toast?.message} type={toast?.type} />
+      <div className="no-print">
+        <AccommodationColumnsEditorSidebar open={columnsEditorOpen} onClose={() => setColumnsEditorOpen(false)} onChanged={loadColumnsConfig} />
+        <StaySidebar open={sidebarOpen} mode={sidebarMode} initial={sidebarTarget} onClose={() => setSidebarOpen(false)} onSaved={handleStaySaved} onDeleted={handleStayDeleted} hotels={hotels} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null} colorLegend={colorLegend} onRoommateChanged={() => loadData(windowStart, windowEnd)} />
+        <SubgroupManagerSidebar
+          open={subgroupSidebarOpen}
+          hotelId={subgroupSidebarHotel?.id}
+          hotelName={subgroupSidebarHotel?.name}
+          productionId={PRODUCTION_ID}
+          onClose={() => setSubgroupSidebarOpen(false)}
+          onChanged={() => { loadSubgroupsForHotel(subgroupSidebarHotel?.id); loadData(windowStart, windowEnd) }}
+        />
+        <Toast message={toast?.message} type={toast?.type} />
+      </div>
     </div>
   )
 }
