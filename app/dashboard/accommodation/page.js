@@ -2462,6 +2462,9 @@ export default function AccommodationPage() {
                                 const isCI = stay.arrival_date === today
                                 const isCO = stay.departure_date === today
                                 const isShared = !!stay.room_assignment_id && (roommateMap[stay.room_assignment_id] || []).length > 1
+                                const isFirstOfGroup = isShared && prevAssignId !== stay.room_assignment_id
+                                const nextStay = sorted[idx + 1]
+                                const isLastOfGroup = isShared && (!nextStay || nextStay.room_assignment_id !== stay.room_assignment_id)
                                 const rowBg = isShared ? '#e0f2fe' : (stay.row_color || (isCI ? '#f0fdf4' : isCO ? '#fef2f2' : 'white'))
                                 const borderColor = isShared ? '#0ea5e9' : (isCI ? '#22c55e' : isCO ? '#ef4444' : (stay.row_color ? 'rgba(0,0,0,0.15)' : 'transparent'))
                                 // Insert separator row between two roommates of the same assignment
@@ -2478,7 +2481,13 @@ export default function AccommodationPage() {
                                 prevAssignId = stay.room_assignment_id || null
                                 rows.push(
                                   <tr key={stay.id}
-                                    style={{ background: rowBg, borderLeft: `3px solid ${borderColor}`, cursor: 'context-menu', borderBottom: '1px solid #e2e8f0' }}
+                                    style={{
+                                      background: rowBg,
+                                      borderLeft: `3px solid ${borderColor}`,
+                                      cursor: 'context-menu',
+                                      borderTop: isFirstOfGroup ? '2px solid #0ea5e9' : undefined,
+                                      borderBottom: isLastOfGroup ? '2px solid #0ea5e9' : (isShared ? '1px solid #7dd3fc' : '1px solid #e2e8f0'),
+                                    }}
                                     onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap }))}</tr>
                                 )
