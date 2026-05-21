@@ -3722,13 +3722,13 @@ function TripsPageInner() {
       {/* ── Mobile toolbar (2 righe sticky) ── */}
       {isMobile && (
         <>
-          <div style={{ position: 'sticky', top: '52px', zIndex: 22, background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+          <div style={{ position: 'sticky', top: '0px', zIndex: 22, background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
             <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1, touchAction: 'manipulation' }}>◀</button>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ flex: 1, minWidth: 0, border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
             <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1, touchAction: 'manipulation' }}>▶</button>
             <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8', touchAction: 'manipulation', whiteSpace: 'nowrap' }}>{t.today}</button>
           </div>
-          <div style={{ position: 'sticky', top: '104px', zIndex: 21, background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 12px', display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'sticky', top: '52px', zIndex: 21, background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 12px', display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
             {['ALL', 'ARR', 'DEP', 'STD'].map(s => {
               const fullMap = { ARR: 'ARRIVAL', DEP: 'DEPARTURE', STD: 'STANDARD' }
               const full = fullMap[s] || s

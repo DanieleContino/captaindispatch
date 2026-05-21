@@ -1607,7 +1607,7 @@ export default function TravelPage() {
         background: 'white', borderBottom: '1px solid #e2e8f0',
         padding: '8px 16px', minHeight: '52px',
         display: 'flex', alignItems: 'center', gap: '8px',
-        position: 'sticky', top: '52px', zIndex: 21,
+        position: 'sticky', top: '0px', zIndex: 21,
       }}>
         <span style={{ fontSize: '18px' }}>✈️</span>
         <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>
@@ -1707,7 +1707,7 @@ export default function TravelPage() {
         background: 'white', borderBottom: '1px solid #e2e8f0',
         padding: '6px 16px',
         display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
-        position: 'sticky', top: '104px', zIndex: 20,
+        position: 'sticky', top: '52px', zIndex: 20,
       }}>
         <input type="text" placeholder="Search name..." value={search}
           onChange={e => setSearch(e.target.value)}

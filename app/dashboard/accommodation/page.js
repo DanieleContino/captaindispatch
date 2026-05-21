@@ -2130,7 +2130,7 @@ export default function AccommodationPage() {
 
   if (!user) return <div style={{ minHeight: '100vh', background: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading...</div>
 
-  const NAVBAR_H   = 52
+  const NAVBAR_H   = 0
   const TOOLBAR_H  = 52
   const FILTER_TOP = NAVBAR_H + TOOLBAR_H
 

@@ -1900,7 +1900,7 @@ export default function CrewPage() {
 
       {addNewBanner && (
         <div style={{
-          position: 'sticky', top: '52px', zIndex: 30,
+          position: 'sticky', top: '0px', zIndex: 30,
           background: '#eff6ff', borderBottom: '2px solid #2563eb',
           padding: '12px 24px', display: 'flex', alignItems: 'center',
           gap: '12px', flexWrap: 'wrap'
@@ -1949,7 +1949,7 @@ export default function CrewPage() {
       )}
 
       {/* Sub-toolbar — two-row sticky; top shifts down when addNewBanner is visible */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: `${52 + (addNewBanner ? 64 : 0)}px`, zIndex: 29 }}>
+      <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: `${addNewBanner ? 64 : 0}px`, zIndex: 29 }}>
 
         {/* Riga 1 — titolo + contatori + azioni */}
         <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
