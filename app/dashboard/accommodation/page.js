@@ -2137,8 +2137,49 @@ export default function AccommodationPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
 
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          html, body {
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          .accom-print-wrap {
+            padding: 0 !important;
+            background: white !important;
+            max-width: none !important;
+          }
+
+          .accom-table-row {
+            font-size: 9px !important;
+            padding: 3px 6px !important;
+          }
+
+          .accom-hotel-header {
+            font-size: 10px !important;
+            padding: 4px 10px !important;
+          }
+
+          .show-only-on-print { display: block !important; }
+          .accom-calendar-only { display: none !important; }
+        }
+
+        @page {
+          size: A4 portrait;
+          margin: 8mm;
+        }
+      `}</style>
+
       {/* ── Toolbar ── MODIFICA 2: data-toolbar attribute */}
-      <div ref={toolbarRef} data-toolbar="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: `${TOOLBAR_H}px`, display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: `${NAVBAR_H}px`, zIndex: 21 }}>
+      <div ref={toolbarRef} data-toolbar="accommodation" className="no-print" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: `${TOOLBAR_H}px`, display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: `${NAVBAR_H}px`, zIndex: 21 }}>
         <span style={{ fontSize: '18px' }}>🏨</span>
         <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '16px', color: '#0f172a', whiteSpace: 'nowrap' }}>Accommodation</span>
         <button onClick={openNew} style={{ background: '#15803d', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(21,128,61,0.3)' }}>+ Add Stay</button>
@@ -2229,7 +2270,7 @@ export default function AccommodationPage() {
       )}
 
       {/* ── Filter Row ── MODIFICA 2: data-filter-row attribute */}
-      <div ref={filterRowRef} data-filter-row="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20 }}>
+      <div ref={filterRowRef} data-filter-row="accommodation" className="no-print" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', position: 'sticky', top: `${FILTER_TOP}px`, zIndex: 20 }}>
         <input type="text" placeholder="Search name..." value={search} onChange={e => setSearch(e.target.value)}
           style={{ padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '160px', minWidth: 0 }} />
         {/* Hotel accordion */}
