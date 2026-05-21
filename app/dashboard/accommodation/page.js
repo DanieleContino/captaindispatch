@@ -2570,9 +2570,9 @@ export default function AccommodationPage() {
                                 if (isShared && prevAssignId && prevAssignId === stay.room_assignment_id) {
                                   rows.push(
                                     <tr key={`sep-${stay.id}`} style={{ background: '#e0f2fe' }}>
-                                      <td style={{ padding: '0 8px', lineHeight: '10px', fontSize: '10px', color: '#0369a1', borderLeft: '3px solid #0ea5e9' }}>↕</td>
+                                      <td style={{ padding: '0 8px', lineHeight: '10px', fontSize: '10px', color: '#0369a1', borderLeft: '3px solid #0ea5e9', borderTop: 'none', borderBottom: 'none' }}>↕</td>
                                       {columnsConfig.slice(1).map((col, i) => (
-                                        <td key={i} style={{ padding: 0, lineHeight: '10px', background: '#e0f2fe' }} />
+                                        <td key={i} style={{ padding: 0, lineHeight: '10px', background: '#e0f2fe', borderTop: 'none', borderBottom: 'none' }} />
                                       ))}
                                     </tr>
                                   )
