@@ -1041,6 +1041,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
                   fontWeight: isActive ? '500' : '400',
                 }}>
                   {hotelName} · {fmtDate(s.arrival_date)}→{fmtDate(s.departure_date)}
+                  {occ && <span style={{ marginLeft: '4px', fontWeight: '600', color: occ.style.color }}>· {occ.label}</span>}
                 </span>
               )
             })}
