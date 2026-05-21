@@ -948,8 +948,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
   // Stays chips
   const validStays = stays.filter(s => s.arrival_date && s.departure_date)
 
-  // Travel chips — max 3
-  const travelChips = travelInfo.slice(0, 3)
+  const travelChips = travelInfo
 
   return (
     <div style={{
@@ -1074,9 +1073,6 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
                 </span>
               )
             })}
-            {travelInfo.length > 3 && (
-              <span style={{ fontSize: '10px', color: '#94a3b8', padding: '2px 4px' }}>+{travelInfo.length - 3}</span>
-            )}
           </div>
         )}
       </div>
