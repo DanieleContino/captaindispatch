@@ -1969,10 +1969,9 @@ export default function CrewPage() {
             {counts.depTomorrow > 0 && <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' }}>✈ {counts.depTomorrow} dep tomorrow</span>}
           </div>
           )}
-          <div style={{ flex: 1 }} />
-          {/* Azioni */}
-          <button onClick={loadCrew} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
           <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>{t.addCrew}</button>
+          <div style={{ flex: 1 }} />
+          <button onClick={loadCrew} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>↻</button>
         </div>
 
         {/* Riga 2 — filtri */}
