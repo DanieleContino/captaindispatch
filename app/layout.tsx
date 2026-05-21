@@ -57,7 +57,7 @@ export default function RootLayout({
         {/* PWA Android */}
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="min-h-screen flex flex-col">
+      <body className="h-full flex flex-col">
         <Providers>{children}</Providers>
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
