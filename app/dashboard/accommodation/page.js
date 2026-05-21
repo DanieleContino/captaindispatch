@@ -2246,7 +2246,7 @@ export default function AccommodationPage() {
 
       {/* ── Legend Editor ── */}
       {legendEditorOpen && (
-        <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div className="no-print" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ fontSize: '11px', fontWeight: '800', color: '#7c3aed', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '2px' }}>
             🎨 Row Color Legend — click a color to edit its label
           </div>
