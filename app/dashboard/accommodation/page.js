@@ -2576,6 +2576,12 @@ export default function AccommodationPage() {
                                       ))}
                                     </tr>
                                   )
+                                } else if (isShared && prevAssignId && prevAssignId !== stay.room_assignment_id) {
+                                  rows.push(
+                                    <tr key={`sep-white-${stay.id}`}>
+                                      <td colSpan={columnsConfig.length} style={{ padding: 0, height: '6px', background: 'white', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }} />
+                                    </tr>
+                                  )
                                 }
                                 prevAssignId = stay.room_assignment_id || null
                                 rows.push(
@@ -2584,8 +2590,8 @@ export default function AccommodationPage() {
                                       background: rowBg,
                                       borderLeft: `3px solid ${borderColor}`,
                                       cursor: 'context-menu',
-                                      borderTop: isFirstOfGroup ? '1px solid #bae6fd' : undefined,
-                                      borderBottom: isShared ? '1px solid #bae6fd' : '1px solid #e2e8f0',
+                                      borderTop: 'none',
+                                      borderBottom: isShared ? 'none' : '1px solid #e2e8f0',
                                     }}
                                     onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap }))}</tr>
