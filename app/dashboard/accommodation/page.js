@@ -2173,6 +2173,16 @@ export default function AccommodationPage() {
             overflow-x: visible !important;
           }
 
+          .accom-table-wrapper {
+            overflow: visible !important;
+          }
+
+          .accom-table-wrapper table {
+            table-layout: auto !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
           .accom-print-wrap table {
             table-layout: auto !important;
             width: 100% !important;
@@ -2523,7 +2533,7 @@ export default function AccommodationPage() {
                     const sections = [...Object.values(sgMap).filter(x => x.stays.length > 0), ...(ungrouped.length > 0 ? [{ sg: null, stays: ungrouped }] : [])]
                     const colMinW = columnsConfig.reduce((s, c) => s + parseInt(c.width || '100'), 0)
                     const renderTable = (stayList, subgroupLabel) => (
-                      <div style={{ overflowX: 'auto', overflowY: 'visible' }} key={subgroupLabel || '__ungrouped__'}>
+                      <div className="accom-table-wrapper" style={{ overflowX: 'auto', overflowY: 'visible' }} key={subgroupLabel || '__ungrouped__'}>
                         {subgroupLabel && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 14px', background: '#f8f4ff', borderLeft: '3px solid #7c3aed', fontSize: '11px', fontWeight: '800', color: '#5b21b6' }}>
                             <span>▾ {subgroupLabel}</span>
