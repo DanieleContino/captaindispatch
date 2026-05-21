@@ -2485,8 +2485,8 @@ export default function AccommodationPage() {
                                       background: rowBg,
                                       borderLeft: `3px solid ${borderColor}`,
                                       cursor: 'context-menu',
-                                      borderTop: isFirstOfGroup ? '2px solid #0ea5e9' : undefined,
-                                      borderBottom: isLastOfGroup ? '2px solid #0ea5e9' : (isShared ? '1px solid #7dd3fc' : '1px solid #e2e8f0'),
+                                      borderTop: isFirstOfGroup ? '1px solid #bae6fd' : undefined,
+                                      borderBottom: isShared ? '1px solid #bae6fd' : '1px solid #e2e8f0',
                                     }}
                                     onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap }))}</tr>
