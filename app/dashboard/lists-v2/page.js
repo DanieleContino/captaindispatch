@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
 import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
 import { SectionsManagerSidebar } from '../../../lib/SectionsManagerSidebar'
@@ -505,9 +504,6 @@ export default function ListsPage() {
       `}</style>
 
       {/* ── Navbar ── */}
-      <div className="no-print">
-        <Navbar currentPath="/dashboard/lists-v2" />
-      </div>
 
       {/* ── Toolbar ── */}
       <div className="no-print toolbar" style={{

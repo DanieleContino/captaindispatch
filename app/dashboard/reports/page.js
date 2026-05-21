@@ -12,7 +12,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { useT } from '../../../lib/i18n'
 
@@ -144,9 +143,6 @@ export default function ReportsPage() {
       `}</style>
 
       {/* Header */}
-      <div className="no-print">
-        <Navbar currentPath="/dashboard/reports" />
-      </div>
 
       {/* Toolbar */}
       <PageHeader

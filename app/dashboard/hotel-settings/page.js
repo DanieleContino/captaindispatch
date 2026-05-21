@@ -8,7 +8,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
 
 // ─── HotelSettingsSidebar ─────────────────────────────────────
@@ -807,7 +806,6 @@ export default function HotelSettingsPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
       <style>{`@keyframes spin{from{transform:translateY(-50%) rotate(0deg)}to{transform:translateY(-50%) rotate(360deg)}}`}</style>
-      <Navbar currentPath="/dashboard/hotel-settings" />
 
       {/* ── Sticky Toolbar ── */}
       <div style={{

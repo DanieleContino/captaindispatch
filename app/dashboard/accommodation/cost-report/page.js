@@ -13,7 +13,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../../lib/navbar'
 import { getProductionId } from '../../../../lib/production'
 import { useIsMobile } from '../../../../lib/useIsMobile'
 
@@ -281,7 +280,6 @@ export default function CostReportPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-      <Navbar currentPath="/dashboard/accommodation" />
 
       {/* Toolbar */}
       <div style={{

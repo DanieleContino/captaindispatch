@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { normalizeDept } from '../../../lib/normalizeDept'
 import { getProductionId } from '../../../lib/production'
@@ -1898,7 +1897,6 @@ export default function CrewPage() {
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
 
       {/* Header */}
-      <Navbar currentPath="/dashboard/crew" />
 
       {addNewBanner && (
         <div style={{

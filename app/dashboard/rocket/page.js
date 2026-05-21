@@ -62,7 +62,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase }  from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { useT } from '../../../lib/i18n'
 import { useIsMobile } from '../../../lib/useIsMobile'
@@ -1771,7 +1770,6 @@ export default function RocketPage() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
 
       {/* ── Top nav ── */}
-      <Navbar currentPath="/dashboard/rocket" />
 
       {/* ── Sub-toolbar ── */}
       <PageHeader

@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
-import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { ImportModal } from '../../../lib/ImportModal'
 import { getProductionId } from '../../../lib/production'
@@ -169,7 +168,6 @@ function SettingsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <Navbar currentPath="/dashboard/settings" />
 
       <PageHeader
         left={

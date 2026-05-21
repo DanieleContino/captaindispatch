@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
 import { getProductionId } from '../../../lib/production'
@@ -738,7 +737,6 @@ export default function VehiclesPage() {
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
 
       {/* Header */}
-      <Navbar currentPath="/dashboard/vehicles" />
 
       {/* Toolbar */}
       <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: '52px', zIndex: 29 }}>

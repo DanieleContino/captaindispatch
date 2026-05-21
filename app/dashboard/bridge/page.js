@@ -7,7 +7,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
 import { ImportModal } from '../../../lib/ImportModal'
 import { useIsMobile } from '../../../lib/useIsMobile'
@@ -2670,7 +2669,6 @@ export default function BridgePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <Navbar user={user} productions={productions} activeProductionId={productionId} />
 
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px' : '24px 20px' }}>
 

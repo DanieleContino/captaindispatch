@@ -22,7 +22,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 
 import { getProductionId } from '../../../lib/production'
 
@@ -81,7 +80,6 @@ export default function QrCodesPage() {
       `}</style>
 
       {/* Header */}
-      <Navbar currentPath="/dashboard/qr-codes" className="no-print" />
 
       {/* Toolbar */}
       <div className="no-print" style={{ background:'white', borderBottom:'1px solid #e2e8f0', padding:'0 24px', height:'52px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:'52px', zIndex:20 }}>

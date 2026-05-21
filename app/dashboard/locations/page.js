@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { getProductionId } from '../../../lib/production'
@@ -589,7 +588,6 @@ export default function LocationsPage() {
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
 
       {/* Header */}
-      <Navbar currentPath="/dashboard/locations" />
 
       {/* Toolbar */}
       <PageHeader

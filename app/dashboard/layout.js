@@ -1,6 +1,6 @@
 'use client'
 /**
- * app/dashboard/layout.js — Role-based access guard (S61)
+ * app/dashboard/layout.js — Role-based access guard (S61) + layout strutturale
  *
  * Wraps ALL pages under /dashboard/*.
  * On every navigation, reads the user's role from user_roles and redirects
@@ -9,6 +9,9 @@
  * CAPTAIN / ADMIN / MANAGER / PRODUCTION → unrestricted, no redirect.
  * TRAVEL → only /dashboard/travel, /dashboard/crew, /dashboard/hub-coverage,
  *           /dashboard/locations, /dashboard/lists-v2
+ *
+ * Rende anche la Navbar una sola volta a questo livello, così la scrollbar
+ * del contenuto parte SOTTO la navbar (fix PWA standalone).
  */
 
 import { useEffect, useRef } from 'react'
@@ -16,6 +19,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { getProductionId } from '../../lib/production'
 import { canAccess, getHomeForRole } from '../../lib/roleAccess'
+import { Navbar } from '../../lib/navbar'
 
 export default function DashboardLayout({ children }) {
   const router   = useRouter()
@@ -64,5 +68,14 @@ export default function DashboardLayout({ children }) {
     return () => { cancelled = true }
   }, [pathname, router])
 
-  return children
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+      {/* Navbar fuori dal contenitore scrollabile: la scrollbar parte sotto di essa */}
+      <Navbar currentPath={pathname} className="no-print" />
+      {/* Area contenuto scrollabile — la scrollbar inizia qui, sotto la navbar */}
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        {children}
+      </div>
+    </div>
+  )
 }

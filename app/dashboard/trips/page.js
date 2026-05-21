@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'rea
 import { supabase } from '../../../lib/supabase'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { TableHeader } from '../../../components/ui/TableHeader'
@@ -3719,7 +3718,6 @@ function TripsPageInner() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9', }}>
 
       {/* ── Header ── */}
-      <Navbar currentPath="/dashboard/trips" />
 
       {/* ── Mobile toolbar (2 righe sticky) ── */}
       {isMobile && (

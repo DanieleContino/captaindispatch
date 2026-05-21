@@ -8,7 +8,6 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getProductionId } from '../../../../lib/production'
-import { Navbar } from '../../../../lib/navbar'
 
 // ── shared section-title helper ───────────────────────────────
 function sectionTitle(icon, title) {
@@ -489,7 +488,6 @@ export default function ProductionSettingsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-      <Navbar currentPath="/dashboard/settings/production" />
 
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: '32px 24px' }}>
 

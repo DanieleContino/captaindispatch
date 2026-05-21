@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getProductionId } from '../../lib/production'
-import { Navbar } from '../../lib/navbar'
 import { useT } from '../../lib/i18n'
 import { useIsMobile } from '../../lib/useIsMobile'
 
@@ -55,7 +54,6 @@ export default function Dashboard() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
 
       {/* Header */}
-      <Navbar currentPath="/dashboard" />
 
       {/* Hero */}
       <div style={{ background: 'linear-gradient(135deg, #0f2340 0%, #1e3a5f 100%)', padding: isMobile ? '24px 16px 20px' : '40px 32px 32px', textAlign: 'center' }}>

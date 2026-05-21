@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { useT } from '../../../lib/i18n'
 
@@ -602,7 +601,6 @@ export default function FleetPage() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
 
       {/* ── Header ── */}
-      <Navbar currentPath="/dashboard/fleet" />
 
       {/* ── Sub-toolbar ── */}
       <PageHeader

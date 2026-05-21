@@ -13,7 +13,6 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { switchProduction, getProductionId, clearProductionOverride } from '../../../lib/production'
-import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 
 function slugify(s) {
@@ -727,7 +726,6 @@ export default function ProductionsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-      <Navbar currentPath="/dashboard/productions" />
 
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: '32px 24px' }}>
 

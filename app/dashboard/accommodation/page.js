@@ -11,7 +11,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
@@ -2137,7 +2136,6 @@ export default function AccommodationPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-      <Navbar currentPath="/dashboard/accommodation" />
 
       {/* ── Toolbar ── MODIFICA 2: data-toolbar attribute */}
       <div ref={toolbarRef} data-toolbar="accommodation" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: `${TOOLBAR_H}px`, display: 'flex', alignItems: 'center', gap: '8px', position: 'sticky', top: `${NAVBAR_H}px`, zIndex: 21 }}>

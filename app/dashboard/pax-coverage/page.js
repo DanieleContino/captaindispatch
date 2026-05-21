@@ -14,7 +14,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '../../../lib/navbar'
 import { useT } from '../../../lib/i18n'
 
 import { getProductionId } from '../../../lib/production'
@@ -609,7 +608,6 @@ export default function PaxCoveragePage() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
 
       {/* Header */}
-      <Navbar currentPath="/dashboard/pax-coverage" />
 
       {/* Toolbar Row 1 — titolo + navigazione data */}
       <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '8px 16px', minHeight: '52px', height: 'auto', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', position: 'sticky', top: '52px', zIndex: 21 }}>
