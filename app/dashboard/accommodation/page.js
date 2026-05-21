@@ -2168,12 +2168,23 @@ export default function AccommodationPage() {
             padding: 4px 10px !important;
           }
 
+          .no-print-inline { display: none !important; }
+
+          .accom-print-wrap table {
+            min-width: 0 !important;
+            width: 100% !important;
+          }
+
+          .accom-print-wrap div[style*="overflowX"] {
+            overflow: visible !important;
+          }
+
           .show-only-on-print { display: block !important; }
           .accom-calendar-only { display: none !important; }
         }
 
         @page {
-          size: A4 portrait;
+          size: A4 landscape;
           margin: 8mm;
         }
       `}</style>
@@ -2402,7 +2413,9 @@ export default function AccommodationPage() {
 
         {/* Banner accommodation missing — collassato di default */}
         {mismatches.length > 0 && (
-          <MismatchBanner mismatches={mismatches} onAddStay={openNew} onDismiss={() => setMismatches([])} />
+          <div className="no-print">
+            <MismatchBanner mismatches={mismatches} onAddStay={openNew} onDismiss={() => setMismatches([])} />
+          </div>
         )}
 
         {/* Stats banner — solo in list mode */}
@@ -2473,6 +2486,7 @@ export default function AccommodationPage() {
                     </span>
                     <button
                       onClick={() => { const h = hotels.find(h => h.name === hotelName); if (h) openSubgroupManager(h) }}
+                      className="no-print"
                       style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: '6px', border: '1px solid #86efac', background: 'white', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
                       ⚙ Subgroups
                     </button>
