@@ -62,7 +62,7 @@ function suggestId(type, vehicles) {
 function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [], vehicles = [] }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
-  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', driver_crew_id: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [] }
+  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', driver_crew_id: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [], is_ncc: false, is_comodato: false, ncc_agency_id: '', comodato_owner_crew_id: '', comodato_rate_per_km: '', comodato_fuel_reimbursement: false, comodato_notes: '' }
   const [form, setForm]           = useState(EMPTY)
   const [saving, setSaving]       = useState(false)
   const [deleting, setDel]        = useState(false)
@@ -2675,14 +2675,14 @@ function NccAgencySidebar({ open, mode, initial, onClose, onSaved, productionId,
               <input value={form.vat_no} onChange={e => set('vat_no', e.target.value)} style={inp} placeholder="IT12345678901" />
             </div>
             <div style={{ marginBottom: '12px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '9px' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📞 Contatti</div>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📞 Contact</div>
               <div style={fld}>
-                <label style={lbl}>Nome Referente</label>
+                <label style={lbl}>Contact Name</label>
                 <input value={form.contact_name} onChange={e => set('contact_name', e.target.value)} style={inp} placeholder="Mario Rossi" />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
                 <div>
-                  <label style={lbl}>Telefono</label>
+                  <label style={lbl}>Phone</label>
                   <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} placeholder="+39 080..." type="tel" />
                 </div>
                 <div>
@@ -2691,19 +2691,19 @@ function NccAgencySidebar({ open, mode, initial, onClose, onSaved, productionId,
                 </div>
               </div>
               <div style={fld}>
-                <label style={lbl}>Indirizzo</label>
+                <label style={lbl}>Address</label>
                 <input value={form.address} onChange={e => set('address', e.target.value)} style={inp} placeholder="Via Roma 1, Bari" />
               </div>
             </div>
             <div style={fld}>
               <label style={lbl}>Note</label>
-              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '70px', resize: 'vertical' }} placeholder="Note aggiuntive..." />
+              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '70px', resize: 'vertical' }} placeholder="Additional notes..." />
             </div>
             {mode === 'new' && (
               <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <span style={{ fontSize: '16px', flexShrink: 0 }}>💡</span>
                 <div style={{ fontSize: '11px', color: '#0369a1', lineHeight: 1.5 }}>
-                  Salva prima l'agenzia — poi potrai aggiungere veicoli NCC e ordini di servizio.
+                  Save the agency first — then you can add NCC vehicles and service orders.
                 </div>
               </div>
             )}
@@ -2896,7 +2896,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
                 <input type="date" value={form.order_date} onChange={e => set('order_date', e.target.value)} style={inp} required />
               </div>
               <div>
-                <label style={lbl}>Tipo Servizio</label>
+                <label style={lbl}>Service Type</label>
                 <select value={form.service_type} onChange={e => set('service_type', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
                   {SERVICE_TYPES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -2925,23 +2925,23 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
 
             {/* Description */}
             <div style={fld}>
-              <label style={lbl}>Descrizione</label>
-              <input value={form.description} onChange={e => set('description', e.target.value)} style={inp} placeholder="Aeroporto BRI → Hotel Excelsior..." />
+              <label style={lbl}>Description</label>
+              <input value={form.description} onChange={e => set('description', e.target.value)} style={inp} placeholder="BRI Airport → Hotel Excelsior..." />
             </div>
 
             {/* Veicolo collegato */}
             <div style={fld}>
-              <label style={lbl}>Veicolo NCC (Fleet)</label>
+              <label style={lbl}>NCC Vehicle (Fleet)</label>
               <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
                 <option value="">— Nessun veicolo collegato —</option>
                 {vehicles.map(v => <option key={v.id} value={v.id}>{v.id} ({v.vehicle_type})</option>)}
               </select>
-              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Collega a un veicolo NCC già in flotta (opzionale)</div>
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Link to an NCC vehicle already in fleet (optional)</div>
             </div>
 
             {/* Driver + Targa */}
             <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #bae6fd', background: '#f0f9ff' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Driver / Mezzo</div>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Driver / Vehicle</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <div>
                   <label style={{ ...lbl, color: '#0369a1' }}>Nome Driver</label>
@@ -3073,7 +3073,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
 
             <div style={{ marginBottom: '12px' }}>
               <label style={lbl}>Note</label>
-              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '60px', resize: 'vertical' }} placeholder="Note aggiuntive..." />
+              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '60px', resize: 'vertical' }} placeholder="Additional notes..." />
             </div>
 
             {mode === 'edit' && (
