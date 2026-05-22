@@ -559,6 +559,8 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
             </span>
           )}
           {v.is_rental && <span style={{ fontSize: '10px', fontWeight: '700', color: '#a16207', background: '#fefce8', padding: '1px 8px', borderRadius: '999px', border: '1px solid #fde68a' }}>🔑 RENTAL</span>}
+          {v.is_ncc && <span style={{ fontSize: '10px', fontWeight: '700', color: '#0369a1', background: '#f0f9ff', padding: '1px 8px', borderRadius: '999px', border: '1px solid #bae6fd' }}>🏢 NCC</span>}
+          {v.is_comodato && <span style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', padding: '1px 8px', borderRadius: '999px', border: '1px solid #86efac' }}>🤝 COMODATO</span>}
           {!v.active && <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #e2e8f0' }}>INATTIVO</span>}
           {v.in_transport === false && <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #cbd5e1' }}>🚐 SD</span>}
           {v.preferred_dept && (
@@ -2607,9 +2609,11 @@ export default function VehiclesPage() {
   const [bulkDeleting, setBulkDel] = useState(false)
   const [bulkConfirm, setBulkConfirm] = useState(false)
   const [crewList, setCrewList] = useState([])
-  const [activeTab, setActiveTab] = useState('owned') // 'owned' | 'rental' | 'suppliers' | 'report'
-  const supplierSidebarTriggerRef = React.useRef(null)
-  const rentalSidebarTriggerRef   = React.useRef(null)
+  const [activeTab, setActiveTab] = useState('fleet') // 'fleet' | 'rental' | 'ncc' | 'comodato' | 'report'
+  const supplierSidebarTriggerRef        = React.useRef(null)
+  const rentalSidebarTriggerRef          = React.useRef(null)
+  const nccAgencySidebarTriggerRef       = React.useRef(null)
+  const comodatoVehicleSidebarTriggerRef = React.useRef(null)
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
@@ -2701,8 +2705,10 @@ export default function VehiclesPage() {
     if (filterActive === 'ACTIVE'   && !v.active) return false
     if (filterActive === 'INACTIVE' &&  v.active) return false
     if (filterType !== 'ALL' && v.vehicle_type !== filterType) return false
-    if (filterRental === 'OWNED'  &&  v.is_rental) return false
-    if (filterRental === 'RENTAL' && !v.is_rental) return false
+    if (filterRental === 'PRODUCTION' && (v.is_rental || v.is_ncc || v.is_comodato)) return false
+    if (filterRental === 'RENTAL'     && !v.is_rental) return false
+    if (filterRental === 'NCC'        && !v.is_ncc) return false
+    if (filterRental === 'COMODATO'   && !v.is_comodato) return false
     if (search) {
       const q = search.toLowerCase()
       if (!(v.id || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q)) return false
@@ -2733,9 +2739,19 @@ export default function VehiclesPage() {
         <div style={{ padding: isMobile ? '8px 12px' : '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
           <span style={{ fontSize: '18px' }}>🚐</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
-          {activeTab === 'owned' && (
+          {activeTab === 'fleet' && (
             <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
               {t.addVehicleBtn}
+            </button>
+          )}
+          {activeTab === 'ncc' && (
+            <button onClick={() => nccAgencySidebarTriggerRef.current && nccAgencySidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+              + Add Agency
+            </button>
+          )}
+          {activeTab === 'comodato' && (
+            <button onClick={() => comodatoVehicleSidebarTriggerRef.current && comodatoVehicleSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+              + Add Comodato
             </button>
           )}
           {activeTab === 'rental' && (
@@ -2776,7 +2792,7 @@ export default function VehiclesPage() {
           </button>
         </div>
         {/* Riga 2 — filtri */}
-        {activeTab === 'owned' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        {activeTab === 'fleet' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <input type="text" placeholder="Cerca ID, driver…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '150px', flexShrink: 0 }} />
           <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
@@ -2825,7 +2841,7 @@ export default function VehiclesPage() {
           <RentalReportTab productionId={PRODUCTION_ID} />
         </div>
       )}
-      {activeTab === 'owned' && <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px', transition: 'margin-right 0.25s', marginRight: !isMobile && sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
+      {activeTab === 'fleet' && <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px', transition: 'margin-right 0.25s', marginRight: !isMobile && sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
         {!PRODUCTION_ID && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>⚠ NEXT_PUBLIC_PRODUCTION_ID non impostato</div>}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
