@@ -4083,7 +4083,7 @@ export default function VehiclesPage() {
           )}
           {activeTab === 'comodato' && (
             <button onClick={() => comodatoVehicleSidebarTriggerRef.current && comodatoVehicleSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-              + Add Comodato
+              + Add Loan Vehicle
             </button>
           )}
           {activeTab === 'rental' && (
