@@ -1707,7 +1707,7 @@ export default function TravelPage() {
         background: 'white', borderBottom: '1px solid #e2e8f0',
         padding: '6px 16px',
         display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
-        position: 'sticky', top: '52px', zIndex: 20,
+        position: 'sticky', top: '0px', zIndex: 20,
       }}>
         <input type="text" placeholder="Search name..." value={search}
           onChange={e => setSearch(e.target.value)}

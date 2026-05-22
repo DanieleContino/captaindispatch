@@ -812,7 +812,7 @@ export default function HotelSettingsPage() {
         background: 'white', borderBottom: '1px solid #e2e8f0',
         padding: '8px 16px', minHeight: '52px',
         display: 'flex', alignItems: 'center', gap: '12px',
-        position: 'sticky', top: '52px', zIndex: 21,
+        position: 'sticky', top: '0px', zIndex: 21,
       }}>
         {/* Left */}
         <a href="/dashboard/accommodation" style={{ fontSize: '12px', color: '#64748b', textDecoration: 'none', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>

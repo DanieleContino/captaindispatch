@@ -510,7 +510,7 @@ export default function ListsPage() {
         background: 'white', borderBottom: '1px solid #e2e8f0',
         padding: '0 24px', height: '52px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: '52px', zIndex: 20,
+        position: 'sticky', top: '0px', zIndex: 20,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '18px' }}>📋</span>

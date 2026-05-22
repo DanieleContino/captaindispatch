@@ -82,7 +82,7 @@ export default function QrCodesPage() {
       {/* Header */}
 
       {/* Toolbar */}
-      <div className="no-print" style={{ background:'white', borderBottom:'1px solid #e2e8f0', padding:'0 24px', height:'52px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:'52px', zIndex:20 }}>
+      <div className="no-print" style={{ background:'white', borderBottom:'1px solid #e2e8f0', padding:'0 24px', height:'52px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:'0px', zIndex:20 }}>
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           <span style={{ fontWeight:'800', fontSize:'16px', color:'#0f172a' }}>📱 QR Codes</span>
           <span style={{ color:'#cbd5e1' }}>·</span>
