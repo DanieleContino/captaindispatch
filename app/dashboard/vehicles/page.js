@@ -603,6 +603,156 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
   )
 }
 
+// ─── RentalSuppliersTab ───────────────────────────────────────
+function RentalSuppliersTab({ productionId, isMobile }) {
+  const [suppliers, setSuppliers] = useState([])
+  const [loading, setLoading]     = useState(true)
+
+  const load = useCallback(async () => {
+    if (!productionId) return
+    setLoading(true)
+    const { data } = await supabase
+      .from('rental_suppliers')
+      .select(`
+        id, name, contact_name, phone, email, address, website, account_no, opening_hours, notes,
+        locations:rental_supplier_locations(id, name, address, phone, email, opening_hours),
+        vouchers:rental_vouchers(id, voucher_no, batch_code, amount, currency, used, vehicle_id),
+        vehicles:vehicles(id, vehicle_type, vehicle_class, license_plate, driver_name, rental_brand, rental_model, rental_start, rental_end, rental_status, rental_second_driver, rental_billing_unit, rental_daily_rate, rental_currency)
+      `)
+      .eq('production_id', productionId)
+      .order('name')
+    setSuppliers(data || [])
+    setLoading(false)
+  }, [productionId])
+
+  useEffect(() => { load() }, [load])
+
+  if (loading) return (
+    <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
+  )
+
+  if (suppliers.length === 0) return (
+    <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+      <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏢</div>
+      <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>No rental suppliers yet</div>
+      <div style={{ fontSize: '12px', color: '#94a3b8' }}>Click + Add Supplier to get started</div>
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
+      {suppliers.map(s => (
+        <div key={s.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderTop: '3px solid #2563eb', borderRadius: '0 0 10px 10px', padding: '14px' }}>
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', marginBottom: '4px' }}>{s.name}</div>
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '11px', padding: '1px 7px', borderRadius: '999px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                  {(s.vehicles || []).filter(v => v.rental_status === 'OPEN').length} vehicles
+                </span>
+                <span style={{ fontSize: '11px', padding: '1px 7px', borderRadius: '999px', background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac' }}>
+                  {(s.vouchers || []).length} vouchers
+                </span>
+                {s.account_no && (
+                  <span style={{ fontSize: '11px', padding: '1px 7px', borderRadius: '999px', background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0' }}>
+                    Acct: {s.account_no}
+                  </span>
+                )}
+              </div>
+            </div>
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', padding: 0 }}>✎</button>
+          </div>
+
+          {/* Contacts */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>
+            {s.contact_name  && <span>👤 {s.contact_name}</span>}
+            {s.phone         && <span>📞 {s.phone}</span>}
+            {s.email         && <span>📧 {s.email}</span>}
+            {s.opening_hours && <span>🕐 {s.opening_hours}</span>}
+          </div>
+
+          {/* Locations */}
+          {(s.locations || []).length > 0 && (
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px', marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>📍 Locations</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {(s.locations || []).map(l => (
+                  <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: '#f8fafc', borderRadius: '6px', fontSize: '11px' }}>
+                    <span style={{ color: '#0f172a', flex: 1 }}>{l.name}</span>
+                    {l.opening_hours && <span style={{ color: '#94a3b8' }}>{l.opening_hours}</span>}
+                    {l.phone && <span style={{ color: '#64748b' }}>{l.phone}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Vehicles */}
+          {(s.vehicles || []).length > 0 && (
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px', marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>🚐 Vehicles</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {(s.vehicles || []).map(v => {
+                  const statusColor = v.rental_status === 'OPEN' ? '#16a34a' : '#94a3b8'
+                  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+                  const isExpiringSoon = v.rental_end && v.rental_end <= new Date(new Date().setDate(new Date().getDate() + 3)).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }) && v.rental_end >= today
+                  return (
+                    <div key={v.id} style={{ padding: '6px 8px', background: '#f8fafc', borderLeft: `2px solid ${statusColor}`, borderRadius: '0 6px 6px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '12px', color: '#0f172a' }}>{v.id}</span>
+                        {v.rental_brand && <span style={{ fontSize: '11px', color: '#374151' }}>{v.rental_brand} {v.rental_model}</span>}
+                        {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{v.license_plate}</span>}
+                        {isExpiringSoon && <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>⚠ Expiring soon</span>}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', fontSize: '11px', color: '#64748b', paddingLeft: '4px' }}>
+                        {v.driver_name && <span>👤 {v.driver_name}</span>}
+                        {v.rental_second_driver && <span>👤 {v.rental_second_driver}</span>}
+                        {v.rental_start && <span>📅 {v.rental_start} → {v.rental_end}</span>}
+                        {v.rental_daily_rate && <span>💰 {v.rental_currency} {v.rental_daily_rate}/{v.rental_billing_unit === 'MONTH' ? 'mo' : 'day'}</span>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Vouchers */}
+          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🎟 Vouchers</span>
+              <button style={{ padding: '1px 7px', fontSize: '11px', border: '1px solid #e2e8f0', borderRadius: '6px', background: 'none', color: '#64748b', cursor: 'pointer' }}>+ Add</button>
+            </div>
+            {(s.vouchers || []).length === 0 ? (
+              <div style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>No vouchers yet</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {(s.vouchers || []).map(v => (
+                  <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: '#f8fafc', borderRadius: '6px', fontSize: '11px' }}>
+                    <span style={{ fontFamily: 'monospace', color: '#0f172a', flex: 1 }}>{v.voucher_no}</span>
+                    {v.batch_code && <span style={{ color: '#94a3b8' }}>{v.batch_code}</span>}
+                    {v.amount && <span style={{ color: '#374151' }}>{v.currency} {v.amount}</span>}
+                    <span style={{ padding: '1px 6px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: v.used ? '#faeeda' : '#f0fdf4', color: v.used ? '#633806' : '#15803d', border: `1px solid ${v.used ? '#fac775' : '#86efac'}` }}>
+                      {v.used ? (v.vehicle_id || 'Used') : 'Free'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add Vehicle button */}
+          <button style={{ marginTop: '10px', width: '100%', padding: '6px', fontSize: '12px', border: '1px dashed #e2e8f0', borderRadius: '8px', background: 'none', color: '#64748b', cursor: 'pointer' }}>
+            + Add Rental Vehicle
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Pagina ───────────────────────────────────────────────────
 export default function VehiclesPage() {
   const t = useT()
@@ -824,10 +974,7 @@ export default function VehiclesPage() {
       )}
       {activeTab === 'suppliers' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏢</div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>Rental Suppliers — coming soon</div>
-          </div>
+          <RentalSuppliersTab productionId={PRODUCTION_ID} isMobile={isMobile} />
         </div>
       )}
       {activeTab === 'report' && (
