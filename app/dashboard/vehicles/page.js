@@ -804,19 +804,19 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
     setLoading(false)
   }, [productionId])
 
-  useEffect(() => { load() }, [load])
-
-  if (loading) return (
-    <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
-  )
-
   function openNewSupplier()    { setSupplierSidebarMode('new');  setSupplierTarget(null);    setSupplierSidebarOpen(true) }
+  function openEditSupplier(s)  { setSupplierSidebarMode('edit'); setSupplierTarget(s);       setSupplierSidebarOpen(true) }
+  function onSupplierSaved()    { setSupplierSidebarOpen(false); load() }
+
+  useEffect(() => { load() }, [load])
 
   useEffect(() => {
     if (openTriggerRef) openTriggerRef.current = openNewSupplier
   }, [openTriggerRef])
-  function openEditSupplier(s)  { setSupplierSidebarMode('edit'); setSupplierTarget(s);       setSupplierSidebarOpen(true) }
-  function onSupplierSaved()    { setSupplierSidebarOpen(false); load() }
+
+  if (loading) return (
+    <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
+  )
 
   if (suppliers.length === 0) return (
     <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
