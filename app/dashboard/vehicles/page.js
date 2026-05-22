@@ -3014,7 +3014,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
             {/* Data + Service Type */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
-                <label style={lbl}>Data *</label>
+                <label style={lbl}>Date *</label>
                 <input type="date" value={form.order_date} onChange={e => set('order_date', e.target.value)} style={inp} required />
               </div>
               <div>
@@ -3055,7 +3055,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
             <div style={fld}>
               <label style={lbl}>NCC Vehicle (Fleet)</label>
               <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
-                <option value="">— Nessun veicolo collegato —</option>
+                <option value="">— No vehicle linked —</option>
                 {vehicles.map(v => <option key={v.id} value={v.id}>{v.id} ({v.vehicle_type})</option>)}
               </select>
               <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Link to an NCC vehicle already in fleet (optional)</div>
@@ -3063,26 +3063,26 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
 
             {/* Driver + Targa */}
             <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #bae6fd', background: '#f0f9ff' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Driver / Vehicle</div>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Driver / Vehicle Details</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <div>
-                  <label style={{ ...lbl, color: '#0369a1' }}>Nome Driver</label>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Driver Name</label>
                   <input value={form.driver_name} onChange={e => set('driver_name', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="Mario Rossi" />
                 </div>
                 <div>
-                  <label style={{ ...lbl, color: '#0369a1' }}>Telefono Driver</label>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Driver Phone</label>
                   <input value={form.driver_phone} onChange={e => set('driver_phone', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="+39 333..." type="tel" />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
-                  <label style={{ ...lbl, color: '#0369a1' }}>Tipo Mezzo Richiesto</label>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Vehicle Type Requested</label>
                   <select value={form.vehicle_type_requested} onChange={e => set('vehicle_type_requested', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#bae6fd', background: 'white' }}>
                     {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(t => <option key={t} value={t}>{TYPE_ICON[t]} {t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ ...lbl, color: '#0369a1' }}>Targa Effettiva</label>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Actual Plate</label>
                   <input value={form.vehicle_plate_actual} onChange={e => set('vehicle_plate_actual', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', borderColor: '#bae6fd' }} placeholder="AB123CD" />
                 </div>
               </div>
@@ -3090,7 +3090,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
 
             {/* KM */}
             <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📍 Chilometri</div>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📍 Mileage</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={lbl}>KM Start</label>
@@ -3101,7 +3101,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
                   <input type="number" step="0.1" value={form.km_end} onChange={e => set('km_end', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0" />
                 </div>
                 <div>
-                  <label style={lbl}>KM Totali</label>
+                  <label style={lbl}>KM Total</label>
                   <div style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontFamily: 'monospace', fontWeight: '700', color: kmTotal > 0 ? '#0f172a' : '#cbd5e1', background: '#f8fafc' }}>
                     {kmTotal !== null ? kmTotal.toFixed(1) : '—'}
                   </div>
@@ -3111,28 +3111,28 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
 
             {/* Costi */}
             <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #fde68a', background: '#fefce8' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#a16207', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>💰 Costi</div>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#a16207', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>💰 Costs</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <div>
-                  <label style={{ ...lbl, color: '#a16207' }}>Tipo Tariffa</label>
+                  <label style={{ ...lbl, color: '#a16207' }}>Rate Type</label>
                   <select value={form.rate_type} onChange={e => set('rate_type', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#fde68a', background: 'white' }}>
                     {RATE_TYPES.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ ...lbl, color: '#a16207' }}>Tariffa</label>
+                  <label style={{ ...lbl, color: '#a16207' }}>Rate</label>
                   <input type="number" step="0.01" value={form.rate_amount} onChange={e => set('rate_amount', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="0.00" />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <div>
-                  <label style={{ ...lbl, color: '#a16207' }}>Valuta</label>
+                  <label style={{ ...lbl, color: '#a16207' }}>Currency</label>
                   <select value={form.rate_currency} onChange={e => set('rate_currency', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#fde68a', background: 'white' }}>
                     {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ ...lbl, color: '#a16207' }}>Ore Lavorate</label>
+                  <label style={{ ...lbl, color: '#a16207' }}>Hours Worked</label>
                   <input type="number" step="0.25" value={form.hours_worked} onChange={e => set('hours_worked', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="0.0" />
                 </div>
                 <div>
@@ -3160,11 +3160,11 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
               {/* Importi manuali override */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <div>
-                  <label style={{ ...lbl, color: '#a16207' }}>Importo Netto (override)</label>
+                  <label style={{ ...lbl, color: '#a16207' }}>Net Amount (override)</label>
                   <input type="number" step="0.01" value={form.amount_net} onChange={e => set('amount_net', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder={computedNet > 0 ? computedNet.toFixed(2) : '0.00'} />
                 </div>
                 <div>
-                  <label style={{ ...lbl, color: '#a16207' }}>Totale (override)</label>
+                  <label style={{ ...lbl, color: '#a16207' }}>Total (override)</label>
                   <input type="number" step="0.01" value={form.amount_total} onChange={e => set('amount_total', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder={computedTotal > 0 ? computedTotal.toFixed(2) : '0.00'} />
                 </div>
               </div>
@@ -3173,7 +3173,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
               {computedNet > 0 && (
                 <div style={{ padding: '8px 10px', background: 'white', border: '1px solid #fde68a', borderRadius: '7px', fontSize: '11px', color: '#92400e' }}>
                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                    <span>Netto: <strong>{form.rate_currency} {computedNet.toFixed(2)}</strong></span>
+                    <span>Net: <strong>{form.rate_currency} {computedNet.toFixed(2)}</strong></span>
                     {form.vat_pct && <span>+ VAT: <strong>{form.rate_currency} {computedTotal.toFixed(2)}</strong></span>}
                     {extrasTotal > 0 && <span>Extras: <strong>{form.rate_currency} {extrasTotal.toFixed(2)}</strong></span>}
                   </div>
@@ -3184,7 +3184,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
             {/* Fatturazione */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
-                <label style={lbl}>N° Fattura</label>
+              <label style={lbl}>Invoice No.</label>
                 <input value={form.invoice_no} onChange={e => set('invoice_no', e.target.value)} style={inp} placeholder="FT-2026-001" />
               </div>
               <div>
@@ -3194,7 +3194,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <label style={lbl}>Note</label>
+              <label style={lbl}>Notes</label>
               <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '60px', resize: 'vertical' }} placeholder="Additional notes..." />
             </div>
 
