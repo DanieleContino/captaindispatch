@@ -21,14 +21,13 @@ const TYPE_COLOR = {
   PICKUP: { bg: '#fdf4ff', color: '#7e22ce', border: '#e9d5ff' },
   CARGO:  { bg: '#fef3c7', color: '#b45309', border: '#fde68a' },
 }
-const CLASS_OPTIONS = ['CLASSIC', 'LUX', 'ECONOMY', 'PREMIUM', 'MINIBUS', 'NCC']
+const CLASS_OPTIONS = ['CLASSIC', 'LUX', 'ECONOMY', 'PREMIUM', 'MINIBUS']
 const CLASS_COLOR = {
   LUX:     { bg: '#fdf4ff', color: '#7e22ce', border: '#e9d5ff' },
   PREMIUM: { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa' },
   CLASSIC: { bg: '#f8fafc', color: '#475569', border: '#e2e8f0' },
   ECONOMY: { bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0' },
   MINIBUS: { bg: '#fefce8', color: '#a16207', border: '#fde68a' },
-  NCC:     { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' },
 }
 
 const DEPT_COLOR = {
@@ -81,7 +80,7 @@ function NccAgencySelectInline({ productionId, value, onChange }) {
 function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [], vehicles = [] }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
-  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', driver_crew_id: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [], is_ncc: false, is_comodato: false, ncc_agency_id: '', comodato_owner_crew_id: '', comodato_rate_per_km: '', comodato_fuel_reimbursement: false, comodato_notes: '' }
+  const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', driver_crew_id: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [], is_ncc: false, is_comodato: false, ncc_agency_id: '', ncc_driver_name: '', ncc_driver_phone: '', comodato_owner_crew_id: '', comodato_rate_per_km: '', comodato_fuel_reimbursement: false, comodato_notes: '' }
   const [form, setForm]           = useState(EMPTY)
   const [saving, setSaving]       = useState(false)
   const [deleting, setDel]        = useState(false)
@@ -96,7 +95,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
     if (!open) return
     setError(null); setCd(false); setCrewSearch(''); setDriverSearch(''); setShowDriverSugg(false)
     if (mode === 'edit' && initial) {
-      setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []), license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', driver_crew_id: initial.driver_crew_id || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, in_transport: initial.in_transport !== false, available_from: initial.available_from || '', available_to: initial.available_to || '', preferred_dept: initial.preferred_dept || '', preferred_crew_ids: Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [], is_ncc: initial.is_ncc || false, is_comodato: initial.is_comodato || false, ncc_agency_id: initial.ncc_agency_id || '', comodato_owner_crew_id: initial.comodato_owner_crew_id || '', comodato_rate_per_km: initial.comodato_rate_per_km ?? '', comodato_fuel_reimbursement: initial.comodato_fuel_reimbursement || false, comodato_notes: initial.comodato_notes || '' })
+      setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []), license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', driver_crew_id: initial.driver_crew_id || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, in_transport: initial.in_transport !== false, available_from: initial.available_from || '', available_to: initial.available_to || '', preferred_dept: initial.preferred_dept || '', preferred_crew_ids: Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [], is_ncc: initial.is_ncc || false, is_comodato: initial.is_comodato || false, ncc_agency_id: initial.ncc_agency_id || '', ncc_driver_name: initial.ncc_driver_name || '', ncc_driver_phone: initial.ncc_driver_phone || '', comodato_owner_crew_id: initial.comodato_owner_crew_id || '', comodato_rate_per_km: initial.comodato_rate_per_km ?? '', comodato_fuel_reimbursement: initial.comodato_fuel_reimbursement || false, comodato_notes: initial.comodato_notes || '' })
       setIdManuallyEdited(false)
     } else {
       setForm({ ...EMPTY, id: suggestId('VAN', vehicles) })
@@ -276,8 +275,8 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
               </div>
             </div>
 
-            {/* Driver — autocomplete crew o testo libero */}
-            <div style={fld}>
+            {/* Driver — autocomplete crew o testo libero — nascosto per NCC */}
+            {!form.is_ncc && <div style={fld}>
               <label style={lbl}>{t.driverLabel}</label>
               {form.driver_crew_id ? (
                 /* Crew collegato — chip verde */
@@ -339,7 +338,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
               <div style={{ fontSize: '9px', color: '#94a3b8', marginTop: '3px' }}>
                 {form.driver_crew_id ? '✅ Crew collegato — verrà marcato come NTN al salvataggio' : 'Digita per cercare un membro crew da collegare come driver'}
               </div>
-            </div>
+            </div>}
 
             {/* Sign code */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
@@ -402,7 +401,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
               <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏷 Vehicle Category</div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${form.is_ncc ? '#bae6fd' : '#e2e8f0'}`, background: form.is_ncc ? '#f0f9ff' : 'white', cursor: 'pointer', marginBottom: '8px' }}
-                onClick={() => setForm(f => ({ ...f, is_ncc: !f.is_ncc, is_comodato: f.is_ncc ? f.is_comodato : false }))}>
+                onClick={() => setForm(f => ({ ...f, is_ncc: !f.is_ncc, is_comodato: !f.is_ncc ? false : f.is_comodato }))}>
                 <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.is_ncc ? '#0369a1' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
                   <div style={{ position: 'absolute', top: '2px', left: form.is_ncc ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                 </div>
@@ -413,11 +412,25 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                 <div style={{ marginBottom: '8px', padding: '10px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px' }}>
                   <label style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>NCC Agency</label>
                   <NccAgencySelectInline productionId={PRODUCTION_ID} value={form.ncc_agency_id} onChange={v => set('ncc_agency_id', v)} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>NCC Driver Name</label>
+                      <input value={form.ncc_driver_name} onChange={e => set('ncc_driver_name', e.target.value)}
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid #bae6fd', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }}
+                        placeholder="Mario Rossi" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>NCC Driver Phone</label>
+                      <input value={form.ncc_driver_phone} onChange={e => set('ncc_driver_phone', e.target.value)}
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid #bae6fd', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }}
+                        placeholder="+39 333..." type="tel" />
+                    </div>
+                  </div>
                 </div>
               )}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${form.is_comodato ? '#86efac' : '#e2e8f0'}`, background: form.is_comodato ? '#f0fdf4' : 'white', cursor: 'pointer', marginBottom: form.is_comodato ? '8px' : '0' }}
-                onClick={() => setForm(f => ({ ...f, is_comodato: !f.is_comodato, is_ncc: f.is_comodato ? f.is_ncc : false }))}>
+                onClick={() => setForm(f => ({ ...f, is_comodato: !f.is_comodato, is_ncc: !f.is_comodato ? false : f.is_ncc }))}>
                 <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.is_comodato ? '#15803d' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
                   <div style={{ position: 'absolute', top: '2px', left: form.is_comodato ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                 </div>
@@ -632,7 +645,7 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
           <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>{v.vehicle_type}</span>
           {Array.isArray(v.vehicle_class) && v.vehicle_class.length > 0
-            ? v.vehicle_class.map(c => { const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC; return <span key={c} style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: cc.bg, color: cc.color, border: `1px solid ${cc.border}` }}>{c === 'LUX' ? '💎 LUX' : c === 'PREMIUM' ? '⭐ PREMIUM' : c === 'NCC' ? '🔑 NCC' : c === 'MINIBUS' ? '🚌 MINIBUS' : c}</span> })
+            ? v.vehicle_class.map(c => { const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC; return <span key={c} style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: cc.bg, color: cc.color, border: `1px solid ${cc.border}` }}>{c === 'LUX' ? '💎 LUX' : c === 'PREMIUM' ? '⭐ PREMIUM' : c === 'MINIBUS' ? '🚌 MINIBUS' : c}</span> })
             : null}
           {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 8px', borderRadius: '5px', border: '1px solid #d4d4d4', letterSpacing: '0.08em' }}>🚘 {v.license_plate}</span>}
           {v.capacity && <span style={{ fontSize: '12px', color: '#64748b' }}>× {v.capacity} pax</span>}
