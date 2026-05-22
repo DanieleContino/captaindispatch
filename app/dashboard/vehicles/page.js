@@ -1047,6 +1047,239 @@ function SupplierVouchersAccordion({ supplierId, productionId }) {
   )
 }
 
+// ─── RentalReportTab ─────────────────────────────────────────
+function RentalReportTab({ productionId }) {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+  const [vehicles, setVehicles]   = useState([])
+  const [suppliers, setSuppliers] = useState([])
+  const [loading, setLoading]     = useState(true)
+
+  const load = useCallback(async () => {
+    if (!productionId) return
+    setLoading(true)
+    const [{ data: vData }, { data: sData }] = await Promise.all([
+      supabase.from('vehicles').select(`
+        id, vehicle_type, vehicle_class, license_plate, driver_name,
+        rental_brand, rental_model, rental_supplier_id, rental_start, rental_end,
+        rental_status, rental_billing_unit, rental_daily_rate, rental_vat_pct,
+        rental_currency, rental_voucher_id, rental_po_number, rental_contract_no,
+        rental_second_driver, rental_extras, rental_notes
+      `).eq('production_id', productionId).eq('is_rental', true).order('rental_supplier_id').order('rental_start'),
+      supabase.from('rental_suppliers').select('id, name').eq('production_id', productionId).order('name'),
+    ])
+    setVehicles(vData || [])
+    setSuppliers(sData || [])
+    setLoading(false)
+  }, [productionId])
+
+  useEffect(() => { load() }, [load])
+
+  function daysBetween(start, end) {
+    if (!start || !end) return 0
+    const a = new Date(start + 'T12:00:00Z')
+    const b = new Date(end   + 'T12:00:00Z')
+    return Math.max(0, Math.round((b - a) / 86400000))
+  }
+
+  function fmtDate(s) {
+    if (!s) return '—'
+    return new Date(s + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  }
+
+  function computeCosts(v) {
+    const days    = daysBetween(v.rental_start, v.rental_end)
+    const rate    = parseFloat(v.rental_daily_rate) || 0
+    const vatPct  = parseFloat(v.rental_vat_pct)    || 0
+    const nv      = rate > 0 && days > 0 ? rate * days : 0
+    const tv      = nv > 0 && vatPct > 0 ? nv * (1 + vatPct / 100) : nv
+    const extras  = (v.rental_extras || []).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+    return { days, nv, tv, extras, currency: v.rental_currency || 'EUR' }
+  }
+
+  function fmt(n, currency) {
+    if (!n || n === 0) return '—'
+    return `${currency} ${n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  const groupedBySupplier = vehicles.reduce((acc, v) => {
+    const sid = v.rental_supplier_id || '__none__'
+    if (!acc[sid]) acc[sid] = []
+    acc[sid].push(v)
+    return acc
+  }, {})
+
+  const sortedSupplierIds = Object.keys(groupedBySupplier).sort((a, b) => {
+    const na = suppliers.find(s => s.id === a)?.name || 'ZZZ'
+    const nb = suppliers.find(s => s.id === b)?.name || 'ZZZ'
+    return na.localeCompare(nb)
+  })
+
+  // Grand totals
+  const grandTotals = vehicles.reduce((acc, v) => {
+    const { nv, tv, extras } = computeCosts(v)
+    return { nv: acc.nv + nv, tv: acc.tv + tv, extras: acc.extras + extras }
+  }, { nv: 0, tv: 0, extras: 0 })
+
+  const thStyle = { padding: '5px 10px', fontSize: '10px', fontWeight: '800', color: '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }
+  const tdStyle = { padding: '6px 10px', fontSize: '11px', color: '#374151', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+  const tdNum   = { ...tdStyle, fontFamily: 'monospace', textAlign: 'right' }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
+
+  if (vehicles.length === 0) return (
+    <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+      <div style={{ fontSize: '40px', marginBottom: '10px' }}>📊</div>
+      <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>No rental vehicles to report</div>
+    </div>
+  )
+
+  return (
+    <div>
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
+          .rental-report-wrap { padding: 0 !important; background: white !important; }
+        }
+        @page { size: A4 landscape; margin: 8mm; }
+      `}</style>
+
+      {/* Summary bar */}
+      <div className="no-print" style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '12px', color: '#374151' }}>Total vehicles: <span style={{ fontWeight: '800', color: '#0f172a' }}>{vehicles.length}</span></div>
+        <div style={{ fontSize: '12px', color: '#374151' }}>Open: <span style={{ fontWeight: '800', color: '#15803d' }}>{vehicles.filter(v => v.rental_status === 'OPEN').length}</span></div>
+        <div style={{ fontSize: '12px', color: '#374151' }}>Closed: <span style={{ fontWeight: '800', color: '#64748b' }}>{vehicles.filter(v => v.rental_status === 'CLOSED').length}</span></div>
+        <div style={{ flex: 1 }} />
+        <button onClick={() => window.print()}
+          style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 16px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
+          🖨 Print / PDF
+        </button>
+      </div>
+
+      <div className="rental-report-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {sortedSupplierIds.map(sid => {
+          const supplierName     = suppliers.find(s => s.id === sid)?.name || 'No Supplier'
+          const supplierVehicles = groupedBySupplier[sid]
+          const supplierTotals   = supplierVehicles.reduce((acc, v) => {
+            const { nv, tv, extras } = computeCosts(v)
+            return { nv: acc.nv + nv, tv: acc.tv + tv, extras: acc.extras + extras }
+          }, { nv: 0, tv: 0, extras: 0 })
+
+          return (
+            <div key={sid} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+              {/* Supplier header */}
+              <div style={{ background: '#0f2340', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏢 {supplierName}</span>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>{supplierVehicles.length} vehicle{supplierVehicles.length !== 1 ? 's' : ''}</span>
+                <div style={{ flex: 1 }} />
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'white', fontFamily: 'monospace' }}>
+                  No VAT: {fmt(supplierTotals.nv, 'EUR')} · + VAT: {fmt(supplierTotals.tv, 'EUR')}
+                  {supplierTotals.extras > 0 && ` · Extras: ${fmt(supplierTotals.extras, 'EUR')}`}
+                </span>
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto', fontSize: '11px' }}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>Vehicle</th>
+                      <th style={thStyle}>Brand / Model</th>
+                      <th style={thStyle}>Plate</th>
+                      <th style={thStyle}>Driver</th>
+                      <th style={thStyle}>2nd Driver</th>
+                      <th style={thStyle}>Start</th>
+                      <th style={thStyle}>End</th>
+                      <th style={{ ...thStyle, textAlign: 'center' }}>Days</th>
+                      <th style={{ ...thStyle, textAlign: 'right' }}>Rate/unit</th>
+                      <th style={{ ...thStyle, textAlign: 'right' }}>No VAT</th>
+                      <th style={{ ...thStyle, textAlign: 'right' }}>+ VAT</th>
+                      <th style={{ ...thStyle, textAlign: 'right' }}>Extras</th>
+                      <th style={thStyle}>Voucher / P.O.</th>
+                      <th style={thStyle}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {supplierVehicles.map((v, idx) => {
+                      const { days, nv, tv, extras, currency } = computeCosts(v)
+                      const isExpiring = v.rental_end && v.rental_end <= new Date(new Date().setDate(new Date().getDate() + 3)).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }) && v.rental_end >= today
+                      const rowBg = idx % 2 === 0 ? 'white' : '#fafafa'
+                      return (
+                        <tr key={v.id} style={{ background: rowBg }}>
+                          <td style={{ ...tdStyle, background: rowBg, fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>{v.id}</td>
+                          <td style={{ ...tdStyle, background: rowBg }}>{[v.rental_brand, v.rental_model].filter(Boolean).join(' ') || '—'}</td>
+                          <td style={{ ...tdStyle, background: rowBg, fontFamily: 'monospace' }}>{v.license_plate || '—'}</td>
+                          <td style={{ ...tdStyle, background: rowBg }}>{v.driver_name || '—'}</td>
+                          <td style={{ ...tdStyle, background: rowBg, color: '#64748b' }}>{v.rental_second_driver || '—'}</td>
+                          <td style={{ ...tdStyle, background: rowBg }}>{fmtDate(v.rental_start)}</td>
+                          <td style={{ ...tdStyle, background: rowBg, fontWeight: isExpiring ? '700' : '400', color: isExpiring ? '#dc2626' : '#374151' }}>{fmtDate(v.rental_end)}{isExpiring && ' ⚠'}</td>
+                          <td style={{ ...tdNum, background: rowBg, textAlign: 'center' }}>{days || '—'}</td>
+                          <td style={{ ...tdNum, background: rowBg }}>{fmt(parseFloat(v.rental_daily_rate) || 0, currency)}</td>
+                          <td style={{ ...tdNum, background: rowBg }}>{fmt(nv, currency)}</td>
+                          <td style={{ ...tdNum, background: rowBg }}>{fmt(tv, currency)}</td>
+                          <td style={{ ...tdNum, background: rowBg, color: extras > 0 ? '#2563eb' : '#cbd5e1' }}>{fmt(extras, currency)}</td>
+                          <td style={{ ...tdStyle, background: rowBg, fontSize: '10px' }}>
+                            {v.rental_voucher_id && <span style={{ marginRight: '4px', color: '#15803d' }}>🎟</span>}
+                            {v.rental_po_number || '—'}
+                          </td>
+                          <td style={{ ...tdStyle, background: rowBg }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: v.rental_status === 'OPEN' ? '#f0fdf4' : '#f1f5f9', color: v.rental_status === 'OPEN' ? '#15803d' : '#64748b', border: `1px solid ${v.rental_status === 'OPEN' ? '#86efac' : '#cbd5e1'}` }}>
+                              {v.rental_status === 'OPEN' ? '🟢 Open' : '⚫ Closed'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  {/* Supplier total row */}
+                  <tfoot>
+                    <tr style={{ background: '#374151' }}>
+                      <td colSpan={9} style={{ padding: '6px 10px', fontSize: '10px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {supplierName} Total
+                      </td>
+                      <td style={{ padding: '6px 10px', fontSize: '11px', fontFamily: 'monospace', textAlign: 'right', fontWeight: '800', color: 'white' }}>{fmt(supplierTotals.nv, 'EUR')}</td>
+                      <td style={{ padding: '6px 10px', fontSize: '11px', fontFamily: 'monospace', textAlign: 'right', fontWeight: '800', color: 'white' }}>{fmt(supplierTotals.tv, 'EUR')}</td>
+                      <td style={{ padding: '6px 10px', fontSize: '11px', fontFamily: 'monospace', textAlign: 'right', fontWeight: '800', color: '#93c5fd' }}>{fmt(supplierTotals.extras, 'EUR')}</td>
+                      <td colSpan={2} style={{ padding: '6px 10px', background: '#374151' }} />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Grand Total */}
+        <div style={{ background: '#0f2340', borderRadius: '10px', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '13px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Grand Total</span>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '2px' }}>No VAT</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: '700', color: 'white' }}>{fmt(grandTotals.nv, 'EUR')}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '2px' }}>+ VAT</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: '700', color: 'white' }}>{fmt(grandTotals.tv, 'EUR')}</div>
+            </div>
+            {grandTotals.extras > 0 && (
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '2px' }}>Extras</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: '700', color: '#93c5fd' }}>{fmt(grandTotals.extras, 'EUR')}</div>
+              </div>
+            )}
+            <div style={{ textAlign: 'right', borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '24px' }}>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '2px' }}>Total + Extras</div>
+              <div style={{ fontFamily: 'monospace', fontSize: '16px', fontWeight: '800', color: 'white' }}>{fmt(grandTotals.tv + grandTotals.extras, 'EUR')}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── RentalTab ───────────────────────────────────────────────
 function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [] }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
@@ -2576,11 +2809,8 @@ export default function VehiclesPage() {
         </div>
       )}
       {activeTab === 'report' && (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '40px', marginBottom: '10px' }}>📊</div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>Rental Report — coming soon</div>
-          </div>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
+          <RentalReportTab productionId={PRODUCTION_ID} />
         </div>
       )}
       {activeTab === 'owned' && <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px', transition: 'margin-right 0.25s', marginRight: !isMobile && sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
