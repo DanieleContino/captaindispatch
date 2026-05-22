@@ -2909,6 +2909,10 @@ export default function VehiclesPage() {
   const rentalSidebarTriggerRef          = React.useRef(null)
   const nccAgencySidebarTriggerRef       = React.useRef(null)
   const comodatoVehicleSidebarTriggerRef = React.useRef(null)
+  const nccVehicleSidebarTriggerRef      = React.useRef(null)
+  const [nccVehicleSidebarOpen, setNccVehicleSidebarOpen] = useState(false)
+  const [nccVehicleSidebarMode, setNccVehicleSidebarMode] = useState('new')
+  const [nccVehicleTarget, setNccVehicleTarget] = useState(null)
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
@@ -2934,7 +2938,15 @@ export default function VehiclesPage() {
   useEffect(() => { if (user) load() }, [user, load])
 
   function openNew()   { setMode('new');  setEdit(null); setSO(true) }
-  function openEdit(v) { setMode('edit'); setEdit(v);    setSO(true) }
+  function openEdit(v) {
+    if (v.is_ncc) {
+      setNccVehicleSidebarMode('edit')
+      setNccVehicleTarget(v)
+      setNccVehicleSidebarOpen(true)
+      return
+    }
+    setMode('edit'); setEdit(v); setSO(true)
+  }
   function onSaved()   { setSO(false); load() }
 
   // ─── Selezione ────────────────────────────────────────────
@@ -3228,6 +3240,17 @@ export default function VehiclesPage() {
           </div>
         )}
 </div>}
+      <NccVehicleSidebar
+        open={nccVehicleSidebarOpen}
+        mode={nccVehicleSidebarMode}
+        initial={nccVehicleTarget}
+        onClose={() => setNccVehicleSidebarOpen(false)}
+        onSaved={() => { setNccVehicleSidebarOpen(false); load() }}
+        productionId={PRODUCTION_ID}
+        crewList={crewList}
+        vehicles={vhcs}
+        openTriggerRef={nccVehicleSidebarTriggerRef}
+      />
       <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
 
       <ImportModal
