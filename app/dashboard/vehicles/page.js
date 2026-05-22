@@ -788,7 +788,7 @@ export default function VehiclesPage() {
           </button>
         </div>
         {/* Riga 2 — filtri */}
-        <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        {activeTab === 'owned' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <input type="text" placeholder="Cerca ID, driver…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '150px', flexShrink: 0 }} />
           <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
@@ -810,7 +810,7 @@ export default function VehiclesPage() {
               )
             })}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Body */}
