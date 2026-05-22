@@ -815,6 +815,236 @@ function SupplierLocationsAccordion({ supplierId, productionId }) {
   )
 }
 
+// ─── SupplierVouchersAccordion ────────────────────────────────
+function SupplierVouchersAccordion({ supplierId, productionId }) {
+  const [open, setOpen]       = useState(false)
+  const [loaded, setLoaded]   = useState(false)
+  const [vouchers, setVouchers] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addForm, setAddForm] = useState({ voucher_no: '', batch_code: '', amount: '', currency: 'EUR', notes: '' })
+  const [saving, setSaving]   = useState(false)
+  const [editId, setEditId]   = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [confirmDelId, setConfirmDelId] = useState(null)
+
+  const EMPTY = { voucher_no: '', batch_code: '', amount: '', currency: 'EUR', notes: '' }
+  const inp = { width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '700', color: '#15803d', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }
+
+  async function load() {
+    setLoading(true)
+    const { data } = await supabase
+      .from('rental_vouchers')
+      .select('id, voucher_no, batch_code, amount, amount_used, currency, used, vehicle_id, notes')
+      .eq('supplier_id', supplierId)
+      .eq('production_id', productionId)
+      .order('created_at', { ascending: true })
+    setVouchers(data || [])
+    setLoading(false)
+    setLoaded(true)
+  }
+
+  function toggle() {
+    const next = !open
+    setOpen(next)
+    if (next && !loaded) load()
+  }
+
+  async function handleAdd() {
+    if (!addForm.voucher_no.trim()) return
+    setSaving(true)
+    const { data, error } = await supabase
+      .from('rental_vouchers')
+      .insert({
+        production_id: productionId,
+        supplier_id:   supplierId,
+        voucher_no:    addForm.voucher_no.trim(),
+        batch_code:    addForm.batch_code.trim() || null,
+        amount:        addForm.amount !== '' ? parseFloat(addForm.amount) : null,
+        currency:      addForm.currency || 'EUR',
+        notes:         addForm.notes.trim() || null,
+        used:          false,
+      })
+      .select('id, voucher_no, batch_code, amount, amount_used, currency, used, vehicle_id, notes')
+      .single()
+    setSaving(false)
+    if (error) return
+    setVouchers(prev => [...prev, data])
+    setAddOpen(false)
+    setAddForm(EMPTY)
+  }
+
+  async function handleEditSave(id) {
+    setSaving(true)
+    const { error } = await supabase
+      .from('rental_vouchers')
+      .update({
+        voucher_no:  editForm.voucher_no.trim(),
+        batch_code:  editForm.batch_code.trim() || null,
+        amount:      editForm.amount !== '' ? parseFloat(editForm.amount) : null,
+        currency:    editForm.currency || 'EUR',
+        notes:       editForm.notes.trim() || null,
+      })
+      .eq('id', id)
+    setSaving(false)
+    if (error) return
+    setVouchers(prev => prev.map(v => v.id === id ? { ...v, ...editForm, amount: editForm.amount !== '' ? parseFloat(editForm.amount) : null } : v))
+    setEditId(null)
+  }
+
+  async function handleDelete(id) {
+    if (confirmDelId !== id) { setConfirmDelId(id); return }
+    setSaving(true)
+    await supabase.from('rental_vouchers').delete().eq('id', id)
+    setSaving(false)
+    setVouchers(prev => prev.filter(v => v.id !== id))
+    setConfirmDelId(null)
+  }
+
+  const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'AUD', 'CAD', 'NOK', 'SEK', 'DKK']
+
+  function VoucherForm({ form, setF, onSave, onCancel, saveLabel }) {
+    return (
+      <div style={{ background: 'white', border: '1px dashed #86efac', borderRadius: '7px', padding: '8px 10px', marginBottom: '6px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+          <div>
+            <label style={lbl}>Voucher No. *</label>
+            <input value={form.voucher_no} onChange={e => setF(f => ({ ...f, voucher_no: e.target.value }))} style={inp} placeholder="HRZ-2026-001" autoFocus />
+          </div>
+          <div>
+            <label style={lbl}>Batch Code</label>
+            <input value={form.batch_code} onChange={e => setF(f => ({ ...f, batch_code: e.target.value }))} style={inp} placeholder="MS4, SW, DIG..." />
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: '6px', marginBottom: '6px' }}>
+          <div>
+            <label style={lbl}>Amount</label>
+            <input type="number" step="0.01" value={form.amount} onChange={e => setF(f => ({ ...f, amount: e.target.value }))} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0.00" />
+          </div>
+          <div>
+            <label style={lbl}>Currency</label>
+            <select value={form.currency} onChange={e => setF(f => ({ ...f, currency: e.target.value }))} style={{ ...inp, cursor: 'pointer' }}>
+              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ marginBottom: '8px' }}>
+          <label style={lbl}>Notes</label>
+          <input value={form.notes} onChange={e => setF(f => ({ ...f, notes: e.target.value }))} style={inp} placeholder="Additional notes..." />
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button type="button" onClick={onCancel}
+            style={{ flex: 1, padding: '4px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
+            Cancel
+          </button>
+          <button type="button" onClick={onSave} disabled={saving || !form.voucher_no.trim()}
+            style={{ flex: 2, padding: '4px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : '#15803d', color: 'white', fontSize: '11px', cursor: saving ? 'default' : 'pointer', fontWeight: '700' }}>
+            {saving ? 'Saving…' : saveLabel}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <button type="button" onClick={toggle}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: open ? '8px 8px 0 0' : '8px', border: '1px solid #e2e8f0', background: open ? '#f0fdf4' : '#f8fafc', cursor: 'pointer', transition: 'background 0.15s' }}>
+        <span style={{ fontSize: '12px', fontWeight: '700', color: open ? '#15803d' : '#374151' }}>
+          🎟 Vouchers
+          {vouchers.length > 0 && (
+            <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', padding: '1px 6px', borderRadius: '999px', border: '1px solid #86efac' }}>
+              {vouchers.length}
+            </span>
+          )}
+        </span>
+        <span style={{ fontSize: '12px', color: '#94a3b8', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{ border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', background: '#f0fdf4', padding: '10px 12px 8px' }}>
+          {loading ? (
+            <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', padding: '8px' }}>Loading…</div>
+          ) : (
+            <>
+              {vouchers.length === 0 && !addOpen && (
+                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontStyle: 'italic' }}>No vouchers recorded</div>
+              )}
+
+              {vouchers.map(v => {
+                if (editId === v.id) {
+                  return (
+                    <div key={v.id}>
+                      <VoucherForm
+                        form={editForm}
+                        setF={setEditForm}
+                        onSave={() => handleEditSave(v.id)}
+                        onCancel={() => setEditId(null)}
+                        saveLabel="✓ Save Voucher"
+                      />
+                    </div>
+                  )
+                }
+                return (
+                  <div key={v.id} style={{ background: 'white', border: '1px solid #86efac', borderRadius: '7px', padding: '7px 10px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, fontSize: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '2px' }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>{v.voucher_no}</span>
+                        {v.batch_code && <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0' }}>{v.batch_code}</span>}
+                        <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: v.used ? '#faeeda' : '#f0fdf4', color: v.used ? '#633806' : '#15803d', border: `1px solid ${v.used ? '#fac775' : '#86efac'}` }}>
+                          {v.used ? (v.vehicle_id ? `Used — ${v.vehicle_id}` : 'Used') : 'Free'}
+                        </span>
+                      </div>
+                      {v.amount && (
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>
+                          {v.currency} {v.amount.toLocaleString('en-GB', { minimumFractionDigits: 2 })}
+                          {v.amount_used > 0 && <span style={{ marginLeft: '6px', color: '#dc2626' }}>Used: {v.currency} {v.amount_used.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <button type="button"
+                      onClick={() => { setEditId(v.id); setEditForm({ voucher_no: v.voucher_no, batch_code: v.batch_code || '', amount: v.amount ?? '', currency: v.currency || 'EUR', notes: v.notes || '' }) }}
+                      style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#15803d', flexShrink: 0 }}>
+                      ✎
+                    </button>
+                    {confirmDelId === v.id ? (
+                      <div style={{ display: 'flex', gap: '3px' }}>
+                        <button type="button" onClick={() => setConfirmDelId(null)}
+                          style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '5px', padding: '3px 6px', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>✕</button>
+                        <button type="button" onClick={() => handleDelete(v.id)} disabled={saving}
+                          style={{ background: '#dc2626', border: 'none', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: 'white', fontWeight: '700' }}>⚠ Del</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setConfirmDelId(v.id)}
+                        style={{ background: '#fff1f2', border: '1px solid #fecaca', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#dc2626', flexShrink: 0 }}>🗑</button>
+                    )}
+                  </div>
+                )
+              })}
+
+              {addOpen ? (
+                <VoucherForm
+                  form={addForm}
+                  setF={setAddForm}
+                  onSave={handleAdd}
+                  onCancel={() => { setAddOpen(false); setAddForm(EMPTY) }}
+                  saveLabel="+ Add Voucher"
+                />
+              ) : (
+                <button type="button" onClick={() => setAddOpen(true)}
+                  style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #86efac', background: 'transparent', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer', marginTop: vouchers.length > 0 ? '4px' : '0' }}>
+                  + Add Voucher
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── RentalSupplierSidebar ───────────────────────────────────
 function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, productionId }) {
   const EMPTY = { name: '', contact_name: '', phone: '', email: '', address: '', website: '', account_no: '', opening_hours: '', notes: '' }
