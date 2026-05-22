@@ -204,6 +204,27 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
               <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>{t.vehicleIdHint}</div>
             </div>
 
+            {/* Rental info banner — read only */}
+            {initial?.is_rental && (
+              <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #fde68a', background: '#fefce8' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px' }}>🔑</span>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#a16207', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rental Vehicle</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '10px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: initial.rental_status === 'OPEN' ? '#f0fdf4' : '#f1f5f9', color: initial.rental_status === 'OPEN' ? '#15803d' : '#64748b', border: `1px solid ${initial.rental_status === 'OPEN' ? '#86efac' : '#cbd5e1'}` }}>
+                    {initial.rental_status === 'OPEN' ? '🟢 Open' : '⚫ Closed'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#92400e', marginBottom: '10px' }}>
+                  {initial.rental_brand && <span>🚘 {[initial.rental_brand, initial.rental_model].filter(Boolean).join(' ')}</span>}
+                  {initial.rental_start && <span>📅 {initial.rental_start} → {initial.rental_end || '—'}</span>}
+                  {initial.rental_daily_rate && <span>💰 {initial.rental_currency || 'EUR'} {initial.rental_daily_rate}/{initial.rental_billing_unit === 'MONTH' ? 'mo' : 'day'}</span>}
+                </div>
+                <div style={{ fontSize: '10px', color: '#a16207', background: 'white', border: '1px solid #fde68a', borderRadius: '7px', padding: '6px 10px' }}>
+                  ℹ Rental contract details (supplier, rates, insurance, voucher) are managed in the <strong>Rental tab</strong>. Edit them there.
+                </div>
+              </div>
+            )}
+
             {/* Tipo veicolo */}
             <div style={fld}>
               <label style={lbl}>{t.vehicleTypeLabel}</label>
