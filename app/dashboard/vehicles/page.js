@@ -2596,8 +2596,9 @@ export default function VehiclesPage() {
   const [vhcs,    setVhcs]   = useState([])
   const [loading, setLoad]   = useState(true)
   const [search,  setSearch] = useState('')
-  const [filterActive, setFA] = useState('ALL')  // ALL | ACTIVE | INACTIVE
-  const [filterType,   setFT] = useState('ALL')  // ALL | VAN | CAR | BUS
+  const [filterActive, setFA]   = useState('ALL')  // ALL | ACTIVE | INACTIVE
+  const [filterType,   setFT]   = useState('ALL')  // ALL | VAN | CAR | BUS
+  const [filterRental, setFR]   = useState('ALL')  // ALL | OWNED | RENTAL
   const [sidebarOpen, setSO] = useState(false)
   const [mode,    setMode]   = useState('new')
   const [editItem, setEdit]  = useState(null)
@@ -2700,6 +2701,8 @@ export default function VehiclesPage() {
     if (filterActive === 'ACTIVE'   && !v.active) return false
     if (filterActive === 'INACTIVE' &&  v.active) return false
     if (filterType !== 'ALL' && v.vehicle_type !== filterType) return false
+    if (filterRental === 'OWNED'  &&  v.is_rental) return false
+    if (filterRental === 'RENTAL' && !v.is_rental) return false
     if (search) {
       const q = search.toLowerCase()
       if (!(v.id || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q)) return false
@@ -2781,6 +2784,14 @@ export default function VehiclesPage() {
               <button key={s} onClick={() => setFA(s)}
                 style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterActive === s ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
                 {s}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+            {[['ALL', 'All'], ['OWNED', '🚐 Owned'], ['RENTAL', '🔑 Rental']].map(([val, label]) => (
+              <button key={val} onClick={() => setFR(val)}
+                style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterRental === val ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                {label}
               </button>
             ))}
           </div>
