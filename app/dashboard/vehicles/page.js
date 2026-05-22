@@ -3300,6 +3300,319 @@ function NccTab({ productionId, isMobile, openTriggerRef }) {
   )
 }
 
+// ─── ComodatoExpenseSidebar ───────────────────────────────────
+function ComodatoExpenseSidebar({ open, mode, initial, onClose, onSaved, productionId, vehicleId }) {
+  const EMPTY = {
+    vehicle_id: vehicleId || '',
+    expense_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }),
+    km_start: '', km_end: '',
+    fuel_amount: '', fuel_receipt_no: '',
+    other_amount: '', other_description: '',
+    notes: '',
+  }
+  const [form, setForm]     = useState(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+  const [confirmDel, setCd] = useState(false)
+  const [deleting, setDel]  = useState(false)
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  useEffect(() => {
+    if (!open) return
+    setError(null); setCd(false)
+    if (mode === 'edit' && initial) {
+      setForm({
+        vehicle_id:        initial.vehicle_id        || vehicleId || '',
+        expense_date:      initial.expense_date      || new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }),
+        km_start:          initial.km_start          ?? '',
+        km_end:            initial.km_end            ?? '',
+        fuel_amount:       initial.fuel_amount       ?? '',
+        fuel_receipt_no:   initial.fuel_receipt_no   || '',
+        other_amount:      initial.other_amount      ?? '',
+        other_description: initial.other_description || '',
+        notes:             initial.notes             || '',
+      })
+    } else {
+      setForm({ ...EMPTY, vehicle_id: vehicleId || '', expense_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }) })
+    }
+  }, [open, mode, initial, vehicleId])
+  const kmTotal = form.km_end !== '' && form.km_start !== '' ? Math.max(0, parseFloat(form.km_end) - parseFloat(form.km_start)) : null
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.vehicle_id) { setError('Vehicle is required'); return }
+    if (!form.expense_date) { setError('Date is required'); return }
+    setSaving(true)
+    const row = {
+      production_id:     productionId,
+      vehicle_id:        form.vehicle_id,
+      expense_date:      form.expense_date,
+      km_start:          form.km_start          !== '' ? parseFloat(form.km_start)    : null,
+      km_end:            form.km_end            !== '' ? parseFloat(form.km_end)      : null,
+      fuel_amount:       form.fuel_amount       !== '' ? parseFloat(form.fuel_amount) : null,
+      fuel_receipt_no:   form.fuel_receipt_no.trim()   || null,
+      other_amount:      form.other_amount      !== '' ? parseFloat(form.other_amount): null,
+      other_description: form.other_description.trim() || null,
+      notes:             form.notes.trim()             || null,
+    }
+    let err
+    if (mode === 'new') { const r = await supabase.from('comodato_expenses').insert(row); err = r.error }
+    else { const r = await supabase.from('comodato_expenses').update(row).eq('id', initial.id); err = r.error }
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+  async function handleDelete() {
+    if (!confirmDel) { setCd(true); return }
+    setDel(true)
+    const { error } = await supabase.from('comodato_expenses').delete().eq('id', initial.id)
+    setDel(false)
+    if (error) { setError(error.message); return }
+    onSaved()
+  }
+  const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
+  const fld = { marginBottom: '12px' }
+  return (
+    <>
+      {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '400px', background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>{mode === 'new' ? '🤝 New Expense' : '✏️ Edit Expense'}</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '16px 18px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>Date *</label>
+                <input type="date" value={form.expense_date} onChange={e => set('expense_date', e.target.value)} style={inp} required />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '1px' }}>
+                <div style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: '#f8fafc', width: '100%', boxSizing: 'border-box' }}>
+                  🤝 {form.vehicle_id || '—'}
+                </div>
+              </div>
+            </div>
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📍 Mileage</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={lbl}>KM Start</label>
+                  <input type="number" step="0.1" value={form.km_start} onChange={e => set('km_start', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0" />
+                </div>
+                <div>
+                  <label style={lbl}>KM End</label>
+                  <input type="number" step="0.1" value={form.km_end} onChange={e => set('km_end', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0" />
+                </div>
+                <div>
+                  <label style={lbl}>KM Total</label>
+                  <div style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontFamily: 'monospace', fontWeight: '700', color: kmTotal > 0 ? '#0f172a' : '#cbd5e1', background: '#f8fafc' }}>
+                    {kmTotal !== null ? kmTotal.toFixed(1) : '—'}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #fde68a', background: '#fefce8' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#a16207', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>⛽ Fuel</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Amount (EUR)</label>
+                  <input type="number" step="0.01" value={form.fuel_amount} onChange={e => set('fuel_amount', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="0.00" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Receipt No.</label>
+                  <input value={form.fuel_receipt_no} onChange={e => set('fuel_receipt_no', e.target.value)} style={{ ...inp, borderColor: '#fde68a' }} placeholder="RIC-001" />
+                </div>
+              </div>
+            </div>
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>💳 Other Expense</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#7e22ce' }}>Amount (EUR)</label>
+                  <input type="number" step="0.01" value={form.other_amount} onChange={e => set('other_amount', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#e9d5ff' }} placeholder="0.00" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#7e22ce' }}>Description</label>
+                  <input value={form.other_description} onChange={e => set('other_description', e.target.value)} style={{ ...inp, borderColor: '#e9d5ff' }} placeholder="Toll, parking..." />
+                </div>
+              </div>
+            </div>
+            <div style={fld}>
+              <label style={lbl}>Notes</label>
+              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '60px', resize: 'vertical' }} placeholder="Additional notes..." />
+            </div>
+            {mode === 'edit' && (
+              <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
+                {!confirmDel ? (
+                  <button type="button" onClick={handleDelete} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>Delete Expense</button>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>Delete this expense? Cannot be undone.</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setCd(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Cancel</button>
+                      <button type="button" onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '800' }}>{deleting ? '...' : 'Confirm Delete'}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+            <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Saving...' : mode === 'new' ? '+ Add Expense' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
+// ─── ComodatoTab ──────────────────────────────────────────────
+function ComodatoTab({ productionId, isMobile, openTriggerRef }) {
+  const [vehicles, setVehicles]           = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [expenseSidebarOpen, setExpenseSidebarOpen] = useState(false)
+  const [expenseSidebarMode, setExpenseSidebarMode] = useState('new')
+  const [expenseTarget, setExpenseTarget] = useState(null)
+  const [expenseVehicleId, setExpenseVehicleId] = useState(null)
+  const [expandedVehicle, setExpandedVehicle]   = useState(null)
+  const [expenses, setExpenses]           = useState({})
+  const [loanVehicleSidebarOpen, setLoanVehicleSidebarOpen] = useState(false)
+  const [loanVehicleSidebarMode, setLoanVehicleSidebarMode] = useState('new')
+  const [loanVehicleTarget, setLoanVehicleTarget]           = useState(null)
+  const [allVehicles, setAllVehicles]     = useState([])
+
+  const load = useCallback(async () => {
+    if (!productionId) return
+    setLoading(true)
+    const [{ data: vData }, { data: allV }] = await Promise.all([
+      supabase.from('vehicles').select('id, vehicle_type, license_plate, driver_name, active, is_comodato, comodato_owner_crew_id, comodato_rate_per_km, comodato_fuel_reimbursement, comodato_notes').eq('production_id', productionId).eq('is_comodato', true).order('id'),
+      supabase.from('vehicles').select('id').eq('production_id', productionId),
+    ])
+    setVehicles(vData || [])
+    setAllVehicles(allV || [])
+    setLoading(false)
+  }, [productionId])
+
+  async function loadExpenses(vehicleId) {
+    const { data } = await supabase.from('comodato_expenses').select('*').eq('vehicle_id', vehicleId).eq('production_id', productionId).order('expense_date', { ascending: false })
+    setExpenses(prev => ({ ...prev, [vehicleId]: data || [] }))
+  }
+
+  function toggleVehicle(id) {
+    const next = expandedVehicle === id ? null : id
+    setExpandedVehicle(next)
+    if (next && !expenses[next]) loadExpenses(next)
+  }
+
+  function openNewExpense(vehicleId) { setExpenseSidebarMode('new'); setExpenseTarget(null); setExpenseVehicleId(vehicleId); setExpenseSidebarOpen(true) }
+  function openEditExpense(e) { setExpenseSidebarMode('edit'); setExpenseTarget(e); setExpenseVehicleId(e.vehicle_id); setExpenseSidebarOpen(true) }
+  function onExpenseSaved() { setExpenseSidebarOpen(false); if (expenseVehicleId) loadExpenses(expenseVehicleId) }
+
+  function openNewLoan() { setLoanVehicleSidebarMode('new'); setLoanVehicleTarget(null); setLoanVehicleSidebarOpen(true) }
+  function openEditLoan(v) { setLoanVehicleSidebarMode('edit'); setLoanVehicleTarget(v); setLoanVehicleSidebarOpen(true) }
+
+  useEffect(() => { load() }, [load])
+  useEffect(() => { if (openTriggerRef) openTriggerRef.current = openNewLoan }, [openTriggerRef])
+
+  function fmtDate(s) {
+    if (!s) return '—'
+    return new Date(s + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
+  }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
+
+  if (vehicles.length === 0) return (
+    <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+      <div style={{ fontSize: '40px', marginBottom: '10px' }}>🤝</div>
+      <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>No loan vehicles yet</div>
+      <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Use + Add Loan to add a loan vehicle</div>
+    </div>
+  )
+
+  const grandTotal = Object.values(expenses).flat().reduce((s, e) => s + (parseFloat(e.fuel_amount) || 0) + (parseFloat(e.other_amount) || 0), 0)
+
+  return (
+    <div>
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '12px', color: '#374151' }}>Loan vehicles: <span style={{ fontWeight: '800', color: '#0f172a' }}>{vehicles.length}</span></div>
+        <div style={{ fontSize: '12px', color: '#374151' }}>Expenses loaded: <span style={{ fontWeight: '800', color: '#0f2340' }}>{Object.values(expenses).flat().length}</span></div>
+        {grandTotal > 0 && <div style={{ fontSize: '12px', color: '#374151' }}>Total: <span style={{ fontWeight: '800', color: '#dc2626', fontFamily: 'monospace' }}>EUR {grandTotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</span></div>}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {vehicles.map(v => {
+          const isExpanded = expandedVehicle === v.id
+          const vehicleExpenses = expenses[v.id] || []
+          const vehicleTotal = vehicleExpenses.reduce((s, e) => s + (parseFloat(e.fuel_amount) || 0) + (parseFloat(e.other_amount) || 0), 0)
+          const vehicleKm = vehicleExpenses.reduce((s, e) => s + (e.km_start !== null && e.km_end !== null ? Math.max(0, e.km_end - e.km_start) : 0), 0)
+          return (
+            <div key={v.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderTop: '3px solid #15803d', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => toggleVehicle(v.id)}>
+                <span style={{ fontSize: '20px' }}>{TYPE_ICON[v.vehicle_type] || '🚗'}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
+                    {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 8px', borderRadius: '5px', border: '1px solid #d4d4d4' }}>{v.license_plate}</span>}
+                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', padding: '1px 8px', borderRadius: '999px', border: '1px solid #86efac' }}>🤝 LOAN</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    {v.driver_name && <span>👤 {v.driver_name}</span>}
+                    {v.comodato_rate_per_km && <span>📍 EUR {v.comodato_rate_per_km}/km</span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {vehicleExpenses.length > 0 && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>{vehicleExpenses.length} expenses</span>}
+                  {vehicleKm > 0 && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', fontWeight: '700' }}>{vehicleKm.toFixed(0)} km</span>}
+                  {vehicleTotal > 0 && <span style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: '700', color: '#dc2626' }}>EUR {vehicleTotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</span>}
+                  <button type="button" onClick={e => { e.stopPropagation(); openEditLoan(v) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', padding: '0 4px' }}>✎</button>
+                  <span style={{ color: '#94a3b8', fontSize: '14px', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.15s' }}>▾</span>
+                </div>
+              </div>
+              {isExpanded && (
+                <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 16px', background: '#f8fafc' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>💳 Expenses</div>
+                    <button onClick={() => openNewExpense(v.id)} style={{ padding: '4px 12px', borderRadius: '7px', border: '1px solid #15803d', background: '#f0fdf4', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>+ Add Expense</button>
+                  </div>
+                  {vehicleExpenses.length === 0 ? (
+                    <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', padding: '8px 0' }}>No expenses recorded</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {vehicleExpenses.map(e => {
+                        const km = e.km_start !== null && e.km_end !== null ? Math.max(0, e.km_end - e.km_start) : null
+                        const total = (parseFloat(e.fuel_amount) || 0) + (parseFloat(e.other_amount) || 0)
+                        return (
+                          <div key={e.id} onClick={() => openEditExpense(e)}
+                            style={{ background: 'white', border: '1px solid #e2e8f0', borderLeft: '3px solid #86efac', borderRadius: '0 8px 8px 0', padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}
+                            onMouseEnter={el => el.currentTarget.style.background = '#f8fafc'}
+                            onMouseLeave={el => el.currentTarget.style.background = 'white'}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f2340', minWidth: '80px' }}>{fmtDate(e.expense_date)}</div>
+                            {km !== null && <span style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '5px', background: '#f0fdf4', color: '#15803d', fontWeight: '700', border: '1px solid #86efac' }}>📍 {km.toFixed(1)} km</span>}
+                            {e.fuel_amount > 0 && <span style={{ fontSize: '11px', color: '#a16207' }}>⛽ EUR {parseFloat(e.fuel_amount).toFixed(2)}</span>}
+                            {e.other_amount > 0 && <span style={{ fontSize: '11px', color: '#7e22ce' }}>💳 {e.other_description || 'Other'}: EUR {parseFloat(e.other_amount).toFixed(2)}</span>}
+                            {e.notes && <span style={{ fontSize: '11px', color: '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.notes}</span>}
+                            {total > 0 && <span style={{ fontSize: '12px', fontFamily: 'monospace', fontWeight: '700', color: '#dc2626', marginLeft: 'auto' }}>EUR {total.toFixed(2)}</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <ComodatoExpenseSidebar open={expenseSidebarOpen} mode={expenseSidebarMode} initial={expenseTarget} onClose={() => setExpenseSidebarOpen(false)} onSaved={onExpenseSaved} productionId={productionId} vehicleId={expenseVehicleId} />
+      <NccVehicleSidebar open={loanVehicleSidebarOpen} mode={loanVehicleSidebarMode} initial={loanVehicleTarget} onClose={() => setLoanVehicleSidebarOpen(false)} onSaved={() => { setLoanVehicleSidebarOpen(false); load() }} productionId={productionId} vehicles={allVehicles} />
+    </div>
+  )
+}
+
 // ─── NccVehicleSidebar ────────────────────────────────────────
 function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef }) {
   const EMPTY = {
