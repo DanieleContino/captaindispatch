@@ -2804,8 +2804,8 @@ export default function VehiclesPage() {
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-            {[['ALL', 'All'], ['OWNED', '🚐 Owned'], ['RENTAL', '🔑 Rental']].map(([val, label]) => (
+          <div style={{ display: 'flex', gap: '3px', flexShrink: 0, flexWrap: 'wrap' }}>
+            {[['ALL', 'All'], ['PRODUCTION', '🚐 Production'], ['RENTAL', '🔑 Rental'], ['NCC', '🏢 NCC'], ['COMODATO', '🤝 Comodato']].map(([val, label]) => (
               <button key={val} onClick={() => setFR(val)}
                 style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterRental === val ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
                 {label}
@@ -2835,6 +2835,22 @@ export default function VehiclesPage() {
       {activeTab === 'suppliers' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
           <RentalSuppliersTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={supplierSidebarTriggerRef} />
+        </div>
+      )}
+      {activeTab === 'ncc' && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
+          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏢</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>NCC — coming soon</div>
+          </div>
+        </div>
+      )}
+      {activeTab === 'comodato' && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
+          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '40px', marginBottom: '10px' }}>🤝</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>Comodato — coming soon</div>
+          </div>
         </div>
       )}
       {activeTab === 'report' && (
