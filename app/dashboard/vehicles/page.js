@@ -3709,13 +3709,13 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef }) {
         })}
       </div>
       <ComodatoExpenseSidebar open={expenseSidebarOpen} mode={expenseSidebarMode} initial={expenseTarget} onClose={() => setExpenseSidebarOpen(false)} onSaved={onExpenseSaved} productionId={productionId} vehicleId={expenseVehicleId} />
-      <NccVehicleSidebar open={loanVehicleSidebarOpen} mode={loanVehicleSidebarMode} initial={loanVehicleTarget} onClose={() => setLoanVehicleSidebarOpen(false)} onSaved={() => { setLoanVehicleSidebarOpen(false); load() }} productionId={productionId} vehicles={allVehicles} />
+      <NccVehicleSidebar open={loanVehicleSidebarOpen} mode={loanVehicleSidebarMode} initial={loanVehicleTarget} onClose={() => setLoanVehicleSidebarOpen(false)} onSaved={() => { setLoanVehicleSidebarOpen(false); load() }} productionId={productionId} vehicles={allVehicles} forceComodato={true} />
     </div>
   )
 }
 
 // ─── NccVehicleSidebar ────────────────────────────────────────
-function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef }) {
+function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef, forceComodato = false }) {
   const EMPTY = {
     id: '', vehicle_type: 'VAN', vehicle_class: [],
     license_plate: '',
@@ -3787,8 +3787,9 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
       capacity:         form.capacity      !== '' ? parseInt(form.capacity)      : null,
       pax_suggested:    form.pax_suggested !== '' ? parseInt(form.pax_suggested) : null,
       pax_max:          form.pax_max       !== '' ? parseInt(form.pax_max)       : null,
-      is_ncc:           true,
-      ncc_agency_id:    form.ncc_agency_id    || null,
+      is_ncc:           forceComodato ? false : true,
+      is_comodato:      forceComodato ? true : false,
+      ncc_agency_id:    forceComodato ? null : (form.ncc_agency_id || null),
       ncc_driver_name:  form.ncc_driver_name.trim()  || null,
       ncc_driver_phone: form.ncc_driver_phone.trim() || null,
       sign_code:        form.sign_code.trim()    || null,
