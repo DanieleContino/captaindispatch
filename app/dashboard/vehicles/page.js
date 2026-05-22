@@ -3875,12 +3875,12 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
               <input value={form.id} onChange={e => { setIdManuallyEdited(true); set('id', e.target.value.toUpperCase()) }}
                 style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em', background: mode === 'edit' ? '#f8fafc' : 'white' }}
                 placeholder="VAN-01 / CAR-05" required readOnly={mode === 'edit'} />
-              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Formato: VAN-01, CAR-05 — usato in Trips e Fleet Monitor</div>
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Format: VAN-01, CAR-05 — used in Trips and Fleet Monitor</div>
             </div>
 
             {/* Tipo veicolo */}
             <div style={fld}>
-              <label style={lbl}>Tipo Veicolo</label>
+              <label style={lbl}>Vehicle Type</label>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(type => {
                   const c = TYPE_COLOR[type]; const active = form.vehicle_type === type
@@ -3898,11 +3898,11 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
             {/* Targa + Capacità */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               <div>
-                <label style={lbl}>Targa</label>
+                <label style={lbl}>License Plate</label>
                 <input value={form.license_plate} onChange={e => set('license_plate', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.1em' }} placeholder="AB123CD" />
               </div>
               <div>
-                <label style={lbl}>Capacità</label>
+                <label style={lbl}>Capacity</label>
                 <input type="number" value={form.capacity} onChange={e => set('capacity', e.target.value)} style={inp} placeholder="8" min="1" max="60" />
               </div>
             </div>
@@ -3927,9 +3927,9 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
               <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏢 NCC Details</div>
 
               <div style={fld}>
-                <label style={{ ...lbl, color: '#0369a1' }}>Agenzia NCC</label>
+                <label style={{ ...lbl, color: '#0369a1' }}>NCC Agency</label>
                 <select value={form.ncc_agency_id} onChange={e => set('ncc_agency_id', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#bae6fd', background: 'white' }}>
-                  <option value="">— Seleziona agenzia —</option>
+                  <option value="">— Select agency —</option>
                   {agencies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
                 {agencies.length === 0 && (
