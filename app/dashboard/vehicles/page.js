@@ -400,7 +400,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
               <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏷 Vehicle Category</div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${form.is_ncc ? '#bae6fd' : '#e2e8f0'}`, background: form.is_ncc ? '#f0f9ff' : 'white', cursor: 'pointer', marginBottom: '8px' }}
-                onClick={() => set('is_ncc', !form.is_ncc)}>
+                onClick={() => setForm(f => ({ ...f, is_ncc: !f.is_ncc, is_comodato: f.is_ncc ? f.is_comodato : false }))}>
                 <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.is_ncc ? '#0369a1' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
                   <div style={{ position: 'absolute', top: '2px', left: form.is_ncc ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                 </div>
@@ -415,7 +415,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
               )}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${form.is_comodato ? '#86efac' : '#e2e8f0'}`, background: form.is_comodato ? '#f0fdf4' : 'white', cursor: 'pointer', marginBottom: form.is_comodato ? '8px' : '0' }}
-                onClick={() => set('is_comodato', !form.is_comodato)}>
+                onClick={() => setForm(f => ({ ...f, is_comodato: !f.is_comodato, is_ncc: f.is_comodato ? f.is_ncc : false }))}>
                 <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.is_comodato ? '#15803d' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
                   <div style={{ position: 'absolute', top: '2px', left: form.is_comodato ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                 </div>
@@ -4050,12 +4050,6 @@ export default function VehiclesPage() {
 
   function openNew()   { setMode('new');  setEdit(null); setSO(true) }
   function openEdit(v) {
-    if (v.is_ncc) {
-      setNccVehicleSidebarMode('edit')
-      setNccVehicleTarget(v)
-      setNccVehicleSidebarOpen(true)
-      return
-    }
     setMode('edit'); setEdit(v); setSO(true)
   }
   function onSaved()   { setSO(false); load() }
