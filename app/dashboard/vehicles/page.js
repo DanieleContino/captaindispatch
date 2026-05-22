@@ -376,6 +376,66 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
               </div>
             </div>
 
+            {/* Vehicle Category */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏷 Vehicle Category</div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${form.is_ncc ? '#bae6fd' : '#e2e8f0'}`, background: form.is_ncc ? '#f0f9ff' : 'white', cursor: 'pointer', marginBottom: '8px' }}
+                onClick={() => set('is_ncc', !form.is_ncc)}>
+                <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.is_ncc ? '#0369a1' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: '2px', left: form.is_ncc ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: form.is_ncc ? '#0369a1' : '#64748b' }}>🏢 NCC Vehicle — provided by external agency</div>
+              </div>
+
+              {form.is_ncc && (
+                <div style={{ marginBottom: '8px', padding: '10px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px' }}>
+                  <label style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>NCC Agency</label>
+                  <NccAgencySelectInline productionId={PRODUCTION_ID} value={form.ncc_agency_id} onChange={v => set('ncc_agency_id', v)} />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${form.is_comodato ? '#86efac' : '#e2e8f0'}`, background: form.is_comodato ? '#f0fdf4' : 'white', cursor: 'pointer', marginBottom: form.is_comodato ? '8px' : '0' }}
+                onClick={() => set('is_comodato', !form.is_comodato)}>
+                <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.is_comodato ? '#15803d' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: '2px', left: form.is_comodato ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: form.is_comodato ? '#15803d' : '#64748b' }}>🤝 Loan Vehicle — personal vehicle with expense reimbursement</div>
+              </div>
+
+              {form.is_comodato && (
+                <div style={{ padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Owner (Crew)</label>
+                      <select value={form.comodato_owner_crew_id} onChange={e => set('comodato_owner_crew_id', e.target.value)}
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid #86efac', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: 'white', cursor: 'pointer', boxSizing: 'border-box' }}>
+                        <option value="">— Select owner —</option>
+                        {crewList.map(c => <option key={c.id} value={c.id}>{c.full_name}{c.department ? ` (${c.department})` : ''}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Rate per KM (EUR)</label>
+                      <input type="number" step="0.01" value={form.comodato_rate_per_km} onChange={e => set('comodato_rate_per_km', e.target.value)}
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid #86efac', borderRadius: '7px', fontSize: '12px', fontFamily: 'monospace', boxSizing: 'border-box' }} placeholder="0.25" />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '7px', border: `1px solid ${form.comodato_fuel_reimbursement ? '#86efac' : '#e2e8f0'}`, background: form.comodato_fuel_reimbursement ? '#f0fdf4' : 'white', cursor: 'pointer', marginBottom: '8px' }}
+                    onClick={() => set('comodato_fuel_reimbursement', !form.comodato_fuel_reimbursement)}>
+                    <div style={{ width: '28px', height: '16px', borderRadius: '999px', background: form.comodato_fuel_reimbursement ? '#15803d' : '#cbd5e1', position: 'relative', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', top: '2px', left: form.comodato_fuel_reimbursement ? '14px' : '2px', width: '12px', height: '12px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: form.comodato_fuel_reimbursement ? '#15803d' : '#64748b' }}>⛽ Fuel reimbursement</span>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '10px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Notes</label>
+                    <input value={form.comodato_notes} onChange={e => set('comodato_notes', e.target.value)}
+                      style={{ width: '100%', padding: '6px 8px', border: '1px solid #86efac', borderRadius: '7px', fontSize: '12px', boxSizing: 'border-box' }} placeholder="Additional notes..." />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Preferenze Assegnazione */}
             <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
               <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '10px' }}>⭐ Preferenze Assegnazione</div>
