@@ -823,8 +823,16 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
       <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏢</div>
       <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>No rental suppliers yet</div>
       <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Click + Add Supplier to get started</div>
-          <button onClick={openNewSupplier} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#0f2340', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>+ Add Supplier</button>
-        </div>
+      <button onClick={openNewSupplier} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#0f2340', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>+ Add Supplier</button>
+      <RentalSupplierSidebar
+        open={supplierSidebarOpen}
+        mode={supplierSidebarMode}
+        initial={supplierTarget}
+        onClose={() => setSupplierSidebarOpen(false)}
+        onSaved={onSupplierSaved}
+        productionId={productionId}
+      />
+    </div>
   )
 
   return (
