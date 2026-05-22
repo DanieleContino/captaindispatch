@@ -7,6 +7,8 @@ import { useT } from '../../../lib/i18n'
 import { ImportModal } from '../../../lib/ImportModal'
 import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
+import { RentalColumnsEditorSidebar } from '../../../lib/RentalColumnsEditorSidebar'
+import { RENTAL_DEFAULT_PRESET } from '../../../lib/rentalColumnsCatalog'
 
 const SIDEBAR_W = 400
 
@@ -1041,6 +1043,289 @@ function SupplierVouchersAccordion({ supplierId, productionId }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── RentalTab ───────────────────────────────────────────────
+function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [] }) {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+  const [vehicles, setVehicles]         = useState([])
+  const [suppliers, setSuppliers]       = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [columnsConfig, setColumnsConfig] = useState([])
+  const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
+  const [applyingPreset, setApplyingPreset] = useState(false)
+  const [filterStatus, setFilterStatus] = useState('ALL')
+  const [search, setSearch]             = useState('')
+  const [rentalSidebarOpen, setRentalSidebarOpen] = useState(false)
+  const [rentalSidebarMode, setRentalSidebarMode] = useState('new')
+  const [rentalTarget, setRentalTarget] = useState(null)
+  const [allVehicles, setAllVehicles]   = useState([])
+
+  const load = useCallback(async () => {
+    if (!productionId) return
+    setLoading(true)
+    const [{ data: vData }, { data: sData }, { data: cData }, { data: allV }] = await Promise.all([
+      supabase.from('vehicles').select(`
+        id, vehicle_type, vehicle_class, license_plate, driver_name, driver_crew_id,
+        rental_brand, rental_model, rental_supplier_id, rental_start, rental_end,
+        rental_status, rental_billing_unit, rental_daily_rate, rental_vat_pct,
+        rental_currency, rental_voucher_id, rental_po_number, rental_contract_no,
+        rental_second_driver, rental_km_included, rental_insurance_casco,
+        rental_insurance_limit, rental_insurance_excess, rental_notes,
+        rental_extras, rental_pickup_location_id, rental_dropoff_location_id,
+        rental_insurance_exp, active, in_transport, available_from, available_to,
+        sign_code, unit_default, preferred_dept, preferred_crew_ids
+      `).eq('production_id', productionId).eq('is_rental', true).order('rental_supplier_id').order('rental_start'),
+      supabase.from('rental_suppliers').select('id, name').eq('production_id', productionId).order('name'),
+      supabase.from('rental_list_columns').select('*').eq('production_id', productionId).order('display_order').order('created_at'),
+      supabase.from('vehicles').select('id').eq('production_id', productionId),
+    ])
+    setVehicles(vData || [])
+    setSuppliers(sData || [])
+    setColumnsConfig(cData || [])
+    setAllVehicles(allV || [])
+    setLoading(false)
+  }, [productionId])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (openTriggerRef) openTriggerRef.current = () => {
+      setRentalSidebarMode('new')
+      setRentalTarget(null)
+      setRentalSidebarOpen(true)
+    }
+  }, [openTriggerRef])
+
+  async function applyDefaultPreset() {
+    if (!productionId || applyingPreset) return
+    setApplyingPreset(true)
+    try {
+      const rows = RENTAL_DEFAULT_PRESET.map(p => ({ ...p, production_id: productionId }))
+      await supabase.from('rental_list_columns').insert(rows)
+      await load()
+    } catch (e) { console.error(e) }
+    finally { setApplyingPreset(false) }
+  }
+
+  function daysBetween(start, end) {
+    if (!start || !end) return null
+    const a = new Date(start + 'T12:00:00Z')
+    const b = new Date(end   + 'T12:00:00Z')
+    const n = Math.round((b - a) / 86400000)
+    return n > 0 ? n : null
+  }
+
+  function fmtDate(s) {
+    if (!s) return '—'
+    return new Date(s + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  }
+
+  function renderCell(col, v, supplierName) {
+    const days = daysBetween(v.rental_start, v.rental_end)
+    const qty  = days || 0
+    const rate = parseFloat(v.rental_daily_rate) || 0
+    const vat  = parseFloat(v.rental_vat_pct)    || 0
+    const nv   = rate > 0 && qty > 0 ? rate * qty : 0
+    const tv   = nv > 0 && vat > 0 ? nv * (1 + vat / 100) : nv
+    const isExpiring = v.rental_end && v.rental_end <= new Date(new Date().setDate(new Date().getDate() + 3)).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }) && v.rental_end >= today
+
+    switch (col.source_field) {
+      case 'vehicle_id':
+        return <td key={col.source_field} onClick={() => { setRentalSidebarMode('edit'); setRentalTarget(v); setRentalSidebarOpen(true) }} style={{ padding: '6px 8px', fontFamily: 'monospace', fontWeight: '700', fontSize: '12px', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(37,99,235,0.06)'} onMouseLeave={e => e.currentTarget.style.background = ''}>{v.id}</td>
+      case 'brand_model':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '12px', color: '#374151', whiteSpace: 'nowrap' }}>{[v.rental_brand, v.rental_model].filter(Boolean).join(' ') || '—'}</td>
+      case 'plate':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontFamily: 'monospace', fontSize: '11px', color: '#374151', whiteSpace: 'nowrap' }}>{v.license_plate || '—'}</td>
+      case 'type': {
+        const tc = TYPE_COLOR[v.vehicle_type] || TYPE_COLOR.VAN
+        return <td key={col.source_field} style={{ padding: '6px 8px' }}><span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 7px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`, whiteSpace: 'nowrap' }}>{TYPE_ICON[v.vehicle_type] || ''} {v.vehicle_type}</span></td>
+      }
+      case 'class': {
+        const cls = Array.isArray(v.vehicle_class) ? v.vehicle_class : []
+        return <td key={col.source_field} style={{ padding: '6px 8px' }}>{cls.length > 0 ? cls.map(c => { const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC; return <span key={c} style={{ fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: cc.bg, color: cc.color, border: `1px solid ${cc.border}`, marginRight: '3px', whiteSpace: 'nowrap' }}>{c}</span> }) : <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+      }
+      case 'driver':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '12px', color: '#374151', whiteSpace: 'nowrap' }}>{v.driver_name ? <span>{v.driver_crew_id ? '🔗 ' : '👤 '}{v.driver_name}</span> : <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+      case 'second_driver':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>{v.rental_second_driver || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+      case 'dept':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>{v.driver_dept || '—'}</td>
+      case 'start':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#374151', whiteSpace: 'nowrap' }}>{fmtDate(v.rental_start)}</td>
+      case 'end':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', fontWeight: isExpiring ? '700' : '400', color: isExpiring ? '#dc2626' : '#374151', whiteSpace: 'nowrap' }}>{fmtDate(v.rental_end)}{isExpiring && <span style={{ marginLeft: '4px', fontSize: '9px', padding: '1px 5px', borderRadius: '999px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>⚠ Expiring</span>}</td>
+      case 'days':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', textAlign: 'center', fontWeight: '700', color: '#0f172a' }}>{days ?? '—'}</td>
+      case 'billing_unit':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#64748b' }}>{v.rental_billing_unit || '—'}</td>
+      case 'rate':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', fontFamily: 'monospace', color: '#374151', textAlign: 'right', whiteSpace: 'nowrap' }}>{rate > 0 ? `${v.rental_currency || 'EUR'} ${rate.toLocaleString('en-GB', { minimumFractionDigits: 2 })}` : '—'}</td>
+      case 'total_no_vat':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', fontFamily: 'monospace', color: '#374151', textAlign: 'right', whiteSpace: 'nowrap' }}>{nv > 0 ? `${v.rental_currency || 'EUR'} ${nv.toLocaleString('en-GB', { minimumFractionDigits: 2 })}` : '—'}</td>
+      case 'total_vat':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', fontFamily: 'monospace', color: '#374151', textAlign: 'right', whiteSpace: 'nowrap' }}>{tv > 0 ? `${v.rental_currency || 'EUR'} ${tv.toLocaleString('en-GB', { minimumFractionDigits: 2 })}` : '—'}</td>
+      case 'currency':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#64748b' }}>{v.rental_currency || 'EUR'}</td>
+      case 'status': {
+        const isOpen = v.rental_status === 'OPEN'
+        return <td key={col.source_field} style={{ padding: '6px 8px' }}><span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 7px', borderRadius: '999px', background: isOpen ? '#f0fdf4' : '#f1f5f9', color: isOpen ? '#15803d' : '#64748b', border: `1px solid ${isOpen ? '#86efac' : '#cbd5e1'}`, whiteSpace: 'nowrap' }}>{isOpen ? '🟢 Open' : '⚫ Closed'}</span></td>
+      }
+      case 'voucher':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', fontFamily: 'monospace', color: '#2563eb', whiteSpace: 'nowrap' }}>{v.rental_voucher_id ? '🎟' : <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+      case 'po':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#374151', whiteSpace: 'nowrap' }}>{v.rental_po_number || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+      case 'contract_no':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#374151', whiteSpace: 'nowrap' }}>{v.rental_contract_no || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+      case 'insurance':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', whiteSpace: 'nowrap' }}>{v.rental_insurance_casco ? <span style={{ padding: '1px 6px', borderRadius: '999px', background: '#ede9fe', color: '#5b21b6', border: '1px solid #c4b5fd', fontWeight: '700' }}>🛡 Full Casco</span> : <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+      case 'km':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>{v.rental_km_included || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+      case 'notes':
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#64748b', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.rental_notes || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+      default:
+        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
+    }
+  }
+
+  const filtered = vehicles.filter(v => {
+    if (filterStatus !== 'ALL' && v.rental_status !== filterStatus) return false
+    if (search) {
+      const q = search.toLowerCase()
+      if (!(v.id || '').toLowerCase().includes(q) &&
+          !(v.driver_name || '').toLowerCase().includes(q) &&
+          !(v.license_plate || '').toLowerCase().includes(q) &&
+          !(v.rental_brand || '').toLowerCase().includes(q) &&
+          !(v.rental_model || '').toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  const groupedBySupplier = filtered.reduce((acc, v) => {
+    const sid = v.rental_supplier_id || '__none__'
+    if (!acc[sid]) acc[sid] = []
+    acc[sid].push(v)
+    return acc
+  }, {})
+
+  const sortedSupplierIds = Object.keys(groupedBySupplier).sort((a, b) => {
+    const na = suppliers.find(s => s.id === a)?.name || 'ZZZ'
+    const nb = suppliers.find(s => s.id === b)?.name || 'ZZZ'
+    return na.localeCompare(nb)
+  })
+
+  const colMinW = columnsConfig.reduce((s, c) => s + parseInt(c.width || '120'), 0)
+
+  if (loading) return <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
+
+  return (
+    <div>
+      {/* Filter row */}
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <input type="text" placeholder="Search ID, driver, plate..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '200px' }} />
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {['ALL', 'OPEN', 'CLOSED'].map(s => (
+            <button key={s} onClick={() => setFilterStatus(s)}
+              style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid',
+                ...(filterStatus === s
+                  ? s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' }
+                  : s === 'OPEN' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
+                  : { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
+                  : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+              {s}
+            </button>
+          ))}
+        </div>
+        <div style={{ flex: 1 }} />
+        {columnsConfig.length === 0 && (
+          <button onClick={applyDefaultPreset} disabled={applyingPreset}
+            style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #0f2340', background: applyingPreset ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+            {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
+          </button>
+        )}
+        <button onClick={() => setColumnsEditorOpen(true)}
+          style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+          Columns {columnsConfig.length > 0 && `(${columnsConfig.length})`}
+        </button>
+        <span style={{ fontSize: '12px', color: '#94a3b8' }}>{filtered.length} vehicles</span>
+      </div>
+
+      {vehicles.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '40px', marginBottom: '10px' }}>🔑</div>
+          <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>No rental vehicles yet</div>
+          <div style={{ fontSize: '12px', color: '#94a3b8' }}>Use + Add Rental to add your first rental vehicle</div>
+        </div>
+      ) : columnsConfig.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>🗂</div>
+          <div style={{ fontSize: '14px', fontWeight: '700', color: '#374151', marginBottom: '6px' }}>No columns configured</div>
+          <button onClick={applyDefaultPreset} disabled={applyingPreset}
+            style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#0f2340', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
+            {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {sortedSupplierIds.map(sid => {
+            const supplierName = suppliers.find(s => s.id === sid)?.name || 'No Supplier'
+            const supplierVehicles = groupedBySupplier[sid]
+            return (
+              <div key={sid}>
+                {/* Supplier header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px 8px 0 0', borderBottom: 'none' }}>
+                  <span style={{ fontSize: '14px' }}>🏢</span>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#14532d', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{supplierName}</span>
+                  <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600' }}>
+                    {supplierVehicles.length} vehicle{supplierVehicles.length !== 1 ? 's' : ''}
+                    {' · '}
+                    {supplierVehicles.filter(v => v.rental_status === 'OPEN').length} open
+                  </span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', border: '1px solid #e2e8f0', borderTop: '1px solid #86efac', borderRadius: '0 0 8px 8px', overflow: 'hidden', minWidth: colMinW + 'px' }}>
+                    <colgroup>{columnsConfig.map(col => <col key={col.source_field} style={{ width: col.width }} />)}</colgroup>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9' }}>
+                        {columnsConfig.map(col => (
+                          <th key={col.source_field} style={{ padding: '6px 8px', fontSize: '10px', fontWeight: '800', color: '#64748b', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>
+                            {col.header_label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {supplierVehicles.map((v, idx) => (
+                        <tr key={v.id} style={{ background: idx % 2 === 0 ? 'white' : '#fafafa', borderBottom: '1px solid #f1f5f9' }}
+                          onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(c => { if (!c.style.background || c.style.background === 'white' || c.style.background === 'rgb(250, 250, 250)') c.style.background = '#f8fafc' })}
+                          onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => { c.style.background = idx % 2 === 0 ? 'white' : '#fafafa' })}>
+                          {columnsConfig.map(col => renderCell(col, v, supplierName))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <RentalColumnsEditorSidebar open={columnsEditorOpen} onClose={() => setColumnsEditorOpen(false)} onChanged={load} />
+      <RentalVehicleSidebar
+        open={rentalSidebarOpen}
+        mode={rentalSidebarMode}
+        initial={rentalTarget}
+        onClose={() => setRentalSidebarOpen(false)}
+        onSaved={() => { setRentalSidebarOpen(false); load() }}
+        productionId={productionId}
+        crewList={crewList}
+        vehicles={allVehicles}
+        initialSupplierId={null}
+      />
     </div>
   )
 }
@@ -2090,9 +2375,6 @@ export default function VehiclesPage() {
   const [activeTab, setActiveTab] = useState('owned') // 'owned' | 'rental' | 'suppliers' | 'report'
   const supplierSidebarTriggerRef = React.useRef(null)
   const rentalSidebarTriggerRef   = React.useRef(null)
-  const [rentalSidebarOpen2, setRentalSidebarOpen2]   = useState(false)
-  const [rentalSidebarMode2, setRentalSidebarMode2]   = useState('new')
-  const [rentalTarget2, setRentalTarget2]             = useState(null)
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
@@ -2284,11 +2566,8 @@ export default function VehiclesPage() {
 
       {/* Body */}
       {activeTab === 'rental' && (
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '40px', marginBottom: '10px' }}>🔑</div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>Rental Vehicles — coming soon</div>
-          </div>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
+          <RentalTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={rentalSidebarTriggerRef} crewList={crewList} />
         </div>
       )}
       {activeTab === 'suppliers' && (
@@ -2381,17 +2660,6 @@ export default function VehiclesPage() {
 </div>}
       <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
 
-      <RentalVehicleSidebar
-        open={rentalSidebarOpen2}
-        mode={rentalSidebarMode2}
-        initial={rentalTarget2}
-        onClose={() => setRentalSidebarOpen2(false)}
-        onSaved={() => { setRentalSidebarOpen2(false); load() }}
-        productionId={PRODUCTION_ID}
-        crewList={crewList}
-        vehicles={vhcs}
-        initialSupplierId={null}
-      />
       <ImportModal
         open={importOpen}
         mode="fleet"
