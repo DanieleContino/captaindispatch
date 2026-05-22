@@ -2775,13 +2775,14 @@ export default function VehiclesPage() {
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden' }}>
             {[
-              { key: 'owned',     label: '🚐 Owned' },
-              { key: 'rental',    label: '🔑 Rental' },
-              { key: 'suppliers', label: '🏢 Suppliers' },
-              { key: 'report',    label: '📊 Report' },
+              { key: 'fleet',    label: '🚐 Fleet' },
+              { key: 'rental',   label: '🔑 Rental' },
+              { key: 'ncc',      label: '🏢 NCC' },
+              { key: 'comodato', label: '🤝 Comodato' },
+              { key: 'report',   label: '📊 Report' },
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                style={{ padding: '5px 12px', border: 'none', borderLeft: tab.key !== 'owned' ? '1px solid #e2e8f0' : 'none', background: activeTab === tab.key ? '#0f2340' : 'white', color: activeTab === tab.key ? 'white' : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                style={{ padding: '5px 12px', border: 'none', borderLeft: tab.key !== 'fleet' ? '1px solid #e2e8f0' : 'none', background: activeTab === tab.key ? '#0f2340' : 'white', color: activeTab === tab.key ? 'white' : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 {tab.label}
               </button>
             ))}
