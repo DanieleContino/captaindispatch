@@ -603,10 +603,189 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
   )
 }
 
+// ─── RentalSupplierSidebar ───────────────────────────────────
+function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, productionId }) {
+  const EMPTY = { name: '', contact_name: '', phone: '', email: '', address: '', website: '', account_no: '', opening_hours: '', notes: '' }
+  const [form, setForm]     = useState(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [deleting, setDeleting]     = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setError(null); setConfirmDel(false)
+    if (mode === 'edit' && initial) {
+      setForm({
+        name:          initial.name          || '',
+        contact_name:  initial.contact_name  || '',
+        phone:         initial.phone         || '',
+        email:         initial.email         || '',
+        address:       initial.address       || '',
+        website:       initial.website       || '',
+        account_no:    initial.account_no    || '',
+        opening_hours: initial.opening_hours || '',
+        notes:         initial.notes         || '',
+      })
+    } else {
+      setForm(EMPTY)
+    }
+  }, [open, mode, initial])
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.name.trim()) { setError('Name is required'); return }
+    setSaving(true)
+    const row = {
+      production_id: productionId,
+      name:          form.name.trim(),
+      contact_name:  form.contact_name.trim()  || null,
+      phone:         form.phone.trim()         || null,
+      email:         form.email.trim()         || null,
+      address:       form.address.trim()       || null,
+      website:       form.website.trim()       || null,
+      account_no:    form.account_no.trim()    || null,
+      opening_hours: form.opening_hours.trim() || null,
+      notes:         form.notes.trim()         || null,
+    }
+    let err
+    if (mode === 'new') {
+      const r = await supabase.from('rental_suppliers').insert(row)
+      err = r.error
+    } else {
+      const r = await supabase.from('rental_suppliers').update(row).eq('id', initial.id)
+      err = r.error
+    }
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+
+  async function handleDelete() {
+    if (!confirmDel) { setConfirmDel(true); return }
+    setDeleting(true)
+    const { error } = await supabase.from('rental_suppliers').delete().eq('id', initial.id)
+    setDeleting(false)
+    if (error) { setError(error.message); return }
+    onSaved()
+  }
+
+  const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
+  const fld = { marginBottom: '12px' }
+
+  return (
+    <>
+      {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '400px', background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
+            {mode === 'new' ? '🏢 New Supplier' : '✏️ Edit Supplier'}
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '16px 18px' }}>
+
+            <div style={fld}>
+              <label style={lbl}>Supplier Name *</label>
+              <input value={form.name} onChange={e => set('name', e.target.value)} style={inp} placeholder="Hertz, Avis, Europcar..." required />
+            </div>
+
+            <div style={fld}>
+              <label style={lbl}>Account No.</label>
+              <input value={form.account_no} onChange={e => set('account_no', e.target.value)} style={inp} placeholder="Corporate account number" />
+            </div>
+
+            <div style={{ marginBottom: '12px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '9px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📞 Contact</div>
+              <div style={fld}>
+                <label style={lbl}>Contact Name</label>
+                <input value={form.contact_name} onChange={e => set('contact_name', e.target.value)} style={inp} placeholder="John Smith" />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                <div>
+                  <label style={lbl}>Phone</label>
+                  <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} placeholder="+39 02..." type="tel" />
+                </div>
+                <div>
+                  <label style={lbl}>Email</label>
+                  <input value={form.email} onChange={e => set('email', e.target.value)} style={inp} placeholder="info@hertz.it" type="email" />
+                </div>
+              </div>
+              <div style={fld}>
+                <label style={lbl}>Address</label>
+                <input value={form.address} onChange={e => set('address', e.target.value)} style={inp} placeholder="Via Roma 1, Milano" />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={lbl}>Website</label>
+                  <input value={form.website} onChange={e => set('website', e.target.value)} style={inp} placeholder="www.hertz.it" />
+                </div>
+                <div>
+                  <label style={lbl}>Opening Hours</label>
+                  <input value={form.opening_hours} onChange={e => set('opening_hours', e.target.value)} style={inp} placeholder="08:00 – 20:00" />
+                </div>
+              </div>
+            </div>
+
+            <div style={fld}>
+              <label style={lbl}>Notes</label>
+              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '80px', resize: 'vertical' }} placeholder="Additional notes..." />
+            </div>
+
+            {mode === 'edit' && (
+              <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
+                {!confirmDel ? (
+                  <button type="button" onClick={handleDelete}
+                    style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
+                    Delete Supplier
+                  </button>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>Delete this supplier? This cannot be undone.</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setConfirmDel(false)}
+                        style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Cancel</button>
+                      <button type="button" onClick={handleDelete} disabled={deleting}
+                        style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: deleting ? 'default' : 'pointer', fontSize: '12px', fontWeight: '800' }}>
+                        {deleting ? '...' : 'Confirm Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
+
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
+            <button type="button" onClick={onClose}
+              style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+            <button type="submit" disabled={saving}
+              style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Saving...' : mode === 'new' ? '+ Add Supplier' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
 // ─── RentalSuppliersTab ───────────────────────────────────────
 function RentalSuppliersTab({ productionId, isMobile }) {
   const [suppliers, setSuppliers] = useState([])
   const [loading, setLoading]     = useState(true)
+  const [supplierSidebarOpen, setSupplierSidebarOpen] = useState(false)
+  const [supplierSidebarMode, setSupplierSidebarMode] = useState('new')
+  const [supplierTarget, setSupplierTarget]           = useState(null)
 
   const load = useCallback(async () => {
     if (!productionId) return
@@ -631,12 +810,17 @@ function RentalSuppliersTab({ productionId, isMobile }) {
     <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
   )
 
+  function openNewSupplier()    { setSupplierSidebarMode('new');  setSupplierTarget(null);    setSupplierSidebarOpen(true) }
+  function openEditSupplier(s)  { setSupplierSidebarMode('edit'); setSupplierTarget(s);       setSupplierSidebarOpen(true) }
+  function onSupplierSaved()    { setSupplierSidebarOpen(false); load() }
+
   if (suppliers.length === 0) return (
     <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
       <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏢</div>
       <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>No rental suppliers yet</div>
-      <div style={{ fontSize: '12px', color: '#94a3b8' }}>Click + Add Supplier to get started</div>
-    </div>
+      <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Click + Add Supplier to get started</div>
+          <button onClick={openNewSupplier} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#0f2340', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>+ Add Supplier</button>
+        </div>
   )
 
   return (
@@ -662,7 +846,7 @@ function RentalSuppliersTab({ productionId, isMobile }) {
                 )}
               </div>
             </div>
-            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', padding: 0 }}>✎</button>
+            <button onClick={() => openEditSupplier(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', padding: 0 }}>✎</button>
           </div>
 
           {/* Contacts */}
@@ -676,7 +860,7 @@ function RentalSuppliersTab({ productionId, isMobile }) {
           {/* Locations */}
           {(s.locations || []).length > 0 && (
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px', marginBottom: '8px' }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>📍 Locations</div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>� Locations</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 {(s.locations || []).map(l => (
                   <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: '#f8fafc', borderRadius: '6px', fontSize: '11px' }}>
@@ -749,6 +933,14 @@ function RentalSuppliersTab({ productionId, isMobile }) {
           </button>
         </div>
       ))}
+      <RentalSupplierSidebar
+        open={supplierSidebarOpen}
+        mode={supplierSidebarMode}
+        initial={supplierTarget}
+        onClose={() => setSupplierSidebarOpen(false)}
+        onSaved={onSupplierSaved}
+        productionId={productionId}
+      />
     </div>
   )
 }
