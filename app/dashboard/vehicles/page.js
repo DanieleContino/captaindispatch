@@ -412,7 +412,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
               </div>
               <div>
                 <div style={{ fontSize: '11px', fontWeight: '700', color: form.in_transport ? '#1d4ed8' : '#64748b' }}>
-                  {form.in_transport ? '✅ In Transport' : '🚐 SD — escluso da trips/liste/fleet'}
+                  {form.in_transport ? '✅ In Transport' : '🚐 SD — excluded from trips/lists/fleet'}
                 </div>
               </div>
             </div>
@@ -682,8 +682,8 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
           )}
           {v.is_rental && <span style={{ fontSize: '10px', fontWeight: '700', color: '#a16207', background: '#fefce8', padding: '1px 8px', borderRadius: '999px', border: '1px solid #fde68a' }}>🔑 RENTAL</span>}
           {v.is_ncc && <span style={{ fontSize: '10px', fontWeight: '700', color: '#0369a1', background: '#f0f9ff', padding: '1px 8px', borderRadius: '999px', border: '1px solid #bae6fd' }}>🏢 NCC</span>}
-          {v.is_comodato && <span style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', padding: '1px 8px', borderRadius: '999px', border: '1px solid #86efac' }}>🤝 COMODATO</span>}
-          {!v.active && <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #e2e8f0' }}>INATTIVO</span>}
+          {v.is_comodato && <span style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', padding: '1px 8px', borderRadius: '999px', border: '1px solid #86efac' }}>🤝 LOAN</span>}
+          {!v.active && <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #e2e8f0' }}>INACTIVE</span>}
           {v.in_transport === false && <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #cbd5e1' }}>🚐 SD</span>}
           {v.preferred_dept && (
             <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', background: (DEPT_COLOR[v.preferred_dept] || {}).bg || '#f8fafc', color: (DEPT_COLOR[v.preferred_dept] || {}).color || '#475569', border: `1px solid ${(DEPT_COLOR[v.preferred_dept] || {}).border || '#e2e8f0'}` }}>
@@ -3934,18 +3934,18 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
                 </select>
                 {agencies.length === 0 && (
                   <div style={{ fontSize: '10px', color: '#0369a1', marginTop: '3px' }}>
-                    ℹ Nessuna agenzia ancora — aggiungila prima dal tab NCC
+                    ℹ No agencies yet — add from NCC tab
                   </div>
                 )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ ...lbl, color: '#0369a1' }}>Nome Driver NCC</label>
+                  <label style={{ ...lbl, color: '#0369a1' }}>NCC Driver Name</label>
                   <input value={form.ncc_driver_name} onChange={e => set('ncc_driver_name', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="Mario Rossi" />
                 </div>
                 <div>
-                  <label style={{ ...lbl, color: '#0369a1' }}>Telefono Driver NCC</label>
+                  <label style={{ ...lbl, color: '#0369a1' }}>NCC Driver Phone</label>
                   <input value={form.ncc_driver_phone} onChange={e => set('ncc_driver_phone', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="+39 333..." type="tel" />
                 </div>
               </div>
@@ -3965,14 +3965,14 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
 
             {/* Availability */}
             <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #d1d5db', background: '#f8fafc' }}>
-              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px' }}>📅 Disponibilità</div>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px' }}>📅 Availability</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={lbl}>Dal</label>
+                  <label style={lbl}>From</label>
                   <input type="date" value={form.available_from} onChange={e => set('available_from', e.target.value)} style={{ ...inp, borderColor: '#d1d5db' }} />
                 </div>
                 <div>
-                  <label style={lbl}>Al</label>
+                  <label style={lbl}>To</label>
                   <input type="date" value={form.available_to} onChange={e => set('available_to', e.target.value)} style={{ ...inp, borderColor: '#d1d5db' }} />
                 </div>
               </div>
@@ -3985,7 +3985,7 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
                 <div style={{ position: 'absolute', top: '2px', left: form.active ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
               </div>
               <div style={{ fontSize: '13px', fontWeight: '700', color: form.active ? '#15803d' : '#64748b' }}>
-                {form.active ? '✅ Veicolo attivo — visibile in Fleet Monitor' : '⏸ Veicolo inattivo — nascosto da Fleet Monitor'}
+                {form.active ? '✅ Active — visible in Fleet Monitor' : '⏸ Inactive — hidden from Fleet Monitor'}
               </div>
             </div>
 
@@ -3996,7 +3996,7 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
                 <div style={{ position: 'absolute', top: '2px', left: form.in_transport ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
               </div>
               <div style={{ fontSize: '11px', fontWeight: '700', color: form.in_transport ? '#1d4ed8' : '#64748b' }}>
-                {form.in_transport ? '✅ In Transport' : '🚐 SD — escluso da trips/liste/fleet'}
+                {form.in_transport ? '✅ In Transport' : '🚐 SD — excluded from trips/lists/fleet'}
               </div>
             </div>
 
