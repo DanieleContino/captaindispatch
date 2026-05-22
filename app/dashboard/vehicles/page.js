@@ -2588,6 +2588,718 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
   )
 }
 
+// ─── NccAgencySidebar ─────────────────────────────────────────
+function NccAgencySidebar({ open, mode, initial, onClose, onSaved, productionId, openTriggerRef }) {
+  const EMPTY = { name: '', contact_name: '', phone: '', email: '', address: '', vat_no: '', notes: '' }
+  const [form, setForm]     = useState(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+  const [confirmDel, setCd] = useState(false)
+  const [deleting, setDel]  = useState(false)
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    if (openTriggerRef) openTriggerRef.current = () => {
+      setForm(EMPTY); setError(null); setCd(false)
+    }
+  }, [openTriggerRef])
+
+  useEffect(() => {
+    if (!open) return
+    setError(null); setCd(false)
+    if (mode === 'edit' && initial) {
+      setForm({
+        name:         initial.name         || '',
+        contact_name: initial.contact_name || '',
+        phone:        initial.phone        || '',
+        email:        initial.email        || '',
+        address:      initial.address      || '',
+        vat_no:       initial.vat_no       || '',
+        notes:        initial.notes        || '',
+      })
+    } else { setForm(EMPTY) }
+  }, [open, mode, initial])
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.name.trim()) { setError('Name is required'); return }
+    setSaving(true)
+    const row = {
+      production_id: productionId,
+      name:          form.name.trim(),
+      contact_name:  form.contact_name.trim() || null,
+      phone:         form.phone.trim()        || null,
+      email:         form.email.trim()        || null,
+      address:       form.address.trim()      || null,
+      vat_no:        form.vat_no.trim()       || null,
+      notes:         form.notes.trim()        || null,
+    }
+    let err
+    if (mode === 'new') { const r = await supabase.from('ncc_agencies').insert(row); err = r.error }
+    else { const r = await supabase.from('ncc_agencies').update(row).eq('id', initial.id); err = r.error }
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+
+  async function handleDelete() {
+    if (!confirmDel) { setCd(true); return }
+    setDel(true)
+    const { error } = await supabase.from('ncc_agencies').delete().eq('id', initial.id)
+    setDel(false)
+    if (error) { setError(error.message); return }
+    onSaved()
+  }
+
+  const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
+  const fld = { marginBottom: '12px' }
+
+  return (
+    <>
+      {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '400px', background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>{mode === 'new' ? '🏢 New NCC Agency' : '✏️ Edit NCC Agency'}</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '16px 18px' }}>
+            <div style={fld}>
+              <label style={lbl}>Agency Name *</label>
+              <input value={form.name} onChange={e => set('name', e.target.value)} style={inp} placeholder="Rossi NCC, Bari Transfer..." required />
+            </div>
+            <div style={fld}>
+              <label style={lbl}>P.IVA / VAT No.</label>
+              <input value={form.vat_no} onChange={e => set('vat_no', e.target.value)} style={inp} placeholder="IT12345678901" />
+            </div>
+            <div style={{ marginBottom: '12px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '9px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📞 Contatti</div>
+              <div style={fld}>
+                <label style={lbl}>Nome Referente</label>
+                <input value={form.contact_name} onChange={e => set('contact_name', e.target.value)} style={inp} placeholder="Mario Rossi" />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                <div>
+                  <label style={lbl}>Telefono</label>
+                  <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} placeholder="+39 080..." type="tel" />
+                </div>
+                <div>
+                  <label style={lbl}>Email</label>
+                  <input value={form.email} onChange={e => set('email', e.target.value)} style={inp} placeholder="info@rossinct.it" type="email" />
+                </div>
+              </div>
+              <div style={fld}>
+                <label style={lbl}>Indirizzo</label>
+                <input value={form.address} onChange={e => set('address', e.target.value)} style={inp} placeholder="Via Roma 1, Bari" />
+              </div>
+            </div>
+            <div style={fld}>
+              <label style={lbl}>Note</label>
+              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '70px', resize: 'vertical' }} placeholder="Note aggiuntive..." />
+            </div>
+            {mode === 'new' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ fontSize: '16px', flexShrink: 0 }}>💡</span>
+                <div style={{ fontSize: '11px', color: '#0369a1', lineHeight: 1.5 }}>
+                  Salva prima l'agenzia — poi potrai aggiungere veicoli NCC e ordini di servizio.
+                </div>
+              </div>
+            )}
+            {mode === 'edit' && (
+              <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
+                {!confirmDel ? (
+                  <button type="button" onClick={handleDelete} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>Delete Agency</button>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>Delete this agency? Cannot be undone.</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setCd(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Cancel</button>
+                      <button type="button" onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '800' }}>{deleting ? '...' : 'Confirm Delete'}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+            <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Saving...' : mode === 'new' ? '+ Add Agency' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
+// ─── NccOrderSidebar ──────────────────────────────────────────
+function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, agencyId }) {
+  const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF']
+  const EMPTY = {
+    agency_id: agencyId || '',
+    vehicle_id: '',
+    order_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }),
+    service_type: 'TRANSFER',
+    description: '',
+    status: 'CONFIRMED',
+    driver_name: '',
+    driver_phone: '',
+    vehicle_type_requested: 'VAN',
+    vehicle_plate_actual: '',
+    km_start: '', km_end: '',
+    rate_type: 'FIXED',
+    rate_amount: '',
+    rate_currency: 'EUR',
+    hours_worked: '',
+    extras: [],
+    amount_net: '',
+    vat_pct: '',
+    amount_total: '',
+    invoice_no: '',
+    po_number: '',
+    notes: '',
+  }
+  const [form, setForm]     = useState(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+  const [confirmDel, setCd] = useState(false)
+  const [deleting, setDel]  = useState(false)
+  const [vehicles, setVehicles] = useState([])
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    if (!open || !productionId) return
+    setError(null); setCd(false)
+    supabase.from('vehicles').select('id, vehicle_type, ncc_agency_id').eq('production_id', productionId).eq('is_ncc', true).order('id')
+      .then(({ data }) => setVehicles(data || []))
+    if (mode === 'edit' && initial) {
+      setForm({
+        agency_id:             initial.agency_id             || agencyId || '',
+        vehicle_id:            initial.vehicle_id            || '',
+        order_date:            initial.order_date            || new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }),
+        service_type:          initial.service_type          || 'TRANSFER',
+        description:           initial.description           || '',
+        status:                initial.status                || 'CONFIRMED',
+        driver_name:           initial.driver_name           || '',
+        driver_phone:          initial.driver_phone          || '',
+        vehicle_type_requested: initial.vehicle_type_requested || 'VAN',
+        vehicle_plate_actual:  initial.vehicle_plate_actual  || '',
+        km_start:              initial.km_start              ?? '',
+        km_end:                initial.km_end                ?? '',
+        rate_type:             initial.rate_type             || 'FIXED',
+        rate_amount:           initial.rate_amount           ?? '',
+        rate_currency:         initial.rate_currency         || 'EUR',
+        hours_worked:          initial.hours_worked          ?? '',
+        extras:                Array.isArray(initial.extras) ? initial.extras : [],
+        amount_net:            initial.amount_net            ?? '',
+        vat_pct:               initial.vat_pct               ?? '',
+        amount_total:          initial.amount_total          ?? '',
+        invoice_no:            initial.invoice_no            || '',
+        po_number:             initial.po_number             || '',
+        notes:                 initial.notes                 || '',
+      })
+    } else {
+      setForm({ ...EMPTY, agency_id: agencyId || '', order_date: new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' }) })
+    }
+  }, [open, mode, initial, agencyId])
+
+  const kmTotal = form.km_end !== '' && form.km_start !== '' ? Math.max(0, parseFloat(form.km_end) - parseFloat(form.km_start)) : null
+  const extrasTotal = (form.extras || []).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+  const computedNet = (() => {
+    if (form.amount_net !== '') return parseFloat(form.amount_net) || 0
+    const rate = parseFloat(form.rate_amount) || 0
+    const hours = parseFloat(form.hours_worked) || 0
+    if (form.rate_type === 'HOURLY' && rate > 0 && hours > 0) return rate * hours
+    if (form.rate_type === 'KM' && rate > 0 && kmTotal > 0) return rate * kmTotal
+    return rate
+  })()
+  const computedTotal = computedNet > 0 && form.vat_pct !== ''
+    ? computedNet * (1 + parseFloat(form.vat_pct) / 100)
+    : computedNet
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.agency_id) { setError('Agency is required'); return }
+    if (!form.order_date) { setError('Date is required'); return }
+    setSaving(true)
+    const row = {
+      production_id:          productionId,
+      agency_id:              form.agency_id,
+      vehicle_id:             form.vehicle_id || null,
+      order_date:             form.order_date,
+      service_type:           form.service_type || 'TRANSFER',
+      description:            form.description.trim() || null,
+      status:                 form.status || 'CONFIRMED',
+      driver_name:            form.driver_name.trim() || null,
+      driver_phone:           form.driver_phone.trim() || null,
+      vehicle_type_requested: form.vehicle_type_requested || null,
+      vehicle_plate_actual:   form.vehicle_plate_actual.trim().toUpperCase() || null,
+      km_start:               form.km_start !== '' ? parseFloat(form.km_start) : null,
+      km_end:                 form.km_end   !== '' ? parseFloat(form.km_end)   : null,
+      rate_type:              form.rate_type || 'FIXED',
+      rate_amount:            form.rate_amount !== '' ? parseFloat(form.rate_amount) : null,
+      rate_currency:          form.rate_currency || 'EUR',
+      hours_worked:           form.hours_worked !== '' ? parseFloat(form.hours_worked) : null,
+      extras:                 form.extras.length > 0 ? form.extras : [],
+      amount_net:             form.amount_net !== '' ? parseFloat(form.amount_net) : (computedNet || null),
+      vat_pct:                form.vat_pct !== '' ? parseFloat(form.vat_pct) : null,
+      amount_total:           form.amount_total !== '' ? parseFloat(form.amount_total) : (computedTotal || null),
+      invoice_no:             form.invoice_no.trim() || null,
+      po_number:              form.po_number.trim()  || null,
+      notes:                  form.notes.trim()      || null,
+    }
+    let err
+    if (mode === 'new') { const r = await supabase.from('ncc_orders').insert(row); err = r.error }
+    else { const r = await supabase.from('ncc_orders').update(row).eq('id', initial.id); err = r.error }
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+
+  async function handleDelete() {
+    if (!confirmDel) { setCd(true); return }
+    setDel(true)
+    const { error } = await supabase.from('ncc_orders').delete().eq('id', initial.id)
+    setDel(false)
+    if (error) { setError(error.message); return }
+    onSaved()
+  }
+
+  const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
+  const fld = { marginBottom: '12px' }
+  const SERVICE_TYPES = ['TRANSFER', 'DAY', 'HOURLY', 'OTHER']
+  const RATE_TYPES = ['FIXED', 'HOURLY', 'KM', 'DAILY']
+  const STATUS_TYPES = ['PENDING', 'CONFIRMED', 'DONE', 'CANCELLED']
+
+  return (
+    <>
+      {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '440px', background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>{mode === 'new' ? '📋 New NCC Order' : '✏️ Edit NCC Order'}</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '16px 18px' }}>
+
+            {/* Data + Service Type */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>Data *</label>
+                <input type="date" value={form.order_date} onChange={e => set('order_date', e.target.value)} style={inp} required />
+              </div>
+              <div>
+                <label style={lbl}>Tipo Servizio</label>
+                <select value={form.service_type} onChange={e => set('service_type', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+                  {SERVICE_TYPES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Status */}
+            <div style={fld}>
+              <label style={lbl}>Status</label>
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                {STATUS_TYPES.map(s => {
+                  const active = form.status === s
+                  const colors = s === 'CONFIRMED' ? { bg: '#f0fdf4', color: '#15803d', border: '#86efac' }
+                    : s === 'DONE'      ? { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' }
+                    : s === 'PENDING'   ? { bg: '#fefce8', color: '#a16207', border: '#fde68a' }
+                    : { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' }
+                  return (
+                    <button key={s} type="button" onClick={() => set('status', s)}
+                      style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? colors.border : '#e2e8f0'}`, background: active ? colors.bg : 'white', color: active ? colors.color : '#94a3b8' }}>
+                      {s}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div style={fld}>
+              <label style={lbl}>Descrizione</label>
+              <input value={form.description} onChange={e => set('description', e.target.value)} style={inp} placeholder="Aeroporto BRI → Hotel Excelsior..." />
+            </div>
+
+            {/* Veicolo collegato */}
+            <div style={fld}>
+              <label style={lbl}>Veicolo NCC (Fleet)</label>
+              <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+                <option value="">— Nessun veicolo collegato —</option>
+                {vehicles.map(v => <option key={v.id} value={v.id}>{v.id} ({v.vehicle_type})</option>)}
+              </select>
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Collega a un veicolo NCC già in flotta (opzionale)</div>
+            </div>
+
+            {/* Driver + Targa */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #bae6fd', background: '#f0f9ff' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Driver / Mezzo</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Nome Driver</label>
+                  <input value={form.driver_name} onChange={e => set('driver_name', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="Mario Rossi" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Telefono Driver</label>
+                  <input value={form.driver_phone} onChange={e => set('driver_phone', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="+39 333..." type="tel" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Tipo Mezzo Richiesto</label>
+                  <select value={form.vehicle_type_requested} onChange={e => set('vehicle_type_requested', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#bae6fd', background: 'white' }}>
+                    {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(t => <option key={t} value={t}>{TYPE_ICON[t]} {t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Targa Effettiva</label>
+                  <input value={form.vehicle_plate_actual} onChange={e => set('vehicle_plate_actual', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', borderColor: '#bae6fd' }} placeholder="AB123CD" />
+                </div>
+              </div>
+            </div>
+
+            {/* KM */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📍 Chilometri</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={lbl}>KM Start</label>
+                  <input type="number" step="0.1" value={form.km_start} onChange={e => set('km_start', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0" />
+                </div>
+                <div>
+                  <label style={lbl}>KM End</label>
+                  <input type="number" step="0.1" value={form.km_end} onChange={e => set('km_end', e.target.value)} style={{ ...inp, fontFamily: 'monospace' }} placeholder="0" />
+                </div>
+                <div>
+                  <label style={lbl}>KM Totali</label>
+                  <div style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontFamily: 'monospace', fontWeight: '700', color: kmTotal > 0 ? '#0f172a' : '#cbd5e1', background: '#f8fafc' }}>
+                    {kmTotal !== null ? kmTotal.toFixed(1) : '—'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Costi */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #fde68a', background: '#fefce8' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#a16207', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>💰 Costi</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Tipo Tariffa</label>
+                  <select value={form.rate_type} onChange={e => set('rate_type', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#fde68a', background: 'white' }}>
+                    {RATE_TYPES.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Tariffa</label>
+                  <input type="number" step="0.01" value={form.rate_amount} onChange={e => set('rate_amount', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="0.00" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Valuta</label>
+                  <select value={form.rate_currency} onChange={e => set('rate_currency', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#fde68a', background: 'white' }}>
+                    {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Ore Lavorate</label>
+                  <input type="number" step="0.25" value={form.hours_worked} onChange={e => set('hours_worked', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="0.0" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>VAT %</label>
+                  <input type="number" step="0.01" value={form.vat_pct} onChange={e => set('vat_pct', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="22" />
+                </div>
+              </div>
+
+              {/* Extras */}
+              <div style={{ marginBottom: '8px' }}>
+                <label style={{ ...lbl, color: '#a16207' }}>Extras</label>
+                {(form.extras || []).map((ex, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 100px auto', gap: '6px', marginBottom: '4px' }}>
+                    <input value={ex.label} onChange={e => { const next = [...form.extras]; next[idx] = { ...next[idx], label: e.target.value }; set('extras', next) }} style={{ ...inp, fontSize: '12px', borderColor: '#fde68a' }} placeholder="Pedaggio, parcheggio..." />
+                    <input type="number" step="0.01" value={ex.amount} onChange={e => { const next = [...form.extras]; next[idx] = { ...next[idx], amount: e.target.value }; set('extras', next) }} style={{ ...inp, fontSize: '12px', fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="0.00" />
+                    <button type="button" onClick={() => set('extras', form.extras.filter((_, i) => i !== idx))} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fff1f2', color: '#dc2626', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => set('extras', [...(form.extras || []), { label: '', amount: '' }])}
+                  style={{ width: '100%', padding: '5px', borderRadius: '7px', border: '1px dashed #fde68a', background: 'transparent', color: '#a16207', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                  + Add Extra
+                </button>
+              </div>
+
+              {/* Importi manuali override */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Importo Netto (override)</label>
+                  <input type="number" step="0.01" value={form.amount_net} onChange={e => set('amount_net', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder={computedNet > 0 ? computedNet.toFixed(2) : '0.00'} />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Totale (override)</label>
+                  <input type="number" step="0.01" value={form.amount_total} onChange={e => set('amount_total', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder={computedTotal > 0 ? computedTotal.toFixed(2) : '0.00'} />
+                </div>
+              </div>
+
+              {/* Preview */}
+              {computedNet > 0 && (
+                <div style={{ padding: '8px 10px', background: 'white', border: '1px solid #fde68a', borderRadius: '7px', fontSize: '11px', color: '#92400e' }}>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    <span>Netto: <strong>{form.rate_currency} {computedNet.toFixed(2)}</strong></span>
+                    {form.vat_pct && <span>+ VAT: <strong>{form.rate_currency} {computedTotal.toFixed(2)}</strong></span>}
+                    {extrasTotal > 0 && <span>Extras: <strong>{form.rate_currency} {extrasTotal.toFixed(2)}</strong></span>}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Fatturazione */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>N° Fattura</label>
+                <input value={form.invoice_no} onChange={e => set('invoice_no', e.target.value)} style={inp} placeholder="FT-2026-001" />
+              </div>
+              <div>
+                <label style={lbl}>P.O. Number</label>
+                <input value={form.po_number} onChange={e => set('po_number', e.target.value)} style={inp} placeholder="P.O. ref..." />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label style={lbl}>Note</label>
+              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '60px', resize: 'vertical' }} placeholder="Note aggiuntive..." />
+            </div>
+
+            {mode === 'edit' && (
+              <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
+                {!confirmDel ? (
+                  <button type="button" onClick={handleDelete} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>Delete Order</button>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>Delete this order? Cannot be undone.</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setCd(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Cancel</button>
+                      <button type="button" onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '800' }}>{deleting ? '...' : 'Confirm Delete'}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+            <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Saving...' : mode === 'new' ? '+ Add Order' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
+// ─── NccTab ───────────────────────────────────────────────────
+function NccTab({ productionId, isMobile, openTriggerRef }) {
+  const [agencies, setAgencies]         = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [agencySidebarOpen, setAgencySidebarOpen] = useState(false)
+  const [agencySidebarMode, setAgencySidebarMode] = useState('new')
+  const [agencyTarget, setAgencyTarget] = useState(null)
+  const [orderSidebarOpen, setOrderSidebarOpen] = useState(false)
+  const [orderSidebarMode, setOrderSidebarMode] = useState('new')
+  const [orderTarget, setOrderTarget]   = useState(null)
+  const [orderAgencyId, setOrderAgencyId] = useState(null)
+  const [expandedAgency, setExpandedAgency] = useState(null)
+  const [orders, setOrders]             = useState({}) // agencyId → orders[]
+
+  const load = useCallback(async () => {
+    if (!productionId) return
+    setLoading(true)
+    const { data } = await supabase
+      .from('ncc_agencies')
+      .select(`id, name, contact_name, phone, email, address, vat_no, notes,
+        vehicles:vehicles(id, vehicle_type, ncc_driver_name, active)`)
+      .eq('production_id', productionId)
+      .order('name')
+    setAgencies(data || [])
+    setLoading(false)
+  }, [productionId])
+
+  async function loadOrders(agencyId) {
+    const { data } = await supabase
+      .from('ncc_orders')
+      .select('*')
+      .eq('agency_id', agencyId)
+      .eq('production_id', productionId)
+      .order('order_date', { ascending: false })
+    setOrders(prev => ({ ...prev, [agencyId]: data || [] }))
+  }
+
+  function toggleAgency(id) {
+    const next = expandedAgency === id ? null : id
+    setExpandedAgency(next)
+    if (next && !orders[next]) loadOrders(next)
+  }
+
+  function openNewAgency()   { setAgencySidebarMode('new');  setAgencyTarget(null);    setAgencySidebarOpen(true) }
+  function openEditAgency(a) { setAgencySidebarMode('edit'); setAgencyTarget(a);       setAgencySidebarOpen(true) }
+  function onAgencySaved()   { setAgencySidebarOpen(false);  load() }
+
+  function openNewOrder(agencyId) { setOrderSidebarMode('new'); setOrderTarget(null); setOrderAgencyId(agencyId); setOrderSidebarOpen(true) }
+  function openEditOrder(o)       { setOrderSidebarMode('edit'); setOrderTarget(o);   setOrderAgencyId(o.agency_id); setOrderSidebarOpen(true) }
+  function onOrderSaved()         { setOrderSidebarOpen(false); if (orderAgencyId) loadOrders(orderAgencyId) }
+
+  useEffect(() => { load() }, [load])
+  useEffect(() => { if (openTriggerRef) openTriggerRef.current = openNewAgency }, [openTriggerRef])
+
+  function fmtDate(s) {
+    if (!s) return '—'
+    return new Date(s + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
+  }
+
+  function statusColor(s) {
+    if (s === 'CONFIRMED') return { bg: '#f0fdf4', color: '#15803d', border: '#86efac' }
+    if (s === 'DONE')      return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' }
+    if (s === 'PENDING')   return { bg: '#fefce8', color: '#a16207', border: '#fde68a' }
+    return { bg: '#fef2f2', color: '#dc2626', border: '#fecaca' }
+  }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
+
+  if (agencies.length === 0) return (
+    <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+      <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏢</div>
+      <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>Nessuna agenzia NCC</div>
+      <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Clicca + Add Agency per iniziare</div>
+      <button onClick={openNewAgency} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#0f2340', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>+ Add Agency</button>
+      <NccAgencySidebar open={agencySidebarOpen} mode={agencySidebarMode} initial={agencyTarget} onClose={() => setAgencySidebarOpen(false)} onSaved={onAgencySaved} productionId={productionId} />
+    </div>
+  )
+
+  const grandTotal = Object.values(orders).flat().reduce((s, o) => s + (parseFloat(o.amount_total) || 0), 0)
+
+  return (
+    <div>
+      {/* Summary bar */}
+      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '12px', color: '#374151' }}>Agenzie: <span style={{ fontWeight: '800', color: '#0f172a' }}>{agencies.length}</span></div>
+        <div style={{ fontSize: '12px', color: '#374151' }}>Ordini caricati: <span style={{ fontWeight: '800', color: '#0f2340' }}>{Object.values(orders).flat().length}</span></div>
+        {grandTotal > 0 && <div style={{ fontSize: '12px', color: '#374151' }}>Totale spesa: <span style={{ fontWeight: '800', color: '#dc2626', fontFamily: 'monospace' }}>EUR {grandTotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</span></div>}
+      </div>
+
+      {/* Agency cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {agencies.map(a => {
+          const isExpanded = expandedAgency === a.id
+          const agencyOrders = orders[a.id] || []
+          const agencyTotal = agencyOrders.reduce((s, o) => s + (parseFloat(o.amount_total) || 0), 0)
+          const nccVehicles = (a.vehicles || []).filter(v => v.active)
+
+          return (
+            <div key={a.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderTop: '3px solid #0369a1', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => toggleAgency(a.id)}>
+                <span style={{ fontSize: '20px' }}>🏢</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', marginBottom: '3px' }}>{a.name}</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '12px', color: '#64748b' }}>
+                    {a.contact_name  && <span>👤 {a.contact_name}</span>}
+                    {a.phone         && <span>📞 {a.phone}</span>}
+                    {a.email         && <span>📧 {a.email}</span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: '700' }}>
+                    {nccVehicles.length} veicoli
+                  </span>
+                  {agencyOrders.length > 0 && (
+                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
+                      {agencyOrders.length} ordini
+                    </span>
+                  )}
+                  {agencyTotal > 0 && (
+                    <span style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: '700', color: '#dc2626' }}>
+                      EUR {agencyTotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}
+                    </span>
+                  )}
+                  <button type="button" onClick={e => { e.stopPropagation(); openEditAgency(a) }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', padding: '0 4px' }}>✎</button>
+                  <span style={{ color: '#94a3b8', fontSize: '14px', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.15s' }}>▾</span>
+                </div>
+              </div>
+
+              {/* Expanded: veicoli + ordini */}
+              {isExpanded && (
+                <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 16px', background: '#f8fafc' }}>
+
+                  {/* Veicoli NCC in flotta */}
+                  {nccVehicles.length > 0 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>🚐 Veicoli in Flotta</div>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {nccVehicles.map(v => (
+                          <span key={v.id} style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                            {TYPE_ICON[v.vehicle_type] || '🚐'} {v.id}
+                            {v.ncc_driver_name && <span style={{ fontWeight: '400', marginLeft: '4px', color: '#64748b' }}>· {v.ncc_driver_name}</span>}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ordini */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📋 Ordini di Servizio</div>
+                    <button onClick={() => openNewOrder(a.id)}
+                      style={{ padding: '4px 12px', borderRadius: '7px', border: '1px solid #0369a1', background: '#f0f9ff', color: '#0369a1', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                      + New Order
+                    </button>
+                  </div>
+
+                  {agencyOrders.length === 0 ? (
+                    <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', padding: '8px 0' }}>Nessun ordine ancora</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {agencyOrders.map(o => {
+                        const sc = statusColor(o.status)
+                        return (
+                          <div key={o.id} onClick={() => openEditOrder(o)}
+                            style={{ background: 'white', border: '1px solid #e2e8f0', borderLeft: `3px solid ${sc.border}`, borderRadius: '0 8px 8px 0', padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f2340', minWidth: '80px' }}>{fmtDate(o.order_date)}</div>
+                            <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 7px', borderRadius: '999px', background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>{o.status}</span>
+                            <span style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '5px', background: '#f1f5f9', color: '#475569', fontWeight: '600' }}>{o.service_type}</span>
+                            {o.description && <span style={{ fontSize: '12px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.description}</span>}
+                            {o.driver_name && <span style={{ fontSize: '11px', color: '#64748b' }}>👤 {o.driver_name}</span>}
+                            {o.vehicle_plate_actual && <span style={{ fontSize: '11px', fontFamily: 'monospace', color: '#374151' }}>{o.vehicle_plate_actual}</span>}
+                            {o.amount_total > 0 && <span style={{ fontSize: '12px', fontFamily: 'monospace', fontWeight: '700', color: '#dc2626', marginLeft: 'auto' }}>EUR {parseFloat(o.amount_total).toLocaleString('en-GB', { minimumFractionDigits: 2 })}</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <NccAgencySidebar open={agencySidebarOpen} mode={agencySidebarMode} initial={agencyTarget} onClose={() => setAgencySidebarOpen(false)} onSaved={onAgencySaved} productionId={productionId} />
+      <NccOrderSidebar open={orderSidebarOpen} mode={orderSidebarMode} initial={orderTarget} onClose={() => setOrderSidebarOpen(false)} onSaved={onOrderSaved} productionId={productionId} agencyId={orderAgencyId} />
+    </div>
+  )
+}
+
 // ─── NccVehicleSidebar ────────────────────────────────────────
 function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef }) {
   const EMPTY = {
@@ -3146,10 +3858,7 @@ export default function VehiclesPage() {
       )}
       {activeTab === 'ncc' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏢</div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>NCC — coming soon</div>
-          </div>
+          <NccTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={nccAgencySidebarTriggerRef} />
         </div>
       )}
       {activeTab === 'comodato' && (
