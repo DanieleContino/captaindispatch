@@ -69,11 +69,12 @@ export default function DashboardLayout({ children }) {
   }, [pathname, router])
 
   return (
-    <div className="dashboard-root" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+    <div className="dashboard-root" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'clip' }}>
       {/* Navbar fuori dal contenitore scrollabile: la scrollbar parte sotto di essa */}
       <Navbar currentPath={pathname} className="no-print" />
       {/* Area contenuto scrollabile — la scrollbar inizia qui, sotto la navbar */}
-      <div className="dashboard-content" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      {/* --dashboard-sticky-top: unica fonte di verità per top dei toolbar sticky nelle pagine */}
+      <div className="dashboard-content" style={{ flex: 1, overflowY: 'auto', minHeight: 0, '--dashboard-sticky-top': '0px' }}>
         {children}
       </div>
     </div>

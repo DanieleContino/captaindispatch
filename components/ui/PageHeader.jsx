@@ -10,9 +10,10 @@ export function PageHeader({ left, right, className = '' }) {
   return (
     <div
       className={
-        'bg-white border-b border-slate-200 px-6 h-[52px] flex items-center justify-between gap-3 sticky top-[52px] z-[29] ' +
+        'bg-white border-b border-slate-200 px-6 h-[52px] flex items-center justify-between gap-3 sticky z-[29] ' +
         className
       }
+      style={{ top: 0 }}
     >
       <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
         {left}
