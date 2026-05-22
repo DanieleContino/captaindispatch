@@ -950,8 +950,26 @@ function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, producti
               <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '80px', resize: 'vertical' }} placeholder="Additional notes..." />
             </div>
 
+            {mode === 'new' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ fontSize: '16px', flexShrink: 0 }}>💡</span>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', marginBottom: '3px' }}>
+                    Save the supplier first to add locations and vouchers
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.5 }}>
+                    Once saved, you can add pickup/dropoff locations and manage vouchers directly from the supplier card.
+                  </div>
+                </div>
+              </div>
+            )}
+
             {mode === 'edit' && initial?.id && (
               <SupplierLocationsAccordion supplierId={initial.id} productionId={productionId} />
+            )}
+
+            {mode === 'edit' && initial?.id && (
+              <SupplierVouchersAccordion supplierId={initial.id} productionId={productionId} />
             )}
 
             {mode === 'edit' && (
