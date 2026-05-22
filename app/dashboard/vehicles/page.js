@@ -558,6 +558,7 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
               📅 {availLabel}
             </span>
           )}
+          {v.is_rental && <span style={{ fontSize: '10px', fontWeight: '700', color: '#a16207', background: '#fefce8', padding: '1px 8px', borderRadius: '999px', border: '1px solid #fde68a' }}>🔑 RENTAL</span>}
           {!v.active && <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #e2e8f0' }}>INATTIVO</span>}
           {v.in_transport === false && <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '1px 8px', borderRadius: '999px', border: '1px solid #cbd5e1' }}>🚐 SD</span>}
           {v.preferred_dept && (
