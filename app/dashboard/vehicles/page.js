@@ -3208,7 +3208,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
 }
 
 // ─── NccTab ───────────────────────────────────────────────────
-function NccTab({ productionId, isMobile, openTriggerRef }) {
+function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
   const [agencies, setAgencies]         = useState([])
   const [loading, setLoading]           = useState(true)
   const [agencySidebarOpen, setAgencySidebarOpen] = useState(false)
@@ -3347,7 +3347,9 @@ function NccTab({ productionId, isMobile, openTriggerRef }) {
                       <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>🚐 Veicoli in Flotta</div>
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {nccVehicles.map(v => (
-                          <span key={v.id} style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                          <span key={v.id}
+                            onClick={() => onEditVehicle && onEditVehicle(v)}
+                            style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', cursor: onEditVehicle ? 'pointer' : 'default' }}>
                             {TYPE_ICON[v.vehicle_type] || '🚐'} {v.id}
                             {v.ncc_driver_name && <span style={{ fontWeight: '400', marginLeft: '4px', color: '#64748b' }}>· {v.ncc_driver_name}</span>}
                           </span>
@@ -3573,7 +3575,7 @@ function ComodatoExpenseSidebar({ open, mode, initial, onClose, onSaved, product
 }
 
 // ─── ComodatoTab ──────────────────────────────────────────────
-function ComodatoTab({ productionId, isMobile, openTriggerRef }) {
+function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [] }) {
   const [vehicles, setVehicles]           = useState([])
   const [loading, setLoading]             = useState(true)
   const [expenseSidebarOpen, setExpenseSidebarOpen] = useState(false)
@@ -3662,6 +3664,10 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef }) {
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     {v.driver_name && <span>👤 {v.driver_name}</span>}
+                    {v.comodato_owner_crew_id && (() => {
+                      const owner = crewList.find(c => c.id === v.comodato_owner_crew_id)
+                      return owner ? <span>🤝 {owner.full_name}{owner.department ? ` — ${owner.department}` : ''}</span> : null
+                    })()}
                     {v.comodato_rate_per_km && <span>📍 EUR {v.comodato_rate_per_km}/km</span>}
                   </div>
                 </div>
@@ -4267,12 +4273,12 @@ export default function VehiclesPage() {
       )}
       {activeTab === 'ncc' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <NccTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={nccAgencySidebarTriggerRef} />
+          <NccTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={nccAgencySidebarTriggerRef} onEditVehicle={openEdit} />
         </div>
       )}
       {activeTab === 'comodato' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <ComodatoTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={comodatoVehicleSidebarTriggerRef} />
+          <ComodatoTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={comodatoVehicleSidebarTriggerRef} crewList={crewList} />
         </div>
       )}
       {activeTab === 'report' && (
