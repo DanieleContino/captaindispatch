@@ -3863,10 +3863,7 @@ export default function VehiclesPage() {
       )}
       {activeTab === 'comodato' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '40px', marginBottom: '10px' }}>🤝</div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>Comodato — coming soon</div>
-          </div>
+          <ComodatoTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={comodatoVehicleSidebarTriggerRef} />
         </div>
       )}
       {activeTab === 'report' && (
