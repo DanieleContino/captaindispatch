@@ -3299,8 +3299,8 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
   if (agencies.length === 0) return (
     <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
       <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏢</div>
-      <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>Nessuna agenzia NCC</div>
-      <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Clicca + Add Agency per iniziare</div>
+      <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>No NCC agencies yet</div>
+      <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Click + Add Agency to get started</div>
       <button onClick={openNewAgency} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#0f2340', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>+ Add Agency</button>
       <NccAgencySidebar open={agencySidebarOpen} mode={agencySidebarMode} initial={agencyTarget} onClose={() => setAgencySidebarOpen(false)} onSaved={onAgencySaved} productionId={productionId} />
     </div>
@@ -3312,9 +3312,9 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
     <div>
       {/* Summary bar */}
       <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-        <div style={{ fontSize: '12px', color: '#374151' }}>Agenzie: <span style={{ fontWeight: '800', color: '#0f172a' }}>{agencies.length}</span></div>
-        <div style={{ fontSize: '12px', color: '#374151' }}>Ordini caricati: <span style={{ fontWeight: '800', color: '#0f2340' }}>{Object.values(orders).flat().length}</span></div>
-        {grandTotal > 0 && <div style={{ fontSize: '12px', color: '#374151' }}>Totale spesa: <span style={{ fontWeight: '800', color: '#dc2626', fontFamily: 'monospace' }}>EUR {grandTotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</span></div>}
+        <div style={{ fontSize: '12px', color: '#374151' }}>Agencies: <span style={{ fontWeight: '800', color: '#0f172a' }}>{agencies.length}</span></div>
+        <div style={{ fontSize: '12px', color: '#374151' }}>Orders loaded: <span style={{ fontWeight: '800', color: '#0f2340' }}>{Object.values(orders).flat().length}</span></div>
+        {grandTotal > 0 && <div style={{ fontSize: '12px', color: '#374151' }}>Total spend: <span style={{ fontWeight: '800', color: '#dc2626', fontFamily: 'monospace' }}>EUR {grandTotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</span></div>}
       </div>
 
       {/* Agency cards */}
@@ -3340,11 +3340,11 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
                 </div>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', fontWeight: '700' }}>
-                    {nccVehicles.length} veicoli
+                    {nccVehicles.length} vehicle{nccVehicles.length !== 1 ? 's' : ''}
                   </span>
                   {agencyOrders.length > 0 && (
                     <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
-                      {agencyOrders.length} ordini
+                      {agencyOrders.length} order{agencyOrders.length !== 1 ? 's' : ''}
                     </span>
                   )}
                   {agencyTotal > 0 && (
@@ -3365,7 +3365,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
                   {/* Veicoli NCC in flotta */}
                   {nccVehicles.length > 0 && (
                     <div style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>🚐 Veicoli in Flotta</div>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>🚐 Vehicles in Fleet</div>
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                         {nccVehicles.map(v => (
                           <span key={v.id}
@@ -3381,7 +3381,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
 
                   {/* Ordini */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📋 Ordini di Servizio</div>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📋 Service Orders</div>
                     <button onClick={() => openNewOrder(a.id)}
                       style={{ padding: '4px 12px', borderRadius: '7px', border: '1px solid #0369a1', background: '#f0f9ff', color: '#0369a1', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
                       + New Order
@@ -3389,7 +3389,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
                   </div>
 
                   {agencyOrders.length === 0 ? (
-                    <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', padding: '8px 0' }}>Nessun ordine ancora</div>
+                    <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', padding: '8px 0' }}>No orders yet</div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {agencyOrders.map(o => {
