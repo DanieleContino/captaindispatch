@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useT } from '../../../lib/i18n'
@@ -780,7 +780,7 @@ function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, producti
 }
 
 // ─── RentalSuppliersTab ───────────────────────────────────────
-function RentalSuppliersTab({ productionId, isMobile }) {
+function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
   const [suppliers, setSuppliers] = useState([])
   const [loading, setLoading]     = useState(true)
   const [supplierSidebarOpen, setSupplierSidebarOpen] = useState(false)
@@ -811,6 +811,10 @@ function RentalSuppliersTab({ productionId, isMobile }) {
   )
 
   function openNewSupplier()    { setSupplierSidebarMode('new');  setSupplierTarget(null);    setSupplierSidebarOpen(true) }
+
+  useEffect(() => {
+    if (openTriggerRef) openTriggerRef.current = openNewSupplier
+  }, [openTriggerRef])
   function openEditSupplier(s)  { setSupplierSidebarMode('edit'); setSupplierTarget(s);       setSupplierSidebarOpen(true) }
   function onSupplierSaved()    { setSupplierSidebarOpen(false); load() }
 
@@ -966,6 +970,7 @@ export default function VehiclesPage() {
   const [bulkConfirm, setBulkConfirm] = useState(false)
   const [crewList, setCrewList] = useState([])
   const [activeTab, setActiveTab] = useState('owned') // 'owned' | 'rental' | 'suppliers' | 'report'
+  const supplierSidebarTriggerRef = React.useRef(null)
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
@@ -1098,7 +1103,7 @@ export default function VehiclesPage() {
             </button>
           )}
           {activeTab === 'suppliers' && (
-            <button onClick={() => alert('Add Supplier — coming soon')} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+            <button onClick={() => supplierSidebarTriggerRef.current && supplierSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
               + Add Supplier
             </button>
           )}
@@ -1166,7 +1171,7 @@ export default function VehiclesPage() {
       )}
       {activeTab === 'suppliers' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <RentalSuppliersTab productionId={PRODUCTION_ID} isMobile={isMobile} />
+          <RentalSuppliersTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={supplierSidebarTriggerRef} />
         </div>
       )}
       {activeTab === 'report' && (
