@@ -1243,6 +1243,616 @@ function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, producti
   )
 }
 
+// ─── RentalVehicleSidebar ────────────────────────────────────
+function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], initialSupplierId = null }) {
+  const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'AUD', 'CAD', 'NOK', 'SEK', 'DKK']
+  const EMPTY = {
+    id: '', vehicle_type: 'VAN', vehicle_class: [],
+    rental_brand: '', rental_model: '', license_plate: '',
+    rental_supplier_id: initialSupplierId || '',
+    rental_pickup_location_id: '', rental_dropoff_location_id: '',
+    rental_start: '', rental_end: '',
+    rental_status: 'OPEN',
+    rental_billing_unit: 'DAY', rental_quantity: '',
+    rental_daily_rate: '', rental_vat_pct: '',
+    rental_extras: [],
+    rental_currency: 'EUR',
+    rental_contract_no: '', rental_voucher_id: '',
+    rental_po_number: '', rental_invoice_no: '',
+    driver_name: '', driver_crew_id: '', driver_dept: '',
+    rental_second_driver: '', rental_second_driver_crew_id: '',
+    rental_pickup_location_id: '', rental_dropoff_location_id: '',
+    rental_insurance_casco: false,
+    rental_insurance_limit: '', rental_insurance_excess: '',
+    rental_insurance_exp: '',
+    rental_km_included: '',
+    rental_notes: '',
+    active: true, in_transport: true,
+  }
+
+  const [form, setForm]       = useState(EMPTY)
+  const [saving, setSaving]   = useState(false)
+  const [error, setError]     = useState(null)
+  const [confirmDel, setCd]   = useState(false)
+  const [deleting, setDel]    = useState(false)
+  const [idManuallyEdited, setIdManuallyEdited] = useState(false)
+
+  // Supplier data
+  const [suppliers, setSuppliers]   = useState([])
+  const [locations, setLocations]   = useState([])
+  const [vouchers,  setVouchers]    = useState([])
+
+  // Driver autocomplete
+  const [driverSearch,      setDriverSearch]      = useState('')
+  const [showDriverSugg,    setShowDriverSugg]    = useState(false)
+  const [driver2Search,     setDriver2Search]     = useState('')
+  const [showDriver2Sugg,   setShowDriver2Sugg]   = useState(false)
+  const [driverNotFound,    setDriverNotFound]    = useState(false)
+  const [driver2NotFound,   setDriver2NotFound]   = useState(false)
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  // Load suppliers on open
+  useEffect(() => {
+    if (!open || !productionId) return
+    supabase.from('rental_suppliers').select('id, name').eq('production_id', productionId).order('name')
+      .then(({ data }) => setSuppliers(data || []))
+  }, [open, productionId])
+
+  // Load locations + vouchers when supplier changes
+  useEffect(() => {
+    if (!form.rental_supplier_id || !productionId) { setLocations([]); setVouchers([]); return }
+    supabase.from('rental_supplier_locations').select('id, name').eq('supplier_id', form.rental_supplier_id).eq('production_id', productionId).order('name')
+      .then(({ data }) => setLocations(data || []))
+    supabase.from('rental_vouchers').select('id, voucher_no, batch_code, amount, currency').eq('supplier_id', form.rental_supplier_id).eq('production_id', productionId).eq('used', false).order('created_at')
+      .then(({ data }) => setVouchers(data || []))
+  }, [form.rental_supplier_id, productionId])
+
+  useEffect(() => {
+    if (!open) return
+    setError(null); setCd(false)
+    setDriverSearch(''); setDriver2Search('')
+    setShowDriverSugg(false); setShowDriver2Sugg(false)
+    setDriverNotFound(false); setDriver2NotFound(false)
+    if (mode === 'edit' && initial) {
+      setForm({
+        id:                         initial.id                        || '',
+        vehicle_type:               initial.vehicle_type              || 'VAN',
+        vehicle_class:              Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []),
+        rental_brand:               initial.rental_brand              || '',
+        rental_model:               initial.rental_model              || '',
+        license_plate:              initial.license_plate             || '',
+        rental_supplier_id:         initial.rental_supplier_id        || '',
+        rental_pickup_location_id:  initial.rental_pickup_location_id || '',
+        rental_dropoff_location_id: initial.rental_dropoff_location_id|| '',
+        rental_start:               initial.rental_start              || '',
+        rental_end:                 initial.rental_end                || '',
+        rental_status:              initial.rental_status             || 'OPEN',
+        rental_billing_unit:        initial.rental_billing_unit       || 'DAY',
+        rental_quantity:            initial.rental_quantity           ?? '',
+        rental_daily_rate:          initial.rental_daily_rate         ?? '',
+        rental_vat_pct:             initial.rental_vat_pct            ?? '',
+        rental_extras:              Array.isArray(initial.rental_extras) ? initial.rental_extras : [],
+        rental_currency:            initial.rental_currency           || 'EUR',
+        rental_contract_no:         initial.rental_contract_no        || '',
+        rental_voucher_id:          initial.rental_voucher_id         || '',
+        rental_po_number:           initial.rental_po_number          || '',
+        rental_invoice_no:          initial.rental_invoice_no         || '',
+        driver_name:                initial.driver_name               || '',
+        driver_crew_id:             initial.driver_crew_id            || '',
+        driver_dept:                initial.driver_dept               || '',
+        rental_second_driver:       initial.rental_second_driver      || '',
+        rental_second_driver_crew_id: initial.rental_second_driver_crew_id || '',
+        rental_insurance_casco:     initial.rental_insurance_casco    || false,
+        rental_insurance_limit:     initial.rental_insurance_limit    ?? '',
+        rental_insurance_excess:    initial.rental_insurance_excess   ?? '',
+        rental_insurance_exp:       initial.rental_insurance_exp      || '',
+        rental_km_included:         initial.rental_km_included        || '',
+        rental_notes:               initial.rental_notes              || '',
+        active:                     initial.active !== false,
+        in_transport:               initial.in_transport !== false,
+      })
+      setDriverSearch(initial.driver_name || '')
+      setDriver2Search(initial.rental_second_driver || '')
+      setIdManuallyEdited(false)
+    } else {
+      setForm({ ...EMPTY, rental_supplier_id: initialSupplierId || '', id: suggestId('CAR', vehicles) })
+      setIdManuallyEdited(false)
+    }
+  }, [open, mode, initial])
+
+  // Computed cost preview
+  const days = (() => {
+    if (!form.rental_start || !form.rental_end) return 0
+    const a = new Date(form.rental_start + 'T12:00:00Z')
+    const b = new Date(form.rental_end   + 'T12:00:00Z')
+    return Math.max(0, Math.round((b - a) / 86400000))
+  })()
+  const qty         = parseFloat(form.rental_quantity) || days
+  const rate        = parseFloat(form.rental_daily_rate) || 0
+  const vatPct      = parseFloat(form.rental_vat_pct) || 0
+  const totalNoVat  = rate > 0 && qty > 0 ? rate * qty : 0
+  const totalVat    = totalNoVat > 0 && vatPct > 0 ? totalNoVat * (1 + vatPct / 100) : totalNoVat
+  const extrasTotal = (form.rental_extras || []).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.id.trim()) { setError('Vehicle ID is required'); return }
+    if (!form.rental_supplier_id) { setError('Supplier is required'); return }
+    if (!form.rental_start || !form.rental_end) { setError('Rental start and end dates are required'); return }
+    setSaving(true)
+    const row = {
+      production_id:              productionId,
+      vehicle_type:               form.vehicle_type || null,
+      vehicle_class:              form.vehicle_class.length > 0 ? form.vehicle_class : null,
+      license_plate:              form.license_plate.trim().toUpperCase() || null,
+      is_rental:                  true,
+      rental_brand:               form.rental_brand.trim() || null,
+      rental_model:               form.rental_model.trim() || null,
+      rental_supplier_id:         form.rental_supplier_id || null,
+      rental_pickup_location_id:  form.rental_pickup_location_id  || null,
+      rental_dropoff_location_id: form.rental_dropoff_location_id || null,
+      rental_start:               form.rental_start || null,
+      rental_end:                 form.rental_end   || null,
+      rental_status:              form.rental_status || 'OPEN',
+      rental_billing_unit:        form.rental_billing_unit || 'DAY',
+      rental_quantity:            form.rental_quantity !== '' ? parseFloat(form.rental_quantity) : (qty || null),
+      rental_daily_rate:          form.rental_daily_rate !== '' ? parseFloat(form.rental_daily_rate) : null,
+      rental_vat_pct:             form.rental_vat_pct    !== '' ? parseFloat(form.rental_vat_pct)    : null,
+      rental_extras:              form.rental_extras.length > 0 ? form.rental_extras : [],
+      rental_currency:            form.rental_currency || 'EUR',
+      rental_contract_no:         form.rental_contract_no.trim() || null,
+      rental_voucher_id:          form.rental_voucher_id || null,
+      rental_po_number:           form.rental_po_number.trim()  || null,
+      rental_invoice_no:          form.rental_invoice_no.trim() || null,
+      driver_name:                form.driver_name.trim() || null,
+      driver_crew_id:             form.driver_crew_id || null,
+      rental_second_driver:       form.rental_second_driver.trim() || null,
+      rental_insurance_casco:     form.rental_insurance_casco || false,
+      rental_insurance_limit:     form.rental_insurance_limit  !== '' ? parseFloat(form.rental_insurance_limit)  : null,
+      rental_insurance_excess:    form.rental_insurance_excess !== '' ? parseFloat(form.rental_insurance_excess) : null,
+      rental_insurance_exp:       form.rental_insurance_exp || null,
+      rental_km_included:         form.rental_km_included.trim() || null,
+      rental_notes:               form.rental_notes.trim() || null,
+      active:                     true,
+      in_transport:               true,
+      sign_code:                  null,
+      unit_default:               null,
+      available_from:             form.rental_start || null,
+      available_to:               form.rental_end   || null,
+    }
+    let err
+    if (mode === 'new') {
+      const r = await supabase.from('vehicles').insert({ ...row, id: form.id.trim().toUpperCase() })
+      err = r.error
+      // Mark voucher as used
+      if (!err && form.rental_voucher_id) {
+        await supabase.from('rental_vouchers').update({ used: true, vehicle_id: form.id.trim().toUpperCase() }).eq('id', form.rental_voucher_id)
+      }
+    } else {
+      const r = await supabase.from('vehicles').update(row).eq('id', initial.id)
+      err = r.error
+    }
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    if (form.driver_crew_id) {
+      await supabase.from('crew').update({ no_transport_needed: true }).eq('id', form.driver_crew_id).eq('production_id', productionId)
+    }
+    onSaved()
+  }
+
+  async function handleDelete() {
+    if (!confirmDel) { setCd(true); return }
+    setDel(true)
+    const { error } = await supabase.from('vehicles').delete().eq('id', initial.id).eq('production_id', productionId)
+    setDel(false)
+    if (error) { setError(error.message); return }
+    onSaved()
+  }
+
+  const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
+  const fld = { marginBottom: '12px' }
+  const tc  = TYPE_COLOR[form.vehicle_type] || TYPE_COLOR.VAN
+
+  function DriverField({ label, nameVal, crewIdVal, searchVal, setSearch, showSugg, setShowSugg, notFound, setNotFound, onSelect, onClear }) {
+    return (
+      <div style={fld}>
+        <label style={lbl}>{label}</label>
+        {crewIdVal ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: '1px solid #86efac', borderRadius: '8px', background: '#f0fdf4' }}>
+            <span style={{ fontSize: '14px' }}>🔗</span>
+            <span style={{ flex: 1, fontSize: '13px', fontWeight: '700', color: '#15803d' }}>{nameVal}</span>
+            <button type="button" onClick={onClear} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '14px', lineHeight: 1, padding: '0 2px' }}>✕</button>
+          </div>
+        ) : (
+          <div style={{ position: 'relative' }}>
+            <input
+              value={searchVal}
+              onChange={e => {
+                setSearch(e.target.value)
+                setShowSugg(e.target.value.length > 0)
+                setNotFound(false)
+              }}
+              onBlur={() => setTimeout(() => {
+                setShowSugg(false)
+                if (searchVal && !crewIdVal) setNotFound(true)
+                else setNotFound(false)
+              }, 160)}
+              style={inp}
+              placeholder="Search crew..."
+              autoComplete="off"
+            />
+            {showSugg && (() => {
+              const q = searchVal.toLowerCase()
+              const matches = crewList.filter(c => q && (c.full_name || '').toLowerCase().includes(q)).slice(0, 6)
+              if (matches.length === 0) return null
+              return (
+                <div style={{ position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 200, overflow: 'hidden' }}>
+                  {matches.map(cm => (
+                    <div key={cm.id}
+                      onMouseDown={() => onSelect(cm)}
+                      style={{ padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', borderBottom: '1px solid #f1f5f9' }}
+                      onMouseOver={e => e.currentTarget.style.background = '#f0fdf4'}
+                      onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                      <span style={{ flex: 1, fontWeight: '600', color: '#0f172a' }}>{cm.full_name}</span>
+                      {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{cm.department}</span>}
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
+        )}
+        {notFound && !crewIdVal && searchVal && (
+          <div style={{ marginTop: '4px', padding: '6px 10px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '11px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>⚠ Driver not found in crew list.</span>
+            <a href="/dashboard/crew" target="_blank" style={{ color: '#1d4ed8', fontWeight: '700', textDecoration: 'none' }}>+ Add to crew →</a>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '440px', background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
+            {mode === 'new' ? '🔑 New Rental Vehicle' : '✏️ Edit Rental Vehicle'}
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '16px 18px' }}>
+
+            {/* Vehicle ID */}
+            <div style={fld}>
+              <label style={lbl}>Vehicle ID *</label>
+              <input value={form.id} onChange={e => { setIdManuallyEdited(true); set('id', e.target.value.toUpperCase()) }}
+                style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em', background: mode === 'edit' ? '#f8fafc' : 'white' }}
+                placeholder="CAR-01 / VAN-05" required readOnly={mode === 'edit'} />
+            </div>
+
+            {/* Vehicle Type */}
+            <div style={fld}>
+              <label style={lbl}>Vehicle Type</label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(type => {
+                  const c = TYPE_COLOR[type]; const active = form.vehicle_type === type
+                  return (
+                    <button key={type} type="button" onClick={() => { set('vehicle_type', type); if (mode === 'new' && !idManuallyEdited) set('id', suggestId(type, vehicles)) }}
+                      style={{ flex: 1, minWidth: '60px', padding: '6px 2px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                      <span style={{ fontSize: '18px' }}>{TYPE_ICON[type]}</span>
+                      <span>{type}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Vehicle Class */}
+            <div style={fld}>
+              <label style={lbl}>Vehicle Class</label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => set('vehicle_class', [])}
+                  style={{ padding: '3px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${form.vehicle_class.length === 0 ? '#0f2340' : '#e2e8f0'}`, background: form.vehicle_class.length === 0 ? '#0f2340' : 'white', color: form.vehicle_class.length === 0 ? 'white' : '#94a3b8' }}>
+                  None
+                </button>
+                {CLASS_OPTIONS.map(c => {
+                  const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC
+                  const active = form.vehicle_class.includes(c)
+                  const label = c === 'LUX' ? '💎 LUX' : c === 'PREMIUM' ? '⭐ PREMIUM' : c === 'ECONOMY' ? '💶 ECONOMY' : c === 'MINIBUS' ? '🚌 MINIBUS' : c === 'NCC' ? '🔑 NCC' : c
+                  return (
+                    <button key={c} type="button"
+                      onClick={() => setForm(f => ({ ...f, vehicle_class: f.vehicle_class.includes(c) ? f.vehicle_class.filter(x => x !== c) : [...f.vehicle_class, c] }))}
+                      style={{ padding: '3px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? cc.border : '#e2e8f0'}`, background: active ? cc.bg : 'white', color: active ? cc.color : '#94a3b8' }}>
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Brand + Model + Plate */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>Brand</label>
+                <input value={form.rental_brand} onChange={e => set('rental_brand', e.target.value)} style={inp} placeholder="Toyota, Peugeot..." />
+              </div>
+              <div>
+                <label style={lbl}>Model</label>
+                <input value={form.rental_model} onChange={e => set('rental_model', e.target.value)} style={inp} placeholder="C-HR, 2008..." />
+              </div>
+            </div>
+            <div style={fld}>
+              <label style={lbl}>License Plate</label>
+              <input value={form.license_plate} onChange={e => set('license_plate', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.1em' }} placeholder="AB123CD" />
+            </div>
+
+            {/* ── RENTAL SECTION ── */}
+            <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #fde68a', background: '#fefce8' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#a16207', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🔑 Rental Details</div>
+
+              {/* Supplier */}
+              <div style={fld}>
+                <label style={{ ...lbl, color: '#a16207' }}>Supplier *</label>
+                <select value={form.rental_supplier_id} onChange={e => { set('rental_supplier_id', e.target.value); set('rental_pickup_location_id', ''); set('rental_dropoff_location_id', ''); set('rental_voucher_id', '') }} style={{ ...inp, cursor: 'pointer', borderColor: '#fde68a', background: 'white' }}>
+                  <option value="">— Select supplier —</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+
+              {/* Status */}
+              <div style={fld}>
+                <label style={{ ...lbl, color: '#a16207' }}>Status</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {['OPEN', 'CLOSED'].map(s => (
+                    <button key={s} type="button" onClick={() => set('rental_status', s)}
+                      style={{ flex: 1, padding: '7px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: '1px solid',
+                        ...(form.rental_status === s
+                          ? s === 'OPEN'
+                            ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
+                            : { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
+                          : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                      {s === 'OPEN' ? '🟢 Open' : '⚫ Closed'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Rental Start *</label>
+                  <input type="date" value={form.rental_start} onChange={e => set('rental_start', e.target.value)} style={{ ...inp, borderColor: '#fde68a' }} />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Rental End *</label>
+                  <input type="date" value={form.rental_end} onChange={e => set('rental_end', e.target.value)} style={{ ...inp, borderColor: '#fde68a' }} />
+                </div>
+              </div>
+              {days > 0 && <div style={{ marginBottom: '12px', padding: '6px 10px', background: 'white', border: '1px solid #fde68a', borderRadius: '7px', fontSize: '11px', color: '#a16207', fontWeight: '700' }}>📅 {days} day{days !== 1 ? 's' : ''}</div>}
+
+              {/* Billing */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Billing Unit</label>
+                  <select value={form.rental_billing_unit} onChange={e => set('rental_billing_unit', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#fde68a', background: 'white' }}>
+                    <option value="DAY">Day</option>
+                    <option value="MONTH">Month</option>
+                    <option value="WEEK">Week</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Rate (no VAT)</label>
+                  <input type="number" step="0.01" value={form.rental_daily_rate} onChange={e => set('rental_daily_rate', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="0.00" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>VAT %</label>
+                  <input type="number" step="0.01" value={form.rental_vat_pct} onChange={e => set('rental_vat_pct', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="22" />
+                </div>
+              </div>
+
+              {/* Currency */}
+              <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Currency</label>
+                  <select value={form.rental_currency} onChange={e => set('rental_currency', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#fde68a', background: 'white' }}>
+                    {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Contract No.</label>
+                  <input value={form.rental_contract_no} onChange={e => set('rental_contract_no', e.target.value)} style={{ ...inp, borderColor: '#fde68a' }} placeholder="Contract reference..." />
+                </div>
+              </div>
+
+              {/* Cost preview */}
+              {totalNoVat > 0 && (
+                <div style={{ marginBottom: '12px', padding: '8px 12px', background: 'white', border: '1px solid #fde68a', borderRadius: '7px', fontSize: '11px', color: '#92400e' }}>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    <span>No VAT: <strong>{form.rental_currency} {totalNoVat.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong></span>
+                    {vatPct > 0 && <span>+ VAT: <strong>{form.rental_currency} {totalVat.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong></span>}
+                    {extrasTotal > 0 && <span>Extras: <strong>{form.rental_currency} {extrasTotal.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</strong></span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Extras */}
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ ...lbl, color: '#a16207' }}>Extras</label>
+                {(form.rental_extras || []).map((ex, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 100px auto', gap: '6px', marginBottom: '4px' }}>
+                    <input value={ex.label} onChange={e => { const next = [...form.rental_extras]; next[idx] = { ...next[idx], label: e.target.value }; set('rental_extras', next) }} style={{ ...inp, fontSize: '12px', borderColor: '#fde68a' }} placeholder="Insurance, GPS..." />
+                    <input type="number" step="0.01" value={ex.amount} onChange={e => { const next = [...form.rental_extras]; next[idx] = { ...next[idx], amount: e.target.value }; set('rental_extras', next) }} style={{ ...inp, fontSize: '12px', fontFamily: 'monospace', borderColor: '#fde68a' }} placeholder="0.00" />
+                    <button type="button" onClick={() => set('rental_extras', form.rental_extras.filter((_, i) => i !== idx))}
+                      style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fff1f2', color: '#dc2626', cursor: 'pointer', fontSize: '12px' }}>✕</button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => set('rental_extras', [...(form.rental_extras || []), { label: '', amount: '' }])}
+                  style={{ width: '100%', padding: '5px', borderRadius: '7px', border: '1px dashed #fde68a', background: 'transparent', color: '#a16207', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                  + Add Extra
+                </button>
+              </div>
+
+              {/* Voucher */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>Voucher</label>
+                  <select value={form.rental_voucher_id} onChange={e => set('rental_voucher_id', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#fde68a', background: 'white' }}>
+                    <option value="">— No voucher —</option>
+                    {vouchers.map(v => <option key={v.id} value={v.id}>{v.voucher_no}{v.batch_code ? ` (${v.batch_code})` : ''}{v.amount ? ` — ${v.currency} ${v.amount}` : ''}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#a16207' }}>P.O. Number</label>
+                  <input value={form.rental_po_number} onChange={e => set('rental_po_number', e.target.value)} style={{ ...inp, borderColor: '#fde68a' }} placeholder="P.O. ref..." />
+                </div>
+              </div>
+              <div style={fld}>
+                <label style={{ ...lbl, color: '#a16207' }}>Invoice No.</label>
+                <input value={form.rental_invoice_no} onChange={e => set('rental_invoice_no', e.target.value)} style={{ ...inp, borderColor: '#fde68a' }} placeholder="Invoice number..." />
+              </div>
+            </div>
+
+            {/* ── DRIVER SECTION ── */}
+            <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #bfdbfe', background: '#eff6ff' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>👤 Driver</div>
+              <DriverField
+                label="Driver *"
+                nameVal={form.driver_name}
+                crewIdVal={form.driver_crew_id}
+                searchVal={driverSearch}
+                setSearch={v => { setDriverSearch(v); if (!form.driver_crew_id) set('driver_name', v) }}
+                showSugg={showDriverSugg}
+                setShowSugg={setShowDriverSugg}
+                notFound={driverNotFound}
+                setNotFound={setDriverNotFound}
+                onSelect={cm => { setForm(f => ({ ...f, driver_name: cm.full_name, driver_crew_id: cm.id, driver_dept: cm.department || '' })); setDriverSearch(cm.full_name); setShowDriverSugg(false); setDriverNotFound(false) }}
+                onClear={() => { setForm(f => ({ ...f, driver_name: '', driver_crew_id: '', driver_dept: '' })); setDriverSearch(''); setDriverNotFound(false) }}
+              />
+              <DriverField
+                label="Second Driver"
+                nameVal={form.rental_second_driver}
+                crewIdVal={form.rental_second_driver_crew_id}
+                searchVal={driver2Search}
+                setSearch={v => { setDriver2Search(v); if (!form.rental_second_driver_crew_id) set('rental_second_driver', v) }}
+                showSugg={showDriver2Sugg}
+                setShowSugg={setShowDriver2Sugg}
+                notFound={driver2NotFound}
+                setNotFound={setDriver2NotFound}
+                onSelect={cm => { setForm(f => ({ ...f, rental_second_driver: cm.full_name, rental_second_driver_crew_id: cm.id })); setDriver2Search(cm.full_name); setShowDriver2Sugg(false); setDriver2NotFound(false) }}
+                onClear={() => { setForm(f => ({ ...f, rental_second_driver: '', rental_second_driver_crew_id: '' })); setDriver2Search(''); setDriver2NotFound(false) }}
+              />
+            </div>
+
+            {/* ── LOCATIONS SECTION ── */}
+            {locations.length > 0 && (
+              <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📍 Pick-up / Drop-off</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={lbl}>Pick-up Location</label>
+                    <select value={form.rental_pickup_location_id} onChange={e => set('rental_pickup_location_id', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+                      <option value="">— Select —</option>
+                      {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={lbl}>Drop-off Location</label>
+                    <select value={form.rental_dropoff_location_id} onChange={e => set('rental_dropoff_location_id', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
+                      <option value="">— Select —</option>
+                      {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── INSURANCE SECTION ── */}
+            <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛡 Insurance</div>
+              <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${form.rental_insurance_casco ? '#c4b5fd' : '#e2e8f0'}`, background: form.rental_insurance_casco ? '#ede9fe' : 'white', cursor: 'pointer' }}
+                onClick={() => set('rental_insurance_casco', !form.rental_insurance_casco)}>
+                <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.rental_insurance_casco ? '#7c3aed' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: '2px', left: form.rental_insurance_casco ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: form.rental_insurance_casco ? '#5b21b6' : '#64748b' }}>
+                  Comprehensive Coverage (Full Casco)
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#7e22ce' }}>Coverage Limit</label>
+                  <input type="number" step="0.01" value={form.rental_insurance_limit} onChange={e => set('rental_insurance_limit', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#e9d5ff' }} placeholder="0.00" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#7e22ce' }}>Excess</label>
+                  <input type="number" step="0.01" value={form.rental_insurance_excess} onChange={e => set('rental_insurance_excess', e.target.value)} style={{ ...inp, fontFamily: 'monospace', borderColor: '#e9d5ff' }} placeholder="0.00" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#7e22ce' }}>Exp. Date</label>
+                  <input type="date" value={form.rental_insurance_exp} onChange={e => set('rental_insurance_exp', e.target.value)} style={{ ...inp, borderColor: '#e9d5ff' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* KM + Notes */}
+            <div style={fld}>
+              <label style={lbl}>KM Included</label>
+              <input value={form.rental_km_included} onChange={e => set('rental_km_included', e.target.value)} style={inp} placeholder="Unlimited, 500/day..." />
+            </div>
+            <div style={fld}>
+              <label style={lbl}>Notes</label>
+              <textarea value={form.rental_notes} onChange={e => set('rental_notes', e.target.value)} style={{ ...inp, minHeight: '60px', resize: 'vertical' }} placeholder="Additional notes..." />
+            </div>
+
+            {/* Delete */}
+            {mode === 'edit' && (
+              <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
+                {!confirmDel ? (
+                  <button type="button" onClick={handleDelete}
+                    style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
+                    Delete Rental Vehicle
+                  </button>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>Delete this vehicle? This cannot be undone.</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setCd(false)}
+                        style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Cancel</button>
+                      <button type="button" onClick={handleDelete} disabled={deleting}
+                        style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: deleting ? 'default' : 'pointer', fontSize: '12px', fontWeight: '800' }}>
+                        {deleting ? '...' : 'Confirm Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
+
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
+            <button type="button" onClick={onClose}
+              style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+            <button type="submit" disabled={saving}
+              style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Saving...' : mode === 'new' ? '+ Add Rental Vehicle' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
 // ─── RentalSuppliersTab ───────────────────────────────────────
 function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
   const [suppliers, setSuppliers] = useState([])
