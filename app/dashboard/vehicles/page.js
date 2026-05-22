@@ -1860,6 +1860,11 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
   const [supplierSidebarOpen, setSupplierSidebarOpen] = useState(false)
   const [supplierSidebarMode, setSupplierSidebarMode] = useState('new')
   const [supplierTarget, setSupplierTarget]           = useState(null)
+  const [rentalSidebarOpen, setRentalSidebarOpen]     = useState(false)
+  const [rentalSidebarMode, setRentalSidebarMode]     = useState('new')
+  const [rentalTarget, setRentalTarget]               = useState(null)
+  const [rentalInitialSupplier, setRentalInitialSupplier] = useState(null)
+  const [allVehicles, setAllVehicles]                 = useState([])
 
   const load = useCallback(async () => {
     if (!productionId) return
@@ -1881,6 +1886,26 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
   function openNewSupplier()    { setSupplierSidebarMode('new');  setSupplierTarget(null);    setSupplierSidebarOpen(true) }
   function openEditSupplier(s)  { setSupplierSidebarMode('edit'); setSupplierTarget(s);       setSupplierSidebarOpen(true) }
   function onSupplierSaved()    { setSupplierSidebarOpen(false); load() }
+
+  function openNewRental(supplierId) {
+    setRentalSidebarMode('new')
+    setRentalTarget(null)
+    setRentalInitialSupplier(supplierId || null)
+    setRentalSidebarOpen(true)
+  }
+  function openEditRental(v) {
+    setRentalSidebarMode('edit')
+    setRentalTarget(v)
+    setRentalInitialSupplier(null)
+    setRentalSidebarOpen(true)
+  }
+  function onRentalSaved() { setRentalSidebarOpen(false); load() }
+
+  useEffect(() => {
+    if (!productionId) return
+    supabase.from('vehicles').select('id').eq('production_id', productionId)
+      .then(({ data }) => setAllVehicles(data || []))
+  }, [productionId])
 
   useEffect(() => { load() }, [load])
 
@@ -2014,7 +2039,7 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
           </div>
 
           {/* Add Vehicle button */}
-          <button style={{ marginTop: '10px', width: '100%', padding: '6px', fontSize: '12px', border: '1px dashed #e2e8f0', borderRadius: '8px', background: 'none', color: '#64748b', cursor: 'pointer' }}>
+          <button onClick={() => openNewRental(s.id)} style={{ marginTop: '10px', width: '100%', padding: '6px', fontSize: '12px', border: '1px dashed #e2e8f0', borderRadius: '8px', background: 'none', color: '#64748b', cursor: 'pointer' }}>
             + Add Rental Vehicle
           </button>
         </div>
@@ -2026,6 +2051,17 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
         onClose={() => setSupplierSidebarOpen(false)}
         onSaved={onSupplierSaved}
         productionId={productionId}
+      />
+      <RentalVehicleSidebar
+        open={rentalSidebarOpen}
+        mode={rentalSidebarMode}
+        initial={rentalTarget}
+        onClose={() => setRentalSidebarOpen(false)}
+        onSaved={onRentalSaved}
+        productionId={productionId}
+        crewList={[]}
+        vehicles={allVehicles}
+        initialSupplierId={rentalInitialSupplier}
       />
     </div>
   )
@@ -2053,6 +2089,10 @@ export default function VehiclesPage() {
   const [crewList, setCrewList] = useState([])
   const [activeTab, setActiveTab] = useState('owned') // 'owned' | 'rental' | 'suppliers' | 'report'
   const supplierSidebarTriggerRef = React.useRef(null)
+  const rentalSidebarTriggerRef   = React.useRef(null)
+  const [rentalSidebarOpen2, setRentalSidebarOpen2]   = useState(false)
+  const [rentalSidebarMode2, setRentalSidebarMode2]   = useState('new')
+  const [rentalTarget2, setRentalTarget2]             = useState(null)
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
@@ -2180,7 +2220,7 @@ export default function VehiclesPage() {
             </button>
           )}
           {activeTab === 'rental' && (
-            <button onClick={() => alert('Add Rental — coming soon')} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+            <button onClick={() => rentalSidebarTriggerRef.current && rentalSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
               + Add Rental
             </button>
           )}
@@ -2341,6 +2381,17 @@ export default function VehiclesPage() {
 </div>}
       <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
 
+      <RentalVehicleSidebar
+        open={rentalSidebarOpen2}
+        mode={rentalSidebarMode2}
+        initial={rentalTarget2}
+        onClose={() => setRentalSidebarOpen2(false)}
+        onSaved={() => { setRentalSidebarOpen2(false); load() }}
+        productionId={PRODUCTION_ID}
+        crewList={crewList}
+        vehicles={vhcs}
+        initialSupplierId={null}
+      />
       <ImportModal
         open={importOpen}
         mode="fleet"
