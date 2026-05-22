@@ -814,7 +814,31 @@ export default function VehiclesPage() {
       </div>
 
       {/* Body */}
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px', transition: 'margin-right 0.25s', marginRight: !isMobile && sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
+      {activeTab === 'rental' && (
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
+          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '40px', marginBottom: '10px' }}>🔑</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>Rental Vehicles — coming soon</div>
+          </div>
+        </div>
+      )}
+      {activeTab === 'suppliers' && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
+          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '40px', marginBottom: '10px' }}>🏢</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>Rental Suppliers — coming soon</div>
+          </div>
+        </div>
+      )}
+      {activeTab === 'report' && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
+          <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '40px', marginBottom: '10px' }}>📊</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>Rental Report — coming soon</div>
+          </div>
+        </div>
+      )}
+      {activeTab === 'owned' && <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px', transition: 'margin-right 0.25s', marginRight: !isMobile && sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
         {!PRODUCTION_ID && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>⚠ NEXT_PUBLIC_PRODUCTION_ID non impostato</div>}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
@@ -888,9 +912,8 @@ export default function VehiclesPage() {
             ))}
           </div>
         )}
-      </div>
-
-<VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
+</div>}
+      <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
 
       <ImportModal
         open={importOpen}
