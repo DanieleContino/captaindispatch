@@ -603,6 +603,218 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
   )
 }
 
+// ─── SupplierLocationsAccordion ──────────────────────────────
+function SupplierLocationsAccordion({ supplierId, productionId }) {
+  const [open, setOpen]       = useState(false)
+  const [loaded, setLoaded]   = useState(false)
+  const [locations, setLocs]  = useState([])
+  const [loading, setLoading] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addForm, setAddForm] = useState({ name: '', address: '', phone: '', email: '', opening_hours: '' })
+  const [saving, setSaving]   = useState(false)
+  const [editId, setEditId]   = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [confirmDelId, setConfirmDelId] = useState(null)
+
+  const EMPTY = { name: '', address: '', phone: '', email: '', opening_hours: '' }
+  const inp = { width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '700', color: '#2563eb', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }
+
+  async function load() {
+    setLoading(true)
+    const { data } = await supabase
+      .from('rental_supplier_locations')
+      .select('id, name, address, phone, email, opening_hours')
+      .eq('supplier_id', supplierId)
+      .eq('production_id', productionId)
+      .order('created_at', { ascending: true })
+    setLocs(data || [])
+    setLoading(false)
+    setLoaded(true)
+  }
+
+  function toggle() {
+    const next = !open
+    setOpen(next)
+    if (next && !loaded) load()
+  }
+
+  async function handleAdd() {
+    if (!addForm.name.trim()) return
+    setSaving(true)
+    const { data, error } = await supabase
+      .from('rental_supplier_locations')
+      .insert({
+        production_id: productionId,
+        supplier_id:   supplierId,
+        name:          addForm.name.trim(),
+        address:       addForm.address.trim() || null,
+        phone:         addForm.phone.trim()   || null,
+        email:         addForm.email.trim()   || null,
+        opening_hours: addForm.opening_hours.trim() || null,
+      })
+      .select('id, name, address, phone, email, opening_hours')
+      .single()
+    setSaving(false)
+    if (error) return
+    setLocs(prev => [...prev, data])
+    setAddOpen(false)
+    setAddForm(EMPTY)
+  }
+
+  async function handleEditSave(id) {
+    setSaving(true)
+    const { error } = await supabase
+      .from('rental_supplier_locations')
+      .update({
+        name:          editForm.name.trim(),
+        address:       editForm.address.trim() || null,
+        phone:         editForm.phone.trim()   || null,
+        email:         editForm.email.trim()   || null,
+        opening_hours: editForm.opening_hours.trim() || null,
+      })
+      .eq('id', id)
+    setSaving(false)
+    if (error) return
+    setLocs(prev => prev.map(l => l.id === id ? { ...l, ...editForm } : l))
+    setEditId(null)
+  }
+
+  async function handleDelete(id) {
+    if (confirmDelId !== id) { setConfirmDelId(id); return }
+    setSaving(true)
+    await supabase.from('rental_supplier_locations').delete().eq('id', id)
+    setSaving(false)
+    setLocs(prev => prev.filter(l => l.id !== id))
+    setConfirmDelId(null)
+  }
+
+  function LocationForm({ form, setF, onSave, onCancel, saveLabel }) {
+    return (
+      <div style={{ background: 'white', border: '1px dashed #bfdbfe', borderRadius: '7px', padding: '8px 10px', marginBottom: '6px' }}>
+        <div style={{ marginBottom: '6px' }}>
+          <label style={lbl}>Location Name *</label>
+          <input value={form.name} onChange={e => setF(f => ({ ...f, name: e.target.value }))} style={inp} placeholder="Bari Airport, City Centre..." autoFocus />
+        </div>
+        <div style={{ marginBottom: '6px' }}>
+          <label style={lbl}>Address</label>
+          <input value={form.address} onChange={e => setF(f => ({ ...f, address: e.target.value }))} style={inp} placeholder="Via Roma 1..." />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+          <div>
+            <label style={lbl}>Phone</label>
+            <input value={form.phone} onChange={e => setF(f => ({ ...f, phone: e.target.value }))} style={inp} placeholder="+39 080..." type="tel" />
+          </div>
+          <div>
+            <label style={lbl}>Opening Hours</label>
+            <input value={form.opening_hours} onChange={e => setF(f => ({ ...f, opening_hours: e.target.value }))} style={inp} placeholder="08:00–20:00" />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button type="button" onClick={onCancel}
+            style={{ flex: 1, padding: '4px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', cursor: 'pointer', fontWeight: '600' }}>
+            Cancel
+          </button>
+          <button type="button" onClick={onSave} disabled={saving || !form.name.trim()}
+            style={{ flex: 2, padding: '4px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : '#2563eb', color: 'white', fontSize: '11px', cursor: saving ? 'default' : 'pointer', fontWeight: '700' }}>
+            {saving ? 'Saving…' : saveLabel}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <button type="button" onClick={toggle}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: open ? '8px 8px 0 0' : '8px', border: '1px solid #e2e8f0', background: open ? '#eff6ff' : '#f8fafc', cursor: 'pointer', transition: 'background 0.15s' }}>
+        <span style={{ fontSize: '12px', fontWeight: '700', color: open ? '#1d4ed8' : '#374151' }}>
+          📍 Locations
+          {locations.length > 0 && (
+            <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: '700', color: '#1d4ed8', background: '#eff6ff', padding: '1px 6px', borderRadius: '999px', border: '1px solid #bfdbfe' }}>
+              {locations.length}
+            </span>
+          )}
+        </span>
+        <span style={{ fontSize: '12px', color: '#94a3b8', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{ border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', background: '#eff6ff', padding: '10px 12px 8px' }}>
+          {loading ? (
+            <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', padding: '8px' }}>Loading…</div>
+          ) : (
+            <>
+              {locations.length === 0 && !addOpen && (
+                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', fontStyle: 'italic' }}>No locations recorded</div>
+              )}
+
+              {locations.map(l => {
+                if (editId === l.id) {
+                  return (
+                    <div key={l.id}>
+                      <LocationForm
+                        form={editForm}
+                        setF={setEditForm}
+                        onSave={() => handleEditSave(l.id)}
+                        onCancel={() => setEditId(null)}
+                        saveLabel="✓ Save Location"
+                      />
+                    </div>
+                  )
+                }
+                return (
+                  <div key={l.id} style={{ background: 'white', border: '1px solid #bfdbfe', borderRadius: '7px', padding: '7px 10px', marginBottom: '6px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <div style={{ flex: 1, fontSize: '12px' }}>
+                      <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '2px' }}>📍 {l.name}</div>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', color: '#64748b', fontSize: '11px' }}>
+                        {l.address       && <span>🏠 {l.address}</span>}
+                        {l.phone         && <span>📞 {l.phone}</span>}
+                        {l.opening_hours && <span>🕐 {l.opening_hours}</span>}
+                      </div>
+                    </div>
+                    <button type="button"
+                      onClick={() => { setEditId(l.id); setEditForm({ name: l.name, address: l.address || '', phone: l.phone || '', email: l.email || '', opening_hours: l.opening_hours || '' }) }}
+                      style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#1d4ed8', flexShrink: 0 }}>
+                      ✎
+                    </button>
+                    {confirmDelId === l.id ? (
+                      <div style={{ display: 'flex', gap: '3px' }}>
+                        <button type="button" onClick={() => setConfirmDelId(null)}
+                          style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '5px', padding: '3px 6px', cursor: 'pointer', fontSize: '11px', color: '#64748b' }}>✕</button>
+                        <button type="button" onClick={() => handleDelete(l.id)} disabled={saving}
+                          style={{ background: '#dc2626', border: 'none', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: 'white', fontWeight: '700' }}>⚠ Del</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setConfirmDelId(l.id)}
+                        style={{ background: '#fff1f2', border: '1px solid #fecaca', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#dc2626', flexShrink: 0 }}>🗑</button>
+                    )}
+                  </div>
+                )
+              })}
+
+              {addOpen ? (
+                <LocationForm
+                  form={addForm}
+                  setF={setAddForm}
+                  onSave={handleAdd}
+                  onCancel={() => { setAddOpen(false); setAddForm(EMPTY) }}
+                  saveLabel="+ Add Location"
+                />
+              ) : (
+                <button type="button" onClick={() => setAddOpen(true)}
+                  style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #bfdbfe', background: 'transparent', color: '#1d4ed8', fontSize: '11px', fontWeight: '700', cursor: 'pointer', marginTop: locations.length > 0 ? '4px' : '0' }}>
+                  + Add Location
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── RentalSupplierSidebar ───────────────────────────────────
 function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, productionId }) {
   const EMPTY = { name: '', contact_name: '', phone: '', email: '', address: '', website: '', account_no: '', opening_hours: '', notes: '' }
@@ -737,6 +949,10 @@ function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, producti
               <label style={lbl}>Notes</label>
               <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: '80px', resize: 'vertical' }} placeholder="Additional notes..." />
             </div>
+
+            {mode === 'edit' && initial?.id && (
+              <SupplierLocationsAccordion supplierId={initial.id} productionId={productionId} />
+            )}
 
             {mode === 'edit' && (
               <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
