@@ -623,6 +623,7 @@ export default function VehiclesPage() {
   const [bulkDeleting, setBulkDel] = useState(false)
   const [bulkConfirm, setBulkConfirm] = useState(false)
   const [crewList, setCrewList] = useState([])
+  const [activeTab, setActiveTab] = useState('owned') // 'owned' | 'rental' | 'suppliers' | 'report'
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
@@ -744,9 +745,21 @@ export default function VehiclesPage() {
         <div style={{ padding: isMobile ? '8px 12px' : '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
           <span style={{ fontSize: '18px' }}>🚐</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
-          <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-            {t.addVehicleBtn}
-          </button>
+          {activeTab === 'owned' && (
+            <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+              {t.addVehicleBtn}
+            </button>
+          )}
+          {activeTab === 'rental' && (
+            <button onClick={() => alert('Add Rental — coming soon')} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+              + Add Rental
+            </button>
+          )}
+          {activeTab === 'suppliers' && (
+            <button onClick={() => alert('Add Supplier — coming soon')} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+              + Add Supplier
+            </button>
+          )}
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>{vhcs.length} totale · {counts.active} attivi</span>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {[['VAN', '🚐'], ['CAR', '🚗'], ['BUS', '🚌'], ['TRUCK', '🚛'], ['PICKUP', '🛻'], ['CARGO', '🚚']].map(([tp, ic]) => counts[tp.toLowerCase()] > 0 && (
@@ -756,6 +769,19 @@ export default function VehiclesPage() {
             ))}
           </div>
           <div style={{ flex: 1 }} />
+          <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden' }}>
+            {[
+              { key: 'owned',     label: '🚐 Owned' },
+              { key: 'rental',    label: '🔑 Rental' },
+              { key: 'suppliers', label: '🏢 Suppliers' },
+              { key: 'report',    label: '📊 Report' },
+            ].map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                style={{ padding: '5px 12px', border: 'none', borderLeft: tab.key !== 'owned' ? '1px solid #e2e8f0' : 'none', background: activeTab === tab.key ? '#0f2340' : 'white', color: activeTab === tab.key ? 'white' : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
           <button onClick={load} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151', flexShrink: 0 }}>↻</button>
           <button onClick={() => setImportOpen(true)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151', flexShrink: 0 }}>
             {t.importFromFile}
