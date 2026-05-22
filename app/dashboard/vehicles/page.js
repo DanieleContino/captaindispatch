@@ -2588,6 +2588,301 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
   )
 }
 
+// ─── NccVehicleSidebar ────────────────────────────────────────
+function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef }) {
+  const EMPTY = {
+    id: '', vehicle_type: 'VAN', vehicle_class: [],
+    license_plate: '',
+    capacity: '', pax_suggested: '', pax_max: '',
+    ncc_agency_id: '',
+    ncc_driver_name: '', ncc_driver_phone: '',
+    sign_code: '', unit_default: '',
+    available_from: '', available_to: '',
+    active: true, in_transport: true,
+  }
+  const [form, setForm]     = useState(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+  const [confirmDel, setCd] = useState(false)
+  const [deleting, setDel]  = useState(false)
+  const [agencies, setAgencies] = useState([])
+  const [idManuallyEdited, setIdManuallyEdited] = useState(false)
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    if (openTriggerRef) openTriggerRef.current = () => {
+      setForm({ ...EMPTY, id: suggestId('VAN', vehicles) })
+      setIdManuallyEdited(false)
+      setError(null); setCd(false)
+    }
+  }, [openTriggerRef, vehicles])
+
+  useEffect(() => {
+    if (!open || !productionId) return
+    setError(null); setCd(false)
+    supabase.from('ncc_agencies').select('id, name').eq('production_id', productionId).order('name')
+      .then(({ data }) => setAgencies(data || []))
+    if (mode === 'edit' && initial) {
+      setForm({
+        id:               initial.id               || '',
+        vehicle_type:     initial.vehicle_type      || 'VAN',
+        vehicle_class:    Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []),
+        license_plate:    initial.license_plate     || '',
+        capacity:         initial.capacity          ?? '',
+        pax_suggested:    initial.pax_suggested     ?? '',
+        pax_max:          initial.pax_max           ?? '',
+        ncc_agency_id:    initial.ncc_agency_id     || '',
+        ncc_driver_name:  initial.ncc_driver_name   || '',
+        ncc_driver_phone: initial.ncc_driver_phone  || '',
+        sign_code:        initial.sign_code         || '',
+        unit_default:     initial.unit_default      || '',
+        available_from:   initial.available_from    || '',
+        available_to:     initial.available_to      || '',
+        active:           initial.active !== false,
+        in_transport:     initial.in_transport !== false,
+      })
+      setIdManuallyEdited(false)
+    } else {
+      setForm({ ...EMPTY, id: suggestId('VAN', vehicles) })
+      setIdManuallyEdited(false)
+    }
+  }, [open, mode, initial])
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.id.trim()) { setError('Vehicle ID obbligatorio'); return }
+    setSaving(true)
+    const row = {
+      production_id:    productionId,
+      vehicle_type:     form.vehicle_type || null,
+      vehicle_class:    form.vehicle_class.length > 0 ? form.vehicle_class : null,
+      license_plate:    form.license_plate.trim().toUpperCase() || null,
+      capacity:         form.capacity      !== '' ? parseInt(form.capacity)      : null,
+      pax_suggested:    form.pax_suggested !== '' ? parseInt(form.pax_suggested) : null,
+      pax_max:          form.pax_max       !== '' ? parseInt(form.pax_max)       : null,
+      is_ncc:           true,
+      ncc_agency_id:    form.ncc_agency_id    || null,
+      ncc_driver_name:  form.ncc_driver_name.trim()  || null,
+      ncc_driver_phone: form.ncc_driver_phone.trim() || null,
+      sign_code:        form.sign_code.trim()    || null,
+      unit_default:     form.unit_default.trim() || null,
+      available_from:   form.available_from || null,
+      available_to:     form.available_to   || null,
+      active:           form.active,
+      in_transport:     form.in_transport !== false,
+    }
+    let err
+    if (mode === 'new') {
+      const r = await supabase.from('vehicles').insert({ ...row, id: form.id.trim().toUpperCase() })
+      err = r.error
+    } else {
+      const r = await supabase.from('vehicles').update(row).eq('id', initial.id).eq('production_id', productionId)
+      err = r.error
+    }
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+
+  async function handleDelete() {
+    if (!confirmDel) { setCd(true); return }
+    setDel(true)
+    const { count } = await supabase.from('trips').select('id', { count: 'exact', head: true }).eq('vehicle_id', initial.id).eq('production_id', productionId)
+    if (count > 0) { setDel(false); setCd(false); setError(`Cannot delete — ${count} trip${count > 1 ? 's' : ''} assigned.`); return }
+    const { error } = await supabase.from('vehicles').delete().eq('id', initial.id).eq('production_id', productionId)
+    setDel(false)
+    if (error) { setError(error.message); return }
+    onSaved()
+  }
+
+  const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
+  const fld = { marginBottom: '12px' }
+
+  return (
+    <>
+      {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '420px', background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
+            {mode === 'new' ? '🏢 New NCC Vehicle' : '✏️ Edit NCC Vehicle'}
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '16px 18px' }}>
+
+            {/* Vehicle ID */}
+            <div style={fld}>
+              <label style={lbl}>Vehicle ID *</label>
+              <input value={form.id} onChange={e => { setIdManuallyEdited(true); set('id', e.target.value.toUpperCase()) }}
+                style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em', background: mode === 'edit' ? '#f8fafc' : 'white' }}
+                placeholder="VAN-01 / CAR-05" required readOnly={mode === 'edit'} />
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Formato: VAN-01, CAR-05 — usato in Trips e Fleet Monitor</div>
+            </div>
+
+            {/* Tipo veicolo */}
+            <div style={fld}>
+              <label style={lbl}>Tipo Veicolo</label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(type => {
+                  const c = TYPE_COLOR[type]; const active = form.vehicle_type === type
+                  return (
+                    <button key={type} type="button" onClick={() => { set('vehicle_type', type); if (mode === 'new' && !idManuallyEdited) set('id', suggestId(type, vehicles)) }}
+                      style={{ flex: 1, minWidth: '60px', padding: '6px 2px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                      <span style={{ fontSize: '18px' }}>{TYPE_ICON[type]}</span>
+                      <span>{type}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Targa + Capacità */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>Targa</label>
+                <input value={form.license_plate} onChange={e => set('license_plate', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.1em' }} placeholder="AB123CD" />
+              </div>
+              <div>
+                <label style={lbl}>Capacità</label>
+                <input type="number" value={form.capacity} onChange={e => set('capacity', e.target.value)} style={inp} placeholder="8" min="1" max="60" />
+              </div>
+            </div>
+
+            {/* Rocket pax */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #bfdbfe', background: '#eff6ff' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', marginBottom: '10px' }}>🚀 Rocket Capacity</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#1d4ed8' }}>pax_suggested</label>
+                  <input type="number" value={form.pax_suggested} onChange={e => set('pax_suggested', e.target.value)} style={{ ...inp, borderColor: '#bfdbfe' }} placeholder={form.capacity || '6'} min="1" max="60" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#1d4ed8' }}>pax_max</label>
+                  <input type="number" value={form.pax_max} onChange={e => set('pax_max', e.target.value)} style={{ ...inp, borderColor: '#bfdbfe' }} placeholder={form.capacity || '8'} min="1" max="60" />
+                </div>
+              </div>
+            </div>
+
+            {/* NCC Details */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #bae6fd', background: '#f0f9ff' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏢 NCC Details</div>
+
+              <div style={fld}>
+                <label style={{ ...lbl, color: '#0369a1' }}>Agenzia NCC</label>
+                <select value={form.ncc_agency_id} onChange={e => set('ncc_agency_id', e.target.value)} style={{ ...inp, cursor: 'pointer', borderColor: '#bae6fd', background: 'white' }}>
+                  <option value="">— Seleziona agenzia —</option>
+                  {agencies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                {agencies.length === 0 && (
+                  <div style={{ fontSize: '10px', color: '#0369a1', marginTop: '3px' }}>
+                    ℹ Nessuna agenzia ancora — aggiungila prima dal tab NCC
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Nome Driver NCC</label>
+                  <input value={form.ncc_driver_name} onChange={e => set('ncc_driver_name', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="Mario Rossi" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#0369a1' }}>Telefono Driver NCC</label>
+                  <input value={form.ncc_driver_phone} onChange={e => set('ncc_driver_phone', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="+39 333..." type="tel" />
+                </div>
+              </div>
+            </div>
+
+            {/* Sign code + Unit */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>Sign Code</label>
+                <input value={form.sign_code} onChange={e => set('sign_code', e.target.value)} style={inp} placeholder="GRIP1, PROD2…" />
+              </div>
+              <div>
+                <label style={lbl}>Unit Default</label>
+                <input value={form.unit_default} onChange={e => set('unit_default', e.target.value)} style={inp} placeholder="MAIN, SECOND…" />
+              </div>
+            </div>
+
+            {/* Availability */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #d1d5db', background: '#f8fafc' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px' }}>📅 Disponibilità</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={lbl}>Dal</label>
+                  <input type="date" value={form.available_from} onChange={e => set('available_from', e.target.value)} style={{ ...inp, borderColor: '#d1d5db' }} />
+                </div>
+                <div>
+                  <label style={lbl}>Al</label>
+                  <input type="date" value={form.available_to} onChange={e => set('available_to', e.target.value)} style={{ ...inp, borderColor: '#d1d5db' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Active toggle */}
+            <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.active ? '#86efac' : '#e2e8f0'}`, background: form.active ? '#f0fdf4' : '#f8fafc', cursor: 'pointer' }}
+              onClick={() => set('active', !form.active)}>
+              <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.active ? '#16a34a' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: '2px', left: form.active ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: form.active ? '#15803d' : '#64748b' }}>
+                {form.active ? '✅ Veicolo attivo — visibile in Fleet Monitor' : '⏸ Veicolo inattivo — nascosto da Fleet Monitor'}
+              </div>
+            </div>
+
+            {/* In Transport toggle */}
+            <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.in_transport ? '#bfdbfe' : '#e2e8f0'}`, background: form.in_transport ? '#eff6ff' : '#f8fafc', cursor: 'pointer' }}
+              onClick={() => set('in_transport', !form.in_transport)}>
+              <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.in_transport ? '#2563eb' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: '2px', left: form.in_transport ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: form.in_transport ? '#1d4ed8' : '#64748b' }}>
+                {form.in_transport ? '✅ In Transport' : '🚐 SD — escluso da trips/liste/fleet'}
+              </div>
+            </div>
+
+            {/* Danger Zone */}
+            {mode === 'edit' && (
+              <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
+                {!confirmDel ? (
+                  <button type="button" onClick={handleDelete} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
+                    Delete NCC Vehicle
+                  </button>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>Delete this vehicle? Cannot be undone.</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setCd(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Cancel</button>
+                      <button type="button" onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '800' }}>
+                        {deleting ? '...' : 'Confirm Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
+
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+            <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Saving...' : mode === 'new' ? '🏢 Add NCC Vehicle' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
 // ─── Pagina ───────────────────────────────────────────────────
 export default function VehiclesPage() {
   const t = useT()
