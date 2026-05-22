@@ -59,6 +59,25 @@ function suggestId(type, vehicles) {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────
+// ─── NccAgencySelectInline helper ────────────────────────────
+function NccAgencySelectInline({ productionId, value, onChange }) {
+  const [agencies, setAgencies] = useState([])
+  useEffect(() => {
+    if (!productionId) return
+    supabase.from('ncc_agencies').select('id, name').eq('production_id', productionId).order('name')
+      .then(({ data }) => setAgencies(data || []))
+  }, [productionId])
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)}
+      style={{ width: '100%', padding: '6px 8px', border: '1px solid #bae6fd', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: 'white', cursor: 'pointer', boxSizing: 'border-box' }}>
+      <option value="">— Select agency —</option>
+      {agencies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+      {agencies.length === 0 && <option disabled>No agencies yet — add from NCC tab</option>}
+    </select>
+  )
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────
 function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [], vehicles = [] }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
