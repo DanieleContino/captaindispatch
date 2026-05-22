@@ -108,8 +108,15 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
       in_transport:       form.in_transport !== false,
       available_from:     form.available_from || null,
       available_to:       form.available_to   || null,
-      preferred_dept:     form.preferred_dept || null,
-      preferred_crew_ids: form.preferred_crew_ids.length > 0 ? form.preferred_crew_ids : null,
+      preferred_dept:              form.preferred_dept || null,
+      preferred_crew_ids:          form.preferred_crew_ids.length > 0 ? form.preferred_crew_ids : null,
+      is_ncc:                      form.is_ncc || false,
+      is_comodato:                 form.is_comodato || false,
+      ncc_agency_id:               form.is_ncc ? (form.ncc_agency_id || null) : null,
+      comodato_owner_crew_id:      form.is_comodato ? (form.comodato_owner_crew_id || null) : null,
+      comodato_rate_per_km:        form.is_comodato && form.comodato_rate_per_km !== '' ? parseFloat(form.comodato_rate_per_km) : null,
+      comodato_fuel_reimbursement: form.is_comodato ? (form.comodato_fuel_reimbursement || false) : false,
+      comodato_notes:              form.is_comodato ? (form.comodato_notes.trim() || null) : null,
     }
     let err
     if (mode === 'new') {
