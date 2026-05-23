@@ -4499,6 +4499,7 @@ export default function VehiclesPage() {
   const [loanVehicleSidebarOpen, setLoanVehicleSidebarOpen] = useState(false)
   const [loanVehicleSidebarMode, setLoanVehicleSidebarMode] = useState('new')
   const [loanVehicleTarget, setLoanVehicleTarget] = useState(null)
+  const [comodatoAddTrigger, setComodatoAddTrigger] = useState(0)
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
