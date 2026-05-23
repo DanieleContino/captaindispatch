@@ -3744,7 +3744,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [] }) 
 // ─── NccVehicleSidebar ────────────────────────────────────────
 function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef, forceComodato = false }) {
   const EMPTY = {
-    id: '', vehicle_type: 'VAN', vehicle_class: [],
+    id: '', vehicle_type: 'VAN',
     license_plate: '',
     capacity: '', pax_suggested: '', pax_max: '',
     ncc_agency_id: '',
@@ -3780,7 +3780,6 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
       setForm({
         id:               initial.id               || '',
         vehicle_type:     initial.vehicle_type      || 'VAN',
-        vehicle_class:    Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []),
         license_plate:    initial.license_plate     || '',
         capacity:         initial.capacity          ?? '',
         pax_suggested:    initial.pax_suggested     ?? '',
@@ -3809,7 +3808,6 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
     const row = {
       production_id:    productionId,
       vehicle_type:     form.vehicle_type || null,
-      vehicle_class:    form.vehicle_class.length > 0 ? form.vehicle_class : null,
       license_plate:    form.license_plate.trim().toUpperCase() || null,
       capacity:         form.capacity      !== '' ? parseInt(form.capacity)      : null,
       pax_suggested:    form.pax_suggested !== '' ? parseInt(form.pax_suggested) : null,
@@ -3872,10 +3870,18 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
             {/* Vehicle ID */}
             <div style={fld}>
               <label style={lbl}>Vehicle ID *</label>
-              <input value={form.id} onChange={e => { setIdManuallyEdited(true); set('id', e.target.value.toUpperCase()) }}
-                style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em', background: mode === 'edit' ? '#f8fafc' : 'white' }}
-                placeholder="VAN-01 / CAR-05" required readOnly={mode === 'edit'} />
-              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Format: VAN-01, CAR-05 — used in Trips and Fleet Monitor</div>
+              {mode === 'edit' ? (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', background: '#0f2340', border: '1px solid #0f2340', borderRadius: '8px' }}>
+                  <span style={{ fontWeight: '800', fontSize: '15px', letterSpacing: '0.06em', color: 'white', fontFamily: 'monospace' }}>{form.id}</span>
+                </div>
+              ) : (
+                <>
+                  <input value={form.id} onChange={e => { setIdManuallyEdited(true); set('id', e.target.value.toUpperCase()) }}
+                    style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em' }}
+                    placeholder="VAN-01 / CAR-05" required />
+                  <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Format: VAN-01, CAR-05 — used in Trips and Fleet Monitor</div>
+                </>
+              )}
             </div>
 
             {/* Tipo veicolo */}
@@ -3999,6 +4005,33 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
                 {form.in_transport ? '✅ In Transport' : '🚐 SD — excluded from trips/lists/fleet'}
               </div>
             </div>
+
+            {/* Assignments — read-only */}
+            {mode === 'edit' && (initial?.preferred_dept || (Array.isArray(initial?.preferred_crew_ids) && initial.preferred_crew_ids.length > 0)) && (
+              <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '8px' }}>⭐ Assignments</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
+                  {initial.preferred_dept && (() => {
+                    const dc = DEPT_COLOR[initial.preferred_dept] || { bg: '#f8fafc', color: '#475569', border: '#e2e8f0' }
+                    return (
+                      <span style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: dc.bg, color: dc.color, border: `1px solid ${dc.border}` }}>
+                        {initial.preferred_dept}
+                      </span>
+                    )
+                  })()}
+                  {Array.isArray(initial.preferred_crew_ids) && initial.preferred_crew_ids.map(cid => {
+                    const cm = crewList.find(c => c.id === cid)
+                    if (!cm) return null
+                    return (
+                      <span key={cid} style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                        {cm.full_name}
+                      </span>
+                    )
+                  })}
+                </div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>Edit assignments from Fleet tab</div>
+              </div>
+            )}
 
             {/* Danger Zone */}
             {mode === 'edit' && (
