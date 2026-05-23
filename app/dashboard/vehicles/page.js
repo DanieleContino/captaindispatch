@@ -4849,7 +4849,7 @@ export default function VehiclesPage() {
       {/* Body */}
       {activeTab === 'rental' && rentalSubTab === 'vehicles' && (
         <div style={{ padding: isMobile ? '12px 16px' : '16px 24px' }}>
-          <RentalTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={rentalSidebarTriggerRef} crewList={crewList} externalSearch={rentalSearch} externalFilterStatus={rentalFilterStatus} onRentalInfo={({ columnsCount, vehicleCount }) => { setRentalColumnsCount(columnsCount); setRentalVehicleCount(vehicleCount) }} columnsEditorOpen={rentalColumnsEditorOpen} onColumnsEditorClose={() => setRentalColumnsEditorOpen(false)} />
+          <RentalTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={rentalSidebarTriggerRef} crewList={crewList} externalSearch={rentalSearch} externalFilterStatus={rentalFilterStatus} onRentalInfo={({ columnsCount, vehicleCount }) => { setRentalColumnsCount(columnsCount); setRentalVehicleCount(vehicleCount) }} columnsEditorOpen={rentalColumnsEditorOpen} onColumnsEditorClose={() => setRentalColumnsEditorOpen(false)} onEditVehicle={v => { setRentalVehicleSidebarMode('edit'); setRentalVehicleSidebarTarget(v); setRentalVehicleSidebarOpen(true) }} />
         </div>
       )}
       {activeTab === 'rental' && rentalSubTab === 'suppliers' && (
@@ -5002,6 +5002,17 @@ export default function VehiclesPage() {
         vehicles={vhcs}
       />
       <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
+      <RentalVehicleSidebar
+        open={rentalVehicleSidebarOpen}
+        mode={rentalVehicleSidebarMode}
+        initial={rentalVehicleSidebarTarget}
+        onClose={() => setRentalVehicleSidebarOpen(false)}
+        onSaved={() => { setRentalVehicleSidebarOpen(false); load() }}
+        productionId={PRODUCTION_ID}
+        crewList={crewList}
+        vehicles={vhcs}
+        initialSupplierId={null}
+      />
       <AddVehicleModal
         open={addVehicleModalOpen}
         onClose={() => setAddVehicleModalOpen(false)}
