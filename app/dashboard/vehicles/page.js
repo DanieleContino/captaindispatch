@@ -4645,38 +4645,9 @@ export default function VehiclesPage() {
             </button>
           )}
           {activeTab === 'rental' && (
-            <>
-              <button onClick={() => rentalSidebarTriggerRef.current && rentalSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-                + Add Rental
-              </button>
-              <input type="text" placeholder="Search ID, driver, plate..." value={rentalSearch} onChange={e => setRentalSearch(e.target.value)}
-                style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px' }} />
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {['ALL', 'OPEN', 'CLOSED'].map(s => (
-                  <button key={s} onClick={() => setRentalFilterStatus(s)}
-                    style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid',
-                      ...(rentalFilterStatus === s
-                        ? s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' }
-                        : s === 'OPEN' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
-                        : { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
-                        : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div style={{ flex: 1 }} />
-              {rentalColumnsCount === 0 && (
-                <button onClick={() => setRentalColumnsEditorOpen(true)}
-                  style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #0f2340', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
-                  Apply Default Columns
-                </button>
-              )}
-              <button onClick={() => setRentalColumnsEditorOpen(true)}
-                style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                Columns {rentalColumnsCount > 0 && `(${rentalColumnsCount})`}
-              </button>
-              <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
-            </>
+            <button onClick={() => rentalSidebarTriggerRef.current && rentalSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+              + Add Rental
+            </button>
           )}
           {activeTab === 'suppliers' && (
             <button onClick={() => supplierSidebarTriggerRef.current && supplierSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
