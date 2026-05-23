@@ -3686,6 +3686,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
 
   useEffect(() => { load() }, [load])
   useEffect(() => { if (openTriggerRef) openTriggerRef.current = openNewLoan }, [openTriggerRef])
+  useEffect(() => { if (addTrigger > 0) openNewLoan() }, [addTrigger])
 
   function fmtDate(s) {
     if (!s) return '—'
