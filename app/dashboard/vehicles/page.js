@@ -3388,19 +3388,26 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
                   <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>🚐 Vehicles in Fleet</div>
                     {nccVehicles.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '8px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                         {nccVehicles.map(v => (
                           <div key={v.id}
                             onClick={() => onEditVehicle && onEditVehicle(v)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'white', border: '1px solid #bae6fd', borderRadius: '8px', cursor: onEditVehicle ? 'pointer' : 'default', flexWrap: 'wrap' }}
+                            style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px', background: 'white', border: '1px solid #bae6fd', borderRadius: '8px', cursor: onEditVehicle ? 'pointer' : 'default' }}
                             onMouseEnter={e => { if (onEditVehicle) e.currentTarget.style.background = '#f0f9ff' }}
                             onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                            <span style={{ fontSize: '18px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
-                            <span style={{ fontFamily: 'monospace', fontWeight: '800', fontSize: '13px', color: '#0f2340' }}>{v.id}</span>
-                            {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 7px', borderRadius: '5px', border: '1px solid #d4d4d4', letterSpacing: '0.08em' }}>{v.license_plate}</span>}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '20px' }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
+                              <span style={{ fontFamily: 'monospace', fontWeight: '800', fontSize: '13px', color: '#0f2340' }}>{v.id}</span>
+                              {v.capacity && <span style={{ fontSize: '11px', color: '#64748b', marginLeft: 'auto' }}>× {v.capacity} pax</span>}
+                            </div>
+                            {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 7px', borderRadius: '5px', border: '1px solid #d4d4d4', letterSpacing: '0.08em', alignSelf: 'flex-start' }}>{v.license_plate}</span>}
                             {v.ncc_driver_name && <span style={{ fontSize: '12px', color: '#0f172a', fontWeight: '600' }}>👤 {v.ncc_driver_name}</span>}
-                            {v.ncc_driver_phone && <span style={{ fontSize: '12px', color: '#64748b' }}>📞 {v.ncc_driver_phone}</span>}
-                            {v.capacity && <span style={{ fontSize: '11px', color: '#64748b', marginLeft: 'auto' }}>× {v.capacity} pax</span>}
+                            {v.ncc_driver_phone && <span style={{ fontSize: '11px', color: '#64748b' }}>📞 {v.ncc_driver_phone}</span>}
+                            {(v.available_from || v.available_to) && (
+                              <span style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '5px', padding: '2px 6px', alignSelf: 'flex-start' }}>
+                                📅 {v.available_from ? fmtDate(v.available_from) : '∞'} → {v.available_to ? fmtDate(v.available_to) : '∞'}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
