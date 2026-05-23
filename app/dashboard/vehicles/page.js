@@ -4513,22 +4513,9 @@ export default function VehiclesPage() {
 
   function openNew()   { setMode('new');  setEdit(null); setSO(true) }
   function openEdit(v) {
-    if (v.is_ncc === true) {
-      // NCC vehicle → apre NccVehicleSidebar
-      setNccVehicleSidebarMode('edit')
-      setNccVehicleTarget(v)
-      setNccVehicleSidebarOpen(true)
-    } else if (v.is_comodato === true) {
-      // Loan vehicle → apre LoanVehicleSidebar
-      setLoanVehicleSidebarMode('edit')
-      setLoanVehicleTarget(v)
-      setLoanVehicleSidebarOpen(true)
-    } else if (v.is_rental === true) {
-      setActiveTab('rental')
-    } else {
-      // Production vehicle → VehicleSidebar
-      setMode('edit'); setEdit(v); setSO(true)
-    }
+    // Tutti i tipi di veicolo aprono la VehicleSidebar completa,
+    // che mostra già banner read-only per rental/NCC e i campi driver + preferiti
+    setMode('edit'); setEdit(v); setSO(true)
   }
   function onSaved()   { setSO(false); load() }
 
