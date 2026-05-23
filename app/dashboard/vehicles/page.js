@@ -4536,7 +4536,7 @@ export default function VehiclesPage() {
       setLoanVehicleTarget(v)
       setLoanVehicleSidebarOpen(true)
     } else if (v.is_rental === true) {
-      // RentalVehicleSidebar — gestita dentro RentalTab, per ora non fare nulla
+      setActiveTab('rental')
     } else {
       // Production vehicle → VehicleSidebar
       setMode('edit'); setEdit(v); setSO(true)
