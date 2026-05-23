@@ -1585,6 +1585,10 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
 
   const colMinW = columnsConfig.reduce((s, c) => s + parseInt(c.width || '120'), 0)
 
+  useEffect(() => {
+    if (onRentalInfo) onRentalInfo({ columnsCount: columnsConfig.length, vehicleCount: filtered.length })
+  }, [columnsConfig.length, filtered.length])
+
   if (loading) return <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
 
   return (
