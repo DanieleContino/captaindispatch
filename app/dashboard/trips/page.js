@@ -3844,7 +3844,7 @@ function TripsPageInner() {
         <TableHeader
           columns={TRIP_COLS}
           style={{
-            top: assignCtx ? '144px' : '104px',
+            top: assignCtx ? '92px' : '52px',
             transition: 'margin-right 0.25s, top 0.15s',
             marginRight: anySidebarOpen ? `${SIDEBAR_W}px` : 0,
           }}

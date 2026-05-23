@@ -4232,6 +4232,7 @@ export default function VehiclesPage() {
             {[
               { key: 'fleet',    label: '🚐 Fleet' },
               { key: 'rental',   label: '🔑 Rental' },
+              { key: 'suppliers', label: '🏢 Suppliers' },
               { key: 'ncc',      label: '🏢 NCC' },
               { key: 'comodato', label: '🤝 Comodato' },
               { key: 'report',   label: '📊 Report' },
