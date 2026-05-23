@@ -1592,22 +1592,6 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
 
   return (
     <div>
-      {/* Filter row */}
-      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1 }} />
-        {columnsConfig.length === 0 && (
-          <button onClick={applyDefaultPreset} disabled={applyingPreset}
-            style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #0f2340', background: applyingPreset ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
-            {applyingPreset ? 'Applying...' : 'Apply Default Columns'}
-          </button>
-        )}
-        <button onClick={() => setColumnsEditorOpen(true)}
-          style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-          Columns {columnsConfig.length > 0 && `(${columnsConfig.length})`}
-        </button>
-        <span style={{ fontSize: '12px', color: '#94a3b8' }}>{filtered.length} vehicles</span>
-      </div>
-
       {vehicles.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
           <div style={{ fontSize: '40px', marginBottom: '10px' }}>🔑</div>
