@@ -4707,9 +4707,6 @@ export default function VehiclesPage() {
             ))}
           </div>
           <button onClick={load} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151', flexShrink: 0 }}>↻</button>
-          <button onClick={() => setImportOpen(true)} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', color: '#374151', flexShrink: 0 }}>
-            {t.importFromFile}
-          </button>
         </div>
         {/* Riga 2 — filtri */}
         {activeTab === 'fleet' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
