@@ -1591,21 +1591,6 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
     <div>
       {/* Filter row */}
       <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-        <input type="text" placeholder="Search ID, driver, plate..." value={search} onChange={e => setSearch(e.target.value)}
-          style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '200px' }} />
-        <div style={{ display: 'flex', gap: '4px' }}>
-          {['ALL', 'OPEN', 'CLOSED'].map(s => (
-            <button key={s} onClick={() => setFilterStatus(s)}
-              style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid',
-                ...(filterStatus === s
-                  ? s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' }
-                  : s === 'OPEN' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
-                  : { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
-                  : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
-              {s}
-            </button>
-          ))}
-        </div>
         <div style={{ flex: 1 }} />
         {columnsConfig.length === 0 && (
           <button onClick={applyDefaultPreset} disabled={applyingPreset}
