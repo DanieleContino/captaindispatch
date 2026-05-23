@@ -1421,7 +1421,6 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
   const [suppliers, setSuppliers]       = useState([])
   const [loading, setLoading]           = useState(true)
   const [columnsConfig, setColumnsConfig] = useState([])
-  const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
   const [applyingPreset, setApplyingPreset] = useState(false)
   const filterStatus = externalFilterStatus
   const search = externalSearch
