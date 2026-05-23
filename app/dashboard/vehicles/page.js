@@ -4528,6 +4528,7 @@ export default function VehiclesPage() {
   const [rentalColumnsCount, setRentalColumnsCount] = useState(0)
   const [rentalVehicleCount, setRentalVehicleCount] = useState(0)
   const [rentalColumnsEditorOpen, setRentalColumnsEditorOpen] = useState(false)
+  const [rentalSubTab, setRentalSubTab] = useState('vehicles')
   const supplierSidebarTriggerRef        = React.useRef(null)
   const rentalSidebarTriggerRef          = React.useRef(null)
   const nccAgencySidebarTriggerRef       = React.useRef(null)
@@ -4743,33 +4744,46 @@ export default function VehiclesPage() {
         </div>
         {/* Riga 2 — filtri Rental */}
         {activeTab === 'rental' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-          <input type="text" placeholder="Search ID, driver, plate..." value={rentalSearch} onChange={e => setRentalSearch(e.target.value)}
-            style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px', background: 'white' }} />
-          <div style={{ display: 'flex', gap: '4px' }}>
-            {['ALL', 'OPEN', 'CLOSED'].map(s => (
-              <button key={s} onClick={() => setRentalFilterStatus(s)}
-                style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid',
-                  ...(rentalFilterStatus === s
-                    ? s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' }
-                    : s === 'OPEN' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
-                    : { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
-                    : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
-                {s}
+          {/* Sub-tab switcher */}
+          <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden', flexShrink: 0 }}>
+            {[{ key: 'vehicles', label: '🚐 Vehicles' }, { key: 'suppliers', label: '🏢 Suppliers' }].map(st => (
+              <button key={st.key} onClick={() => setRentalSubTab(st.key)}
+                style={{ padding: '4px 12px', border: 'none', borderLeft: st.key !== 'vehicles' ? '1px solid #e2e8f0' : 'none', background: rentalSubTab === st.key ? '#0f2340' : 'white', color: rentalSubTab === st.key ? 'white' : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {st.label}
               </button>
             ))}
           </div>
-          <div style={{ flex: 1 }} />
-          {rentalColumnsCount === 0 && (
+          {/* Filtri visibili solo su sub-tab Vehicles */}
+          {rentalSubTab === 'vehicles' && <>
+            <input type="text" placeholder="Search ID, driver, plate..." value={rentalSearch} onChange={e => setRentalSearch(e.target.value)}
+              style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px', background: 'white' }} />
+            <div style={{ display: 'flex', gap: '4px' }}>
+              {['ALL', 'OPEN', 'CLOSED'].map(s => (
+                <button key={s} onClick={() => setRentalFilterStatus(s)}
+                  style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid',
+                    ...(rentalFilterStatus === s
+                      ? s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' }
+                      : s === 'OPEN' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
+                      : { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
+                      : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <div style={{ flex: 1 }} />
+            {rentalColumnsCount === 0 && (
+              <button onClick={() => setRentalColumnsEditorOpen(true)}
+                style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #0f2340', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                Apply Default Columns
+              </button>
+            )}
             <button onClick={() => setRentalColumnsEditorOpen(true)}
-              style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #0f2340', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
-              Apply Default Columns
+              style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+              Columns {rentalColumnsCount > 0 && `(${rentalColumnsCount})`}
             </button>
-          )}
-          <button onClick={() => setRentalColumnsEditorOpen(true)}
-            style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-            Columns {rentalColumnsCount > 0 && `(${rentalColumnsCount})`}
-          </button>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
+          </>}
+          {rentalSubTab === 'suppliers' && <div style={{ flex: 1 }} />}
         </div>}
         {/* Riga 2 — filtri Production */}
         {activeTab === 'production' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
