@@ -4541,6 +4541,9 @@ export default function VehiclesPage() {
   const [loanVehicleSidebarMode, setLoanVehicleSidebarMode] = useState('new')
   const [loanVehicleTarget, setLoanVehicleTarget] = useState(null)
   const [comodatoAddTrigger, setComodatoAddTrigger] = useState(0)
+  const [rentalVehicleSidebarOpen, setRentalVehicleSidebarOpen] = useState(false)
+  const [rentalVehicleSidebarMode, setRentalVehicleSidebarMode] = useState('new')
+  const [rentalVehicleSidebarTarget, setRentalVehicleSidebarTarget] = useState(null)
   const [addVehicleModalOpen, setAddVehicleModalOpen] = useState(false)
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
