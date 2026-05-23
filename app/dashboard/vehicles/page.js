@@ -1669,7 +1669,7 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
         </div>
       )}
 
-      <RentalColumnsEditorSidebar open={columnsEditorOpen} onClose={() => setColumnsEditorOpen(false)} onChanged={load} />
+      <RentalColumnsEditorSidebar open={columnsEditorOpen} onClose={() => { if (onColumnsEditorClose) onColumnsEditorClose() }} onChanged={load} />
       <RentalVehicleSidebar
         open={rentalSidebarOpen}
         mode={rentalSidebarMode}
