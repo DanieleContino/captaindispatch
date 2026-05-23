@@ -4491,6 +4491,7 @@ export default function VehiclesPage() {
   const [rentalFilterStatus, setRentalFilterStatus] = useState('ALL')
   const [rentalColumnsCount, setRentalColumnsCount] = useState(0)
   const [rentalVehicleCount, setRentalVehicleCount] = useState(0)
+  const [rentalColumnsEditorOpen, setRentalColumnsEditorOpen] = useState(false)
   const supplierSidebarTriggerRef        = React.useRef(null)
   const rentalSidebarTriggerRef          = React.useRef(null)
   const nccAgencySidebarTriggerRef       = React.useRef(null)
