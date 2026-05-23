@@ -3760,7 +3760,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [] }) 
         })}
       </div>
       <ComodatoExpenseSidebar open={expenseSidebarOpen} mode={expenseSidebarMode} initial={expenseTarget} onClose={() => setExpenseSidebarOpen(false)} onSaved={onExpenseSaved} productionId={productionId} vehicleId={expenseVehicleId} />
-      <NccVehicleSidebar open={loanVehicleSidebarOpen} mode={loanVehicleSidebarMode} initial={loanVehicleTarget} onClose={() => setLoanVehicleSidebarOpen(false)} onSaved={() => { setLoanVehicleSidebarOpen(false); load() }} productionId={productionId} vehicles={allVehicles} forceComodato={true} />
+      <LoanVehicleSidebar open={loanVehicleSidebarOpen} mode={loanVehicleSidebarMode} initial={loanVehicleTarget} onClose={() => setLoanVehicleSidebarOpen(false)} onSaved={() => { setLoanVehicleSidebarOpen(false); load() }} productionId={productionId} crewList={crewList} vehicles={allVehicles} />
     </div>
   )
 }
@@ -4094,6 +4094,358 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
   )
 }
 
+// ─── LoanVehicleSidebar ───────────────────────────────────────
+function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef }) {
+  const EMPTY = {
+    id: '', vehicle_type: 'VAN',
+    license_plate: '',
+    capacity: '', pax_suggested: '', pax_max: '',
+    sign_code: '', unit_default: '',
+    available_from: '', available_to: '',
+    active: true, in_transport: true,
+    comodato_owner_crew_id: '',
+    comodato_rate_per_km: '',
+    comodato_fuel_reimbursement: false,
+    comodato_notes: '',
+  }
+  const [form, setForm]     = useState(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [error, setError]   = useState(null)
+  const [confirmDel, setCd] = useState(false)
+  const [deleting, setDel]  = useState(false)
+  const [idManuallyEdited, setIdManuallyEdited] = useState(false)
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    if (openTriggerRef) openTriggerRef.current = () => {
+      setForm({ ...EMPTY, id: suggestId('VAN', vehicles) })
+      setIdManuallyEdited(false)
+      setError(null); setCd(false)
+    }
+  }, [openTriggerRef, vehicles])
+
+  useEffect(() => {
+    if (!open) return
+    setError(null); setCd(false)
+    if (mode === 'edit' && initial) {
+      setForm({
+        id:                          initial.id                          || '',
+        vehicle_type:                initial.vehicle_type                || 'VAN',
+        license_plate:               initial.license_plate               || '',
+        capacity:                    initial.capacity                    ?? '',
+        pax_suggested:               initial.pax_suggested               ?? '',
+        pax_max:                     initial.pax_max                     ?? '',
+        sign_code:                   initial.sign_code                   || '',
+        unit_default:                initial.unit_default                || '',
+        available_from:              initial.available_from              || '',
+        available_to:                initial.available_to                || '',
+        active:                      initial.active !== false,
+        in_transport:                initial.in_transport !== false,
+        comodato_owner_crew_id:      initial.comodato_owner_crew_id      || '',
+        comodato_rate_per_km:        initial.comodato_rate_per_km        ?? '',
+        comodato_fuel_reimbursement: initial.comodato_fuel_reimbursement || false,
+        comodato_notes:              initial.comodato_notes              || '',
+      })
+      setIdManuallyEdited(false)
+    } else {
+      setForm({ ...EMPTY, id: suggestId('VAN', vehicles) })
+      setIdManuallyEdited(false)
+    }
+  }, [open, mode, initial])
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.id.trim()) { setError('Vehicle ID obbligatorio'); return }
+    setSaving(true)
+    const row = {
+      production_id:               productionId,
+      vehicle_type:                form.vehicle_type || null,
+      license_plate:               form.license_plate.trim().toUpperCase() || null,
+      capacity:                    form.capacity      !== '' ? parseInt(form.capacity)      : null,
+      pax_suggested:               form.pax_suggested !== '' ? parseInt(form.pax_suggested) : null,
+      pax_max:                     form.pax_max       !== '' ? parseInt(form.pax_max)       : null,
+      is_ncc:                      false,
+      is_comodato:                 true,
+      ncc_agency_id:               null,
+      ncc_driver_name:             null,
+      ncc_driver_phone:            null,
+      sign_code:                   form.sign_code.trim()    || null,
+      unit_default:                form.unit_default.trim() || null,
+      available_from:              form.available_from || null,
+      available_to:                form.available_to   || null,
+      active:                      form.active,
+      in_transport:                form.in_transport !== false,
+      comodato_owner_crew_id:      form.comodato_owner_crew_id || null,
+      comodato_rate_per_km:        form.comodato_rate_per_km !== '' ? parseFloat(form.comodato_rate_per_km) : null,
+      comodato_fuel_reimbursement: form.comodato_fuel_reimbursement || false,
+      comodato_notes:              form.comodato_notes.trim() || null,
+    }
+    let err
+    if (mode === 'new') {
+      const r = await supabase.from('vehicles').insert({ ...row, id: form.id.trim().toUpperCase() })
+      err = r.error
+    } else {
+      const r = await supabase.from('vehicles').update(row).eq('id', initial.id).eq('production_id', productionId)
+      err = r.error
+    }
+    setSaving(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+
+  async function handleDelete() {
+    if (!confirmDel) { setCd(true); return }
+    setDel(true)
+    const { count } = await supabase.from('trips').select('id', { count: 'exact', head: true }).eq('vehicle_id', initial.id).eq('production_id', productionId)
+    if (count > 0) { setDel(false); setCd(false); setError(`Cannot delete — ${count} trip${count > 1 ? 's' : ''} assigned.`); return }
+    const { error } = await supabase.from('vehicles').delete().eq('id', initial.id).eq('production_id', productionId)
+    setDel(false)
+    if (error) { setError(error.message); return }
+    onSaved()
+  }
+
+  const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
+  const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
+  const fld = { marginBottom: '12px' }
+
+  const ownerCrew = crewList.find(c => c.id === form.comodato_owner_crew_id)
+
+  return (
+    <>
+      {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '420px', background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
+            {mode === 'new' ? '🤝 New Loan Vehicle' : '✏️ Edit Loan Vehicle'}
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '16px 18px' }}>
+
+            {/* Vehicle ID */}
+            <div style={fld}>
+              <label style={lbl}>Vehicle ID *</label>
+              {mode === 'edit' ? (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', background: '#0f2340', border: '1px solid #0f2340', borderRadius: '8px' }}>
+                  <span style={{ fontWeight: '800', fontSize: '15px', letterSpacing: '0.06em', color: 'white', fontFamily: 'monospace' }}>{form.id}</span>
+                </div>
+              ) : (
+                <>
+                  <input value={form.id} onChange={e => { setIdManuallyEdited(true); set('id', e.target.value.toUpperCase()) }}
+                    style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em' }}
+                    placeholder="VAN-01 / CAR-05" required />
+                  <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Format: VAN-01, CAR-05 — used in Trips and Fleet Monitor</div>
+                </>
+              )}
+            </div>
+
+            {/* Tipo veicolo */}
+            <div style={fld}>
+              <label style={lbl}>Vehicle Type</label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {['VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(type => {
+                  const c = TYPE_COLOR[type]; const active = form.vehicle_type === type
+                  return (
+                    <button key={type} type="button" onClick={() => { set('vehicle_type', type); if (mode === 'new' && !idManuallyEdited) set('id', suggestId(type, vehicles)) }}
+                      style={{ flex: 1, minWidth: '60px', padding: '6px 2px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                      <span style={{ fontSize: '18px' }}>{TYPE_ICON[type]}</span>
+                      <span>{type}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Targa + Capacità */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>License Plate</label>
+                <input value={form.license_plate} onChange={e => set('license_plate', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.1em' }} placeholder="AB123CD" />
+              </div>
+              <div>
+                <label style={lbl}>Capacity</label>
+                <input type="number" value={form.capacity} onChange={e => set('capacity', e.target.value)} style={inp} placeholder="8" min="1" max="60" />
+              </div>
+            </div>
+
+            {/* Rocket Capacity */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #bfdbfe', background: '#eff6ff' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', marginBottom: '10px' }}>🚀 Rocket Capacity</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ ...lbl, color: '#1d4ed8' }}>pax_suggested</label>
+                  <input type="number" value={form.pax_suggested} onChange={e => set('pax_suggested', e.target.value)} style={{ ...inp, borderColor: '#bfdbfe' }} placeholder={form.capacity || '6'} min="1" max="60" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, color: '#1d4ed8' }}>pax_max</label>
+                  <input type="number" value={form.pax_max} onChange={e => set('pax_max', e.target.value)} style={{ ...inp, borderColor: '#bfdbfe' }} placeholder={form.capacity || '8'} min="1" max="60" />
+                </div>
+              </div>
+            </div>
+
+            {/* Sign code + Unit */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>Sign Code</label>
+                <input value={form.sign_code} onChange={e => set('sign_code', e.target.value)} style={inp} placeholder="GRIP1, PROD2…" />
+              </div>
+              <div>
+                <label style={lbl}>Unit Default</label>
+                <input value={form.unit_default} onChange={e => set('unit_default', e.target.value)} style={inp} placeholder="MAIN, SECOND…" />
+              </div>
+            </div>
+
+            {/* Availability */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #d1d5db', background: '#f8fafc' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px' }}>📅 Availability</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={lbl}>From</label>
+                  <input type="date" value={form.available_from} onChange={e => set('available_from', e.target.value)} style={{ ...inp, borderColor: '#d1d5db' }} />
+                </div>
+                <div>
+                  <label style={lbl}>To</label>
+                  <input type="date" value={form.available_to} onChange={e => set('available_to', e.target.value)} style={{ ...inp, borderColor: '#d1d5db' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Active toggle */}
+            <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.active ? '#86efac' : '#e2e8f0'}`, background: form.active ? '#f0fdf4' : '#f8fafc', cursor: 'pointer' }}
+              onClick={() => set('active', !form.active)}>
+              <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.active ? '#16a34a' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: '2px', left: form.active ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: form.active ? '#15803d' : '#64748b' }}>
+                {form.active ? '✅ Active — visible in Fleet Monitor' : '⏸ Inactive — hidden from Fleet Monitor'}
+              </div>
+            </div>
+
+            {/* In Transport toggle */}
+            <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.in_transport ? '#bfdbfe' : '#e2e8f0'}`, background: form.in_transport ? '#eff6ff' : '#f8fafc', cursor: 'pointer' }}
+              onClick={() => set('in_transport', !form.in_transport)}>
+              <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.in_transport ? '#2563eb' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: '2px', left: form.in_transport ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: form.in_transport ? '#1d4ed8' : '#64748b' }}>
+                {form.in_transport ? '✅ In Transport' : '🚐 SD — excluded from trips/lists/fleet'}
+              </div>
+            </div>
+
+            {/* Loan Details */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #86efac', background: '#f0fdf4' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#15803d', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🤝 Loan Details</div>
+
+              {/* Owner */}
+              <div style={fld}>
+                <label style={{ ...lbl, color: '#15803d' }}>Owner (Crew)</label>
+                <select value={form.comodato_owner_crew_id} onChange={e => set('comodato_owner_crew_id', e.target.value)}
+                  style={{ ...inp, cursor: 'pointer', borderColor: '#86efac', background: 'white' }}>
+                  <option value="">— Select owner —</option>
+                  {crewList.map(c => <option key={c.id} value={c.id}>{c.full_name}{c.department ? ` (${c.department})` : ''}</option>)}
+                </select>
+              </div>
+
+              {/* Rate per KM */}
+              <div style={fld}>
+                <label style={{ ...lbl, color: '#15803d' }}>Rate per KM (EUR)</label>
+                <input type="number" step="0.01" value={form.comodato_rate_per_km} onChange={e => set('comodato_rate_per_km', e.target.value)}
+                  style={{ ...inp, fontFamily: 'monospace', borderColor: '#86efac' }} placeholder="0.25" />
+              </div>
+
+              {/* Fuel reimbursement */}
+              <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${form.comodato_fuel_reimbursement ? '#86efac' : '#d1d5db'}`, background: form.comodato_fuel_reimbursement ? '#f0fdf4' : 'white', cursor: 'pointer' }}
+                onClick={() => set('comodato_fuel_reimbursement', !form.comodato_fuel_reimbursement)}>
+                <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.comodato_fuel_reimbursement ? '#15803d' : '#cbd5e1', position: 'relative', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: '2px', left: form.comodato_fuel_reimbursement ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: form.comodato_fuel_reimbursement ? '#15803d' : '#64748b' }}>⛽ Fuel reimbursement</span>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label style={{ ...lbl, color: '#15803d' }}>Notes</label>
+                <textarea value={form.comodato_notes} onChange={e => set('comodato_notes', e.target.value)}
+                  style={{ ...inp, minHeight: '60px', resize: 'vertical', borderColor: '#86efac' }} placeholder="Additional notes..." />
+              </div>
+            </div>
+
+            {/* Assignments — read-only, visible only in edit if preferred_dept or preferred_crew_ids */}
+            {mode === 'edit' && (initial?.preferred_dept || (Array.isArray(initial?.preferred_crew_ids) && initial.preferred_crew_ids.length > 0)) && (
+              <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '8px' }}>⭐ Assignments</div>
+                {ownerCrew && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '6px 10px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '7px' }}>
+                    <span style={{ fontSize: '12px' }}>🔗</span>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>{ownerCrew.full_name}</span>
+                    {ownerCrew.department && <span style={{ fontSize: '10px', color: '#64748b' }}>{ownerCrew.department}</span>}
+                    <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', marginLeft: 'auto' }}>owner/driver</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
+                  {initial.preferred_dept && (() => {
+                    const dc = DEPT_COLOR[initial.preferred_dept] || { bg: '#f8fafc', color: '#475569', border: '#e2e8f0' }
+                    return (
+                      <span style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: dc.bg, color: dc.color, border: `1px solid ${dc.border}` }}>
+                        {initial.preferred_dept}
+                      </span>
+                    )
+                  })()}
+                  {Array.isArray(initial.preferred_crew_ids) && initial.preferred_crew_ids.map(cid => {
+                    const cm = crewList.find(c => c.id === cid)
+                    if (!cm) return null
+                    return (
+                      <span key={cid} style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                        {cm.full_name}
+                      </span>
+                    )
+                  })}
+                </div>
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>Edit assignments from Fleet tab</div>
+              </div>
+            )}
+
+            {/* Danger Zone */}
+            {mode === 'edit' && (
+              <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>Danger Zone</div>
+                {!confirmDel ? (
+                  <button type="button" onClick={handleDelete} style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: '700', width: '100%' }}>
+                    Delete Loan Vehicle
+                  </button>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700', marginBottom: '8px' }}>Delete this vehicle? Cannot be undone.</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => setCd(false)} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Cancel</button>
+                      <button type="button" onClick={handleDelete} disabled={deleting} style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '800' }}>
+                        {deleting ? '...' : 'Confirm Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
+
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+            <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
+              {saving ? 'Saving...' : mode === 'new' ? '🤝 Add Loan Vehicle' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  )
+}
+
 // ─── Pagina ───────────────────────────────────────────────────
 export default function VehiclesPage() {
   const t = useT()
@@ -4124,6 +4476,9 @@ export default function VehiclesPage() {
   const [nccVehicleSidebarOpen, setNccVehicleSidebarOpen] = useState(false)
   const [nccVehicleSidebarMode, setNccVehicleSidebarMode] = useState('new')
   const [nccVehicleTarget, setNccVehicleTarget] = useState(null)
+  const [loanVehicleSidebarOpen, setLoanVehicleSidebarOpen] = useState(false)
+  const [loanVehicleSidebarMode, setLoanVehicleSidebarMode] = useState('new')
+  const [loanVehicleTarget, setLoanVehicleTarget] = useState(null)
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
@@ -4151,14 +4506,19 @@ export default function VehiclesPage() {
   function openNew()   { setMode('new');  setEdit(null); setSO(true) }
   function openEdit(v) {
     if (v.is_ncc === true) {
-      // NCC vehicle → apre NccVehicleSidebar; ncc_agency_id è in v.ncc_agency_id (passato via initial)
+      // NCC vehicle → apre NccVehicleSidebar
       setNccVehicleSidebarMode('edit')
       setNccVehicleTarget(v)
       setNccVehicleSidebarOpen(true)
+    } else if (v.is_comodato === true) {
+      // Loan vehicle → apre LoanVehicleSidebar
+      setLoanVehicleSidebarMode('edit')
+      setLoanVehicleTarget(v)
+      setLoanVehicleSidebarOpen(true)
     } else if (v.is_rental === true) {
       // RentalVehicleSidebar — gestita dentro RentalTab, per ora non fare nulla
     } else {
-      // is_comodato === true → VehicleSidebar, tutti false → VehicleSidebar (Production)
+      // Production vehicle → VehicleSidebar
       setMode('edit'); setEdit(v); setSO(true)
     }
   }
@@ -4460,6 +4820,16 @@ export default function VehiclesPage() {
         crewList={crewList}
         vehicles={vhcs}
         openTriggerRef={nccVehicleSidebarTriggerRef}
+      />
+      <LoanVehicleSidebar
+        open={loanVehicleSidebarOpen}
+        mode={loanVehicleSidebarMode}
+        initial={loanVehicleTarget}
+        onClose={() => setLoanVehicleSidebarOpen(false)}
+        onSaved={() => { setLoanVehicleSidebarOpen(false); load() }}
+        productionId={PRODUCTION_ID}
+        crewList={crewList}
+        vehicles={vhcs}
       />
       <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
 
