@@ -3786,7 +3786,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [] }) 
 }
 
 // ─── NccVehicleSidebar ────────────────────────────────────────
-function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef, forceComodato = false, initialAgencyId = null }) {
+function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef, initialAgencyId = null }) {
   const EMPTY = {
     id: '', vehicle_type: 'VAN',
     license_plate: '',
@@ -3856,9 +3856,9 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
       capacity:         form.capacity      !== '' ? parseInt(form.capacity)      : null,
       pax_suggested:    form.pax_suggested !== '' ? parseInt(form.pax_suggested) : null,
       pax_max:          form.pax_max       !== '' ? parseInt(form.pax_max)       : null,
-      is_ncc:           forceComodato ? false : true,
-      is_comodato:      forceComodato ? true : false,
-      ncc_agency_id:    forceComodato ? null : (form.ncc_agency_id || null),
+      is_ncc:           true,
+      is_comodato:      false,
+      ncc_agency_id:    form.ncc_agency_id || null,
       ncc_driver_name:  form.ncc_driver_name.trim()  || null,
       ncc_driver_phone: form.ncc_driver_phone.trim() || null,
       sign_code:        form.sign_code.trim()    || null,
