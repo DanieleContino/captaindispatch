@@ -3640,7 +3640,7 @@ function ComodatoExpenseSidebar({ open, mode, initial, onClose, onSaved, product
 }
 
 // ─── ComodatoTab ──────────────────────────────────────────────
-function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [] }) {
+function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], addTrigger = 0 }) {
   const [vehicles, setVehicles]           = useState([])
   const [loading, setLoading]             = useState(true)
   const [expenseSidebarOpen, setExpenseSidebarOpen] = useState(false)
