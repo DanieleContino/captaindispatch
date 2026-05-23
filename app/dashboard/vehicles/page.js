@@ -4485,6 +4485,8 @@ export default function VehiclesPage() {
   const [activeTab, setActiveTab] = useState('fleet') // 'fleet' | 'rental' | 'ncc' | 'comodato' | 'report'
   const [rentalSearch, setRentalSearch] = useState('')
   const [rentalFilterStatus, setRentalFilterStatus] = useState('ALL')
+  const [rentalColumnsCount, setRentalColumnsCount] = useState(0)
+  const [rentalVehicleCount, setRentalVehicleCount] = useState(0)
   const supplierSidebarTriggerRef        = React.useRef(null)
   const rentalSidebarTriggerRef          = React.useRef(null)
   const nccAgencySidebarTriggerRef       = React.useRef(null)
