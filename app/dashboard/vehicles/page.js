@@ -1415,7 +1415,7 @@ function RentalReportTab({ productionId }) {
 }
 
 // ─── RentalTab ───────────────────────────────────────────────
-function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], externalSearch = '', externalFilterStatus = 'ALL', onRentalInfo }) {
+function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], externalSearch = '', externalFilterStatus = 'ALL', onRentalInfo, columnsEditorOpen = false, onColumnsEditorClose }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
   const [vehicles, setVehicles]         = useState([])
   const [suppliers, setSuppliers]       = useState([])
