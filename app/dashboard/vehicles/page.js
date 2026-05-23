@@ -1415,7 +1415,7 @@ function RentalReportTab({ productionId }) {
 }
 
 // ─── RentalTab ───────────────────────────────────────────────
-function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], externalSearch = '', externalFilterStatus = 'ALL', onRentalInfo, columnsEditorOpen = false, onColumnsEditorClose }) {
+function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], externalSearch = '', externalFilterStatus = 'ALL', onRentalInfo, columnsEditorOpen = false, onColumnsEditorClose, onEditVehicle }) {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
   const [vehicles, setVehicles]         = useState([])
   const [suppliers, setSuppliers]       = useState([])
@@ -1500,7 +1500,7 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
 
     switch (col.source_field) {
       case 'vehicle_id':
-        return <td key={col.source_field} onClick={() => { setRentalSidebarMode('edit'); setRentalTarget(v); setRentalSidebarOpen(true) }} style={{ padding: '6px 8px', fontFamily: 'monospace', fontWeight: '700', fontSize: '12px', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(37,99,235,0.06)'} onMouseLeave={e => e.currentTarget.style.background = ''}>{v.id}</td>
+        return <td key={col.source_field} onClick={() => onEditVehicle ? onEditVehicle(v) : (() => { setRentalSidebarMode('edit'); setRentalTarget(v); setRentalSidebarOpen(true) })()} style={{ padding: '6px 8px', fontFamily: 'monospace', fontWeight: '700', fontSize: '12px', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(37,99,235,0.06)'} onMouseLeave={e => e.currentTarget.style.background = ''}>{v.id}</td>
       case 'brand_model':
         return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '12px', color: '#374151', whiteSpace: 'nowrap' }}>{[v.rental_brand, v.rental_model].filter(Boolean).join(' ') || '—'}</td>
       case 'plate':
