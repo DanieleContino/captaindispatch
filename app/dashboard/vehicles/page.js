@@ -4579,10 +4579,10 @@ export default function VehiclesPage() {
 
   function handleAddVehicleSelect(type) {
     setAddVehicleModalOpen(false)
-    if (type === 'production') { setActiveTab('production'); openNew() }
-    if (type === 'rental')     { setActiveTab('rental');     setTimeout(() => rentalSidebarTriggerRef.current && rentalSidebarTriggerRef.current(), 100) }
-    if (type === 'ncc')        { setActiveTab('ncc');        setTimeout(() => nccAgencySidebarTriggerRef.current && nccAgencySidebarTriggerRef.current(), 100) }
-    if (type === 'loan')       { setActiveTab('comodato');   setTimeout(() => setComodatoAddTrigger(n => n + 1), 100) }
+    if (type === 'production') { setMode('new'); setEdit(null); setSO(true) }
+    if (type === 'rental')     { setActiveTab('rental'); setRentalSubTab('vehicles'); setRentalVehicleSidebarMode('new'); setRentalVehicleSidebarTarget(null); setRentalVehicleSidebarOpen(true) }
+    if (type === 'ncc')        { setActiveTab('ncc'); setNccVehicleSidebarMode('new'); setNccVehicleTarget(null); setNccVehicleSidebarOpen(true) }
+    if (type === 'loan')       { setActiveTab('comodato'); setLoanVehicleSidebarMode('new'); setLoanVehicleTarget(null); setLoanVehicleSidebarOpen(true) }
   }
 
   // ─── Selezione ────────────────────────────────────────────
@@ -4695,30 +4695,22 @@ export default function VehiclesPage() {
         <div style={{ padding: isMobile ? '8px 12px' : '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
           <span style={{ fontSize: '18px' }}>🚐</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
-          <button onClick={() => setAddVehicleModalOpen(true)} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-            {t.addVehicleBtn}
+          <button onClick={() => {
+            if (activeTab === 'fleet')     { setAddVehicleModalOpen(true) }
+            else if (activeTab === 'production') { setMode('new'); setEdit(null); setSO(true) }
+            else if (activeTab === 'rental' && rentalSubTab === 'vehicles')   { setRentalVehicleSidebarMode('new'); setRentalVehicleSidebarTarget(null); setRentalVehicleSidebarOpen(true) }
+            else if (activeTab === 'rental' && rentalSubTab === 'suppliers')  { supplierSidebarTriggerRef.current && supplierSidebarTriggerRef.current() }
+            else if (activeTab === 'ncc')      { setNccVehicleSidebarMode('new'); setNccVehicleTarget(null); setNccVehicleSidebarOpen(true) }
+            else if (activeTab === 'comodato') { setLoanVehicleSidebarMode('new'); setLoanVehicleTarget(null); setLoanVehicleSidebarOpen(true) }
+          }} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+            {activeTab === 'fleet'      ? '+ Add Vehicle'
+            : activeTab === 'production' ? '+ Add Production'
+            : (activeTab === 'rental' && rentalSubTab === 'vehicles')  ? '+ Add Rental'
+            : (activeTab === 'rental' && rentalSubTab === 'suppliers') ? '+ Add Supplier'
+            : activeTab === 'ncc'      ? '+ Add NCC Vehicle'
+            : activeTab === 'comodato' ? '+ Add Loan Vehicle'
+            : '+ Add Vehicle'}
           </button>
-          {activeTab === 'ncc' && (
-            <button onClick={() => nccAgencySidebarTriggerRef.current && nccAgencySidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-              + Add Agency
-            </button>
-          )}
-          {activeTab === 'comodato' && (
-            <button onClick={() => setComodatoAddTrigger(n => n + 1)} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-              + Add Loan Vehicle
-            </button>
-          )}
-          {activeTab === 'rental' && (
-            <button onClick={() => rentalSidebarTriggerRef.current && rentalSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-              + Add Rental
-            </button>
-          )}
-          {/* search e filtri rental rimossi da riga 1 — ora in riga 2 */}
-          {activeTab === 'suppliers' && (
-            <button onClick={() => supplierSidebarTriggerRef.current && supplierSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-              + Add Supplier
-            </button>
-          )}
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>{vhcs.length} totale · {counts.active} attivi</span>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {[['VAN', '🚐'], ['CAR', '🚗'], ['BUS', '🚌'], ['TRUCK', '🚛'], ['PICKUP', '🛻'], ['CARGO', '🚚']].map(([tp, ic]) => counts[tp.toLowerCase()] > 0 && (
