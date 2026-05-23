@@ -4682,9 +4682,17 @@ export default function VehiclesPage() {
                 ))}
               </div>
               <div style={{ flex: 1 }} />
-              {rentalColumnsCount > 0 && (
-                <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
+              {rentalColumnsCount === 0 && (
+                <button onClick={() => setRentalColumnsEditorOpen(true)}
+                  style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #0f2340', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                  Apply Default Columns
+                </button>
               )}
+              <button onClick={() => setRentalColumnsEditorOpen(true)}
+                style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                Columns {rentalColumnsCount > 0 && `(${rentalColumnsCount})`}
+              </button>
+              <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
             </>
           )}
           {activeTab === 'suppliers' && (
