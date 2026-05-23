@@ -4680,6 +4680,10 @@ export default function VehiclesPage() {
                   </button>
                 ))}
               </div>
+              <div style={{ flex: 1 }} />
+              {rentalColumnsCount > 0 && (
+                <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
+              )}
             </>
           )}
           {activeTab === 'suppliers' && (
