@@ -4577,6 +4577,19 @@ export default function VehiclesPage() {
     if (!error) { setSelectedIds([]); setBulkConfirm(false); load() }
   }
 
+  // Filtro production-only (per tab Production)
+  const productionFiltered = vhcs.filter(v => {
+    if (v.is_rental || v.is_ncc || v.is_comodato) return false
+    if (filterActive === 'ACTIVE'   && !v.active) return false
+    if (filterActive === 'INACTIVE' &&  v.active) return false
+    if (filterType !== 'ALL' && v.vehicle_type !== filterType) return false
+    if (search) {
+      const q = search.toLowerCase()
+      if (!(v.id || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
   // Reset selezione quando cambiano i filtri
   const filtered = vhcs.filter(v => {
     if (filterActive === 'ACTIVE'   && !v.active) return false
@@ -4616,7 +4629,7 @@ export default function VehiclesPage() {
         <div style={{ padding: isMobile ? '8px 12px' : '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
           <span style={{ fontSize: '18px' }}>🚐</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
-          {activeTab === 'fleet' && (
+          {(activeTab === 'fleet' || activeTab === 'production') && (
             <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
               {t.addVehicleBtn}
             </button>
@@ -4653,8 +4666,9 @@ export default function VehiclesPage() {
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden' }}>
             {[
-              { key: 'fleet',    label: '🚐 Fleet' },
-              { key: 'rental',   label: '🔑 Rental' },
+            { key: 'fleet',      label: '🚐 Fleet' },
+            { key: 'production', label: '🏭 Production' },
+            { key: 'rental',     label: '🔑 Rental' },
               { key: 'suppliers', label: '🏢 Suppliers' },
               { key: 'ncc',      label: '🏢 NCC' },
               { key: 'comodato', label: '🤝 Comodato' },
@@ -4697,6 +4711,30 @@ export default function VehiclesPage() {
             Columns {rentalColumnsCount > 0 && `(${rentalColumnsCount})`}
           </button>
           <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
+        </div>}
+        {/* Riga 2 — filtri Production */}
+        {activeTab === 'production' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <input type="text" placeholder="Cerca ID, driver…" value={search} onChange={e => setSearch(e.target.value)}
+            style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '150px', flexShrink: 0 }} />
+          <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+            {['ALL', 'ACTIVE', 'INACTIVE'].map(s => (
+              <button key={s} onClick={() => setFA(s)}
+                style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(filterActive === s ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                {s}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+            {['ALL', 'VAN', 'CAR', 'BUS', 'TRUCK', 'PICKUP', 'CARGO'].map(s => {
+              const active = filterType === s; const c = s !== 'ALL' ? TYPE_COLOR[s] : null
+              return (
+                <button key={s} onClick={() => setFT(s)}
+                  style={{ padding: '3px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid', ...(active ? (s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: c.bg, color: c.color, borderColor: c.border }) : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                  {s !== 'ALL' && (TYPE_ICON[s] + ' ')}{s}
+                </button>
+              )
+            })}
+          </div>
         </div>}
         {/* Riga 2 — filtri Fleet */}
         {activeTab === 'fleet' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -4758,6 +4796,39 @@ export default function VehiclesPage() {
           <RentalReportTab productionId={PRODUCTION_ID} />
         </div>
       )}
+      {activeTab === 'production' && <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
+        {!PRODUCTION_ID && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>⚠ NEXT_PUBLIC_PRODUCTION_ID non impostato</div>}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>{t.loading}</div>
+        ) : productionFiltered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '80px' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🏭</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b' }}>
+              {vhcs.filter(v => !v.is_rental && !v.is_ncc && !v.is_comodato).length === 0
+                ? 'Nessun veicolo di produzione ancora' : t.noResults}
+            </div>
+            {vhcs.filter(v => !v.is_rental && !v.is_ncc && !v.is_comodato).length === 0 && (
+              <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '9px', padding: '9px 20px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', marginTop: '12px' }}>
+                + Add Production Vehicle
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {productionFiltered.map(v => (
+              <VehicleRow
+                key={v.id}
+                v={v}
+                onEdit={openEdit}
+                onDelete={handleDeleteSingle}
+                selected={selectedIds.includes(v.id)}
+                onToggleSelect={toggleSelect}
+                crewList={crewList}
+              />
+            ))}
+          </div>
+        )}
+      </div>}
       {activeTab === 'fleet' && <div style={{ maxWidth: '900px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px', transition: 'margin-right 0.25s', marginRight: !isMobile && sidebarOpen ? `${SIDEBAR_W}px` : 'auto' }}>
         {!PRODUCTION_ID && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>⚠ NEXT_PUBLIC_PRODUCTION_ID non impostato</div>}
         {loading ? (
