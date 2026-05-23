@@ -3686,7 +3686,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
 
   useEffect(() => { load() }, [load])
   useEffect(() => { if (openTriggerRef) openTriggerRef.current = openNewLoan }, [openTriggerRef])
-  useEffect(() => { if (addTrigger > 0) { setLoanVehicleSidebarMode('new'); setLoanVehicleTarget(null); setLoanVehicleSidebarOpen(true) } }, [addTrigger])
+  useEffect(() => { console.log('addTrigger changed:', addTrigger); if (addTrigger > 0) { console.log('opening loan sidebar'); setLoanVehicleSidebarMode('new'); setLoanVehicleTarget(null); setLoanVehicleSidebarOpen(true) } }, [addTrigger])
 
   function fmtDate(s) {
     if (!s) return '—'
