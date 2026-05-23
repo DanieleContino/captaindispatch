@@ -4453,7 +4453,7 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
 function AddVehicleModal({ open, onClose, onSelect }) {
   if (!open) return null
   const options = [
-    { key: 'production', icon: '🏭', label: 'Production',
+    { key: 'production', icon: '🎥', label: 'Production',
       desc: 'Veicolo di proprietà della produzione',
       color: '#0f2340', bg: '#eff6ff', border: '#bfdbfe' },
     { key: 'rental', icon: '🔑', label: 'Rental',
