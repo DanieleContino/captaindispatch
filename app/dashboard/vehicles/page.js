@@ -4150,7 +4150,17 @@ export default function VehiclesPage() {
 
   function openNew()   { setMode('new');  setEdit(null); setSO(true) }
   function openEdit(v) {
-    setMode('edit'); setEdit(v); setSO(true)
+    if (v.is_ncc === true) {
+      // NCC vehicle → apre NccVehicleSidebar; ncc_agency_id è in v.ncc_agency_id (passato via initial)
+      setNccVehicleSidebarMode('edit')
+      setNccVehicleTarget(v)
+      setNccVehicleSidebarOpen(true)
+    } else if (v.is_rental === true) {
+      // RentalVehicleSidebar — gestita dentro RentalTab, per ora non fare nulla
+    } else {
+      // is_comodato === true → VehicleSidebar, tutti false → VehicleSidebar (Production)
+      setMode('edit'); setEdit(v); setSO(true)
+    }
   }
   function onSaved()   { setSO(false); load() }
 
