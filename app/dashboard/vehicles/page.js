@@ -4579,7 +4579,7 @@ export default function VehiclesPage() {
 
   function handleAddVehicleSelect(type) {
     setAddVehicleModalOpen(false)
-    if (type === 'production') { setMode('new'); setEdit(null); setSO(true) }
+    if (type === 'production') { setActiveTab('production'); setMode('new'); setEdit(null); setSO(true) }
     if (type === 'rental')     { setActiveTab('rental'); setRentalSubTab('vehicles'); setRentalVehicleSidebarMode('new'); setRentalVehicleSidebarTarget(null); setRentalVehicleSidebarOpen(true) }
     if (type === 'ncc')        { setActiveTab('ncc'); setNccVehicleSidebarMode('new'); setNccVehicleTarget(null); setNccVehicleSidebarOpen(true) }
     if (type === 'loan')       { setActiveTab('comodato'); setLoanVehicleSidebarMode('new'); setLoanVehicleTarget(null); setLoanVehicleSidebarOpen(true) }
