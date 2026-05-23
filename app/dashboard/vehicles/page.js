@@ -3271,7 +3271,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
       supabase
         .from('ncc_agencies')
         .select(`id, name, contact_name, phone, email, address, vat_no, notes,
-          vehicles:vehicles(id, vehicle_type, ncc_driver_name, ncc_driver_phone, license_plate, capacity, active)`)
+          vehicles:vehicles(id, vehicle_type, ncc_driver_name, ncc_driver_phone, license_plate, capacity, active, is_ncc)`)
         .eq('production_id', productionId)
         .order('name'),
       supabase.from('vehicles').select('id').eq('production_id', productionId),
