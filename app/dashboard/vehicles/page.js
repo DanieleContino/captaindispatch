@@ -4478,7 +4478,6 @@ export default function VehiclesPage() {
   const [sidebarOpen, setSO] = useState(false)
   const [mode,    setMode]   = useState('new')
   const [editItem, setEdit]  = useState(null)
-  const [importOpen, setImportOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState([])   // bulk selection
   const [bulkDeleting, setBulkDel] = useState(false)
   const [bulkConfirm, setBulkConfirm] = useState(false)
@@ -4866,14 +4865,6 @@ export default function VehiclesPage() {
       />
       <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
 
-      <ImportModal
-        open={importOpen}
-        mode="fleet"
-        productionId={PRODUCTION_ID}
-        locations={[]}
-        onClose={() => setImportOpen(false)}
-        onImported={() => { setImportOpen(false); load() }}
-      />
     </div>
   )
 }
