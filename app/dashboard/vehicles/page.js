@@ -4449,6 +4449,59 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
   )
 }
 
+// ─── AddVehicleModal ──────────────────────────────────────────
+function AddVehicleModal({ open, onClose, onSelect }) {
+  if (!open) return null
+  const options = [
+    { key: 'production', icon: '🏭', label: 'Production',
+      desc: 'Veicolo di proprietà della produzione',
+      color: '#0f2340', bg: '#eff6ff', border: '#bfdbfe' },
+    { key: 'rental', icon: '🔑', label: 'Rental',
+      desc: 'Veicolo a noleggio (contratto supplier)',
+      color: '#a16207', bg: '#fefce8', border: '#fde68a' },
+    { key: 'ncc', icon: '🏢', label: 'NCC',
+      desc: 'Veicolo fornito da agenzia NCC esterna',
+      color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' },
+    { key: 'loan', icon: '🤝', label: 'Loan',
+      desc: 'Veicolo personale con rimborso spese',
+      color: '#15803d', bg: '#f0fdf4', border: '#86efac' },
+  ]
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,35,64,0.4)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 61,
+        background: 'white', borderRadius: '14px', padding: '24px', width: '380px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a', marginBottom: '6px' }}>
+          🚐 Aggiungi Veicolo
+        </div>
+        <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '18px' }}>
+          Seleziona il tipo di veicolo da aggiungere
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {options.map(opt => (
+            <button key={opt.key} onClick={() => onSelect(opt.key)}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+                borderRadius: '10px', border: `1px solid ${opt.border}`, background: opt.bg,
+                cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+              <span style={{ fontSize: '24px', flexShrink: 0 }}>{opt.icon}</span>
+              <div>
+                <div style={{ fontWeight: '800', fontSize: '13px', color: opt.color }}>{opt.label}</div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>{opt.desc}</div>
+              </div>
+              <span style={{ marginLeft: 'auto', color: opt.color, fontSize: '16px' }}>›</span>
+            </button>
+          ))}
+        </div>
+        <button onClick={onClose} style={{ marginTop: '14px', width: '100%', padding: '8px',
+          borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white',
+          color: '#64748b', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>
+          Cancel
+        </button>
+      </div>
+    </>
+  )
+}
+
 // ─── Pagina ───────────────────────────────────────────────────
 export default function VehiclesPage() {
   const t = useT()
@@ -4487,6 +4540,7 @@ export default function VehiclesPage() {
   const [loanVehicleSidebarMode, setLoanVehicleSidebarMode] = useState('new')
   const [loanVehicleTarget, setLoanVehicleTarget] = useState(null)
   const [comodatoAddTrigger, setComodatoAddTrigger] = useState(0)
+  const [addVehicleModalOpen, setAddVehicleModalOpen] = useState(false)
   const deptOptions = [...new Set(crewList.map(c => c.department).filter(Boolean))].sort()
 
   useEffect(() => {
@@ -4518,6 +4572,14 @@ export default function VehiclesPage() {
     setMode('edit'); setEdit(v); setSO(true)
   }
   function onSaved()   { setSO(false); load() }
+
+  function handleAddVehicleSelect(type) {
+    setAddVehicleModalOpen(false)
+    if (type === 'production') { setActiveTab('production'); openNew() }
+    if (type === 'rental')     { setActiveTab('rental');     setTimeout(() => rentalSidebarTriggerRef.current && rentalSidebarTriggerRef.current(), 100) }
+    if (type === 'ncc')        { setActiveTab('ncc');        setTimeout(() => nccAgencySidebarTriggerRef.current && nccAgencySidebarTriggerRef.current(), 100) }
+    if (type === 'loan')       { setActiveTab('comodato');   setTimeout(() => setComodatoAddTrigger(n => n + 1), 100) }
+  }
 
   // ─── Selezione ────────────────────────────────────────────
   function toggleSelect(id) {
@@ -4629,11 +4691,9 @@ export default function VehiclesPage() {
         <div style={{ padding: isMobile ? '8px 12px' : '10px 24px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9' }}>
           <span style={{ fontSize: '18px' }}>🚐</span>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>Vehicles</span>
-          {(activeTab === 'fleet' || activeTab === 'production') && (
-            <button onClick={openNew} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
-              {t.addVehicleBtn}
-            </button>
-          )}
+          <button onClick={() => setAddVehicleModalOpen(true)} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
+            {t.addVehicleBtn}
+          </button>
           {activeTab === 'ncc' && (
             <button onClick={() => nccAgencySidebarTriggerRef.current && nccAgencySidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
               + Add Agency
@@ -4926,7 +4986,11 @@ export default function VehiclesPage() {
         vehicles={vhcs}
       />
       <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
-
+      <AddVehicleModal
+        open={addVehicleModalOpen}
+        onClose={() => setAddVehicleModalOpen(false)}
+        onSelect={handleAddVehicleSelect}
+      />
     </div>
   )
 }
