@@ -3696,10 +3696,13 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
   if (loading) return <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading...</div>
 
   if (vehicles.length === 0) return (
-    <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-      <div style={{ fontSize: '40px', marginBottom: '10px' }}>🤝</div>
-      <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>No loan vehicles yet</div>
-      <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Use + Add Loan to add a loan vehicle</div>
+    <div>
+      <div style={{ textAlign: 'center', padding: '80px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+        <div style={{ fontSize: '40px', marginBottom: '10px' }}>🤝</div>
+        <div style={{ fontSize: '15px', fontWeight: '600', color: '#64748b', marginBottom: '8px' }}>No loan vehicles yet</div>
+        <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Use + Add Loan to add a loan vehicle</div>
+      </div>
+      <LoanVehicleSidebar open={loanVehicleSidebarOpen} mode={loanVehicleSidebarMode} initial={loanVehicleTarget} onClose={() => setLoanVehicleSidebarOpen(false)} onSaved={() => { setLoanVehicleSidebarOpen(false); load() }} productionId={productionId} crewList={crewList} vehicles={allVehicles} />
     </div>
   )
 
