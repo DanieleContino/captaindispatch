@@ -3444,6 +3444,17 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
 
       <NccAgencySidebar open={agencySidebarOpen} mode={agencySidebarMode} initial={agencyTarget} onClose={() => setAgencySidebarOpen(false)} onSaved={onAgencySaved} productionId={productionId} />
       <NccOrderSidebar open={orderSidebarOpen} mode={orderSidebarMode} initial={orderTarget} onClose={() => setOrderSidebarOpen(false)} onSaved={onOrderSaved} productionId={productionId} agencyId={orderAgencyId} />
+      <NccVehicleSidebar
+        open={nccVehicleSidebarOpen}
+        mode="new"
+        initial={null}
+        onClose={() => setNccVehicleSidebarOpen(false)}
+        onSaved={() => { setNccVehicleSidebarOpen(false); load() }}
+        productionId={productionId}
+        crewList={[]}
+        vehicles={allVehicles}
+        initialAgencyId={nccVehicleSidebarAgencyId}
+      />
     </div>
   )
 }
@@ -3766,7 +3777,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [] }) 
 }
 
 // ─── NccVehicleSidebar ────────────────────────────────────────
-function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef, forceComodato = false }) {
+function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], openTriggerRef, forceComodato = false, initialAgencyId = null }) {
   const EMPTY = {
     id: '', vehicle_type: 'VAN',
     license_plate: '',
@@ -3820,10 +3831,10 @@ function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId
       })
       setIdManuallyEdited(false)
     } else {
-      setForm({ ...EMPTY, id: suggestId('VAN', vehicles) })
+      setForm({ ...EMPTY, id: suggestId('VAN', vehicles), ncc_agency_id: initialAgencyId || '' })
       setIdManuallyEdited(false)
     }
-  }, [open, mode, initial])
+  }, [open, mode, initial, initialAgencyId])
 
   async function handleSubmit(e) {
     e.preventDefault()
