@@ -4767,7 +4767,7 @@ export default function VehiclesPage() {
             )}
             <button onClick={() => setRentalColumnsEditorOpen(true)}
               style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-              Columns {rentalColumnsCount > 0 && `(${rentalColumnsCount})`}
+              ✎ Edit Columns {rentalColumnsCount > 0 && `(${rentalColumnsCount})`}
             </button>
             <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
           </>}
