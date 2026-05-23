@@ -4739,15 +4739,6 @@ export default function VehiclesPage() {
         </div>
         {/* Riga 2 — filtri Rental */}
         {activeTab === 'rental' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-          {/* Sub-tab switcher */}
-          <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden', flexShrink: 0 }}>
-            {[{ key: 'vehicles', label: '🚐 Vehicles' }, { key: 'suppliers', label: '🏢 Suppliers' }].map(st => (
-              <button key={st.key} onClick={() => setRentalSubTab(st.key)}
-                style={{ padding: '4px 12px', border: 'none', borderLeft: st.key !== 'vehicles' ? '1px solid #e2e8f0' : 'none', background: rentalSubTab === st.key ? '#0f2340' : 'white', color: rentalSubTab === st.key ? 'white' : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                {st.label}
-              </button>
-            ))}
-          </div>
           {/* Filtri visibili solo su sub-tab Vehicles */}
           {rentalSubTab === 'vehicles' && <>
             <input type="text" placeholder="Search ID, driver, plate..." value={rentalSearch} onChange={e => setRentalSearch(e.target.value)}
@@ -4765,7 +4756,9 @@ export default function VehiclesPage() {
                 </button>
               ))}
             </div>
-            <div style={{ flex: 1 }} />
+          </>}
+          <div style={{ flex: 1 }} />
+          {rentalSubTab === 'vehicles' && <>
             {rentalColumnsCount === 0 && (
               <button onClick={() => setRentalColumnsEditorOpen(true)}
                 style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #0f2340', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
@@ -4778,7 +4771,15 @@ export default function VehiclesPage() {
             </button>
             <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
           </>}
-          {rentalSubTab === 'suppliers' && <div style={{ flex: 1 }} />}
+          {/* Sub-tab switcher — destra */}
+          <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden', flexShrink: 0 }}>
+            {[{ key: 'vehicles', label: '🚐 Vehicles' }, { key: 'suppliers', label: '🏢 Suppliers' }].map(st => (
+              <button key={st.key} onClick={() => setRentalSubTab(st.key)}
+                style={{ padding: '4px 12px', border: 'none', borderLeft: st.key !== 'vehicles' ? '1px solid #e2e8f0' : 'none', background: rentalSubTab === st.key ? '#0f2340' : 'white', color: rentalSubTab === st.key ? 'white' : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {st.label}
+              </button>
+            ))}
+          </div>
         </div>}
         {/* Riga 2 — filtri Production */}
         {activeTab === 'production' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
