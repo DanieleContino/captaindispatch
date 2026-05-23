@@ -4748,7 +4748,7 @@ export default function VehiclesPage() {
       )}
       {activeTab === 'comodato' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <ComodatoTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={comodatoVehicleSidebarTriggerRef} crewList={crewList} />
+        <ComodatoTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={comodatoVehicleSidebarTriggerRef} crewList={crewList} addTrigger={comodatoAddTrigger} />
         </div>
       )}
       {activeTab === 'report' && (
