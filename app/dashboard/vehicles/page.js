@@ -77,7 +77,7 @@ function NccAgencySelectInline({ productionId, value, onChange }) {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────
-function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [], vehicles = [] }) {
+function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [], vehicles = [], nccAgencyId = null }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', driver_crew_id: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [], is_ncc: false, is_comodato: false, ncc_agency_id: '', ncc_driver_name: '', ncc_driver_phone: '', comodato_owner_crew_id: '', comodato_rate_per_km: '', comodato_fuel_reimbursement: false, comodato_notes: '' }
@@ -98,10 +98,10 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
       setForm({ id: initial.id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []), license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', driver_crew_id: initial.driver_crew_id || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, in_transport: initial.in_transport !== false, available_from: initial.available_from || '', available_to: initial.available_to || '', preferred_dept: initial.preferred_dept || '', preferred_crew_ids: Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [], is_ncc: initial.is_ncc || false, is_comodato: initial.is_comodato || false, ncc_agency_id: initial.ncc_agency_id || '', ncc_driver_name: initial.ncc_driver_name || '', ncc_driver_phone: initial.ncc_driver_phone || '', comodato_owner_crew_id: initial.comodato_owner_crew_id || '', comodato_rate_per_km: initial.comodato_rate_per_km ?? '', comodato_fuel_reimbursement: initial.comodato_fuel_reimbursement || false, comodato_notes: initial.comodato_notes || '' })
       setIdManuallyEdited(false)
     } else {
-      setForm({ ...EMPTY, id: suggestId('VAN', vehicles) })
+      setForm({ ...EMPTY, id: suggestId('VAN', vehicles), ...(nccAgencyId ? { is_ncc: true, ncc_agency_id: nccAgencyId } : {}) })
       setIdManuallyEdited(false)
     }
-  }, [open, mode, initial])
+  }, [open, mode, initial, nccAgencyId])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -3239,21 +3239,11 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
   const [orderSidebarMode, setOrderSidebarMode] = useState('new')
   const [orderTarget, setOrderTarget]   = useState(null)
   const [orderAgencyId, setOrderAgencyId] = useState(null)
-  const [expandedAgency, setExpandedAgency] = useState(null)
+  const [expandedAgency, setExpandedAgency] = useState(new Set())
   const [orders, setOrders]             = useState({}) // agencyId → orders[]
-
-  const load = useCallback(async () => {
-    if (!productionId) return
-    setLoading(true)
-    const { data } = await supabase
-      .from('ncc_agencies')
-      .select(`id, name, contact_name, phone, email, address, vat_no, notes,
-        vehicles:vehicles(id, vehicle_type, ncc_driver_name, active)`)
-      .eq('production_id', productionId)
-      .order('name')
-    setAgencies(data || [])
-    setLoading(false)
-  }, [productionId])
+  const [nccVehicleSidebarOpen, setNccVehicleSidebarOpen] = useState(false)
+  const [nccVehicleSidebarAgencyId, setNccVehicleSidebarAgencyId] = useState(null)
+  const [allVehicles, setAllVehicles]   = useState([])
 
   async function loadOrders(agencyId) {
     const { data } = await supabase
@@ -3265,10 +3255,33 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
     setOrders(prev => ({ ...prev, [agencyId]: data || [] }))
   }
 
+  const load = useCallback(async () => {
+    if (!productionId) return
+    setLoading(true)
+    const [{ data }, { data: allV }] = await Promise.all([
+      supabase
+        .from('ncc_agencies')
+        .select(`id, name, contact_name, phone, email, address, vat_no, notes,
+          vehicles:vehicles(id, vehicle_type, ncc_driver_name, ncc_driver_phone, license_plate, capacity, active)`)
+        .eq('production_id', productionId)
+        .order('name'),
+      supabase.from('vehicles').select('id').eq('production_id', productionId),
+    ])
+    const agencyList = data || []
+    setAgencies(agencyList)
+    setAllVehicles(allV || [])
+    setExpandedAgency(new Set(agencyList.map(a => a.id)))
+    await Promise.all(agencyList.map(a => loadOrders(a.id)))
+    setLoading(false)
+  }, [productionId])
+
   function toggleAgency(id) {
-    const next = expandedAgency === id ? null : id
-    setExpandedAgency(next)
-    if (next && !orders[next]) loadOrders(next)
+    setExpandedAgency(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
+      return next
+    })
+    if (!orders[id]) loadOrders(id)
   }
 
   function openNewAgency()   { setAgencySidebarMode('new');  setAgencyTarget(null);    setAgencySidebarOpen(true) }
@@ -3320,7 +3333,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
       {/* Agency cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {agencies.map(a => {
-          const isExpanded = expandedAgency === a.id
+          const isExpanded = expandedAgency.has(a.id)
           const agencyOrders = orders[a.id] || []
           const agencyTotal = agencyOrders.reduce((s, o) => s + (parseFloat(o.amount_total) || 0), 0)
           const nccVehicles = (a.vehicles || []).filter(v => v.active)
@@ -3363,21 +3376,32 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
                 <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 16px', background: '#f8fafc' }}>
 
                   {/* Veicoli NCC in flotta */}
-                  {nccVehicles.length > 0 && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>🚐 Vehicles in Fleet</div>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>🚐 Vehicles in Fleet</div>
+                    {nccVehicles.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '8px' }}>
                         {nccVehicles.map(v => (
-                          <span key={v.id}
+                          <div key={v.id}
                             onClick={() => onEditVehicle && onEditVehicle(v)}
-                            style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', cursor: onEditVehicle ? 'pointer' : 'default' }}>
-                            {TYPE_ICON[v.vehicle_type] || '🚐'} {v.id}
-                            {v.ncc_driver_name && <span style={{ fontWeight: '400', marginLeft: '4px', color: '#64748b' }}>· {v.ncc_driver_name}</span>}
-                          </span>
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'white', border: '1px solid #bae6fd', borderRadius: '8px', cursor: onEditVehicle ? 'pointer' : 'default', flexWrap: 'wrap' }}
+                            onMouseEnter={e => { if (onEditVehicle) e.currentTarget.style.background = '#f0f9ff' }}
+                            onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                            <span style={{ fontSize: '18px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
+                            <span style={{ fontFamily: 'monospace', fontWeight: '800', fontSize: '13px', color: '#0f2340' }}>{v.id}</span>
+                            {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 7px', borderRadius: '5px', border: '1px solid #d4d4d4', letterSpacing: '0.08em' }}>{v.license_plate}</span>}
+                            {v.ncc_driver_name && <span style={{ fontSize: '12px', color: '#0f172a', fontWeight: '600' }}>👤 {v.ncc_driver_name}</span>}
+                            {v.ncc_driver_phone && <span style={{ fontSize: '12px', color: '#64748b' }}>📞 {v.ncc_driver_phone}</span>}
+                            {v.capacity && <span style={{ fontSize: '11px', color: '#64748b', marginLeft: 'auto' }}>× {v.capacity} pax</span>}
+                          </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      onClick={e => { e.stopPropagation(); setNccVehicleSidebarAgencyId(a.id); setNccVehicleSidebarOpen(true) }}
+                      style={{ padding: '5px 14px', borderRadius: '7px', border: '1px dashed #bae6fd', background: 'transparent', color: '#0369a1', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                      + Add NCC Vehicle
+                    </button>
+                  </div>
 
                   {/* Ordini */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
