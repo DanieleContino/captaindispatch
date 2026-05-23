@@ -4649,6 +4649,7 @@ export default function VehiclesPage() {
               + Add Rental
             </button>
           )}
+          {/* search e filtri rental rimossi da riga 1 — ora in riga 2 */}
           {activeTab === 'suppliers' && (
             <button onClick={() => supplierSidebarTriggerRef.current && supplierSidebarTriggerRef.current()} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(37,99,235,0.3)', flexShrink: 0 }}>
               + Add Supplier
@@ -4680,7 +4681,37 @@ export default function VehiclesPage() {
           </div>
           <button onClick={load} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151', flexShrink: 0 }}>↻</button>
         </div>
-        {/* Riga 2 — filtri */}
+        {/* Riga 2 — filtri Rental */}
+        {activeTab === 'rental' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+          <input type="text" placeholder="Search ID, driver, plate..." value={rentalSearch} onChange={e => setRentalSearch(e.target.value)}
+            style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '180px', background: 'white' }} />
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {['ALL', 'OPEN', 'CLOSED'].map(s => (
+              <button key={s} onClick={() => setRentalFilterStatus(s)}
+                style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: '1px solid',
+                  ...(rentalFilterStatus === s
+                    ? s === 'ALL' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' }
+                    : s === 'OPEN' ? { background: '#f0fdf4', color: '#15803d', borderColor: '#86efac' }
+                    : { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
+                    : { background: 'white', color: '#94a3b8', borderColor: '#e2e8f0' }) }}>
+                {s}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex: 1 }} />
+          {rentalColumnsCount === 0 && (
+            <button onClick={() => setRentalColumnsEditorOpen(true)}
+              style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #0f2340', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+              Apply Default Columns
+            </button>
+          )}
+          <button onClick={() => setRentalColumnsEditorOpen(true)}
+            style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+            Columns {rentalColumnsCount > 0 && `(${rentalColumnsCount})`}
+          </button>
+          <span style={{ fontSize: '12px', color: '#94a3b8' }}>{rentalVehicleCount} vehicle{rentalVehicleCount !== 1 ? 's' : ''}</span>
+        </div>}
+        {/* Riga 2 — filtri Fleet */}
         {activeTab === 'fleet' && <div style={{ padding: isMobile ? '8px 12px' : '8px 24px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <input type="text" placeholder="Cerca ID, driver…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', width: '150px', flexShrink: 0 }} />
