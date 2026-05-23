@@ -4844,12 +4844,12 @@ export default function VehiclesPage() {
       </div>
 
       {/* Body */}
-      {activeTab === 'rental' && (
+      {activeTab === 'rental' && rentalSubTab === 'vehicles' && (
         <div style={{ padding: isMobile ? '12px 16px' : '16px 24px' }}>
           <RentalTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={rentalSidebarTriggerRef} crewList={crewList} externalSearch={rentalSearch} externalFilterStatus={rentalFilterStatus} onRentalInfo={({ columnsCount, vehicleCount }) => { setRentalColumnsCount(columnsCount); setRentalVehicleCount(vehicleCount) }} columnsEditorOpen={rentalColumnsEditorOpen} onColumnsEditorClose={() => setRentalColumnsEditorOpen(false)} />
         </div>
       )}
-      {activeTab === 'suppliers' && (
+      {activeTab === 'rental' && rentalSubTab === 'suppliers' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
           <RentalSuppliersTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={supplierSidebarTriggerRef} />
         </div>
