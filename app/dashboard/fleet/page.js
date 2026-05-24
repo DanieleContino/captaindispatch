@@ -450,7 +450,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
 }
 
 // ─── Pagina principale ─────────────────────────────────────────
-export default function FleetPage() {
+export default function FleetMonitorPage() {
   const t       = useT()
   const router  = useRouter()
   const PRODUCTION_ID = getProductionId()
