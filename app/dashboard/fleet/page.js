@@ -7,6 +7,7 @@ import { PageHeader } from '../../../components/ui/PageHeader'
 import { useT } from '../../../lib/i18n'
 
 import { getProductionId } from '../../../lib/production'
+import { SendLinksModal } from '../../wrap-trip/components/SendLinksModal'
 
 const REFRESH_INTERVAL = 30_000  // auto-reload dati ogni 30s
 const NOW_TICK_MS      = 15_000  // aggiorna "adesso" ogni 15s per le progress bar
@@ -468,6 +469,7 @@ export default function FleetPage() {
   const [refreshingTraffic, setRefreshingTraffic] = useState(false)
   const [trafficMsg,    setTrafficMsg]    = useState(null)
   const [autoRefresh,   setAutoRefresh]   = useState(true)
+  const [sendLinksOpen, setSendLinksOpen] = useState(false)
 
   // Ref per evitare stale closure nel channel Realtime
   const dateRef = useRef(date)
@@ -634,6 +636,10 @@ export default function FleetPage() {
             {lastRefresh && <span>{fmtLastRefresh(lastRefresh)}</span>}
             <span style={{ color: '#cbd5e1' }}>·</span>
             <span>{autoRefresh ? `Refresh in ${countdown}s` : 'Auto-refresh paused'}</span>
+            <button onClick={() => setSendLinksOpen(true)}
+              style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              📱 Driver Links
+            </button>
             <button onClick={() => loadData(date)}
               style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
               {loading ? '…' : '↻'} {t.fleetRefreshBtn}
@@ -803,6 +809,7 @@ export default function FleetPage() {
           </>
         )}
       </div>
+      <SendLinksModal open={sendLinksOpen} onClose={() => setSendLinksOpen(false)} productionId={PRODUCTION_ID} />
     </div>
   )
 }
