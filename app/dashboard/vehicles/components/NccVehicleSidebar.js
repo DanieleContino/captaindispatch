@@ -99,15 +99,16 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
   }, [open, mode, initial, initialAgencyId])
 
   useEffect(() => {
-    if (!open || !form.ncc_agency_id) { setAgencyDrivers([]); return }
+    const agencyId = form.ncc_agency_id || initial?.ncc_agency_id
+    if (!open || !agencyId) { setAgencyDrivers([]); return }
     supabase.from('ncc_drivers')
       .select('id, name, phone')
-      .eq('agency_id', form.ncc_agency_id)
+      .eq('agency_id', agencyId)
       .eq('production_id', productionId)
       .eq('is_active', true)
       .order('name')
       .then(({ data }) => setAgencyDrivers(data || []))
-  }, [open, form.ncc_agency_id, productionId])
+  }, [open, form.ncc_agency_id, initial?.ncc_agency_id, productionId])
 
   async function handleSubmit(e) {
     e.preventDefault()
