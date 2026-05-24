@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../../../../lib/supabase'
 
 const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌', TRUCK: '🚛', PICKUP: '🛻', CARGO: '🚚' }
@@ -56,8 +56,12 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
   const [agencies, setAgencies] = useState([])
   const [idManuallyEdited, setIdManuallyEdited] = useState(false)
   const [agencyDrivers, setAgencyDrivers] = useState([])
+  const nccDriverIdRef = useRef('')
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k, v) => {
+    if (k === 'ncc_driver_id') nccDriverIdRef.current = v || ''
+    setForm(f => ({ ...f, [k]: v }))
+  }
 
   useEffect(() => {
     if (openTriggerRef) openTriggerRef.current = () => {
@@ -91,6 +95,8 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
         active:           initial.active !== false,
         in_transport:     initial.in_transport !== false,
       })
+      // sync ref
+      nccDriverIdRef.current = initial.ncc_driver_id || ''
       setIdManuallyEdited(false)
       if (initial.ncc_agency_id) {
         supabase.from('ncc_drivers')
@@ -134,7 +140,7 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
       ncc_agency_id:    form.ncc_agency_id || null,
       ncc_driver_name:  form.ncc_driver_name.trim()  || null,
       ncc_driver_phone: form.ncc_driver_phone.trim() || null,
-      ncc_driver_id:    form.ncc_driver_id || null,
+      ncc_driver_id:    nccDriverIdRef.current || null,
       sign_code:        form.sign_code.trim()    || null,
       unit_default:     form.unit_default.trim() || null,
       available_from:   form.available_from || null,
