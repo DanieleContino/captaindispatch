@@ -2652,7 +2652,7 @@ export default function BridgePage() {
       .then(({ data }) => setLocations(data || []))
   }, [productionId])
 
-  if (loading) {
+  if (loading && !user) {
     return (
       <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ color: '#94a3b8', fontSize: '14px' }}>Loading…</div>
