@@ -124,6 +124,36 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
   async function handleSubmit(e) {
     e.preventDefault()
     if (!form.id.trim()) { setError('Vehicle ID obbligatorio'); return }
+
+    // Controlla conflitti driver NCC per date sovrapposte
+    if (form.ncc_driver_id) {
+      const { data: conflicts } = await supabase
+        .from('vehicles')
+        .select('id, available_from, available_to')
+        .eq('production_id', productionId)
+        .eq('ncc_driver_id', form.ncc_driver_id)
+        .eq('active', true)
+        .neq('id', mode === 'edit' ? initial.id : '')
+
+      const fromA = form.available_from || null
+      const toA   = form.available_to   || null
+
+      const conflict = (conflicts || []).find(v => {
+        const fromB = v.available_from || null
+        const toB   = v.available_to   || null
+        // Se uno dei due non ha date → sovrapposizione indefinita → conflitto
+        if (!fromA || !toA || !fromB || !toB) return true
+        // Sovrapposizione: A inizia prima che B finisca E A finisce dopo che B inizia
+        return fromA <= toB && toA >= fromB
+      })
+
+      if (conflict) {
+        const driverName = agencyDrivers.find(d => d.id === form.ncc_driver_id)?.name || 'Questo driver'
+        setError(`${driverName} è già assegnato a ${conflict.id} in questo periodo. Controlla le date di disponibilità.`)
+        return
+      }
+    }
+
     setSaving(true)
     const selectedDriver = form.ncc_driver_id
       ? agencyDrivers.find(d => d.id === form.ncc_driver_id)
