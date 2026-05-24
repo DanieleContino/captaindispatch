@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { supabase } from '../../../lib/supabase'
+import { supabase } from '../../../../lib/supabase'
 
 const SIDEBAR_W = 400
 
