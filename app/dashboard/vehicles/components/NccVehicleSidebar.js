@@ -43,7 +43,7 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
     capacity: '', pax_suggested: '', pax_max: '',
     ncc_agency_id: '',
     ncc_driver_name: '', ncc_driver_phone: '',
-    ncc_driver_id: '', assigned_date: '',
+    ncc_driver_id: '',
     sign_code: '', unit_default: '',
     available_from: '', available_to: '',
     active: true, in_transport: true,
@@ -84,7 +84,6 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
         ncc_driver_name:  initial.ncc_driver_name   || '',
         ncc_driver_phone: initial.ncc_driver_phone  || '',
         ncc_driver_id:    initial.ncc_driver_id     || '',
-        assigned_date:    initial.assigned_date     || '',
         sign_code:        initial.sign_code         || '',
         unit_default:     initial.unit_default      || '',
         available_from:   initial.available_from    || '',
@@ -127,7 +126,6 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
       ncc_driver_name:  form.ncc_driver_name.trim()  || null,
       ncc_driver_phone: form.ncc_driver_phone.trim() || null,
       ncc_driver_id:    form.ncc_driver_id || null,
-      assigned_date:    form.assigned_date || null,
       sign_code:        form.sign_code.trim()    || null,
       unit_default:     form.unit_default.trim() || null,
       available_from:   form.available_from || null,
@@ -281,12 +279,6 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
                     <option key={d.id} value={d.id}>{d.name}{d.phone ? ` · ${d.phone}` : ''}</option>
                   ))}
                 </select>
-                <input
-                  type="date"
-                  value={form.assigned_date || ''}
-                  onChange={e => set('assigned_date', e.target.value || null)}
-                  style={{ marginTop: '6px', width: '100%', padding: '6px 8px', border: '1px solid #bae6fd', borderRadius: '7px', fontSize: '12px', boxSizing: 'border-box' }}
-                />
                 {agencyDrivers.length === 0 && (
                   <div style={{ fontSize: '10px', color: '#0369a1', marginTop: '4px' }}>
                     ℹ Aggiungi prima i driver dalla sezione Drivers dell'agenzia
