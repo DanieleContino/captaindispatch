@@ -4473,7 +4473,7 @@ export default function VehiclesPage() {
               { key: 'fleet',      label: '🚐 Fleet' },
               { key: 'production', label: '🎥 Production' },
               { key: 'rental',     label: '🔑 Rental' },
-              { key: 'ncc',        label: '🏢 NCC' },
+              { key: 'ncc',        label: '🧑‍💼 NCC' },
               { key: 'comodato',   label: '🤝 Loan' },
               { key: 'report',     label: '📊 Report' },
             ].map(tab => (
