@@ -128,6 +128,10 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
     e.preventDefault()
     if (!form.id.trim()) { setError('Vehicle ID obbligatorio'); return }
     setSaving(true)
+    const selectedDriver = form.ncc_driver_id
+      ? agencyDrivers.find(d => d.id === form.ncc_driver_id)
+      : null
+
     const row = {
       production_id:    productionId,
       vehicle_type:     form.vehicle_type || null,
@@ -138,9 +142,9 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
       is_ncc:           true,
       is_comodato:      false,
       ncc_agency_id:    form.ncc_agency_id || null,
-      ncc_driver_name:  form.ncc_driver_name.trim()  || null,
-      ncc_driver_phone: form.ncc_driver_phone.trim() || null,
-      ncc_driver_id:    nccDriverIdRef.current || null,
+      ncc_driver_name:  selectedDriver ? selectedDriver.name : (form.ncc_driver_name.trim() || null),
+      ncc_driver_phone: selectedDriver ? selectedDriver.phone : (form.ncc_driver_phone.trim() || null),
+      ncc_driver_id:    form.ncc_driver_id || null,
       sign_code:        form.sign_code.trim()    || null,
       unit_default:     form.unit_default.trim() || null,
       available_from:   form.available_from || null,
