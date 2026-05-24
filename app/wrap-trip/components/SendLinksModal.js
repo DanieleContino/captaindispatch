@@ -11,31 +11,48 @@ export function SendLinksModal({ open, onClose, productionId }) {
   useEffect(() => {
     if (!open || !productionId) return
     setLoading(true)
-    supabase
-      .from('vehicles')
-      .select(`
-        id, driver_name, driver_crew_id, ncc_driver_id, vehicle_type, sign_code,
-    ncc_driver:ncc_drivers!ncc_driver_id(id, name, phone, tracking_token),
-    crew_driver:crew!driver_crew_id(id, full_name, phone, tracking_token)
-      `)
-      .eq('production_id', productionId)
-      .eq('active', true)
-      .eq('in_transport', true)
-      .order('id')
-      .then(({ data }) => {
-        const list = []
-        for (const v of (data || [])) {
-          if (v.ncc_driver) {
-            list.push({ id: v.ncc_driver.id, name: v.ncc_driver.name, phone: v.ncc_driver.phone, token: v.ncc_driver.tracking_token, vehicle: v.id, type: 'NCC' })
-          } else if (v.crew_driver) {
-            list.push({ id: v.crew_driver.id, name: v.crew_driver.full_name, phone: v.crew_driver.phone, token: v.crew_driver.tracking_token, vehicle: v.id, type: 'CREW' })
-          } else if (v.driver_name) {
-            list.push({ id: v.id, name: v.driver_name, phone: null, token: null, vehicle: v.id, type: 'MANUAL' })
-          }
+    async function loadDrivers() {
+      const { data: vehicles } = await supabase
+        .from('vehicles')
+        .select('id, driver_name, driver_crew_id, ncc_driver_id, ncc_driver_name, ncc_driver_phone')
+        .eq('production_id', productionId)
+        .eq('active', true)
+        .eq('in_transport', true)
+        .order('id')
+
+      const nccDriverIds = (vehicles || []).map(v => v.ncc_driver_id).filter(Boolean)
+      const crewDriverIds = (vehicles || []).map(v => v.driver_crew_id).filter(Boolean)
+
+      const [nccRes, crewRes] = await Promise.all([
+        nccDriverIds.length > 0
+          ? supabase.from('ncc_drivers').select('id, name, phone, tracking_token').in('id', nccDriverIds)
+          : { data: [] },
+        crewDriverIds.length > 0
+          ? supabase.from('crew').select('id, full_name, phone, tracking_token').in('id', crewDriverIds)
+          : { data: [] },
+      ])
+
+      const nccMap  = {}; (nccRes.data  || []).forEach(d => { nccMap[d.id]  = d })
+      const crewMap = {}; (crewRes.data || []).forEach(d => { crewMap[d.id] = d })
+
+      const list = []
+      for (const v of (vehicles || [])) {
+        if (v.ncc_driver_id && nccMap[v.ncc_driver_id]) {
+          const d = nccMap[v.ncc_driver_id]
+          list.push({ id: d.id, name: d.name, phone: d.phone, token: d.tracking_token, vehicle: v.id, type: 'NCC' })
+        } else if (v.driver_crew_id && crewMap[v.driver_crew_id]) {
+          const d = crewMap[v.driver_crew_id]
+          list.push({ id: d.id, name: d.full_name, phone: d.phone, token: d.tracking_token, vehicle: v.id, type: 'CREW' })
+        } else if (v.ncc_driver_name) {
+          list.push({ id: v.id, name: v.ncc_driver_name, phone: v.ncc_driver_phone || null, token: null, vehicle: v.id, type: 'MANUAL' })
+        } else if (v.driver_name) {
+          list.push({ id: v.id, name: v.driver_name, phone: null, token: null, vehicle: v.id, type: 'MANUAL' })
         }
-        setDrivers(list)
-        setLoading(false)
-      })
+      }
+      setDrivers(list)
+      setLoading(false)
+    }
+    loadDrivers()
   }, [open, productionId])
 
   function handleCopy(d) {
