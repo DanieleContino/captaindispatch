@@ -64,6 +64,17 @@ export function NccDriverSidebar({ open, mode, initial, onClose, onSaved, produc
     }
     setSaving(false)
     if (err) { setError(err.message); return }
+    // Sync legacy fields on all vehicles assigned to this driver
+    if (mode === 'edit' && initial?.id) {
+      await supabase
+        .from('vehicles')
+        .update({
+          ncc_driver_name:  form.name.trim() || null,
+          ncc_driver_phone: form.phone.trim() || null,
+        })
+        .eq('ncc_driver_id', initial.id)
+        .eq('production_id', productionId)
+    }
     onSaved()
   }
 
