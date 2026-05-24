@@ -92,6 +92,15 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
         in_transport:     initial.in_transport !== false,
       })
       setIdManuallyEdited(false)
+      if (initial.ncc_agency_id) {
+        supabase.from('ncc_drivers')
+          .select('id, name, phone')
+          .eq('agency_id', initial.ncc_agency_id)
+          .eq('production_id', productionId)
+          .eq('is_active', true)
+          .order('name')
+          .then(({ data }) => setAgencyDrivers(data || []))
+      }
     } else {
       setForm({ ...EMPTY, id: suggestId('VAN', vehicles), ncc_agency_id: initialAgencyId || '' })
       setIdManuallyEdited(false)
