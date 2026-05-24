@@ -15,8 +15,8 @@ export function SendLinksModal({ open, onClose, productionId }) {
       .from('vehicles')
       .select(`
         id, driver_name, driver_crew_id, ncc_driver_id, vehicle_type, sign_code,
-        ncc_driver:ncc_drivers(id, name, phone, tracking_token),
-        crew_driver:crew!driver_crew_id(id, full_name, phone, tracking_token)
+    ncc_driver:ncc_drivers!ncc_driver_id(id, name, phone, tracking_token),
+    crew_driver:crew!driver_crew_id(id, full_name, phone, tracking_token)
       `)
       .eq('production_id', productionId)
       .eq('active', true)
