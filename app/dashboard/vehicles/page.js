@@ -8,6 +8,7 @@ import { ImportModal } from '../../../lib/ImportModal'
 import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import { RentalColumnsEditorSidebar } from '../../../lib/RentalColumnsEditorSidebar'
+import { NccDriverSidebar } from './components/NccDriverSidebar'
 import { RENTAL_DEFAULT_PRESET } from '../../../lib/rentalColumnsCatalog'
 
 const SIDEBAR_W = 400
@@ -3226,6 +3227,26 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
   const [nccVehicleSidebarAgencyId, setNccVehicleSidebarAgencyId] = useState(null)
   const [allVehicles, setAllVehicles]   = useState([])
 
+  const [drivers, setDrivers] = useState({})  // agencyId → drivers[]
+  const [driverSidebarOpen, setDriverSidebarOpen] = useState(false)
+  const [driverSidebarMode, setDriverSidebarMode] = useState('new')
+  const [driverTarget, setDriverTarget] = useState(null)
+  const [driverAgencyId, setDriverAgencyId] = useState(null)
+
+  async function loadDrivers(agencyId) {
+    const { data } = await supabase
+      .from('ncc_drivers')
+      .select('id, name, phone, tracking_token, token_type, is_active, notes')
+      .eq('agency_id', agencyId)
+      .eq('production_id', productionId)
+      .order('name')
+    setDrivers(prev => ({ ...prev, [agencyId]: data || [] }))
+  }
+
+  function openNewDriver(agencyId) { setDriverSidebarMode('new'); setDriverTarget(null); setDriverAgencyId(agencyId); setDriverSidebarOpen(true) }
+  function openEditDriver(d) { setDriverSidebarMode('edit'); setDriverTarget(d); setDriverAgencyId(d.agency_id); setDriverSidebarOpen(true) }
+  function onDriverSaved() { setDriverSidebarOpen(false); if (driverAgencyId) loadDrivers(driverAgencyId) }
+
   async function loadOrders(agencyId) {
     const { data } = await supabase
       .from('ncc_orders')
@@ -3253,6 +3274,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
     setAllVehicles(allV || [])
     setExpandedAgency(new Set(agencyList.map(a => a.id)))
     await Promise.all(agencyList.map(a => loadOrders(a.id)))
+    await Promise.all(agencyList.map(a => loadDrivers(a.id)))
     setLoading(false)
   }, [productionId])
 
@@ -3356,6 +3378,45 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
               {isExpanded && (
                 <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 16px', background: '#f8fafc' }}>
 
+                  {/* Drivers NCC */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>👤 Drivers</div>
+                    {(drivers[a.id] || []).length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                        {(drivers[a.id] || []).map(d => (
+                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'white', border: '1px solid #e9d5ff', borderRadius: '8px' }}>
+                            <span style={{ fontSize: '16px' }}>👤</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>{d.name}</div>
+                              {d.phone && <div style={{ fontSize: '11px', color: '#64748b' }}>📱 {d.phone}</div>}
+                            </div>
+                            <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 7px', borderRadius: '999px', background: d.is_active ? '#f0fdf4' : '#f1f5f9', color: d.is_active ? '#15803d' : '#94a3b8', border: `1px solid ${d.is_active ? '#86efac' : '#e2e8f0'}` }}>
+                              {d.is_active ? '🟢 Active' : '⚫ Inactive'}
+                            </span>
+                            <button
+                              onClick={e => { e.stopPropagation(); openEditDriver(d) }}
+                              style={{ background: '#fdf4ff', border: '1px solid #e9d5ff', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', color: '#7e22ce', flexShrink: 0 }}>
+                              ✎
+                            </button>
+                            <a
+                              href={`https://wa.me/${(d.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Ciao ${d.name}, ecco il tuo link CaptainDispatch:\nhttps://captaindispatch.com/go/${d.tracking_token}`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', color: '#15803d', flexShrink: 0, textDecoration: 'none' }}>
+                              📱
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={e => { e.stopPropagation(); openNewDriver(a.id) }}
+                      style={{ padding: '5px 14px', borderRadius: '7px', border: '1px dashed #e9d5ff', background: 'transparent', color: '#7e22ce', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                      + Add Driver
+                    </button>
+                  </div>
+
                   {/* Veicoli NCC in flotta */}
                   <div style={{ marginBottom: '12px' }}>
                     <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>🚐 Vehicles in Fleet</div>
@@ -3430,6 +3491,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle }) {
         })}
       </div>
 
+      <NccDriverSidebar open={driverSidebarOpen} mode={driverSidebarMode} initial={driverTarget} onClose={() => setDriverSidebarOpen(false)} onSaved={onDriverSaved} productionId={productionId} agencyId={driverAgencyId} />
       <NccAgencySidebar open={agencySidebarOpen} mode={agencySidebarMode} initial={agencyTarget} onClose={() => setAgencySidebarOpen(false)} onSaved={onAgencySaved} productionId={productionId} />
       <NccOrderSidebar open={orderSidebarOpen} mode={orderSidebarMode} initial={orderTarget} onClose={() => setOrderSidebarOpen(false)} onSaved={onOrderSaved} productionId={productionId} agencyId={orderAgencyId} />
       <NccVehicleSidebar
