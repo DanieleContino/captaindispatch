@@ -10,12 +10,8 @@ export function SendLinksModal({ open, onClose, productionId }) {
 
   useEffect(() => {
     if (!open || !productionId) return
-    loadDrivers()
-  }, [open, productionId])
-
-  async function loadDrivers() {
     setLoading(true)
-    const { data: vehicles, error } = await supabase
+    supabase
       .from('vehicles')
       .select(`
         id, driver_name, driver_crew_id, ncc_driver_id, vehicle_type, sign_code,
@@ -26,311 +22,123 @@ export function SendLinksModal({ open, onClose, productionId }) {
       .eq('active', true)
       .eq('in_transport', true)
       .order('id')
+      .then(({ data }) => {
+        const list = []
+        for (const v of (data || [])) {
+          if (v.ncc_driver) {
+            list.push({ id: v.ncc_driver.id, name: v.ncc_driver.name, phone: v.ncc_driver.phone, token: v.ncc_driver.tracking_token, vehicle: v.id, type: 'NCC' })
+          } else if (v.crew_driver) {
+            list.push({ id: v.crew_driver.id, name: v.crew_driver.full_name, phone: v.crew_driver.phone, token: v.crew_driver.tracking_token, vehicle: v.id, type: 'CREW' })
+          } else if (v.driver_name) {
+            list.push({ id: v.id, name: v.driver_name, phone: null, token: null, vehicle: v.id, type: 'MANUAL' })
+          }
+        }
+        setDrivers(list)
+        setLoading(false)
+      })
+  }, [open, productionId])
 
-    if (error) {
-      console.error('SendLinksModal: error loading vehicles', error)
-      setLoading(false)
-      return
-    }
-
-    const list = []
-    for (const v of vehicles || []) {
-      if (v.ncc_driver) {
-        list.push({
-          name: v.ncc_driver.name,
-          phone: v.ncc_driver.phone,
-          token: v.ncc_driver.tracking_token,
-          vehicle: v.sign_code || v.id,
-          type: 'NCC',
-        })
-      } else if (v.crew_driver) {
-        list.push({
-          name: v.crew_driver.full_name,
-          phone: v.crew_driver.phone,
-          token: v.crew_driver.tracking_token,
-          vehicle: v.sign_code || v.id,
-          type: 'CREW',
-        })
-      } else if (v.driver_name) {
-        list.push({
-          name: v.driver_name,
-          phone: null,
-          token: null,
-          vehicle: v.sign_code || v.id,
-          type: 'MANUAL',
-        })
-      }
-    }
-
-    setDrivers(list)
-    setLoading(false)
-  }
-
-  function handleCopyLink(driver, idx) {
-    navigator.clipboard.writeText('https://captaindispatch.com/go/' + driver.token)
-    setCopiedId(idx)
+  function handleCopy(d) {
+    navigator.clipboard.writeText('https://captaindispatch.com/go/' + d.token)
+    setCopiedId(d.id)
     setTimeout(() => setCopiedId(null), 2000)
   }
 
   function handleCopyAll() {
     const withToken = drivers.filter(d => d.token)
-    const text =
-      '🎬 Captain Go Links\n\n' +
-      withToken
-        .map(d => `👤 ${d.name} (${d.vehicle}):\nhttps://captaindispatch.com/go/${d.token}`)
-        .join('\n\n') +
-      '\n\n'
+    const text = '🎬 Captain Go Links\n\n' + withToken.map(d => `👤 ${d.name} (${d.vehicle}):\nhttps://captaindispatch.com/go/${d.token}`).join('\n\n')
     navigator.clipboard.writeText(text)
     setCopiedAll(true)
     setTimeout(() => setCopiedAll(false), 2000)
   }
 
-  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
-  const driversWithToken = drivers.filter(d => d.token)
-
-  const badgeStyle = {
-    NCC: { background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' },
-    CREW: { background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac' },
-    MANUAL: { background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' },
-  }
-
   if (!open) return null
 
+  const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
+  const withToken = drivers.filter(d => d.token)
+  const typeColor = {
+    NCC:    { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd', label: 'NCC' },
+    CREW:   { bg: '#f0fdf4', color: '#15803d', border: '#86efac', label: 'CREW' },
+    MANUAL: { bg: '#fef3c7', color: '#b45309', border: '#fde68a', label: 'MANUAL' },
+  }
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: 'rgba(0,0,0,0.55)',
-        display: 'flex',
-        alignItems: 'stretch',
-        justifyContent: 'center',
-      }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100%',
-          maxWidth: 520,
-          background: '#f8fafc',
-          margin: '0 auto',
-          height: '100%',
-          overflowY: 'hidden',
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            background: '#0f2340',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexShrink: 0,
-          }}
-        >
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,35,64,0.4)' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 201, display: 'flex', flexDirection: 'column', background: 'white', maxWidth: '480px', margin: '0 auto' }}>
+
+        <div style={{ background: '#0f2340', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ color: 'white', fontWeight: 800, fontSize: 17 }}>
-              📱 Driver Links
-            </div>
-            <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 2 }}>{today}</div>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>📱 Driver Links</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>{today}</div>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'white',
-              fontSize: 22,
-              cursor: 'pointer',
-              lineHeight: 1,
-              padding: '4px 6px',
-            }}
-            aria-label="Close"
-          >
-            ✕
-          </button>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', borderRadius: '6px', padding: '4px 8px' }}>✕</button>
         </div>
 
-        {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 14px' }}>
-          {loading && (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: 32 }}>
-              Caricamento…
-            </div>
-          )}
-
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
+          {loading && <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Loading…</div>}
           {!loading && drivers.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#64748b', padding: 32 }}>
-              Nessun veicolo attivo trovato.
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🚐</div>
+              <div style={{ fontSize: '13px' }}>No active drivers found</div>
+              <div style={{ fontSize: '11px', marginTop: '4px' }}>Assign drivers to active vehicles first</div>
             </div>
           )}
-
-          {!loading &&
-            drivers.map((driver, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: 'white',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 12,
-                  padding: '12px 14px',
-                  marginBottom: 12,
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.07)',
-                }}
-              >
-                {/* Row 1: name + badge */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 6,
-                  }}
-                >
-                  <span style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>
-                    👤 {driver.name}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      borderRadius: 6,
-                      padding: '2px 8px',
-                      ...badgeStyle[driver.type],
-                    }}
-                  >
-                    {driver.type === 'NCC' ? '🏢 NCC' : driver.type === 'CREW' ? '🎬 CREW' : '✏ MANUAL'}
-                  </span>
+          {drivers.map(d => {
+            const tc = typeColor[d.type]
+            return (
+              <div key={d.id + d.vehicle} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>👤</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>{d.name}</div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>🚐 {d.vehicle}{d.phone ? ` · ${d.phone}` : ''}</div>
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>{tc.label}</span>
                 </div>
 
-                {/* Row 2: vehicle + phone */}
-                <div style={{ fontSize: 13, color: '#475569', marginBottom: 10 }}>
-                  🚐 {driver.vehicle}
-                  {driver.phone && <span> · {driver.phone}</span>}
-                </div>
-
-                {/* Actions */}
-                {driver.token ? (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {/* WhatsApp */}
-                    {driver.phone ? (
+                {d.token ? (
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {d.phone ? (
                       <a
-                        href={`https://wa.me/${driver.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                          'Ciao ' +
-                            driver.name +
-                            ', ecco il tuo link Captain Go per oggi:\n' +
-                            'https://captaindispatch.com/go/' +
-                            driver.token
-                        )}`}
+                        href={`https://wa.me/${d.phone.replace(/\D/g,'')}?text=${encodeURIComponent('Ciao ' + d.name + ', ecco il tuo link Captain Go:\nhttps://captaindispatch.com/go/' + d.token)}`}
                         target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          background: '#25D366',
-                          color: 'white',
-                          borderRadius: 8,
-                          padding: '7px 14px',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          textDecoration: 'none',
-                          display: 'inline-block',
-                        }}
-                      >
+                        rel="noopener noreferrer"
+                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px', borderRadius: '8px', background: '#25D366', color: 'white', fontSize: '12px', fontWeight: '700', textDecoration: 'none' }}>
                         📱 WhatsApp
                       </a>
                     ) : (
-                      <span
-                        title="Nessun telefono registrato"
-                        style={{
-                          background: '#d1fae5',
-                          color: '#6b7280',
-                          borderRadius: 8,
-                          padding: '7px 14px',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          display: 'inline-block',
-                          opacity: 0.5,
-                          cursor: 'not-allowed',
-                        }}
-                      >
-                        📱 WhatsApp
-                      </span>
+                      <button disabled style={{ flex: 1, padding: '8px', borderRadius: '8px', background: '#f1f5f9', color: '#94a3b8', fontSize: '12px', border: 'none', cursor: 'not-allowed' }}>
+                        📱 No phone
+                      </button>
                     )}
-
-                    {/* Copy link */}
                     <button
-                      onClick={() => handleCopyLink(driver, idx)}
-                      style={{
-                        background: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: 8,
-                        padding: '7px 14px',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        color: '#0f172a',
-                      }}
-                    >
-                      {copiedId === idx ? '✅ Copiato!' : '🔗 Copia Link'}
+                      onClick={() => handleCopy(d)}
+                      style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', background: copiedId === d.id ? '#f0fdf4' : 'white', color: copiedId === d.id ? '#15803d' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                      {copiedId === d.id ? '✅ Copiato!' : '🔗 Copia Link'}
                     </button>
                   </div>
                 ) : (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: '#b45309',
-                      background: '#fef3c7',
-                      border: '1px solid #fde68a',
-                      borderRadius: 8,
-                      padding: '6px 10px',
-                    }}
-                  >
+                  <div style={{ padding: '8px 10px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '11px', color: '#92400e' }}>
                     ⚠ Nessun token — aggiungi questo driver al sistema
                   </div>
                 )}
               </div>
-            ))}
+            )
+          })}
         </div>
 
-        {/* Footer */}
-        <div
-          style={{
-            borderTop: '1px solid #e2e8f0',
-            background: 'white',
-            padding: '12px 14px',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
-          }}
-        >
-          <span style={{ fontSize: 12, color: '#64748b' }}>
-            {driversWithToken.length} driver con link attivo
-          </span>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
+          <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px', textAlign: 'center' }}>
+            {withToken.length} driver con link attivo
+          </div>
           <button
             onClick={handleCopyAll}
-            disabled={driversWithToken.length === 0}
-            style={{
-              background: driversWithToken.length === 0 ? '#e2e8f0' : '#0f2340',
-              color: driversWithToken.length === 0 ? '#94a3b8' : 'white',
-              border: 'none',
-              borderRadius: 8,
-              padding: '8px 16px',
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: driversWithToken.length === 0 ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {copiedAll
-              ? `✅ Copiati ${driversWithToken.length} links!`
-              : '📋 Copia Tutti i Links'}
+            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: copiedAll ? '#f0fdf4' : 'white', color: copiedAll ? '#15803d' : '#374151', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+            {copiedAll ? `✅ Copiati ${withToken.length} links!` : '📋 Copia Tutti i Links'}
           </button>
         </div>
       </div>
-    </div>
+    </>
   )
 }
