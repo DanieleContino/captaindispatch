@@ -42,7 +42,6 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
     license_plate: '',
     capacity: '', pax_suggested: '', pax_max: '',
     ncc_agency_id: '',
-    ncc_driver_name: '', ncc_driver_phone: '',
     ncc_driver_id: '',
     sign_code: '', unit_default: '',
     available_from: '', available_to: '',
@@ -85,8 +84,6 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
         pax_suggested:    initial.pax_suggested     ?? '',
         pax_max:          initial.pax_max           ?? '',
         ncc_agency_id:    initial.ncc_agency_id     || '',
-        ncc_driver_name:  initial.ncc_driver_name   || '',
-        ncc_driver_phone: initial.ncc_driver_phone  || '',
         ncc_driver_id:    initial.ncc_driver_id     || '',
         sign_code:        initial.sign_code         || '',
         unit_default:     initial.unit_default      || '',
@@ -273,16 +270,6 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
                 )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ ...lbl, color: '#0369a1' }}>NCC Driver Name</label>
-                  <input value={form.ncc_driver_name} onChange={e => set('ncc_driver_name', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="Mario Rossi" />
-                </div>
-                <div>
-                  <label style={{ ...lbl, color: '#0369a1' }}>NCC Driver Phone</label>
-                  <input value={form.ncc_driver_phone} onChange={e => set('ncc_driver_phone', e.target.value)} style={{ ...inp, borderColor: '#bae6fd' }} placeholder="+39 333..." type="tel" />
-                </div>
-              </div>
 
               <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #bae6fd' }}>
                 <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>
