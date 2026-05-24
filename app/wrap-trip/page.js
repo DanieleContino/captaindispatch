@@ -11,6 +11,7 @@ import { useEffect, useState, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import { getProductionId } from '../../lib/production'
+import { SendLinksModal } from './components/SendLinksModal'
 
 const SESSION_KEY   = 'captain_wrap_trip_v4'
 
@@ -196,6 +197,7 @@ function FleetMonitor({ onBack }) {
   const [loadingTraffic, setLoadingTraffic] = useState(false)
   const [trafficMsg,     setTrafficMsg]     = useState(null)
   const [autoRefresh,    setAutoRefresh]    = useState(true)
+  const [sendLinksOpen,  setSendLinksOpen]  = useState(false)
 
   const loadFleet = useCallback(async (d) => {
     if (!PRODUCTION_ID) return
@@ -290,6 +292,11 @@ function FleetMonitor({ onBack }) {
                 whiteSpace: 'nowrap',
               }}>
               {autoRefresh ? '⏸' : '▶'}
+            </button>
+            <button
+              onClick={() => setSendLinksOpen(true)}
+              style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
+              📱
             </button>
             <button
               onClick={async () => {
@@ -467,6 +474,7 @@ function FleetMonitor({ onBack }) {
           })
         }
       </div>
+      <SendLinksModal open={sendLinksOpen} onClose={() => setSendLinksOpen(false)} productionId={PRODUCTION_ID} />
     </div>
   )
 }
