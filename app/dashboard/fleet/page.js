@@ -226,9 +226,12 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
               {vehicle.id}
             </div>
             <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {[vehicle.driver_name, vehicle.sign_code, vehicle.capacity ? `×${vehicle.capacity}` : null]
+              {[vehicle.driver_name || vehicle.ncc_driver_name, vehicle.sign_code, vehicle.capacity ? `×${vehicle.capacity}` : null]
                 .filter(Boolean).join('  ·  ')}
             </div>
+            {vehicle.is_ncc && (
+              <span style={{ fontSize: '10px', fontWeight: '700', color: '#0369a1', background: '#f0f9ff', padding: '1px 7px', borderRadius: '999px', border: '1px solid #bae6fd' }}>NCC</span>
+            )}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '5px', flexShrink: 0, alignItems: 'center' }}>
@@ -492,7 +495,7 @@ export default function FleetMonitorPage() {
 
     const [vR, tR, lR, rR] = await Promise.all([
       supabase.from('vehicles')
-        .select('id,vehicle_type,driver_name,sign_code,capacity,unit_default')
+        .select('id,vehicle_type,driver_name,ncc_driver_name,is_ncc,sign_code,capacity,unit_default')
         .eq('production_id', PRODUCTION_ID)
         .eq('active', true)
         .eq('in_transport', true)
