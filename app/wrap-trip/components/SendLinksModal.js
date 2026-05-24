@@ -1,6 +1,6 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../../lib/supabase'
 
 export function SendLinksModal({ open, onClose, productionId }) {
   const [drivers, setDrivers] = useState([])
