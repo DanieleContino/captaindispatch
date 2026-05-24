@@ -703,9 +703,9 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
           )}
         </div>
         <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#64748b', flexWrap: 'wrap' }}>
-          {v.driver_name && (
+          {(v.driver_name || v.ncc_driver_name) && (
             <span style={v.driver_crew_id ? { color: '#15803d', fontWeight: '600' } : {}}>
-              {v.driver_crew_id ? '🔗' : '👤'} {v.driver_name}
+              {v.driver_crew_id ? '🔗' : '👤'} {v.driver_name || v.ncc_driver_name}
               {v.driver_crew_id && <span style={{ fontSize: '10px', color: '#15803d', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '999px', padding: '0 5px', marginLeft: '4px', fontWeight: '700' }}>NTN</span>}
             </span>
           )}
