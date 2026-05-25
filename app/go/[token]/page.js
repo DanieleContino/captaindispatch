@@ -53,16 +53,24 @@ export default function CaptainGoPage() {
         if (d.messages && d.messages.length > 0) {
           for (const msg of d.messages) {
             if (msg.message_type === 'PING_REQUEST') {
-              // Mostra banner e rispondi silenziosamente
+              const pingStart = Date.now()
               setPingBanner(true)
               if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                  pos => sendPositionSilent(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
-                  () => setPingBanner(false),
+                  pos => {
+                    sendPositionSilent(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy)
+                    const elapsed = Date.now() - pingStart
+                    const remaining = Math.max(0, 3000 - elapsed)
+                    setTimeout(() => setPingBanner('sent'), remaining)
+                    setTimeout(() => setPingBanner(false), remaining + 3000)
+                  },
+                  () => {
+                    setPingBanner('error')
+                    setTimeout(() => setPingBanner(false), 3000)
+                  },
                   { enableHighAccuracy: true, timeout: 10000 }
                 )
               }
-              // Fallback: nascondi dopo 15s se GPS non risponde
               setTimeout(() => setPingBanner(false), 15000)
             }
           }
@@ -386,12 +394,13 @@ export default function CaptainGoPage() {
       {/* Banner ping request */}
       {pingBanner && (
         <div style={{
-          position: 'fixed', bottom: session ? '80px' : '0', left: '16px', right: '16px',
-          background: '#1d4ed8', borderRadius: '12px',
+          position: 'fixed', top: '16px', left: '16px', right: '16px',
+          background: pingBanner === 'sent' ? '#16a34a' : pingBanner === 'error' ? '#dc2626' : '#1d4ed8',
+          borderRadius: '12px',
           padding: '12px 16px', zIndex: 101,
           display: 'flex', alignItems: 'center', gap: '10px',
           boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          paddingBottom: session ? '12px' : 'calc(12px + env(safe-area-inset-bottom))',
+          transition: 'background 0.3s',
         }}>
           <span style={{ fontSize: '20px' }}>📡</span>
           <div style={{ flex: 1 }}>
