@@ -121,11 +121,7 @@ export default function CaptainGoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, lat, lng, accuracy: accuracy ?? null, speed: null, session_id: sessionId }),
       })
-      setPingBanner('sent')
-    } catch {
-      setPingBanner('error')
-    }
-    setTimeout(() => setPingBanner(false), 3000)
+    } catch {}
   }
 
   // ── GPS: invia posizione all'API ──────────────────────────
