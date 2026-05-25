@@ -2033,8 +2033,8 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
       rental_notes:               form.rental_notes.trim() || null,
       active:                     true,
       in_transport:               true,
-      sign_code:                  null,
-      unit_default:               null,
+      sign_code:                  form.sign_code?.trim() || null,
+      unit_default:               form.unit_default?.trim() || null,
       available_from:             form.rental_start || null,
       available_to:               form.rental_end   || null,
     }
@@ -2415,6 +2415,18 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                   <label style={{ ...lbl, color: '#7e22ce' }}>Exp. Date</label>
                   <input type="date" value={form.rental_insurance_exp} onChange={e => set('rental_insurance_exp', e.target.value)} style={{ ...inp, borderColor: '#e9d5ff' }} />
                 </div>
+              </div>
+            </div>
+
+            {/* Sign Code + Unit Default */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>Sign Code</label>
+                <input value={form.sign_code || ''} onChange={e => set('sign_code', e.target.value)} style={inp} placeholder="GRIP1, PROD2…" />
+              </div>
+              <div>
+                <label style={lbl}>Unit Default</label>
+                <input value={form.unit_default || ''} onChange={e => set('unit_default', e.target.value)} style={inp} placeholder="MAIN, SECOND…" />
               </div>
             </div>
 
