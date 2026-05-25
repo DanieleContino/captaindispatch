@@ -9,7 +9,7 @@ import { useT } from '../../../lib/i18n'
 import { getProductionId } from '../../../lib/production'
 import { SendLinksModal } from '../../wrap-trip/components/SendLinksModal'
 
-const REFRESH_INTERVAL = 30_000  // auto-reload dati ogni 30s
+const REFRESH_INTERVAL = 15_000  // auto-reload dati ogni 15s
 const NOW_TICK_MS      = 15_000  // aggiorna "adesso" ogni 15s per le progress bar
 
 // ─── Utility ─────────────────────────────────────────────────
