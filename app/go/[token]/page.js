@@ -419,8 +419,9 @@ export default function CaptainGoPage() {
   const [reconnecting,  setReconnecting]  = useState(false)
   const [showWizard,    setShowWizard]    = useState(false)
   const [wizardDone,    setWizardDone]    = useState(null) // trip_id creato
-  const [ending,        setEnding]        = useState(false)
+  const [ending,         setEnding]         = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
+  const [tripAction,     setTripAction]     = useState(null) // trip.id in corso di update
 
   useEffect(() => {
     if (!token) return
@@ -630,6 +631,46 @@ export default function CaptainGoPage() {
     }
   }
 
+  async function handleStartTrip(trip) {
+    if (tripAction) return
+    setTripAction(trip.id)
+    try {
+      const res = await fetch('/api/go/trip/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, trip_id: trip.id }),
+      })
+      const d = await res.json()
+      if (d.error) alert(d.error)
+      else {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        const updated = await fetch(`/api/go/session?token=${token}`).then(r => r.json())
+        if (!updated.error) setData(updated)
+      }
+    } catch { alert('Connection error') }
+    finally { setTripAction(null) }
+  }
+
+  async function handleArrived(trip) {
+    if (tripAction) return
+    setTripAction(trip.id)
+    try {
+      const res = await fetch('/api/go/trip/arrive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, trip_id: trip.id }),
+      })
+      const d = await res.json()
+      if (d.error) alert(d.error)
+      else {
+        await new Promise(resolve => setTimeout(resolve, 800))
+        const updated = await fetch(`/api/go/session?token=${token}`).then(r => r.json())
+        if (!updated.error) setData(updated)
+      }
+    } catch { alert('Connection error') }
+    finally { setTripAction(null) }
+  }
+
   const fmtDate = d => new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
 
   function openMaps(trip) {
@@ -784,18 +825,48 @@ export default function CaptainGoPage() {
                   </div>
                 )}
 
-                {/* Bottone Naviga */}
+                {/* Bottoni azione trip */}
+                {!isDone && !isBusy && session && (
+                  <button
+                    onClick={() => handleStartTrip(trip)}
+                    disabled={tripAction === trip.id}
+                    style={{
+                      width: '100%', padding: '10px', borderRadius: '10px',
+                      border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#16a34a',
+                      color: 'white', fontSize: '14px', fontWeight: '800',
+                      cursor: tripAction === trip.id ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      marginBottom: dropoff ? '8px' : '0',
+                    }}>
+                    {tripAction === trip.id ? '⏳...' : '▶ Start Trip'}
+                  </button>
+                )}
+                {isBusy && (
+                  <button
+                    onClick={() => handleArrived(trip)}
+                    disabled={tripAction === trip.id}
+                    style={{
+                      width: '100%', padding: '10px', borderRadius: '10px',
+                      border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#f59e0b',
+                      color: 'white', fontSize: '14px', fontWeight: '800',
+                      cursor: tripAction === trip.id ? 'default' : 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      marginBottom: dropoff ? '8px' : '0',
+                    }}>
+                    {tripAction === trip.id ? '⏳...' : '✅ Arrived'}
+                  </button>
+                )}
                 {!isDone && dropoff && (
                   <button
                     onClick={() => openMaps(trip)}
                     style={{
                       width: '100%', padding: '10px', borderRadius: '10px',
-                      border: 'none', background: isBusy ? '#f59e0b' : '#0f2340',
+                      border: 'none', background: isBusy ? '#0f2340' : '#475569',
                       color: 'white', fontSize: '14px', fontWeight: '800',
                       cursor: 'pointer', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', gap: '8px',
                     }}>
-                    🗺 Navigate to {dropoff.name}
+                    🗺 Navigate to {dropoff?.name}
                   </button>
                 )}
                 {isDone && (
