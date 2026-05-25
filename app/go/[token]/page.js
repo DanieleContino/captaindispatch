@@ -85,10 +85,10 @@ export default function CaptainGoPage() {
       return
     }
     // Sessione attiva, tracking ON e watch non ancora avviato
-    if (watchId === null && navigator.geolocation && gpsTracking) {
+    if (watchId === null && navigator.geolocation) {
       const id = navigator.geolocation.watchPosition(
-        pos => sendPosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.speed),
-        () => setGpsStatus('error'),
+        pos => sendPositionSilent(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+        () => {},
         { enableHighAccuracy: true, distanceFilter: 50 }
       )
       setWatchId(id)
@@ -430,26 +430,16 @@ export default function CaptainGoPage() {
            : gpsStatus === 'error'   ? '❌ Errore GPS'
            : '📍 Sono Qui'}
           </button>
-          <button
-            onClick={() => setGpsTracking(p => !p)}
-            style={{
-              flexShrink: 0,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
-              background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px',
-              borderRadius: '8px',
-            }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', flexShrink: 0, padding: '4px 6px' }}>
             <div style={{
               width: '10px', height: '10px', borderRadius: '50%',
               background: watchId !== null ? '#22c55e' : '#475569',
               boxShadow: watchId !== null ? '0 0 6px #22c55e' : 'none',
-              transition: 'background 0.3s',
             }} />
-            <div style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase',
-              color: gpsTracking ? '#22c55e' : 'rgba(255,255,255,0.3)',
-            }}>
-              {gpsTracking ? 'LIVE' : 'OFF'}
+            <div style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: watchId !== null ? '#22c55e' : 'rgba(255,255,255,0.3)' }}>
+              {watchId !== null ? 'LIVE' : 'GPS'}
             </div>
-          </button>
+          </div>
         </div>
       )}
     </div>
