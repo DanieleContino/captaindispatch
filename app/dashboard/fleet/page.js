@@ -105,6 +105,9 @@ function groupByTripId(tripRows) {
       const g = map[t.trip_id]
       if (t.dropoff_id && !g.dropoff_ids.includes(t.dropoff_id)) g.dropoff_ids.push(t.dropoff_id)
       g.rows.push(t)
+      // Prende lo status più avanzato: DONE > BUSY > CANCELLED > PLANNED
+      const STATUS_RANK = { DONE: 4, BUSY: 3, CANCELLED: 2, PLANNED: 1 }
+      if ((STATUS_RANK[t.status] || 0) > (STATUS_RANK[g.status] || 0)) g.status = t.status
       g.pax_count = Math.max(g.pax_count, t.pax_count || 0)
       if (t.passenger_list && !g.passenger_list.includes(t.passenger_list)) {
         g.passenger_list = [g.passenger_list, t.passenger_list].filter(Boolean).join(', ')
@@ -132,28 +135,31 @@ function vehicleStatus(groups, now) {
     return { status: 'IDLE', current: null, next: null, last: null }
   }
 
-  // 1. BUSY confermato dal DB (driver ha premuto Start)
+  // 1. BUSY confermato dal DB — ma solo se non c'è già un DONE confermato
   const confirmedBusy = groups.find(g => g.status === 'BUSY') || null
-  if (confirmedBusy) {
+  const confirmedDone = groups.filter(g => g.status === 'DONE')
+  const hasPlanned = groups.some(g => g.status === 'PLANNED')
+
+  if (confirmedBusy && confirmedDone.length === 0) {
     const next = groups
-      .filter(g => g.minStart > now && g.status !== 'DONE')
+      .filter(g => g.minStart > now && g.status === 'PLANNED')
       .sort((a, b) => a.minStart - b.minStart)[0] || null
     return { status: 'BUSY', estimated: false, current: confirmedBusy, next, last: null }
   }
 
-  // 2. BUSY stimato da orario (driver non ha ancora premuto)
+  // 2. BUSY stimato da orario — solo per trip PLANNED
   const estimatedBusy = groups.find(g =>
     g.status === 'PLANNED' && g.minStart && g.maxEnd &&
     g.minStart <= now && now < g.maxEnd
   ) || null
   if (estimatedBusy) {
     const next = groups
-      .filter(g => g.minStart > now && g.status !== 'DONE')
+      .filter(g => g.status === 'PLANNED' && g.minStart > now)
       .sort((a, b) => a.minStart - b.minStart)[0] || null
     return { status: 'BUSY', estimated: true, current: estimatedBusy, next, last: null }
   }
 
-  // 3. FREE: ha trip futuri non cancellati
+  // 3. FREE: ha trip PLANNED futuri
   const future = groups
     .filter(g => g.status === 'PLANNED' && g.minStart > now)
     .sort((a, b) => a.minStart - b.minStart)
@@ -161,18 +167,22 @@ function vehicleStatus(groups, now) {
     return { status: 'FREE', estimated: false, current: null, next: future[0], last: null }
   }
 
-  // 4. DONE confermato dal DB
-  const allDone = groups.every(g => g.status === 'DONE' || g.status === 'CANCELLED')
-  if (allDone && groups.some(g => g.status === 'DONE')) {
-    const last = [...groups].filter(g => g.status === 'DONE').sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
+  // 4. DONE confermato — tutti i non-PLANNED sono DONE o CANCELLED
+  if (confirmedDone.length > 0 && !hasPlanned && !confirmedBusy) {
+    const last = [...confirmedDone].sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
     return { status: 'DONE', estimated: false, current: null, next: null, last }
   }
 
-  // 5. DONE stimato da orario
-  const allPast = groups
-    .filter(g => g.status === 'PLANNED')
-    .every(g => g.maxEnd && now > g.maxEnd)
-  if (allPast && groups.some(g => g.status === 'PLANNED')) {
+  // 5. Misto: alcuni DONE confermati, alcuni PLANNED futuri già passati
+  if (confirmedDone.length > 0 && !hasPlanned) {
+    const last = [...confirmedDone].sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
+    return { status: 'DONE', estimated: false, current: null, next: null, last }
+  }
+
+  // 6. DONE stimato da orario — tutti i PLANNED sono passati
+  const plannedGroups = groups.filter(g => g.status === 'PLANNED')
+  const allPast = plannedGroups.length > 0 && plannedGroups.every(g => g.maxEnd && now > g.maxEnd)
+  if (allPast) {
     const last = [...groups].sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
     return { status: 'DONE', estimated: true, current: null, next: null, last }
   }
