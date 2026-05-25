@@ -419,6 +419,8 @@ export default function CaptainGoPage() {
   const [reconnecting,  setReconnecting]  = useState(false)
   const [showWizard,    setShowWizard]    = useState(false)
   const [wizardDone,    setWizardDone]    = useState(null) // trip_id creato
+  const [ending,        setEnding]        = useState(false)
+  const [showEndConfirm, setShowEndConfirm] = useState(false)
 
   useEffect(() => {
     if (!token) return
@@ -601,6 +603,30 @@ export default function CaptainGoPage() {
       alert('Connection error')
     } finally {
       setStarting(false)
+    }
+  }
+
+  async function handleEndSession() {
+    if (ending) return
+    setEnding(true)
+    setShowEndConfirm(false)
+    try {
+      const res = await fetch('/api/go/session/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const d = await res.json()
+      if (d.error) alert(d.error)
+      else {
+        await new Promise(resolve => setTimeout(resolve, 500))
+        const updated = await fetch(`/api/go/session?token=${token}`).then(r => r.json())
+        if (!updated.error) setData(updated)
+      }
+    } catch {
+      alert('Connection error')
+    } finally {
+      setEnding(false)
     }
   }
 
@@ -905,6 +931,43 @@ export default function CaptainGoPage() {
             }} />
             <div style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: watchId !== null ? '#22c55e' : 'rgba(255,255,255,0.3)' }}>
               {watchId !== null ? 'LIVE' : 'GPS'}
+            </div>
+          </div>
+          <button
+            onClick={() => setShowEndConfirm(true)}
+            disabled={ending}
+            style={{
+              flexShrink: 0, padding: '10px 12px', borderRadius: '10px',
+              border: '1px solid rgba(239,68,68,0.4)',
+              background: 'rgba(239,68,68,0.15)',
+              color: '#fca5a5', fontSize: '11px', fontWeight: '800',
+              cursor: ending ? 'default' : 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+            }}>
+            <span style={{ fontSize: '16px' }}>🔴</span>
+            <span>End</span>
+          </button>
+        </div>
+      )}
+
+      {/* Modal conferma fine giornata */}
+      {showEndConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔴</div>
+            <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginBottom: '8px' }}>End Your Day?</div>
+            <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px', lineHeight: 1.5 }}>
+              Your coordinator will see you offline. GPS tracking will stop.
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setShowEndConfirm(false)}
+                style={{ flex: 1, padding: '13px', borderRadius: '10px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={handleEndSession}
+                style={{ flex: 1, padding: '13px', borderRadius: '10px', border: 'none', background: '#dc2626', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer' }}>
+                {ending ? '⏳...' : 'End Day'}
+              </button>
             </div>
           </div>
         </div>
