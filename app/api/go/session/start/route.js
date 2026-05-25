@@ -68,14 +68,20 @@ export async function POST(request) {
   }
 
   // 3. Controlla se esiste già sessione attiva oggi
-  const { data: existing } = await supabase
+  let existingQuery = supabase
     .from('vehicle_tracking_sessions')
     .select('id, status')
     .eq('production_id', productionId)
-    .eq('ncc_driver_id', driverType === 'NCC' ? driver.id : null)
     .neq('status', 'ENDED')
     .limit(1)
-    .single()
+
+  if (driverType === 'NCC') {
+    existingQuery = existingQuery.eq('ncc_driver_id', driver.id)
+  } else {
+    existingQuery = existingQuery.eq('vehicle_id', vehicle?.id || '')
+  }
+
+  const { data: existing } = await existingQuery.single()
 
   if (existing) {
     return Response.json({ session: existing, already_active: true })
