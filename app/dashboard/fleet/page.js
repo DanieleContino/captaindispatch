@@ -292,7 +292,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
 }
 
 // ─── Card singolo veicolo ─────────────────────────────────────
-function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAlerts, now }) {
+function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAlerts, now, session }) {
   const t = useT()
   const [expanded, setExpanded] = useState(false)
   const { status, current, next, last } = vehicleStatus(groups, now)
@@ -383,6 +383,15 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
           }}>
             {s.label}
           </span>
+          {session && (
+            <span style={{
+              padding: '3px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '800',
+              background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac',
+              whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '3px',
+            }}>
+              📍 LIVE
+            </span>
+          )}
           {headerAlert && (
             <span style={{
               padding: '3px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '800',
@@ -921,6 +930,7 @@ export default function FleetMonitorPage() {
                   routeDurMap={routeDurMap}
                   vehicleTrafficAlerts={trafficAlerts.filter(a => a.vehicleId === vehicle.id)}
                   now={now}
+                  session={sessions.find(s => s.vehicle_id === vehicle.id) || null}
                 />
               ))}
             </div>
