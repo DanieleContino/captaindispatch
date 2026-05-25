@@ -292,9 +292,10 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
 }
 
 // ─── Card singolo veicolo ─────────────────────────────────────
-function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAlerts, now, session }) {
+function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAlerts, now, session, productionId }) {
   const t = useT()
   const [expanded, setExpanded] = useState(false)
+  const [pingStatus, setPingStatus] = useState('idle') // idle | sending | sent | error
   const { status, current, next, last } = vehicleStatus(groups, now)
   const s    = SS[status] || SS.IDLE
   const icon = TYPE_ICON[vehicle.vehicle_type] || '🚐'
@@ -391,6 +392,44 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
             }}>
               📍 LIVE
             </span>
+          )}
+          {session && (
+            <button
+              onClick={async () => {
+                if (pingStatus === 'sending') return
+                setPingStatus('sending')
+                try {
+                  const res = await fetch('/api/go/ping', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vehicle_id: vehicle.id, production_id: productionId }),
+                  })
+                  const d = await res.json()
+                  if (d.error) setPingStatus('error')
+                  else setPingStatus('sent')
+                } catch {
+                  setPingStatus('error')
+                }
+                setTimeout(() => setPingStatus('idle'), 4000)
+              }}
+              style={{
+                padding: '3px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '800',
+                background: pingStatus === 'sent'    ? '#f0fdf4'
+                           : pingStatus === 'error'  ? '#fef2f2'
+                           : pingStatus === 'sending' ? '#f1f5f9'
+                           : '#eff6ff',
+                color:      pingStatus === 'sent'    ? '#15803d'
+                           : pingStatus === 'error'  ? '#dc2626'
+                           : pingStatus === 'sending' ? '#94a3b8'
+                           : '#1d4ed8',
+                border:     pingStatus === 'sent'    ? '1px solid #86efac'
+                           : pingStatus === 'error'  ? '1px solid #fecaca'
+                           : '1px solid #bfdbfe',
+                cursor: pingStatus === 'sending' ? 'default' : 'pointer',
+                whiteSpace: 'nowrap',
+              }}>
+              {pingStatus === 'sending' ? '⏳' : pingStatus === 'sent' ? '✅ Sent' : pingStatus === 'error' ? '❌' : '📡 Ping'}
+            </button>
           )}
           {headerAlert && (
             <span style={{
@@ -994,6 +1033,7 @@ export default function FleetMonitorPage() {
                   vehicleTrafficAlerts={trafficAlerts.filter(a => a.vehicleId === vehicle.id)}
                   now={now}
                   session={sessions.find(s => s.vehicle_id === vehicle.id) || null}
+                  productionId={PRODUCTION_ID}
                 />
               ))}
             </div>
