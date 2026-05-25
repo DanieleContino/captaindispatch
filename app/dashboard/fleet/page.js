@@ -145,19 +145,20 @@ function vehicleStatus(groups, now) {
   }
 
   // FREE: ci sono trip PLANNED futuri
-  const futurePlanned = plannedGroups.filter(g => g.minStart > now)
+  const futurePlanned = plannedGroups.filter(g => g.minStart && g.minStart > now)
   if (futurePlanned.length > 0) {
     return { status: 'FREE', estimated: false, current: null, next: futurePlanned[0], last: null }
   }
 
-  // FREE: ci sono trip PLANNED (senza orario o nel passato — non ancora avviati)
-  if (plannedGroups.length > 0) {
-    return { status: 'FREE', estimated: false, current: null, next: plannedGroups[0], last: null }
-  }
-
-  // DONE: tutti i trip sono DONE
+  // DONE: tutti i trip sono DONE (ignora PLANNED con orario passato)
   if (doneGroups.length > 0) {
     return { status: 'DONE', estimated: false, current: null, next: null, last: doneGroups[0] }
+  }
+
+  // FREE: trip PLANNED senza orario (non schedulati)
+  const unscheduledPlanned = plannedGroups.filter(g => !g.minStart)
+  if (unscheduledPlanned.length > 0) {
+    return { status: 'FREE', estimated: false, current: null, next: unscheduledPlanned[0], last: null }
   }
 
   return { status: 'IDLE', estimated: false, current: null, next: null, last: null }
