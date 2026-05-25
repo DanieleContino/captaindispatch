@@ -104,15 +104,21 @@ export async function GET(request) {
   }
 
   // 6. Sessione attiva oggi
-  const { data: activeSession } = await supabase
+  let sessionQuery = supabase
     .from('vehicle_tracking_sessions')
     .select('id, status, current_trip_id, started_at')
     .eq('production_id', productionId)
-    .eq('ncc_driver_id', driverType === 'NCC' ? driver.id : '00000000-0000-0000-0000-000000000000')
     .neq('status', 'ENDED')
     .order('started_at', { ascending: false })
     .limit(1)
-    .single()
+
+  if (driverType === 'NCC') {
+    sessionQuery = sessionQuery.eq('ncc_driver_id', driver.id)
+  } else if (vehicle) {
+    sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
+  }
+
+  const { data: activeSession } = await sessionQuery.single()
 
   return Response.json({
     driver: {
