@@ -4306,16 +4306,7 @@ export default function VehiclesPage() {
 
   function openNew()   { setMode('new');  setEdit(null); setSO(true) }
   function openEdit(v) {
-    if (v.is_ncc === true) {
-      setNccVehicleSidebarMode('edit')
-      setNccVehicleTarget(v)
-      setNccVehicleSidebarOpen(true)
-    } else if (v.is_comodato === true) {
-      setLoanVehicleSidebarMode('edit')
-      setLoanVehicleTarget(v)
-      setLoanVehicleSidebarOpen(true)
-    } else if (v.is_rental === true) {
-      setActiveTab('rental')
+    if (v.is_rental === true) {
       setRentalVehicleSidebarMode('edit')
       setRentalVehicleSidebarTarget(v)
       setRentalVehicleSidebarOpen(true)
