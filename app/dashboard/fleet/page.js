@@ -150,6 +150,147 @@ function vehicleStatus(groups, now) {
   return { status: 'DONE', current: null, next: null, last }
 }
 
+// ─── Mappa Fleet ──────────────────────────────────────────────
+function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
+  const mapRef    = useRef(null)
+  const mapObjRef = useRef(null)
+  const markersRef = useRef({})
+  const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+
+  const STATUS_COLOR = { BUSY: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#60a5fa' }
+
+  useEffect(() => {
+    if (!mapRef.current) return
+    if (mapObjRef.current) return // già inizializzata
+
+    // Carica Google Maps script se non presente
+    if (!window.google?.maps) {
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}`
+      script.async = true
+      script.onload = () => initMap()
+      document.head.appendChild(script)
+    } else {
+      initMap()
+    }
+
+    function initMap() {
+      // Centro default: Puglia (produzione attiva)
+      const center = { lat: 40.9, lng: 17.4 }
+
+      // Se ci sono sessioni con posizione, centra su quella
+      const withPos = sessions.filter(s => s.last_lat && s.last_lng)
+      if (withPos.length > 0) {
+        center.lat = withPos[0].last_lat
+        center.lng = withPos[0].last_lng
+      }
+
+      mapObjRef.current = new window.google.maps.Map(mapRef.current, {
+        center,
+        zoom: 11,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+        zoomControl: true,
+      })
+
+      updateMarkers()
+    }
+  }, [])
+
+  // Aggiorna marker quando cambiano sessions o vehicleData
+  useEffect(() => {
+    if (!mapObjRef.current) return
+    updateMarkers()
+  }, [sessions, vehicleData])
+
+  function updateMarkers() {
+    if (!mapObjRef.current || !window.google?.maps) return
+
+    const activeVehicleIds = new Set()
+
+    sessions.forEach(s => {
+      if (!s.last_lat || !s.last_lng) return
+      activeVehicleIds.add(s.vehicle_id)
+
+      const vd = vehicleData.find(v => v.vehicle.id === s.vehicle_id)
+      const status = vd?.status || 'IDLE'
+      const color  = STATUS_COLOR[status] || '#94a3b8'
+      const vehicle = vd?.vehicle
+      const driverName = vehicle?.driver_name || vehicle?.ncc_driver_name || s.driver_name || '–'
+
+      const pos = { lat: s.last_lat, lng: s.last_lng }
+
+      if (markersRef.current[s.vehicle_id]) {
+        // Aggiorna posizione marker esistente
+        markersRef.current[s.vehicle_id].marker.setPosition(pos)
+      } else {
+        // Crea nuovo marker
+        const marker = new window.google.maps.Marker({
+          position: pos,
+          map: mapObjRef.current,
+          title: s.vehicle_id,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: color,
+            fillOpacity: 1,
+            strokeColor: 'white',
+            strokeWeight: 2,
+          },
+          label: {
+            text: s.vehicle_id.slice(0, 4),
+            color: 'white',
+            fontSize: '9px',
+            fontWeight: '800',
+          },
+        })
+
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `<div style="font-family:monospace;font-size:13px;font-weight:800;color:#0f172a">${s.vehicle_id}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px">👤 ${driverName}</div>
+            <div style="font-size:11px;font-weight:700;color:${color};margin-top:2px">${status}</div>
+            ${s.last_seen_at ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px">Last seen ${new Date(s.last_seen_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>` : ''}`,
+        })
+
+        marker.addListener('click', () => {
+          infoWindow.open(mapObjRef.current, marker)
+        })
+
+        markersRef.current[s.vehicle_id] = { marker, infoWindow }
+      }
+    })
+
+    // Rimuovi marker di veicoli non più in sessione
+    Object.keys(markersRef.current).forEach(vid => {
+      if (!activeVehicleIds.has(vid)) {
+        markersRef.current[vid].marker.setMap(null)
+        delete markersRef.current[vid]
+      }
+    })
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div ref={mapRef} style={{ width: '100%', height: '400px' }} />
+      {sessions.filter(s => s.last_lat && s.last_lng).length === 0 && (
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'rgba(255,255,255,0.92)', padding: '12px 20px', borderRadius: '10px', fontSize: '13px', color: '#64748b', fontWeight: '600', textAlign: 'center', pointerEvents: 'none' }}>
+          📍 No active GPS sessions today<br />
+          <span style={{ fontSize: '11px', fontWeight: '400' }}>Positions will appear when drivers start Captain Go</span>
+        </div>
+      )}
+      <div style={{ position: 'absolute', top: '10px', left: '10px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {Object.entries(STATUS_COLOR).map(([s, c]) => (
+          <span key={s} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: c, display: 'inline-block' }} />
+            {s}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Card singolo veicolo ─────────────────────────────────────
 function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAlerts, now }) {
   const t = useT()
@@ -730,6 +871,18 @@ export default function FleetMonitorPage() {
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '20px' }}>
             ⚠ <strong>NEXT_PUBLIC_PRODUCTION_ID</strong> not set in .env.local
+          </div>
+        )}
+
+        {/* ── Mappa Google Maps ── */}
+        {mapOpen && (
+          <div style={{ marginBottom: '24px', borderRadius: '14px', overflow: 'hidden', border: '1px solid #e2e8f0', position: 'relative' }}>
+            <FleetMap
+              vehicles={vehicles}
+              sessions={sessions}
+              vehicleData={vehicleData}
+              locsMap={locsMap}
+            />
           </div>
         )}
 
