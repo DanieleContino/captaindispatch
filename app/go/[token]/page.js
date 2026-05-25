@@ -97,7 +97,7 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
 
   // Carica locations e crew
   useEffect(() => {
-    if (!productionId) return
+    if (!token) return
     Promise.all([
       fetch(`/api/go/data?token=${token}&type=locations`).then(r => r.json()),
       fetch(`/api/go/data?token=${token}&type=crew`).then(r => r.json()),
@@ -105,7 +105,7 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
       setLocations(lRes.data || [])
       setCrew(cRes.data || [])
     }).catch(() => {})
-  }, [token, productionId])
+  }, [token])
 
   // QR scan handler
   async function handleScan(rawText) {
