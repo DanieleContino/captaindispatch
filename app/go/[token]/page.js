@@ -83,6 +83,7 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
   const [search,      setSearch]      = useState('')
   const [showScanner, setShowScanner] = useState(false)
   const [scanMode,    setScanMode]    = useState('crew')
+  const [showPicker,  setShowPicker]  = useState(null)
   const [saving,      setSaving]      = useState(false)
   const [err,         setErr]         = useState('')
   const [toast,       setToast]       = useState('')
@@ -211,19 +212,71 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
 
             <div>
               <label style={lbl}>Pickup Location</label>
-              <select value={pickupId} onChange={e => setPickupId(e.target.value)} style={{ ...inp, appearance: 'auto' }}>
-                <option value="">Select pickup...</option>
-                {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
+              <button onClick={() => setShowPicker('pickup')} style={{
+                width: '100%', padding: '12px 14px', border: `1px solid ${pickupId ? '#2563eb' : '#e2e8f0'}`,
+                borderRadius: '10px', fontSize: '15px', color: pickupId ? '#0f172a' : '#94a3b8',
+                background: pickupId ? '#eff6ff' : 'white', textAlign: 'left', cursor: 'pointer',
+                fontFamily: 'inherit', fontWeight: pickupId ? '700' : '400',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span>{locsMap[pickupId] || 'Select pickup...'}</span>
+                <span style={{ color: '#94a3b8', fontSize: '12px' }}>▾</span>
+              </button>
             </div>
 
             <div>
               <label style={lbl}>Dropoff (optional)</label>
-              <select value={dropoffId} onChange={e => setDropoffId(e.target.value)} style={{ ...inp, appearance: 'auto' }}>
-                <option value="">— Auto —</option>
-                {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
+              <button onClick={() => setShowPicker('dropoff')} style={{
+                width: '100%', padding: '12px 14px', border: '1px solid #e2e8f0',
+                borderRadius: '10px', fontSize: '15px', color: dropoffId ? '#0f172a' : '#94a3b8',
+                background: 'white', textAlign: 'left', cursor: 'pointer',
+                fontFamily: 'inherit', fontWeight: dropoffId ? '700' : '400',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span>{locsMap[dropoffId] || '— Auto —'}</span>
+                <span style={{ color: '#94a3b8', fontSize: '12px' }}>▾</span>
+              </button>
             </div>
+
+            {/* Picker modal locations */}
+            {showPicker && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                <div style={{ background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '10px' }}>
+                    <div style={{ width: '36px', height: '4px', background: '#e2e8f0', borderRadius: '2px' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 10px' }}>
+                    <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>
+                      {showPicker === 'pickup' ? 'Pickup Location' : 'Dropoff Location'}
+                    </span>
+                    <button onClick={() => setShowPicker(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>✕</button>
+                  </div>
+                  <div style={{ overflowY: 'auto', flex: 1 }}>
+                    {showPicker === 'dropoff' && (
+                      <div onClick={() => { setDropoffId(''); setShowPicker(null) }}
+                        style={{ padding: '14px 16px', borderBottom: '1px solid #f8fafc', background: !dropoffId ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '15px', color: '#94a3b8' }}>— Auto —</span>
+                        {!dropoffId && <span style={{ color: '#2563eb' }}>✓</span>}
+                      </div>
+                    )}
+                    {locations.map(l => {
+                      const isSel = showPicker === 'pickup' ? pickupId === l.id : dropoffId === l.id
+                      return (
+                        <div key={l.id} onClick={() => {
+                          if (showPicker === 'pickup') setPickupId(l.id)
+                          else setDropoffId(l.id)
+                          setShowPicker(null)
+                        }} style={{ padding: '14px 16px', borderBottom: '1px solid #f8fafc', background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '15px', fontWeight: isSel ? '700' : '500', color: '#0f172a' }}>{l.name}</span>
+                          {isSel && <span style={{ color: '#2563eb', fontSize: '18px' }}>✓</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div style={{ height: '20px' }} />
+                </div>
+              </div>
+            )}
 
             <button onClick={() => setStep(2)} disabled={!date || !callTime || !pickupId}
               style={{ width: '100%', padding: '15px', borderRadius: '10px', border: 'none', fontSize: '16px', fontWeight: '800', cursor: !date || !callTime || !pickupId ? 'default' : 'pointer', background: !date || !callTime || !pickupId ? '#e2e8f0' : '#2563eb', color: !date || !callTime || !pickupId ? '#94a3b8' : 'white' }}>
