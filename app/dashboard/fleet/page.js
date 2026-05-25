@@ -363,11 +363,11 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <span style={{ fontSize: '24px', flexShrink: 0 }}>{icon}</span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '17px', color: '#0f172a', letterSpacing: '-0.3px' }}>
-              {vehicle.id}
+            <div style={{ fontWeight: '900', fontSize: '17px', color: '#0f172a', letterSpacing: '-0.3px' }}>
+              {vehicle.sign_code || vehicle.id}
             </div>
             <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {[vehicle.driver_name || vehicle.ncc_driver_name, vehicle.sign_code, vehicle.capacity ? `×${vehicle.capacity}` : null]
+              {[vehicle.driver_name || vehicle.ncc_driver_name, vehicle.id, vehicle.capacity ? `×${vehicle.capacity}` : null]
                 .filter(Boolean).join('  ·  ')}
             </div>
             {vehicle.is_ncc && (
@@ -924,9 +924,9 @@ export default function FleetMonitorPage() {
                           background: dotColor, flexShrink: 0,
                           boxShadow: hasPos ? `0 0 6px ${dotColor}` : 'none',
                         }} />
-                        {/* Vehicle ID */}
-                        <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '13px', color: '#0f172a', minWidth: '80px' }}>
-                          {s.vehicle_id || '–'}
+                        {/* Vehicle sign_code */}
+                        <span style={{ fontWeight: '900', fontSize: '13px', color: '#0f172a', minWidth: '80px' }}>
+                          {vd?.vehicle?.sign_code || s.vehicle_id || '–'}
                         </span>
                         {/* Driver */}
                         <span style={{ fontSize: '12px', color: '#374151', fontWeight: '600', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
