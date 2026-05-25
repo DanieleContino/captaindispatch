@@ -38,7 +38,7 @@ export async function POST(request) {
   // 2. Aggiorna trip status
   const { error: tripErr } = await supabase
     .from('trips')
-    .update({ status: 'IN_PROGRESS' })
+    .update({ status: 'BUSY' })
     .eq('id', trip_id)
     .eq('production_id', driver.production_id)
 
