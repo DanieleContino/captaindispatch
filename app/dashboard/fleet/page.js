@@ -232,17 +232,17 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
           title: s.vehicle_id,
           icon: {
             path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 10,
+            scale: 22,
             fillColor: color,
             fillOpacity: 1,
             strokeColor: 'white',
-            strokeWeight: 2,
+            strokeWeight: 3,
           },
           label: {
             text: s.vehicle_id.slice(0, 4),
             color: 'white',
-            fontSize: '9px',
-            fontWeight: '800',
+            fontSize: '12px',
+            fontWeight: '900',
           },
         })
 
