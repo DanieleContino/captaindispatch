@@ -25,14 +25,21 @@ export default function CaptainGoPage() {
 
   useEffect(() => {
     if (!token) return
-    fetch(`/api/go/session?token=${token}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) setError(d.error)
-        else setData(d)
-      })
-      .catch(() => setError('Connection error'))
-      .finally(() => setLoading(false))
+
+    function fetchData() {
+      fetch(`/api/go/session?token=${token}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.error) setError(d.error)
+          else setData(d)
+        })
+        .catch(() => setError('Connection error'))
+        .finally(() => setLoading(false))
+    }
+
+    fetchData()
+    const interval = setInterval(fetchData, 15_000)
+    return () => clearInterval(interval)
   }, [token])
 
   if (loading) return (
