@@ -19,9 +19,10 @@ const CLS_COLOR = {
 
 export default function CaptainGoPage() {
   const { token } = useParams()
-  const [data,    setData]    = useState(null)
-  const [error,   setError]   = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [data,     setData]    = useState(null)
+  const [error,    setError]   = useState(null)
+  const [loading,  setLoading] = useState(true)
+  const [starting, setStarting] = useState(false)
 
   useEffect(() => {
     if (!token) return
@@ -63,7 +64,6 @@ export default function CaptainGoPage() {
   )
 
   const { driver, vehicle, trips, locsMap, session, today } = data
-  const [starting, setStarting] = useState(false)
 
   async function handleStartSession() {
     if (starting || session) return
