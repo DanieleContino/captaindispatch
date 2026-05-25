@@ -42,7 +42,30 @@ export default function CaptainGoPage() {
 
     fetchData()
     const interval = setInterval(fetchData, 15_000)
-    return () => clearInterval(interval)
+
+    // Poll messaggi ogni 15s
+    async function checkMessages() {
+      try {
+        const res = await fetch(`/api/go/messages?token=${token}`)
+        const d = await res.json()
+        if (d.messages && d.messages.length > 0) {
+          for (const msg of d.messages) {
+            if (msg.message_type === 'PING_REQUEST') {
+              // Rispondi automaticamente con la posizione corrente
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  pos => sendPosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, null),
+                  () => {}
+                )
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+
+    const msgInterval = setInterval(checkMessages, 15_000)
+    return () => { clearInterval(interval); clearInterval(msgInterval) }
   }, [token])
 
   // ── watchPosition: parte quando ON DUTY ──────────────────
