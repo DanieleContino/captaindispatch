@@ -473,6 +473,8 @@ export default function FleetMonitorPage() {
   const [trafficMsg,    setTrafficMsg]    = useState(null)
   const [autoRefresh,   setAutoRefresh]   = useState(true)
   const [sendLinksOpen, setSendLinksOpen] = useState(false)
+  const [sessions,      setSessions]      = useState([])
+  const [mapOpen,       setMapOpen]       = useState(false)
 
   // Ref per evitare stale closure nel channel Realtime
   const dateRef = useRef(date)
@@ -493,7 +495,7 @@ export default function FleetMonitorPage() {
 
     const d = targetDate ?? dateRef.current
 
-    const [vR, tR, lR, rR] = await Promise.all([
+    const [vR, tR, lR, rR, sR] = await Promise.all([
       supabase.from('vehicles')
         .select('id,vehicle_type,driver_name,ncc_driver_name,is_ncc,sign_code,capacity,unit_default')
         .eq('production_id', PRODUCTION_ID)
@@ -510,6 +512,11 @@ export default function FleetMonitorPage() {
       supabase.from('routes')
         .select('from_id,to_id,duration_min')
         .eq('production_id', PRODUCTION_ID),
+      supabase.from('vehicle_tracking_sessions')
+        .select('id,vehicle_id,ncc_driver_id,driver_name,status,last_lat,last_lng,last_seen_at,current_trip_id,type')
+        .eq('production_id', PRODUCTION_ID)
+        .neq('status', 'ENDED')
+        .order('started_at', { ascending: false }),
     ])
 
     if (vR.data) setVehicles(vR.data)
@@ -524,6 +531,7 @@ export default function FleetMonitorPage() {
       rR.data.forEach(r => { rm[`${r.from_id}||${r.to_id}`] = r.duration_min })
       setRouteDurMap(rm)
     }
+    if (sR.data) setSessions(sR.data)
 
     setLoading(false)
     setLastRefresh(new Date())
