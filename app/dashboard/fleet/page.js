@@ -625,9 +625,8 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
           {expanded && (
             <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {groups.map((g, i) => {
-                const gStart = g.minStart ? new Date(g.minStart) : null
-                const gEnd   = g.maxEnd   ? new Date(g.maxEnd)   : null
-                const st = !gStart ? 'PLANNED' : now < gStart ? 'PLANNED' : gEnd && now > gEnd ? 'DONE' : 'BUSY'
+                // Usa sempre status dal DB
+                const st = g.status || 'PLANNED'
                 const stColor = { BUSY: '#b91c1c', DONE: '#92400e', PLANNED: '#1d4ed8' }[st]
                 const stBg    = { BUSY: '#fee2e2', DONE: '#fef9c3', PLANNED: '#eff6ff' }[st]
                 return (
