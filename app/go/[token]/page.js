@@ -704,19 +704,27 @@ export default function CaptainGoPage() {
       </div>
 
       {/* Data */}
-      <div style={{ padding: '12px 20px', background: '#1e3a5f', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '12px 20px', background: '#1e3a5f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ fontSize: '13px', fontWeight: '700', color: 'rgba(255,255,255,0.8)' }}>
           📅 {fmtDate(today)}
         </div>
-        {session ? (
-          <span style={{ fontSize: '11px', fontWeight: '800', padding: '3px 10px', borderRadius: '999px', background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac' }}>
-            🟢 ON DUTY
-          </span>
-        ) : (
-          <span style={{ fontSize: '11px', fontWeight: '800', padding: '3px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
-            ⚫ STANDBY
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {session && !showWizard && !wizardDone && (
+            <button onClick={() => setShowWizard(true)}
+              style={{ background: '#2563eb', border: 'none', borderRadius: '999px', padding: '6px 12px', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              ➕ New Trip
+            </button>
+          )}
+          {session ? (
+            <span style={{ fontSize: '11px', fontWeight: '800', padding: '3px 10px', borderRadius: '999px', background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac' }}>
+              🟢 ON DUTY
+            </span>
+          ) : (
+            <span style={{ fontSize: '11px', fontWeight: '800', padding: '3px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
+              ⚫ STANDBY
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Inizia Giornata */}
@@ -918,16 +926,6 @@ export default function CaptainGoPage() {
           <button onClick={() => setWizardDone(null)}
             style={{ width: '100%', maxWidth: '320px', padding: '15px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}>
             ← Back to Captain Go
-          </button>
-        </div>
-      )}
-
-      {/* Bottone New Trip — visibile solo ON DUTY */}
-      {session && !showWizard && !wizardDone && (
-        <div style={{ position: 'fixed', top: '72px', right: '16px', zIndex: 99 }}>
-          <button onClick={() => setShowWizard(true)}
-            style={{ background: '#2563eb', border: 'none', borderRadius: '999px', padding: '10px 16px', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 16px rgba(37,99,235,0.4)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            ➕ New Trip
           </button>
         </div>
       )}
