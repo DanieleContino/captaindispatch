@@ -55,12 +55,10 @@ function fmtLastRefresh(d) {
 
 // ─── Stili status ─────────────────────────────────────────────
 const SS = {
-  BUSY:      { bg: '#fffbeb', border: '#fde68a', left: '#f59e0b', badge: '#92400e', badgeBg: '#fef3c7', label: '⏳ BUSY' },
-  BUSY_EST:  { bg: '#fff7ed', border: '#fed7aa', left: '#f97316', badge: '#7c2d12', badgeBg: '#ffedd5', label: '~ BUSY' },
-  FREE:      { bg: '#f0fdf4', border: '#bbf7d0', left: '#22c55e', badge: '#14532d', badgeBg: '#dcfce7', label: '✅ FREE' },
-  IDLE:      { bg: '#f8fafc', border: '#e2e8f0', left: '#94a3b8', badge: '#475569', badgeBg: '#f1f5f9', label: '💤 IDLE' },
-  DONE:      { bg: '#eff6ff', border: '#bfdbfe', left: '#60a5fa', badge: '#1e40af', badgeBg: '#dbeafe', label: '✓ DONE' },
-  DONE_EST:  { bg: '#f8fafc', border: '#e2e8f0', left: '#94a3b8', badge: '#475569', badgeBg: '#f1f5f9', label: '~ DONE' },
+  BUSY: { bg: '#fffbeb', border: '#fde68a', left: '#f59e0b', badge: '#92400e', badgeBg: '#fef3c7', label: '⏳ BUSY' },
+  FREE: { bg: '#f0fdf4', border: '#bbf7d0', left: '#22c55e', badge: '#14532d', badgeBg: '#dcfce7', label: '✅ FREE' },
+  IDLE: { bg: '#f8fafc', border: '#e2e8f0', left: '#94a3b8', badge: '#475569', badgeBg: '#f1f5f9', label: '💤 IDLE' },
+  DONE: { bg: '#eff6ff', border: '#bfdbfe', left: '#60a5fa', badge: '#1e40af', badgeBg: '#dbeafe', label: '✓ DONE' },
 }
 
 const CLS = {
@@ -132,59 +130,34 @@ function groupByTripId(tripRows) {
  */
 function vehicleStatus(groups, now) {
   if (!groups || groups.length === 0) {
-    return { status: 'IDLE', current: null, next: null, last: null }
+    return { status: 'IDLE', estimated: false, current: null, next: null, last: null }
   }
 
-  // 1. BUSY confermato dal DB — ma solo se non c'è già un DONE confermato
-  const confirmedBusy = groups.find(g => g.status === 'BUSY') || null
-  const confirmedDone = groups.filter(g => g.status === 'DONE')
-  const hasPlanned = groups.some(g => g.status === 'PLANNED')
+  // STATUS solo dal DB — nessuna stima automatica
+  const busyGroup  = groups.find(g => g.status === 'BUSY') || null
+  const plannedGroups = groups.filter(g => g.status === 'PLANNED').sort((a, b) => (a.minStart || 0) - (b.minStart || 0))
+  const doneGroups = groups.filter(g => g.status === 'DONE').sort((a, b) => (b.maxEnd || 0) - (a.maxEnd || 0))
 
-  if (confirmedBusy && confirmedDone.length === 0) {
-    const next = groups
-      .filter(g => g.minStart > now && g.status === 'PLANNED')
-      .sort((a, b) => a.minStart - b.minStart)[0] || null
-    return { status: 'BUSY', estimated: false, current: confirmedBusy, next, last: null }
+  // BUSY: driver ha premuto Start
+  if (busyGroup) {
+    const next = plannedGroups.find(g => g.minStart > now) || plannedGroups[0] || null
+    return { status: 'BUSY', estimated: false, current: busyGroup, next, last: null }
   }
 
-  // 2. BUSY stimato da orario — solo per trip PLANNED
-  const estimatedBusy = groups.find(g =>
-    g.status === 'PLANNED' && g.minStart && g.maxEnd &&
-    g.minStart <= now && now < g.maxEnd
-  ) || null
-  if (estimatedBusy) {
-    const next = groups
-      .filter(g => g.status === 'PLANNED' && g.minStart > now)
-      .sort((a, b) => a.minStart - b.minStart)[0] || null
-    return { status: 'BUSY', estimated: true, current: estimatedBusy, next, last: null }
+  // FREE: ci sono trip PLANNED futuri
+  const futurePlanned = plannedGroups.filter(g => g.minStart > now)
+  if (futurePlanned.length > 0) {
+    return { status: 'FREE', estimated: false, current: null, next: futurePlanned[0], last: null }
   }
 
-  // 3. FREE: ha trip PLANNED futuri
-  const future = groups
-    .filter(g => g.status === 'PLANNED' && g.minStart > now)
-    .sort((a, b) => a.minStart - b.minStart)
-  if (future.length > 0) {
-    return { status: 'FREE', estimated: false, current: null, next: future[0], last: null }
+  // FREE: ci sono trip PLANNED (senza orario o nel passato — non ancora avviati)
+  if (plannedGroups.length > 0) {
+    return { status: 'FREE', estimated: false, current: null, next: plannedGroups[0], last: null }
   }
 
-  // 4. DONE confermato — tutti i non-PLANNED sono DONE o CANCELLED
-  if (confirmedDone.length > 0 && !hasPlanned && !confirmedBusy) {
-    const last = [...confirmedDone].sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
-    return { status: 'DONE', estimated: false, current: null, next: null, last }
-  }
-
-  // 5. Misto: alcuni DONE confermati, alcuni PLANNED futuri già passati
-  if (confirmedDone.length > 0 && !hasPlanned) {
-    const last = [...confirmedDone].sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
-    return { status: 'DONE', estimated: false, current: null, next: null, last }
-  }
-
-  // 6. DONE stimato da orario — tutti i PLANNED sono passati
-  const plannedGroups = groups.filter(g => g.status === 'PLANNED')
-  const allPast = plannedGroups.length > 0 && plannedGroups.every(g => g.maxEnd && now > g.maxEnd)
-  if (allPast) {
-    const last = [...groups].sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
-    return { status: 'DONE', estimated: true, current: null, next: null, last }
+  // DONE: tutti i trip sono DONE
+  if (doneGroups.length > 0) {
+    return { status: 'DONE', estimated: false, current: null, next: null, last: doneGroups[0] }
   }
 
   return { status: 'IDLE', estimated: false, current: null, next: null, last: null }
@@ -336,11 +309,8 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
   const t = useT()
   const [expanded, setExpanded] = useState(false)
   const [pingStatus, setPingStatus] = useState('idle') // idle | sending | sent | error
-  const { status, estimated, current, next, last } = vehicleStatus(groups, now)
-  const ssKey = estimated
-    ? (status === 'BUSY' ? 'BUSY_EST' : status === 'DONE' ? 'DONE_EST' : status)
-    : status
-  const s = SS[ssKey] || SS.IDLE
+  const { status, current, next, last } = vehicleStatus(groups, now)
+  const s = SS[status] || SS.IDLE
   const icon = TYPE_ICON[vehicle.vehicle_type] || '🚐'
 
   // Progress bar per BUSY
