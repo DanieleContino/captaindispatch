@@ -647,6 +647,10 @@ export default function FleetMonitorPage() {
             {lastRefresh && <span>{fmtLastRefresh(lastRefresh)}</span>}
             <span style={{ color: '#cbd5e1' }}>·</span>
             <span>{autoRefresh ? `Refresh in ${countdown}s` : 'Auto-refresh paused'}</span>
+            <button onClick={() => setMapOpen(p => !p)}
+              style={{ background: mapOpen ? '#0f2340' : '#f8fafc', border: `1px solid ${mapOpen ? '#0f2340' : '#e2e8f0'}`, borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: mapOpen ? 'white' : '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              🗺 Map
+            </button>
             <button onClick={() => setSendLinksOpen(true)}
               style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '4px' }}>
               📱 Driver Links
