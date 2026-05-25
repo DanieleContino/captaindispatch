@@ -35,11 +35,18 @@ export async function POST(request) {
 
   if (!driver) return Response.json({ error: 'Invalid token' }, { status: 404 })
 
-  // 2. Aggiorna trip status → DONE
+  // 2. Trova trip_id testuale dalla row UUID
+  const { data: tripRow } = await supabase
+    .from('trips')
+    .select('trip_id')
+    .eq('id', trip_id)
+    .single()
+
+  // Aggiorna tutte le rows con lo stesso trip_id
   const { error: tripErr } = await supabase
     .from('trips')
     .update({ status: 'DONE' })
-    .eq('id', trip_id)
+    .eq('trip_id', tripRow?.trip_id || trip_id)
     .eq('production_id', driver.production_id)
 
   if (tripErr) return Response.json({ error: tripErr.message }, { status: 500 })
