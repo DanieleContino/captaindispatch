@@ -783,7 +783,7 @@ export default function CaptainGoPage() {
             const dropoff = locsMap[trip.dropoff_id]
             const cls     = CLS_COLOR[trip.transfer_class] || CLS_COLOR.STANDARD
             const isDone  = trip.status === 'DONE' || trip.status === 'COMPLETED'
-            const isBusy  = trip.status === 'IN_PROGRESS' || trip.status === 'ACTIVE'
+            const isBusy  = trip.status === 'BUSY' || trip.status === 'IN_PROGRESS' || trip.status === 'ACTIVE'
 
             return (
               <div key={trip.id || idx} style={{
