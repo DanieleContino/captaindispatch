@@ -26,7 +26,8 @@ export default function CaptainGoPage() {
   const [gpsStatus,   setGpsStatus]   = useState('idle') // idle | sending | sent | error
   const [watchId,     setWatchId]     = useState(null)
   const [pingBanner,  setPingBanner]  = useState(false)  // mostra banner ping request
-  const [gpsTracking, setGpsTracking] = useState(true)   // toggle GPS tracking ON/OFF
+  const [gpsTracking,   setGpsTracking]   = useState(true)
+  const [reconnecting,  setReconnecting]  = useState(false)
 
   useEffect(() => {
     if (!token) return
@@ -35,10 +36,19 @@ export default function CaptainGoPage() {
       fetch(`/api/go/session?token=${token}`)
         .then(r => r.json())
         .then(d => {
-          if (d.error) setError(d.error)
-          else setData(d)
+          if (d.error) {
+            // Errori reali (token invalido, driver non attivo) → pagina errore
+            setError(d.error)
+          } else {
+            setData(d)
+            setReconnecting(false)
+            setError(null)
+          }
         })
-        .catch(() => setError('Connection error'))
+        .catch(() => {
+          // Errore di rete (standby, offline) → banner reconnecting, non pagina errore
+          setReconnecting(true)
+        })
         .finally(() => setLoading(false))
     }
 
@@ -386,6 +396,23 @@ export default function CaptainGoPage() {
       <div style={{ padding: '24px 20px 100px', textAlign: 'center' }}>
         <div style={{ fontSize: '10px', color: '#94a3b8' }}>CaptainDispatch · Captain Go</div>
       </div>
+
+      {/* Banner reconnecting */}
+      {reconnecting && (
+        <div style={{
+          position: 'fixed', top: '16px', left: '16px', right: '16px',
+          background: '#92400e', borderRadius: '12px',
+          padding: '12px 16px', zIndex: 102,
+          display: 'flex', alignItems: 'center', gap: '10px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        }}>
+          <span style={{ fontSize: '20px' }}>📶</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: 'white' }}>Reconnecting...</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '1px' }}>Waiting for connection</div>
+          </div>
+        </div>
+      )}
 
       {/* Banner ping request */}
       {pingBanner && (
