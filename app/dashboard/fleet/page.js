@@ -55,10 +55,12 @@ function fmtLastRefresh(d) {
 
 // ─── Stili status ─────────────────────────────────────────────
 const SS = {
-  BUSY: { bg: '#fffbeb', border: '#fde68a', left: '#f59e0b', badge: '#92400e', badgeBg: '#fef3c7', label: '⏳ BUSY' },
-  FREE: { bg: '#f0fdf4', border: '#bbf7d0', left: '#22c55e', badge: '#14532d', badgeBg: '#dcfce7', label: '✅ FREE' },
-  IDLE: { bg: '#f8fafc', border: '#e2e8f0', left: '#94a3b8', badge: '#475569', badgeBg: '#f1f5f9', label: '💤 IDLE' },
-  DONE: { bg: '#eff6ff', border: '#bfdbfe', left: '#60a5fa', badge: '#1e40af', badgeBg: '#dbeafe', label: '✓ DONE' },
+  BUSY:      { bg: '#fffbeb', border: '#fde68a', left: '#f59e0b', badge: '#92400e', badgeBg: '#fef3c7', label: '⏳ BUSY' },
+  BUSY_EST:  { bg: '#fff7ed', border: '#fed7aa', left: '#f97316', badge: '#7c2d12', badgeBg: '#ffedd5', label: '~ BUSY' },
+  FREE:      { bg: '#f0fdf4', border: '#bbf7d0', left: '#22c55e', badge: '#14532d', badgeBg: '#dcfce7', label: '✅ FREE' },
+  IDLE:      { bg: '#f8fafc', border: '#e2e8f0', left: '#94a3b8', badge: '#475569', badgeBg: '#f1f5f9', label: '💤 IDLE' },
+  DONE:      { bg: '#eff6ff', border: '#bfdbfe', left: '#60a5fa', badge: '#1e40af', badgeBg: '#dbeafe', label: '✓ DONE' },
+  DONE_EST:  { bg: '#f8fafc', border: '#e2e8f0', left: '#94a3b8', badge: '#475569', badgeBg: '#f1f5f9', label: '~ DONE' },
 }
 
 const CLS = {
@@ -130,24 +132,52 @@ function vehicleStatus(groups, now) {
     return { status: 'IDLE', current: null, next: null, last: null }
   }
 
-  // BUSY: un trip è in corso adesso
-  const current = groups.find(g => g.minStart <= now && now < g.maxEnd) || null
-  if (current) {
+  // 1. BUSY confermato dal DB (driver ha premuto Start)
+  const confirmedBusy = groups.find(g => g.status === 'BUSY') || null
+  if (confirmedBusy) {
     const next = groups
-      .filter(g => g.minStart > now)
+      .filter(g => g.minStart > now && g.status !== 'DONE')
       .sort((a, b) => a.minStart - b.minStart)[0] || null
-    return { status: 'BUSY', current, next, last: null }
+    return { status: 'BUSY', estimated: false, current: confirmedBusy, next, last: null }
   }
 
-  // FREE: ha trip futuri
-  const future = groups.filter(g => g.minStart > now).sort((a, b) => a.minStart - b.minStart)
+  // 2. BUSY stimato da orario (driver non ha ancora premuto)
+  const estimatedBusy = groups.find(g =>
+    g.status === 'PLANNED' && g.minStart && g.maxEnd &&
+    g.minStart <= now && now < g.maxEnd
+  ) || null
+  if (estimatedBusy) {
+    const next = groups
+      .filter(g => g.minStart > now && g.status !== 'DONE')
+      .sort((a, b) => a.minStart - b.minStart)[0] || null
+    return { status: 'BUSY', estimated: true, current: estimatedBusy, next, last: null }
+  }
+
+  // 3. FREE: ha trip futuri non cancellati
+  const future = groups
+    .filter(g => g.status === 'PLANNED' && g.minStart > now)
+    .sort((a, b) => a.minStart - b.minStart)
   if (future.length > 0) {
-    return { status: 'FREE', current: null, next: future[0], last: null }
+    return { status: 'FREE', estimated: false, current: null, next: future[0], last: null }
   }
 
-  // DONE: tutti i trip sono finiti
-  const last = [...groups].sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
-  return { status: 'DONE', current: null, next: null, last }
+  // 4. DONE confermato dal DB
+  const allDone = groups.every(g => g.status === 'DONE' || g.status === 'CANCELLED')
+  if (allDone && groups.some(g => g.status === 'DONE')) {
+    const last = [...groups].filter(g => g.status === 'DONE').sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
+    return { status: 'DONE', estimated: false, current: null, next: null, last }
+  }
+
+  // 5. DONE stimato da orario
+  const allPast = groups
+    .filter(g => g.status === 'PLANNED')
+    .every(g => g.maxEnd && now > g.maxEnd)
+  if (allPast && groups.some(g => g.status === 'PLANNED')) {
+    const last = [...groups].sort((a, b) => b.maxEnd - a.maxEnd)[0] || null
+    return { status: 'DONE', estimated: true, current: null, next: null, last }
+  }
+
+  return { status: 'IDLE', estimated: false, current: null, next: null, last: null }
 }
 
 // ─── Mappa Fleet ──────────────────────────────────────────────
@@ -296,8 +326,11 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
   const t = useT()
   const [expanded, setExpanded] = useState(false)
   const [pingStatus, setPingStatus] = useState('idle') // idle | sending | sent | error
-  const { status, current, next, last } = vehicleStatus(groups, now)
-  const s    = SS[status] || SS.IDLE
+  const { status, estimated, current, next, last } = vehicleStatus(groups, now)
+  const ssKey = estimated
+    ? (status === 'BUSY' ? 'BUSY_EST' : status === 'DONE' ? 'DONE_EST' : status)
+    : status
+  const s = SS[ssKey] || SS.IDLE
   const icon = TYPE_ICON[vehicle.vehicle_type] || '🚐'
 
   // Progress bar per BUSY
