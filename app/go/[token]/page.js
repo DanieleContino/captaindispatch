@@ -62,8 +62,8 @@ export default function CaptainGoPage() {
                   { enableHighAccuracy: true, timeout: 10000 }
                 )
               }
-              // Auto-nascondi banner dopo 5s anche se GPS lento
-              setTimeout(() => setPingBanner(false), 5000)
+              // Fallback: nascondi dopo 15s se GPS non risponde
+              setTimeout(() => setPingBanner(false), 15000)
             }
           }
         }
@@ -113,8 +113,11 @@ export default function CaptainGoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, lat, lng, accuracy: accuracy ?? null, speed: null, session_id: sessionId }),
       })
-    } catch {}
-    setPingBanner(false)
+      setPingBanner('sent')
+    } catch {
+      setPingBanner('error')
+    }
+    setTimeout(() => setPingBanner(false), 3000)
   }
 
   // ── GPS: invia posizione all'API ──────────────────────────
@@ -392,10 +395,17 @@ export default function CaptainGoPage() {
         }}>
           <span style={{ fontSize: '20px' }}>📡</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '13px', fontWeight: '800', color: 'white' }}>Position requested</div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '1px' }}>Sending your location...</div>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: 'white' }}>
+              {pingBanner === 'sent' ? '✅ Position sent' : pingBanner === 'error' ? '❌ GPS error' : '📡 Position requested'}
+            </div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '1px' }}>
+              {pingBanner === 'sent' ? 'Your coordinator can see you' : pingBanner === 'error' ? 'Could not get GPS position' : 'Getting your location...'}
+            </div>
           </div>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%',
+            background: pingBanner === 'sent' ? '#22c55e' : pingBanner === 'error' ? '#ef4444' : '#fbbf24',
+            boxShadow: `0 0 8px ${pingBanner === 'sent' ? '#22c55e' : pingBanner === 'error' ? '#ef4444' : '#fbbf24'}`,
+          }} />
         </div>
       )}
 
