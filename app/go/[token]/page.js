@@ -63,6 +63,30 @@ export default function CaptainGoPage() {
   )
 
   const { driver, vehicle, trips, locsMap, session, today } = data
+  const [starting, setStarting] = useState(false)
+
+  async function handleStartSession() {
+    if (starting || session) return
+    setStarting(true)
+    try {
+      const res = await fetch('/api/go/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const d = await res.json()
+      if (d.error) alert(d.error)
+      else {
+        // Aggiorna dati immediatamente
+        const updated = await fetch(`/api/go/session?token=${token}`).then(r => r.json())
+        if (!updated.error) setData(updated)
+      }
+    } catch {
+      alert('Connection error')
+    } finally {
+      setStarting(false)
+    }
+  }
 
   const fmtDate = d => new Date(d + 'T12:00:00Z').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -115,6 +139,28 @@ export default function CaptainGoPage() {
           </span>
         )}
       </div>
+
+      {/* Inizia Giornata */}
+      {!session && vehicle && (
+        <div style={{ margin: '16px 20px 0' }}>
+          <button
+            onClick={handleStartSession}
+            disabled={starting}
+            style={{
+              width: '100%', padding: '16px', borderRadius: '14px',
+              border: 'none', background: starting ? '#94a3b8' : '#16a34a',
+              color: 'white', fontSize: '16px', fontWeight: '900',
+              cursor: starting ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+              boxShadow: starting ? 'none' : '0 4px 16px rgba(22,163,74,0.4)',
+            }}>
+            {starting ? '⏳ Starting...' : '🟢 Inizia Giornata'}
+          </button>
+          <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', marginTop: '6px' }}>
+            Tap to go on duty — your coordinator will see you online
+          </div>
+        </div>
+      )}
 
       {/* Vehicle info */}
       {vehicle && (
