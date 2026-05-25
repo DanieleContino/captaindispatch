@@ -883,15 +883,78 @@ export default function FleetMonitorPage() {
           </div>
         )}
 
-        {/* ── Mappa Google Maps ── */}
+        {/* ── Mappa Google Maps + Lista Live ── */}
         {mapOpen && (
-          <div style={{ marginBottom: '24px', borderRadius: '14px', overflow: 'hidden', border: '1px solid #e2e8f0', position: 'relative' }}>
+          <div style={{ marginBottom: '24px', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden', background: 'white' }}>
             <FleetMap
               vehicles={vehicles}
               sessions={sessions}
               vehicleData={vehicleData}
               locsMap={locsMap}
             />
+            {/* Lista veicoli con sessione GPS attiva */}
+            {sessions.length > 0 && (
+              <div style={{ borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ padding: '10px 16px 6px', fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  📍 Live Drivers — {sessions.length} active
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {sessions.map((s, i) => {
+                    const vd = vehicleData.find(v => v.vehicle.id === s.vehicle_id)
+                    const status = vd?.status || 'IDLE'
+                    const st = SS[status] || SS.IDLE
+                    const vehicle = vd?.vehicle
+                    const driverName = vehicle?.driver_name || vehicle?.ncc_driver_name || s.driver_name || '–'
+                    const hasPos = s.last_lat && s.last_lng
+                    const lastSeen = s.last_seen_at
+                      ? new Date(s.last_seen_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                      : null
+                    const STATUS_COLOR = { BUSY: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#60a5fa' }
+                    const dotColor = STATUS_COLOR[status] || '#94a3b8'
+                    return (
+                      <div key={s.id || i} style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '10px 16px',
+                        borderTop: i > 0 ? '1px solid #f1f5f9' : 'none',
+                        background: 'white',
+                      }}>
+                        {/* Dot status */}
+                        <span style={{
+                          width: '10px', height: '10px', borderRadius: '50%',
+                          background: dotColor, flexShrink: 0,
+                          boxShadow: hasPos ? `0 0 6px ${dotColor}` : 'none',
+                        }} />
+                        {/* Vehicle ID */}
+                        <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '13px', color: '#0f172a', minWidth: '80px' }}>
+                          {s.vehicle_id || '–'}
+                        </span>
+                        {/* Driver */}
+                        <span style={{ fontSize: '12px', color: '#374151', fontWeight: '600', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          👤 {driverName}
+                        </span>
+                        {/* Status badge */}
+                        <span style={{
+                          fontSize: '10px', fontWeight: '800', padding: '2px 8px',
+                          borderRadius: '999px', whiteSpace: 'nowrap',
+                          background: st.badgeBg, color: st.badge, border: `1px solid ${st.border}`,
+                        }}>
+                          {st.label}
+                        </span>
+                        {/* Posizione / last seen */}
+                        <span style={{ fontSize: '10px', color: '#94a3b8', whiteSpace: 'nowrap', minWidth: '80px', textAlign: 'right' }}>
+                          {hasPos ? `📍 ${lastSeen || '–'}` : '⚫ no GPS'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            {sessions.length === 0 && (
+              <div style={{ padding: '12px 16px', fontSize: '12px', color: '#94a3b8', borderTop: '1px solid #e2e8f0' }}>
+                ⚫ No active driver sessions today
+              </div>
+            )}
           </div>
         )}
 
