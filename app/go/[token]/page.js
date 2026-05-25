@@ -23,6 +23,8 @@ export default function CaptainGoPage() {
   const [error,    setError]   = useState(null)
   const [loading,  setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
+  const [gpsStatus, setGpsStatus] = useState('idle') // idle | sending | sent | error
+  const [watchId,   setWatchId]   = useState(null)
 
   useEffect(() => {
     if (!token) return
@@ -42,6 +44,63 @@ export default function CaptainGoPage() {
     const interval = setInterval(fetchData, 15_000)
     return () => clearInterval(interval)
   }, [token])
+
+  // ── watchPosition: parte quando ON DUTY ──────────────────
+  useEffect(() => {
+    if (!data?.session) {
+      // Sessione non attiva: ferma watch se era partito
+      if (watchId !== null) {
+        navigator.geolocation?.clearWatch(watchId)
+        setWatchId(null)
+      }
+      return
+    }
+    // Sessione attiva e watch non ancora avviato
+    if (watchId === null && navigator.geolocation) {
+      const id = navigator.geolocation.watchPosition(
+        pos => sendPosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, pos.coords.speed),
+        () => setGpsStatus('error'),
+        { enableHighAccuracy: true, distanceFilter: 50 }
+      )
+      setWatchId(id)
+    }
+    return () => {
+      if (watchId !== null) navigator.geolocation?.clearWatch(watchId)
+    }
+  }, [data?.session])
+
+  // ── GPS: invia posizione all'API ──────────────────────────
+  async function sendPosition(lat, lng, accuracy, speed) {
+    if (!token) return
+    try {
+      setGpsStatus('sending')
+      const sessionId = data?.session?.id || null
+      const res = await fetch('/api/go/position', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, lat, lng, accuracy: accuracy ?? null, speed: speed ?? null, session_id: sessionId }),
+      })
+      const d = await res.json()
+      if (d.error) setGpsStatus('error')
+      else setGpsStatus('sent')
+    } catch {
+      setGpsStatus('error')
+    }
+    setTimeout(() => setGpsStatus('idle'), 3000)
+  }
+
+  // ── GPS: pulsante manuale "Sono Qui" ──────────────────────
+  function handleSonoQui() {
+    if (!navigator.geolocation) {
+      alert('GPS non disponibile su questo dispositivo')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => sendPosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, null),
+      () => setGpsStatus('error'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
@@ -269,9 +328,53 @@ export default function CaptainGoPage() {
       </div>
 
       {/* Footer */}
-      <div style={{ padding: '24px 20px', textAlign: 'center' }}>
+      <div style={{ padding: '24px 20px 100px', textAlign: 'center' }}>
         <div style={{ fontSize: '10px', color: '#94a3b8' }}>CaptainDispatch · Captain Go</div>
       </div>
+
+      {/* Bottom bar GPS — visibile solo ON DUTY */}
+      {session && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0,
+          background: '#0f2340',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          padding: '12px 20px',
+          display: 'flex', alignItems: 'center', gap: '12px',
+          zIndex: 100,
+          paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
+        }}>
+          <button
+            onClick={handleSonoQui}
+            disabled={gpsStatus === 'sending'}
+            style={{
+              flex: 1, padding: '13px', borderRadius: '12px',
+              border: 'none',
+              background: gpsStatus === 'sent'    ? '#16a34a'
+                        : gpsStatus === 'error'   ? '#dc2626'
+                        : gpsStatus === 'sending' ? '#475569'
+                        : '#2563eb',
+              color: 'white', fontSize: '15px', fontWeight: '800',
+              cursor: gpsStatus === 'sending' ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              transition: 'background 0.2s',
+            }}>
+            {gpsStatus === 'sending' ? '⏳ Invio...'
+           : gpsStatus === 'sent'    ? '✅ Inviato'
+           : gpsStatus === 'error'   ? '❌ Errore GPS'
+           : '📍 Sono Qui'}
+          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+            <div style={{
+              width: '10px', height: '10px', borderRadius: '50%',
+              background: watchId !== null ? '#22c55e' : '#475569',
+              boxShadow: watchId !== null ? '0 0 6px #22c55e' : 'none',
+            }} />
+            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', textTransform: 'uppercase' }}>
+              {watchId !== null ? 'LIVE' : 'GPS'}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
