@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 
 const pad2 = n => String(n).padStart(2, '0')
@@ -11,6 +11,342 @@ function minToHHMM(min) {
 }
 
 const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌', TRUCK: '🚛', PICKUP: '🛻', CARGO: '🚚' }
+
+const SERVICE_TYPES = ['Wrap', 'Hotel Run', 'Airport', 'Unit Move', 'Charter', 'Shuttle', 'Other']
+
+function nowHHMM() {
+  const d = new Date()
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0')
+}
+function isoToday() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+}
+
+// ─── QR Scanner per Captain Go ────────────────────────────────
+function GoQrScanner({ onScan, onClose }) {
+  const READER_ID = 'go-qr-reader'
+  const qrRef = useRef(null)
+  const [scanErr, setScanErr] = useState('')
+
+  useEffect(() => {
+    let scanner = null
+    const timer = setTimeout(async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode')
+        scanner = new Html5Qrcode(READER_ID)
+        qrRef.current = scanner
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 240, height: 240 } },
+          (text) => {
+            scanner.stop().catch(() => {})
+            qrRef.current = null
+            onScan(text)
+          }
+        )
+      } catch (e) {
+        setScanErr(e?.message || 'Camera unavailable. Check permissions.')
+      }
+    }, 150)
+    return () => {
+      clearTimeout(timer)
+      if (qrRef.current) { qrRef.current.stop().catch(() => {}); qrRef.current = null }
+    }
+  }, [onScan])
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 200, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: '#0f2340', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ color: 'white', fontWeight: '800', fontSize: '15px' }}>📷 Scan QR</span>
+        <button onClick={onClose} style={{ color: 'white', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div id={READER_ID} style={{ width: '100%', maxWidth: '320px', borderRadius: '16px', overflow: 'hidden', background: '#111' }} />
+        {scanErr && <div style={{ marginTop: '16px', color: '#f87171', fontSize: '13px', textAlign: 'center' }}>❌ {scanErr}</div>}
+        <p style={{ color: '#94a3b8', fontSize: '12px', marginTop: '16px', textAlign: 'center' }}>Point camera at a QR code</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Wizard New Trip ──────────────────────────────────────────
+function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
+  const [step,        setStep]        = useState(1)
+  const [date,        setDate]        = useState(isoToday())
+  const [callTime,    setCallTime]    = useState(nowHHMM())
+  const [serviceType, setServiceType] = useState('Wrap')
+  const [pickupId,    setPickupId]    = useState('')
+  const [dropoffId,   setDropoffId]   = useState('')
+  const [locations,   setLocations]   = useState([])
+  const [crew,        setCrew]        = useState([])
+  const [selCrew,     setSelCrew]     = useState([])
+  const [search,      setSearch]      = useState('')
+  const [showScanner, setShowScanner] = useState(false)
+  const [scanMode,    setScanMode]    = useState('crew')
+  const [saving,      setSaving]      = useState(false)
+  const [err,         setErr]         = useState('')
+  const [toast,       setToast]       = useState('')
+
+  const locsMap = Object.fromEntries(locations.map(l => [l.id, l.name]))
+
+  function showToast(msg) {
+    setToast(msg)
+    setTimeout(() => setToast(''), 3000)
+  }
+
+  // Carica locations e crew
+  useEffect(() => {
+    if (!productionId) return
+    Promise.all([
+      fetch(`/api/go/data?token=${token}&type=locations`).then(r => r.json()),
+      fetch(`/api/go/data?token=${token}&type=crew`).then(r => r.json()),
+    ]).then(([lRes, cRes]) => {
+      setLocations(lRes.data || [])
+      setCrew(cRes.data || [])
+    }).catch(() => {})
+  }, [token, productionId])
+
+  // QR scan handler
+  async function handleScan(rawText) {
+    setShowScanner(false)
+    let text = rawText.trim()
+    try {
+      const url = new URL(text)
+      const qrParam = url.searchParams.get('qr')
+      if (qrParam) text = qrParam
+    } catch {}
+
+    try {
+      const res  = await fetch(`/api/qr/resolve?qr=${encodeURIComponent(text)}`)
+      const data = await res.json()
+      if (data.error) { showToast('❌ QR not found'); return }
+      if (data.type === 'crew') {
+        if (selCrew.find(c => c.id === data.id)) { showToast('⚠️ Already added'); return }
+        setSelCrew(p => [...p, { id: data.id, full_name: data.full_name, department: data.department, hotel_id: data.hotel?.id || null }])
+        showToast('✅ ' + data.full_name + ' added')
+      }
+    } catch { showToast('❌ Scan error') }
+  }
+
+  async function handleConfirm() {
+    setSaving(true); setErr('')
+    try {
+      const res = await fetch('/api/go/wrap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token, date, callTime, serviceType,
+          pickupId, dropoffId: dropoffId || null,
+          passengerIds: selCrew.map(c => c.id),
+        }),
+      })
+      const d = await res.json()
+      if (d.error) { setErr(d.error); setSaving(false); return }
+      onCreated(d.trip_id)
+    } catch (e) { setErr(e.message); setSaving(false) }
+  }
+
+  const inp = { width: '100%', padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px', color: '#0f172a', background: 'white', boxSizing: 'border-box', fontFamily: 'inherit' }
+  const lbl = { fontSize: '11px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: '#f1f5f9', zIndex: 150, display: 'flex', flexDirection: 'column', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', overflowY: 'auto' }}>
+
+      {/* Header */}
+      <div style={{ background: '#0f2340', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <span style={{ color: 'white', fontWeight: '900', fontSize: '16px' }}>➕ New Trip</span>
+        <button onClick={onClose} style={{ color: 'white', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+      </div>
+
+      {/* Step bar */}
+      <div style={{ display: 'flex', gap: '4px', padding: '10px 16px', background: '#0f2340', flexShrink: 0 }}>
+        {[1,2,3].map(n => (
+          <div key={n} style={{ flex: 1, height: '3px', borderRadius: '2px', background: n < step ? '#22c55e' : n === step ? '#60a5fa' : 'rgba(255,255,255,0.2)' }} />
+        ))}
+      </div>
+
+      {/* QR Scanner */}
+      {showScanner && <GoQrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
+
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)', background: '#0f2340', color: 'white', padding: '10px 20px', borderRadius: '24px', fontSize: '13px', zIndex: 300, fontWeight: '600', whiteSpace: 'nowrap' }}>
+          {toast}
+        </div>
+      )}
+
+      <div style={{ flex: 1, padding: '20px 16px 100px' }}>
+
+        {/* ── STEP 1: Dettagli ── */}
+        {step === 1 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '6px' }}>📦</div>
+              <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Trip Details</div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={lbl}>Date</label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={lbl}>Time</label>
+                <input type="time" value={callTime} onChange={e => setCallTime(e.target.value)} style={{ ...inp, fontWeight: '900', textAlign: 'center' }} />
+              </div>
+            </div>
+
+            <div>
+              <label style={lbl}>Service Type</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {SERVICE_TYPES.map(s => (
+                  <button key={s} onClick={() => setServiceType(s)} style={{
+                    padding: '8px 14px', borderRadius: '999px', border: `2px solid ${serviceType === s ? '#2563eb' : '#e2e8f0'}`,
+                    background: serviceType === s ? '#eff6ff' : 'white', color: serviceType === s ? '#1d4ed8' : '#374151',
+                    fontWeight: serviceType === s ? '800' : '500', fontSize: '13px', cursor: 'pointer',
+                  }}>{s}</button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label style={lbl}>Pickup Location</label>
+              <select value={pickupId} onChange={e => setPickupId(e.target.value)} style={{ ...inp, appearance: 'auto' }}>
+                <option value="">Select pickup...</option>
+                {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label style={lbl}>Dropoff (optional)</label>
+              <select value={dropoffId} onChange={e => setDropoffId(e.target.value)} style={{ ...inp, appearance: 'auto' }}>
+                <option value="">— Auto —</option>
+                {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+
+            <button onClick={() => setStep(2)} disabled={!date || !callTime || !pickupId}
+              style={{ width: '100%', padding: '15px', borderRadius: '10px', border: 'none', fontSize: '16px', fontWeight: '800', cursor: !date || !callTime || !pickupId ? 'default' : 'pointer', background: !date || !callTime || !pickupId ? '#e2e8f0' : '#2563eb', color: !date || !callTime || !pickupId ? '#94a3b8' : 'white' }}>
+              Next — Passengers →
+            </button>
+          </div>
+        )}
+
+        {/* ── STEP 2: Passeggeri ── */}
+        {step === 2 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '6px' }}>👥</div>
+              <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Passengers</div>
+            </div>
+
+            <button onClick={() => { setScanMode('crew'); setShowScanner(true) }}
+              style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              📷 Scan Crew Badge
+            </button>
+
+            {selCrew.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#1d4ed8' }}>👥 {selCrew.length} selected</span>
+                  <button onClick={() => setSelCrew([])} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Remove all</button>
+                </div>
+                {selCrew.map(c => (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#eff6ff', color: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '12px', flexShrink: 0 }}>
+                      {c.full_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: '700', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
+                      <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
+                    </div>
+                    <button onClick={() => setSelCrew(p => p.filter(x => x.id !== c.id))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <input type="text" placeholder="🔍 Search crew..." value={search} onChange={e => setSearch(e.target.value)}
+              style={{ ...inp, fontSize: '14px' }} />
+
+            {search && (
+              <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', background: 'white' }}>
+                {(() => {
+                  const q = search.toLowerCase()
+                  const filtered = crew.filter(c => !selCrew.find(x => x.id === c.id) && (c.full_name.toLowerCase().includes(q) || (c.department || '').toLowerCase().includes(q)))
+                  if (!filtered.length) return <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No results</div>
+                  return filtered.map(c => (
+                    <div key={c.id} onClick={() => { setSelCrew(p => [...p, c]); setSearch('') }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f8fafc' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{c.full_name}</div>
+                        <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
+                      </div>
+                      <span style={{ color: '#16a34a', fontSize: '22px' }}>+</span>
+                    </div>
+                  ))
+                })()}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => setStep(1)} style={{ flex: 1, padding: '14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>← Back</button>
+              <button onClick={() => { setSearch(''); setStep(3) }} style={{ flex: 2, padding: '14px', borderRadius: '10px', border: 'none', background: '#2563eb', color: 'white', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}>
+                Review ({selCrew.length}) →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 3: Conferma ── */}
+        {step === 3 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '6px' }}>📋</div>
+              <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Confirm Trip</div>
+            </div>
+
+            <div style={{ background: 'white', borderRadius: '12px', padding: '14px', border: '1px solid #e2e8f0' }}>
+              {[
+                ['Date', date],
+                ['Time', callTime],
+                ['Service', serviceType],
+                ['Pickup', locsMap[pickupId] || pickupId],
+                dropoffId ? ['Dropoff', locsMap[dropoffId] || dropoffId] : null,
+                vehicle ? ['Vehicle', vehicle.sign_code || vehicle.id] : null,
+                ['Passengers', `${selCrew.length} pax`],
+              ].filter(Boolean).map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                  <span style={{ color: '#64748b' }}>{label}</span>
+                  <span style={{ fontWeight: '700', color: '#0f172a', textAlign: 'right' }}>{value}</span>
+                </div>
+              ))}
+            </div>
+
+            {selCrew.length > 0 && (
+              <div style={{ background: 'white', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#374151', lineHeight: 1.6 }}>
+                👥 {selCrew.map(c => c.full_name).join(', ')}
+              </div>
+            )}
+
+            {err && (
+              <div style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {err}</div>
+            )}
+
+            <button onClick={handleConfirm} disabled={saving}
+              style={{ width: '100%', padding: '15px', borderRadius: '10px', border: 'none', background: saving ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '16px', fontWeight: '900', cursor: saving ? 'default' : 'pointer' }}>
+              {saving ? '⏳ Creating...' : '✅ Create Trip'}
+            </button>
+            <button onClick={() => setStep(2)} disabled={saving}
+              style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+              ← Edit Passengers
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 const CLS_COLOR = {
   ARRIVAL:   { dot: '#16a34a', label: 'ARR' },
   DEPARTURE: { dot: '#ea580c', label: 'DEP' },
@@ -28,6 +364,8 @@ export default function CaptainGoPage() {
   const [pingBanner,  setPingBanner]  = useState(false)  // mostra banner ping request
   const [gpsTracking,   setGpsTracking]   = useState(true)
   const [reconnecting,  setReconnecting]  = useState(false)
+  const [showWizard,    setShowWizard]    = useState(false)
+  const [wizardDone,    setWizardDone]    = useState(null) // trip_id creato
 
   useEffect(() => {
     if (!token) return
@@ -411,6 +749,40 @@ export default function CaptainGoPage() {
             <div style={{ fontSize: '13px', fontWeight: '800', color: 'white' }}>Reconnecting...</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '1px' }}>Waiting for connection</div>
           </div>
+        </div>
+      )}
+
+      {/* Wizard New Trip */}
+      {showWizard && (
+        <NewTripWizard
+          token={token}
+          vehicle={vehicle}
+          productionId={data?.driver ? undefined : undefined}
+          onClose={() => setShowWizard(false)}
+          onCreated={(tripId) => { setShowWizard(false); setWizardDone(tripId) }}
+        />
+      )}
+
+      {/* Screen trip creato */}
+      {wizardDone && (
+        <div style={{ position: 'fixed', inset: 0, background: '#f1f5f9', zIndex: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+          <div style={{ width: '80px', height: '80px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', marginBottom: '20px' }}>✓</div>
+          <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginBottom: '8px' }}>Trip Created!</div>
+          <div style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '18px', color: '#2563eb', marginBottom: '24px' }}>{wizardDone}</div>
+          <button onClick={() => setWizardDone(null)}
+            style={{ width: '100%', maxWidth: '320px', padding: '15px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}>
+            ← Back to Captain Go
+          </button>
+        </div>
+      )}
+
+      {/* Bottone New Trip — visibile solo ON DUTY */}
+      {session && !showWizard && !wizardDone && (
+        <div style={{ position: 'fixed', top: '72px', right: '16px', zIndex: 99 }}>
+          <button onClick={() => setShowWizard(true)}
+            style={{ background: '#2563eb', border: 'none', borderRadius: '999px', padding: '10px 16px', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 16px rgba(37,99,235,0.4)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            ➕ New Trip
+          </button>
         </div>
       )}
 
