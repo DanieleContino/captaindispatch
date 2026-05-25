@@ -23,8 +23,9 @@ export default function CaptainGoPage() {
   const [error,    setError]   = useState(null)
   const [loading,  setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
-  const [gpsStatus, setGpsStatus] = useState('idle') // idle | sending | sent | error
-  const [watchId,   setWatchId]   = useState(null)
+  const [gpsStatus,   setGpsStatus]   = useState('idle') // idle | sending | sent | error
+  const [watchId,     setWatchId]     = useState(null)
+  const [pingBanner,  setPingBanner]  = useState(false)  // mostra banner ping request
 
   useEffect(() => {
     if (!token) return
@@ -51,13 +52,17 @@ export default function CaptainGoPage() {
         if (d.messages && d.messages.length > 0) {
           for (const msg of d.messages) {
             if (msg.message_type === 'PING_REQUEST') {
-              // Rispondi automaticamente con la posizione corrente
+              // Mostra banner e rispondi silenziosamente
+              setPingBanner(true)
               if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                  pos => sendPosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, null),
-                  () => {}
+                  pos => sendPositionSilent(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+                  () => setPingBanner(false),
+                  { enableHighAccuracy: true, timeout: 10000 }
                 )
               }
+              // Auto-nascondi banner dopo 5s anche se GPS lento
+              setTimeout(() => setPingBanner(false), 5000)
             }
           }
         }
@@ -91,6 +96,20 @@ export default function CaptainGoPage() {
       if (watchId !== null) navigator.geolocation?.clearWatch(watchId)
     }
   }, [data?.session])
+
+  // ── GPS: invia posizione silenziosa (ping response — non tocca gpsStatus) ──
+  async function sendPositionSilent(lat, lng, accuracy) {
+    if (!token) return
+    try {
+      const sessionId = data?.session?.id || null
+      await fetch('/api/go/position', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, lat, lng, accuracy: accuracy ?? null, speed: null, session_id: sessionId }),
+      })
+    } catch {}
+    setPingBanner(false)
+  }
 
   // ── GPS: invia posizione all'API ──────────────────────────
   async function sendPosition(lat, lng, accuracy, speed) {
@@ -354,6 +373,25 @@ export default function CaptainGoPage() {
       <div style={{ padding: '24px 20px 100px', textAlign: 'center' }}>
         <div style={{ fontSize: '10px', color: '#94a3b8' }}>CaptainDispatch · Captain Go</div>
       </div>
+
+      {/* Banner ping request */}
+      {pingBanner && (
+        <div style={{
+          position: 'fixed', bottom: session ? '80px' : '0', left: '16px', right: '16px',
+          background: '#1d4ed8', borderRadius: '12px',
+          padding: '12px 16px', zIndex: 101,
+          display: 'flex', alignItems: 'center', gap: '10px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+          paddingBottom: session ? '12px' : 'calc(12px + env(safe-area-inset-bottom))',
+        }}>
+          <span style={{ fontSize: '20px' }}>📡</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: 'white' }}>Position requested</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '1px' }}>Sending your location...</div>
+          </div>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
+        </div>
+      )}
 
       {/* Bottom bar GPS — visibile solo ON DUTY */}
       {session && (
