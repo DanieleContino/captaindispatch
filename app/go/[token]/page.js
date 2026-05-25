@@ -77,7 +77,8 @@ export default function CaptainGoPage() {
       const d = await res.json()
       if (d.error) alert(d.error)
       else {
-        // Aggiorna dati immediatamente
+        // Aspetta 500ms poi aggiorna
+        await new Promise(resolve => setTimeout(resolve, 500))
         const updated = await fetch(`/api/go/session?token=${token}`).then(r => r.json())
         if (!updated.error) setData(updated)
       }
