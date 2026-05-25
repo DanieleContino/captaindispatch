@@ -432,26 +432,19 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
             </div>
 
             {/* Vehicle Category */}
-            {form.is_ncc ? (
-              /* ── NCC read-only banner ── */
-              <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #bae6fd', background: '#f0f9ff' }}>
-                <div style={{ fontSize: '11px', fontWeight: '800', color: '#0369a1', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏷 Vehicle Category</div>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                  <span style={{ fontSize: '20px', flexShrink: 0, lineHeight: 1 }}>🏢</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#0369a1', marginBottom: form.ncc_agency_id ? '4px' : '0' }}>NCC Vehicle — managed from NCC tab</div>
-                    {form.ncc_agency_id && <NccAgencyNameInline productionId={PRODUCTION_ID} agencyId={form.ncc_agency_id} />}
+            {mode === 'edit' ? (
+              (form.is_ncc || form.is_comodato) && (
+                <div style={{ ...fld, padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.is_ncc ? '#bae6fd' : '#86efac'}`, background: form.is_ncc ? '#f0f9ff' : '#f0fdf4' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '800', color: form.is_ncc ? '#0369a1' : '#15803d', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏷 Vehicle Category</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: form.is_ncc ? '#0369a1' : '#15803d' }}>
+                    {form.is_ncc ? '🏢 NCC Vehicle — managed from NCC tab' : '🤝 Loan Vehicle — managed from Loan tab'}
                   </div>
+                  {form.is_ncc && form.ncc_agency_id && <NccAgencyNameInline productionId={PRODUCTION_ID} agencyId={form.ncc_agency_id} />}
                 </div>
-                <div style={{ marginTop: '10px', fontSize: '10px', color: '#0369a1', background: 'white', border: '1px solid #bae6fd', borderRadius: '7px', padding: '6px 10px' }}>
-                  ℹ Agency details, driver and category are managed in the <strong>NCC tab</strong>. Edit them there.
-                </div>
-              </div>
+              )
             ) : (
-              /* ── Normal toggles for non-NCC vehicles ── */
               <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
                 <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏷 Vehicle Category</div>
-
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', marginBottom: '8px' }}
                   onClick={() => setForm(f => ({ ...f, is_ncc: true, is_comodato: false }))}>
                   <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
@@ -459,7 +452,6 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                   </div>
                   <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>🏢 NCC Vehicle — provided by external agency</div>
                 </div>
-
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${form.is_comodato ? '#86efac' : '#e2e8f0'}`, background: form.is_comodato ? '#f0fdf4' : 'white', cursor: 'pointer', marginBottom: form.is_comodato ? '8px' : '0' }}
                   onClick={() => setForm(f => ({ ...f, is_comodato: !f.is_comodato, is_ncc: false }))}>
                   <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.is_comodato ? '#15803d' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
@@ -467,7 +459,6 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                   </div>
                   <div style={{ fontSize: '12px', fontWeight: '700', color: form.is_comodato ? '#15803d' : '#64748b' }}>🤝 Loan Vehicle — personal vehicle with expense reimbursement</div>
                 </div>
-
                 {form.is_comodato && (
                   <div style={{ padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
