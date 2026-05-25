@@ -1861,7 +1861,7 @@ function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, producti
 }
 
 // ─── RentalVehicleSidebar ────────────────────────────────────
-function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], initialSupplierId = null }) {
+function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], initialSupplierId = null, compactMode = false }) {
   const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'AUD', 'CAD', 'NOK', 'SEK', 'DKK']
   const EMPTY = {
     id: '', vehicle_type: 'VAN', vehicle_class: [],
@@ -2211,7 +2211,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
             </div>
 
             {/* ── RENTAL SECTION ── */}
-            <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #fde68a', background: '#fefce8' }}>
+            {!compactMode && <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #fde68a', background: '#fefce8' }}>
               <div style={{ fontSize: '11px', fontWeight: '800', color: '#a16207', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🔑 Rental Details</div>
 
               {/* Supplier */}
@@ -2334,7 +2334,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                 <label style={{ ...lbl, color: '#a16207' }}>Invoice No.</label>
                 <input value={form.rental_invoice_no} onChange={e => set('rental_invoice_no', e.target.value)} style={{ ...inp, borderColor: '#fde68a' }} placeholder="Invoice number..." />
               </div>
-            </div>
+            </div>}
 
             {/* ── DRIVER SECTION ── */}
             <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #bfdbfe', background: '#eff6ff' }}>
@@ -2391,7 +2391,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
             )}
 
             {/* ── INSURANCE SECTION ── */}
-            <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
+            {!compactMode && <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
               <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🛡 Insurance</div>
               <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${form.rental_insurance_casco ? '#c4b5fd' : '#e2e8f0'}`, background: form.rental_insurance_casco ? '#ede9fe' : 'white', cursor: 'pointer' }}
                 onClick={() => set('rental_insurance_casco', !form.rental_insurance_casco)}>
@@ -2416,7 +2416,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                   <input type="date" value={form.rental_insurance_exp} onChange={e => set('rental_insurance_exp', e.target.value)} style={{ ...inp, borderColor: '#e9d5ff' }} />
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* Sign Code + Unit Default */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
@@ -4747,6 +4747,7 @@ export default function VehiclesPage() {
         crewList={crewList}
         vehicles={vhcs}
         initialSupplierId={null}
+        compactMode={activeTab === 'fleet'}
       />
       <AddVehicleModal
         open={addVehicleModalOpen}
