@@ -2431,10 +2431,10 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
             </div>
 
             {/* KM + Notes */}
-            <div style={fld}>
+            {!compactMode && <div style={fld}>
               <label style={lbl}>KM Included</label>
               <input value={form.rental_km_included} onChange={e => set('rental_km_included', e.target.value)} style={inp} placeholder="Unlimited, 500/day..." />
-            </div>
+            </div>}
             <div style={fld}>
               <label style={lbl}>Notes</label>
               <textarea value={form.rental_notes} onChange={e => set('rental_notes', e.target.value)} style={{ ...inp, minHeight: '60px', resize: 'vertical' }} placeholder="Additional notes..." />
