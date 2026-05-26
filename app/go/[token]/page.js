@@ -422,6 +422,9 @@ export default function CaptainGoPage() {
   const [ending,         setEnding]         = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [tripAction,     setTripAction]     = useState(null) // trip.id in corso di update
+  const [unreadCount,    setUnreadCount]    = useState(() => {
+    try { return parseInt(localStorage.getItem(`unread_${token}`) || '0', 10) } catch { return 0 }
+  })
 
   useEffect(() => {
     if (!token) return
@@ -455,6 +458,11 @@ export default function CaptainGoPage() {
         const res = await fetch(`/api/go/messages?token=${token}`)
         const d = await res.json()
         if (d.messages && d.messages.length > 0) {
+          setUnreadCount(prev => {
+            const next = prev + d.messages.length
+            try { localStorage.setItem(`unread_${token}`, String(next)) } catch {}
+            return next
+          })
           for (const msg of d.messages) {
             if (msg.message_type === 'PING_REQUEST') {
               const pingStart = Date.now()
@@ -689,7 +697,25 @@ export default function CaptainGoPage() {
       <div style={{ background: '#0f2340', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Captain Go</div>
-          <div style={{ fontSize: '18px', fontWeight: '900', color: 'white' }}>👤 {driver.name}</div>
+          <div style={{ fontSize: '18px', fontWeight: '900', color: 'white', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            👤 {driver.name}
+            {unreadCount > 0 && (
+              <button
+                onClick={() => {
+                  setUnreadCount(0)
+                  try { localStorage.removeItem(`unread_${token}`) } catch {}
+                }}
+                style={{
+                  background: '#ef4444', border: 'none', borderRadius: '999px',
+                  minWidth: '22px', height: '22px', padding: '0 6px',
+                  color: 'white', fontSize: '11px', fontWeight: '900',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  lineHeight: 1,
+                }}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </button>
+            )}
+          </div>
         </div>
         <div style={{ textAlign: 'right' }}>
           {vehicle ? (
