@@ -45,7 +45,7 @@ export async function POST(request) {
   // Aggiorna tutte le rows con lo stesso trip_id
   const { error: tripErr } = await supabase
     .from('trips')
-    .update({ status: 'BUSY' })
+    .update({ status: 'BUSY', started_at: new Date().toISOString() })
     .eq('trip_id', tripRow?.trip_id || trip_id)
     .eq('production_id', driver.production_id)
 
