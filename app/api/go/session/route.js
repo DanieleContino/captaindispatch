@@ -80,12 +80,20 @@ export async function GET(request) {
   if (vehicle) {
     const { data: tripData } = await supabase
       .from('trips')
-      .select('id, trip_id, pickup_id, dropoff_id, pickup_min, call_min, start_dt, end_dt, status, pax_count, passenger_list, service_type, transfer_class')
+      .select('id, trip_id, pickup_id, dropoff_id, pickup_min, call_min, start_dt, end_dt, started_at, arrived_at, status, pax_count, passenger_list, service_type, transfer_class')
       .eq('production_id', productionId)
       .eq('vehicle_id', vehicle.id)
       .eq('date', today)
-      .order('pickup_min', { ascending: true })
-    trips = tripData || []
+    const rawTrips = tripData || []
+    // DONE → ordina per started_at reale, altri → per pickup_min pianificato
+    trips = rawTrips.sort((a, b) => {
+      const aTime = (a.status === 'DONE' && a.started_at) ? new Date(a.started_at) : (a.pickup_min ?? a.call_min ?? 9999)
+      const bTime = (b.status === 'DONE' && b.started_at) ? new Date(b.started_at) : (b.pickup_min ?? b.call_min ?? 9999)
+      if (aTime instanceof Date && bTime instanceof Date) return aTime - bTime
+      if (aTime instanceof Date) return -1
+      if (bTime instanceof Date) return 1
+      return aTime - bTime
+    })
   }
 
   // 5. Locations per trip
