@@ -97,6 +97,7 @@ function groupByTripId(tripRows) {
         status:         t.status,
         minStart:       sd,
         maxEnd:         ed,
+        arrived_at:     t.arrived_at || null,
         rows:           [t],
       }
     } else {
