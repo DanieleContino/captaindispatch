@@ -98,6 +98,7 @@ function groupByTripId(tripRows) {
         minStart:       sd,
         maxEnd:         ed,
         arrived_at:     t.arrived_at || null,
+        started_at:     t.started_at || null,
         rows:           [t],
       }
     } else {
@@ -113,7 +114,7 @@ function groupByTripId(tripRows) {
       }
       if (!g.service_type && t.service_type) g.service_type = t.service_type
       if (sd && (!g.minStart || sd < g.minStart)) { g.minStart = sd; g.pickup_min = t.pickup_min; g.call_min = t.call_min }
-      if (ed && (!g.maxEnd  || ed > g.maxEnd))   { g.maxEnd = ed; g.lastDropoffId = t.dropoff_id; g.arrived_at = t.arrived_at || null }
+      if (ed && (!g.maxEnd  || ed > g.maxEnd))   { g.maxEnd = ed; g.lastDropoffId = t.dropoff_id; g.arrived_at = t.arrived_at || null; g.started_at = t.started_at || null }
     }
   }
   // Sort: groups with timestamps first, then by trip_id
@@ -589,8 +590,20 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
             {t.fleetLastTrip}{last.service_type ? ` · ${last.service_type}` : ''}
           </div>
           <div style={{ fontSize: '12px', color: '#475569' }}>
-            {routeLabel(last)} · ended at {last.arrived_at ? dtToHHMM(new Date(last.arrived_at)) : dtToHHMM(last.maxEnd)}
+            {routeLabel(last)}
           </div>
+          {(() => {
+            const dep = last.started_at ? new Date(last.started_at) : null
+            const arr = last.arrived_at ? new Date(last.arrived_at) : last.maxEnd
+            const durMin = dep && arr ? Math.round((arr - dep) / 60000) : null
+            return (
+              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {dep && <span>▶ {dtToHHMM(dep)}</span>}
+                {arr && <span>✅ {dtToHHMM(arr)}</span>}
+                {durMin !== null && <span>⏱ {durMin} min</span>}
+              </div>
+            )
+          })()}
           {(last.passenger_list || last.pax_count > 0) && (
             <div style={{ fontSize: '11px', color: '#64748b', marginTop: '5px', lineHeight: 1.5, padding: '5px 8px', background: 'rgba(255,255,255,0.6)', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.06)' }}>
               👥 {last.passenger_list || `${last.pax_count} pax`}
@@ -638,6 +651,18 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
                     {g.passenger_list && (
                       <div style={{ color: '#64748b', marginTop: '2px' }}>👥 {g.passenger_list}</div>
                     )}
+                    {(g.started_at || g.arrived_at) && (() => {
+                      const dep = g.started_at ? new Date(g.started_at) : null
+                      const arr = g.arrived_at ? new Date(g.arrived_at) : null
+                      const durMin = dep && arr ? Math.round((arr - dep) / 60000) : null
+                      return (
+                        <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {dep && <span>▶ {dtToHHMM(dep)}</span>}
+                          {arr && <span>✅ {dtToHHMM(arr)}</span>}
+                          {durMin !== null && <span>⏱ {durMin} min</span>}
+                        </div>
+                      )
+                    })()}
                   </div>
                 )
               })}
