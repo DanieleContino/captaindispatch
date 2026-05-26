@@ -503,7 +503,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
           {/* Progress bar */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#92400e', marginBottom: '4px', fontWeight: '600' }}>
-              <span>{t.fleetStartLabel} {dtToHHMM(current.minStart)}</span>
+              <span>{t.fleetStartLabel} {dtToHHMM(busyStart)}</span>
               <span style={{ fontWeight: '800', fontSize: '12px' }}>{Math.round(progress)}%</span>
               {['Wrap', 'Charter', 'Other'].includes(current.service_type) && Math.round(progress) >= 50 && (
                 <span style={{ color: '#15803d', fontWeight: '800', fontSize: '11px' }}>
