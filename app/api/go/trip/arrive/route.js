@@ -42,16 +42,7 @@ export async function POST(request) {
     .eq('id', trip_id)
     .single()
 
-  // Aggiorna tutte le rows con lo stesso trip_id
-  const { error: tripErr } = await supabase
-    .from('trips')
-    .update({ status: 'DONE', arrived_at: new Date().toISOString() })
-    .eq('trip_id', tripRow?.trip_id || trip_id)
-    .eq('production_id', driver.production_id)
-
-  if (tripErr) return Response.json({ error: tripErr.message }, { status: 500 })
-
-  // 3. Aggiorna sessione → STANDBY, current_trip_id null
+  // 3. Recupera sessione attiva (prima di aggiornare il trip)
   let sessionQuery = supabase
     .from('vehicle_tracking_sessions')
     .select('id')
@@ -72,9 +63,44 @@ export async function POST(request) {
       .single()
     if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
   }
-
   const { data: session } = await sessionQuery.single()
 
+  // 4. Calcola actual_km da vehicle_positions della sessione attiva
+  let actualKm = null
+  if (session?.id) {
+    const { data: positions } = await supabase
+      .from('vehicle_positions')
+      .select('lat, lng, recorded_at')
+      .eq('session_id', session.id)
+      .order('recorded_at', { ascending: true })
+    if (positions && positions.length > 1) {
+      let totalMeters = 0
+      for (let i = 1; i < positions.length; i++) {
+        const a = positions[i - 1]
+        const b = positions[i]
+        const R = 6371000
+        const dLat = (b.lat - a.lat) * Math.PI / 180
+        const dLng = (b.lng - a.lng) * Math.PI / 180
+        const sinLat = Math.sin(dLat / 2)
+        const sinLng = Math.sin(dLng / 2)
+        const c = sinLat * sinLat + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * sinLng * sinLng
+        const dist = R * 2 * Math.atan2(Math.sqrt(c), Math.sqrt(1 - c))
+        if (dist < 2000) totalMeters += dist
+      }
+      actualKm = Math.round(totalMeters / 100) / 10
+    }
+  }
+
+  // 5. Aggiorna tutte le rows con lo stesso trip_id
+  const { error: tripErr } = await supabase
+    .from('trips')
+    .update({ status: 'DONE', arrived_at: new Date().toISOString(), ...(actualKm !== null && { actual_km: actualKm }) })
+    .eq('trip_id', tripRow?.trip_id || trip_id)
+    .eq('production_id', driver.production_id)
+
+  if (tripErr) return Response.json({ error: tripErr.message }, { status: 500 })
+
+  // 6. Aggiorna sessione → STANDBY
   if (session) {
     await supabase
       .from('vehicle_tracking_sessions')
