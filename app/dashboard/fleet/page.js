@@ -616,19 +616,27 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
       {groups.length > 0 && (
         <div style={{ borderTop: '1px solid rgba(0,0,0,0.07)', paddingTop: '8px' }}>
           {/* Summary row — click to expand/collapse */}
-          <div
-            onClick={() => setExpanded(e => !e)}
-            style={{ display: 'flex', gap: '16px', fontSize: '10px', color: '#64748b', cursor: 'pointer', userSelect: 'none', alignItems: 'center' }}
-          >
-            <span style={{ fontWeight: expanded ? '800' : '600', color: expanded ? '#1d4ed8' : '#64748b' }}>
-              {groups.length} {t.fleetTripsToday} {expanded ? '▲' : '▼'}
-            </span>
-            <span>{t.fleetStartLabel} {dtToHHMM(groups[0]?.minStart)}</span>
-            <span>{t.fleetEndLabel} {dtToHHMM(groups[groups.length - 1]?.maxEnd)}</span>
-            {groups.some(g => g.pax_count > 0) && (
-              <span>{groups.reduce((sum, g) => sum + (g.pax_count || 0), 0)} {t.fleetTotalPax}</span>
-            )}
-          </div>
+          {(() => {
+            const firstStarted = groups.find(g => g.started_at)
+            const realStart = firstStarted ? new Date(firstStarted.started_at) : groups[0]?.minStart
+            const lastArrived = [...groups].reverse().find(g => g.arrived_at)
+            const realEnd = lastArrived ? new Date(lastArrived.arrived_at) : groups[groups.length - 1]?.maxEnd
+            return (
+              <div
+                onClick={() => setExpanded(e => !e)}
+                style={{ display: 'flex', gap: '16px', fontSize: '10px', color: '#64748b', cursor: 'pointer', userSelect: 'none', alignItems: 'center' }}
+              >
+                <span style={{ fontWeight: expanded ? '800' : '600', color: expanded ? '#1d4ed8' : '#64748b' }}>
+                  {groups.length} {t.fleetTripsToday} {expanded ? '▲' : '▼'}
+                </span>
+                <span>{t.fleetStartLabel} {dtToHHMM(realStart)}</span>
+                <span>{t.fleetEndLabel} {dtToHHMM(realEnd)}</span>
+                {groups.some(g => g.pax_count > 0) && (
+                  <span>{groups.reduce((sum, g) => sum + (g.pax_count || 0), 0)} {t.fleetTotalPax}</span>
+                )}
+              </div>
+            )
+          })()}
           {/* Expanded list of all trips */}
           {expanded && (
             <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
