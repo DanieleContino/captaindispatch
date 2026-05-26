@@ -1885,6 +1885,8 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
     rental_km_included: '',
     rental_notes: '',
     active: true, in_transport: true,
+    preferred_dept: '',
+    preferred_crew_ids: [],
   }
 
   const [form, setForm]       = useState(EMPTY)
@@ -1968,6 +1970,8 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
         rental_notes:               initial.rental_notes              || '',
         active:                     initial.active !== false,
         in_transport:               initial.in_transport !== false,
+        preferred_dept:             initial.preferred_dept    || '',
+        preferred_crew_ids:         Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [],
       })
       setDriverSearch(initial.driver_name || '')
       setDriver2Search(initial.rental_second_driver || '')
@@ -2033,6 +2037,8 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
       rental_notes:               form.rental_notes.trim() || null,
       active:                     true,
       in_transport:               true,
+      preferred_dept:             form.preferred_dept || null,
+      preferred_crew_ids:         form.preferred_crew_ids.length > 0 ? form.preferred_crew_ids : null,
       sign_code:                  form.sign_code?.trim() || null,
       unit_default:               form.unit_default?.trim() || null,
       available_from:             form.rental_start || null,
@@ -2429,6 +2435,60 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                 <input value={form.unit_default || ''} onChange={e => set('unit_default', e.target.value)} style={inp} placeholder="MAIN, SECOND…" />
               </div>
             </div>
+
+            {/* ── PREFERENZE ASSEGNAZIONE (solo compactMode = Fleet tab) ── */}
+            {compactMode && (
+              <div style={{ marginBottom: '12px', padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '10px' }}>⭐ Preferenze Assegnazione</div>
+
+                {/* Preferred Dept */}
+                <div style={{ marginBottom: '10px' }}>
+                  <label style={lbl}>Dept Preferito</label>
+                  <select value={form.preferred_dept || ''} onChange={e => set('preferred_dept', e.target.value || '')}
+                    style={{ ...inp, background: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).bg || 'white') : 'white', color: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).color || '#0f172a') : '#94a3b8', fontWeight: form.preferred_dept ? '700' : '400' }}>
+                    <option value="">— Nessun dept preferito —</option>
+                    {[...new Set(crewList.map(c => c.department).filter(Boolean))].sort().map(d => <option key={d} value={d}>{d}</option>)}
+                    {form.preferred_dept && ![...new Set(crewList.map(c => c.department).filter(Boolean))].includes(form.preferred_dept) && (
+                      <option value={form.preferred_dept}>{form.preferred_dept}</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Preferred Crew Multi-Select */}
+                <div>
+                  <label style={lbl}>Crew Preferiti</label>
+                  {form.preferred_crew_ids.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                      {form.preferred_crew_ids.map(cid => {
+                        const cm = crewList.find(c => c.id === cid)
+                        if (!cm) return null
+                        return (
+                          <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                            {cm.full_name}
+                            <button type="button" onClick={() => setForm(f => ({ ...f, preferred_crew_ids: f.preferred_crew_ids.filter(x => x !== cid) }))}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '12px', padding: '0', lineHeight: 1, marginLeft: '2px' }}>✕</button>
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
+                    {crewList.map(cm => {
+                      const sel = form.preferred_crew_ids.includes(cm.id)
+                      return (
+                        <div key={cm.id}
+                          onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.id) : [...f.preferred_crew_ids, cm.id] }))}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', background: sel ? '#eff6ff' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
+                          <span style={{ fontSize: '13px', flexShrink: 0 }}>{sel ? '✅' : '⬜'}</span>
+                          <span style={{ fontSize: '11px', fontWeight: sel ? '700' : '500', color: sel ? '#1d4ed8' : '#0f172a', flex: 1 }}>{cm.full_name}</span>
+                          {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{cm.department}</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* KM + Notes */}
             {!compactMode && <div style={fld}>
