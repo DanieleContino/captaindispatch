@@ -114,7 +114,8 @@ function groupByTripId(tripRows) {
       }
       if (!g.service_type && t.service_type) g.service_type = t.service_type
       if (sd && (!g.minStart || sd < g.minStart)) { g.minStart = sd; g.pickup_min = t.pickup_min; g.call_min = t.call_min }
-      if (ed && (!g.maxEnd  || ed > g.maxEnd))   { g.maxEnd = ed; g.lastDropoffId = t.dropoff_id; g.arrived_at = t.arrived_at || null; g.started_at = t.started_at || null }
+      if (ed && (!g.maxEnd  || ed > g.maxEnd))   { g.maxEnd = ed; g.lastDropoffId = t.dropoff_id; g.arrived_at = t.arrived_at || null }
+      if (t.started_at && !g.started_at) g.started_at = t.started_at
     }
   }
   // Sort: groups with timestamps first, then by trip_id
