@@ -422,6 +422,7 @@ export default function CaptainGoPage() {
   const [ending,         setEnding]         = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [tripAction,     setTripAction]     = useState(null) // trip.id in corso di update
+  const [mapTrip,        setMapTrip]        = useState(null) // trip in visualizzazione mappa
   const [unreadCount,    setUnreadCount]    = useState(() => {
     try { return parseInt(localStorage.getItem(`unread_${token}`) || '0', 10) } catch { return 0 }
   })
@@ -888,7 +889,7 @@ export default function CaptainGoPage() {
                 )}
                 {!isDone && dropoff && (
                   <button
-                    onClick={() => openMaps(trip)}
+                    onClick={() => isBusy ? setMapTrip(trip) : openMaps(trip)}
                     style={{
                       width: '100%', padding: '10px', borderRadius: '10px',
                       border: 'none', background: isBusy ? '#0f2340' : '#475569',
@@ -896,7 +897,7 @@ export default function CaptainGoPage() {
                       cursor: 'pointer', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', gap: '8px',
                     }}>
-                    🗺 Navigate to {dropoff?.name}
+                    {isBusy ? '🗺 Mappa Fullscreen' : '🗺 Navigate to ' + dropoff?.name}
                   </button>
                 )}
                 {isDone && (
@@ -909,6 +910,48 @@ export default function CaptainGoPage() {
           })}
         </div>
       </div>
+
+      {/* Overlay Mappa Fullscreen — IN CORSA */}
+      {mapTrip && (() => {
+        const mpPickup  = locsMap[mapTrip.pickup_id]
+        const mpDropoff = locsMap[mapTrip.dropoff_id]
+        const hasCoords = mpDropoff?.lat && mpDropoff?.lng
+        const origin    = mpPickup?.lat && mpPickup?.lng ? `${mpPickup.lat},${mpPickup.lng}` : ''
+        const dest      = hasCoords ? `${mpDropoff.lat},${mpDropoff.lng}` : encodeURIComponent(mpDropoff?.address || mpDropoff?.name || '')
+        const apiKey    = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        const iframeSrc = `https://www.google.com/maps/embed/v1/directions?key=${apiKey}&origin=${origin}&destination=${dest}&mode=driving`
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', background: '#0f2340' }}>
+            {/* Header mappa */}
+            <div style={{ background: '#0f2340', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em' }}>IN CORSA</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: 'white', marginTop: '2px' }}>
+                  {mpPickup?.name || '–'} → {mpDropoff?.name || '–'}
+                </div>
+              </div>
+              <button onClick={() => setMapTrip(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+            {/* Iframe mappa */}
+            <iframe
+              src={iframeSrc}
+              style={{ flex: 1, border: 'none', width: '100%' }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+            {/* Bottone Arrived in basso */}
+            <div style={{ background: '#0f2340', padding: '12px 16px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))', flexShrink: 0 }}>
+              <button
+                onClick={() => { setMapTrip(null); handleArrived(mapTrip) }}
+                disabled={tripAction === mapTrip.id}
+                style={{ width: '100%', padding: '14px', borderRadius: '12px', border: 'none', background: tripAction === mapTrip.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '15px', fontWeight: '900', cursor: tripAction === mapTrip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                {tripAction === mapTrip.id ? '⏳...' : '✅ Arrived — Sono Arrivato'}
+              </button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Footer */}
       <div style={{ padding: '24px 20px 100px', textAlign: 'center' }}>
