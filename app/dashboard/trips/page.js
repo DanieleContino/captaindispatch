@@ -112,7 +112,7 @@ async function checkVehicleAvail(vehicleId, date, startDt, endDt, excludeRowIds)
   if (!vehicleId || !startDt || !endDt || !PRODUCTION_ID) return null
   const excl = Array.isArray(excludeRowIds) ? excludeRowIds.filter(Boolean) : (excludeRowIds ? [excludeRowIds] : [])
   let q = supabase.from('trips')
-    .select('id,trip_id,start_dt,end_dt')
+    .select('id,trip_id,start_dt,end_dt,arrived_at,status')
     .eq('production_id', PRODUCTION_ID)
     .eq('vehicle_id', vehicleId)
     .eq('date', date)
@@ -121,7 +121,14 @@ async function checkVehicleAvail(vehicleId, date, startDt, endDt, excludeRowIds)
   const { data } = await q
   if (!data) return null
   const s = new Date(startDt), e = new Date(endDt)
-  const conflict = data.find(t => t.start_dt && t.end_dt && new Date(t.start_dt) < e && new Date(t.end_dt) > s)
+  const conflict = data.find(t => {
+    if (!t.start_dt || !t.end_dt) return false
+    // Per trip DONE: usa arrived_at come fine effettiva (se disponibile)
+    const effectiveEnd = (t.status === 'DONE' && t.arrived_at)
+      ? new Date(t.arrived_at)
+      : new Date(t.end_dt)
+    return new Date(t.start_dt) < e && effectiveEnd > s
+  })
   return conflict ? { available: false, conflictTripId: conflict.trip_id } : { available: true }
 }
 
