@@ -112,7 +112,7 @@ function groupByTripId(tripRows) {
       }
       if (!g.service_type && t.service_type) g.service_type = t.service_type
       if (sd && (!g.minStart || sd < g.minStart)) { g.minStart = sd; g.pickup_min = t.pickup_min; g.call_min = t.call_min }
-      if (ed && (!g.maxEnd  || ed > g.maxEnd))   { g.maxEnd = ed; g.lastDropoffId = t.dropoff_id }
+      if (ed && (!g.maxEnd  || ed > g.maxEnd))   { g.maxEnd = ed; g.lastDropoffId = t.dropoff_id; g.arrived_at = t.arrived_at || null }
     }
   }
   // Sort: groups with timestamps first, then by trip_id
@@ -588,7 +588,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
             {t.fleetLastTrip}{last.service_type ? ` · ${last.service_type}` : ''}
           </div>
           <div style={{ fontSize: '12px', color: '#475569' }}>
-            {routeLabel(last)} · ended at {dtToHHMM(last.maxEnd)}
+            {routeLabel(last)} · ended at {last.arrived_at ? dtToHHMM(new Date(last.arrived_at)) : dtToHHMM(last.maxEnd)}
           </div>
           {(last.passenger_list || last.pax_count > 0) && (
             <div style={{ fontSize: '11px', color: '#64748b', marginTop: '5px', lineHeight: 1.5, padding: '5px 8px', background: 'rgba(255,255,255,0.6)', borderRadius: '6px', border: '1px solid rgba(0,0,0,0.06)' }}>
@@ -699,7 +699,7 @@ export default function FleetMonitorPage() {
         .eq('in_transport', true)
         .order('vehicle_type').order('id'),
       supabase.from('trips')
-        .select('id,trip_id,vehicle_id,pickup_id,dropoff_id,transfer_class,pickup_min,call_min,start_dt,end_dt,status,pax_count,passenger_list,service_type,duration_min,date')
+        .select('id,trip_id,vehicle_id,pickup_id,dropoff_id,transfer_class,pickup_min,call_min,start_dt,end_dt,arrived_at,status,pax_count,passenger_list,service_type,duration_min,date')
         .eq('production_id', PRODUCTION_ID)
         .eq('date', d),
       supabase.from('locations')
