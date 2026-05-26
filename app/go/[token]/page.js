@@ -691,6 +691,11 @@ export default function CaptainGoPage() {
     window.open(`https://www.google.com/maps/dir/?api=1${origin}&destination=${dest}&travelmode=driving`, '_blank')
   }
 
+  function navigateAndTrack(trip) {
+    openMaps(trip)
+    setMapTrip(trip)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
 
@@ -889,7 +894,7 @@ export default function CaptainGoPage() {
                 )}
                 {!isDone && dropoff && (
                   <button
-                    onClick={() => isBusy ? setMapTrip(trip) : openMaps(trip)}
+                    onClick={() => isBusy ? navigateAndTrack(trip) : openMaps(trip)}
                     style={{
                       width: '100%', padding: '10px', borderRadius: '10px',
                       border: 'none', background: isBusy ? '#0f2340' : '#475569',
@@ -897,7 +902,7 @@ export default function CaptainGoPage() {
                       cursor: 'pointer', display: 'flex', alignItems: 'center',
                       justifyContent: 'center', gap: '8px',
                     }}>
-                    {isBusy ? '🗺 Mappa Fullscreen' : '🗺 Navigate to ' + dropoff?.name}
+                    {isBusy ? '🗺 Naviga' : '🗺 Navigate to ' + dropoff?.name}
                   </button>
                 )}
                 {isDone && (
@@ -911,44 +916,35 @@ export default function CaptainGoPage() {
         </div>
       </div>
 
-      {/* Overlay Mappa Fullscreen — IN CORSA */}
+      {/* Overlay IN CORSA — banner sticky con Arrived */}
       {mapTrip && (() => {
         const mpPickup  = locsMap[mapTrip.pickup_id]
         const mpDropoff = locsMap[mapTrip.dropoff_id]
-        const hasCoords = mpDropoff?.lat && mpDropoff?.lng
-        const origin    = mpPickup?.lat && mpPickup?.lng ? `${mpPickup.lat},${mpPickup.lng}` : ''
-        const dest      = hasCoords ? `${mpDropoff.lat},${mpDropoff.lng}` : encodeURIComponent(mpDropoff?.address || mpDropoff?.name || '')
-        const apiKey    = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-        const iframeSrc = `https://www.google.com/maps/embed/v1/directions?key=${apiKey}&origin=${origin}&destination=${dest}&mode=driving`
         return (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', background: '#0f2340' }}>
-            {/* Header mappa */}
-            <div style={{ background: '#0f2340', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 300,
+            background: '#0f2340',
+            borderTop: '2px solid #f59e0b',
+            borderRadius: '20px 20px 0 0',
+            padding: '16px 20px',
+            paddingBottom: 'calc(16px + env(safe-area-inset-bottom))',
+            boxShadow: '0 -4px 24px rgba(0,0,0,0.4)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.06em' }}>IN CORSA</div>
-                <div style={{ fontSize: '14px', fontWeight: '800', color: 'white', marginTop: '2px' }}>
+                <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>🟡 IN CORSA</div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>
                   {mpPickup?.name || '–'} → {mpDropoff?.name || '–'}
                 </div>
               </div>
-              <button onClick={() => setMapTrip(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <button onClick={() => setMapTrip(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', fontSize: '18px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
-            {/* Iframe mappa */}
-            <iframe
-              src={iframeSrc}
-              style={{ flex: 1, border: 'none', width: '100%' }}
-              allowFullScreen
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-            {/* Bottone Arrived in basso */}
-            <div style={{ background: '#0f2340', padding: '12px 16px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))', flexShrink: 0 }}>
-              <button
-                onClick={() => { setMapTrip(null); handleArrived(mapTrip) }}
-                disabled={tripAction === mapTrip.id}
-                style={{ width: '100%', padding: '14px', borderRadius: '12px', border: 'none', background: tripAction === mapTrip.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '15px', fontWeight: '900', cursor: tripAction === mapTrip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                {tripAction === mapTrip.id ? '⏳...' : '✅ Arrived — Sono Arrivato'}
-              </button>
-            </div>
+            <button
+              onClick={() => { setMapTrip(null); handleArrived(mapTrip) }}
+              disabled={tripAction === mapTrip.id}
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: tripAction === mapTrip.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '16px', fontWeight: '900', cursor: tripAction === mapTrip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              {tripAction === mapTrip.id ? '⏳...' : '✅ Sono Arrivato'}
+            </button>
           </div>
         )
       })()}
