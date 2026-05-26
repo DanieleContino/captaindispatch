@@ -310,9 +310,16 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
   const s = SS[status] || SS.IDLE
   const icon = TYPE_ICON[vehicle.vehicle_type] || '🚐'
 
-  // Progress bar per BUSY
-  const progress = (status === 'BUSY' && current)
-    ? Math.min(100, Math.max(0, (now - current.minStart) / (current.maxEnd - current.minStart) * 100))
+  // Progress bar per BUSY — usa started_at reale se disponibile
+  const busyStart = (status === 'BUSY' && current)
+    ? (current.started_at ? new Date(current.started_at) : current.minStart)
+    : null
+  const busyDurMs = (status === 'BUSY' && current)
+    ? (current.rows?.[0]?.duration_min ? current.rows[0].duration_min * 60_000 : (current.maxEnd - current.minStart))
+    : null
+  const busyEta = (busyStart && busyDurMs) ? new Date(busyStart.getTime() + busyDurMs) : current?.maxEnd
+  const progress = (status === 'BUSY' && busyStart && busyDurMs)
+    ? Math.min(100, Math.max(0, (now - busyStart) / busyDurMs * 100))
     : 0
 
   // Repositioning ETA: ultimo dropoff → prossimo pickup (da cache Google Routes)
@@ -507,8 +514,8 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
                   ? `⏱ ETA ${currentAlert.dropoffEtaStr}${currentAlert.delayMin > 0 ? ` (+${currentAlert.delayMin}min)` : ''}` +
                     (currentAlert.backEtaStr ? ` · ↩ ${currentAlert.backEtaStr}` : '')
                   : repoEta
-                    ? `⏱ Drop ${dtToHHMM(current.maxEnd)} · Repo ${repoMin}min → ${pad2(repoEta.getHours())}:${pad2(repoEta.getMinutes())}`
-                    : `⏱ Back at ${dtToHHMM(current.maxEnd)}`
+                    ? `⏱ Drop ${dtToHHMM(busyEta)} · Repo ${repoMin}min → ${pad2(repoEta.getHours())}:${pad2(repoEta.getMinutes())}`
+                    : `⏱ Back at ${dtToHHMM(busyEta)}`
                 }
               </span>
             </div>
