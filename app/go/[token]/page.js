@@ -423,6 +423,7 @@ export default function CaptainGoPage() {
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [tripAction,     setTripAction]     = useState(null) // trip.id in corso di update
   const [mapTrip,        setMapTrip]        = useState(null) // trip in visualizzazione mappa
+  const wakeLockRef = useRef(null)
   const [unreadCount,    setUnreadCount]    = useState(() => {
     try { return parseInt(localStorage.getItem(`unread_${token}`) || '0', 10) } catch { return 0 }
   })
@@ -494,6 +495,46 @@ export default function CaptainGoPage() {
     const msgInterval = setInterval(checkMessages, 15_000)
     return () => { clearInterval(interval); clearInterval(msgInterval) }
   }, [token])
+
+  // ── Wake Lock: schermo acceso quando c'è un trip BUSY ────
+  useEffect(() => {
+    const hasBusyTrip = data?.trips?.some(t => t.status === 'BUSY' || t.status === 'IN_PROGRESS' || t.status === 'ACTIVE')
+
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) return
+      try {
+        if (wakeLockRef.current) return // già attivo
+        wakeLockRef.current = await navigator.wakeLock.request('screen')
+        wakeLockRef.current.addEventListener('release', () => {
+          wakeLockRef.current = null
+        })
+      } catch {}
+    }
+
+    async function releaseWakeLock() {
+      if (wakeLockRef.current) {
+        try { await wakeLockRef.current.release() } catch {}
+        wakeLockRef.current = null
+      }
+    }
+
+    if (hasBusyTrip) {
+      requestWakeLock()
+    } else {
+      releaseWakeLock()
+    }
+
+    // Riacquista wake lock quando la pagina torna in foreground
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible' && hasBusyTrip) {
+        requestWakeLock()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [data?.trips])
 
   // ── watchPosition: parte quando ON DUTY ──────────────────
   useEffect(() => {
