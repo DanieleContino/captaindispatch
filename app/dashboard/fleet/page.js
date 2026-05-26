@@ -118,11 +118,13 @@ function groupByTripId(tripRows) {
       if (t.started_at && !g.started_at) g.started_at = t.started_at
     }
   }
-  // Sort: groups with timestamps first, then by trip_id
+  // Sort: DONE per started_at reale, altri per minStart pianificato
   return Object.values(map).sort((a, b) => {
-    if (a.minStart && b.minStart) return a.minStart - b.minStart
-    if (a.minStart) return -1
-    if (b.minStart) return 1
+    const aTime = (a.status === 'DONE' && a.started_at) ? new Date(a.started_at) : a.minStart
+    const bTime = (b.status === 'DONE' && b.started_at) ? new Date(b.started_at) : b.minStart
+    if (aTime && bTime) return aTime - bTime
+    if (aTime) return -1
+    if (bTime) return 1
     return a.trip_id.localeCompare(b.trip_id)
   })
 }
