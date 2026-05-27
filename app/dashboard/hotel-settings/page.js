@@ -291,10 +291,12 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
           }
         }
 
-        const { error: hotelErr } = await supabase.from('hotels').insert({
+        // Use upsert so that if a hotels row already exists for this location
+        // (e.g. location was reused after a delete) it gets updated instead of duplicated
+        const { error: hotelErr } = await supabase.from('hotels').upsert({
           ...hotelRow,
           location_id,
-        })
+        }, { onConflict: 'production_id,location_id' })
         if (hotelErr) { setError(hotelErr.message); return }
       } else {
         // Edit mode — update hotels row
