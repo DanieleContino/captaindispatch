@@ -109,13 +109,11 @@
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://lvxtvgxyancpegvfcnsk.supabase.co'
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eHR2Z3h5YW5jcGVndmZjbnNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNTQyMjAsImV4cCI6MjA4OTkzMDIyMH0.nBLtWdnA_KxnMZ2wUTfbnzs4t-uv-J1EnSebdw0s1WU'
   // Legge production_id da: 1) URL param ?pid=  2) localStorage  3) fallback hardcoded
   const PROD_ID = new URLSearchParams(location.search).get('pid')
               || localStorage.getItem('captainProductionId')
               || '0b4553e1-dd49-46af-aa9d-54ca5346796d'
-  let MAPS_KEY      = ''
+  let MAPS_KEY = ''
 
   const STATUS_COLOR = { BUSY: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#60a5fa' }
   const STATUS_LABEL = { BUSY: '⏳ BUSY', FREE: '✅ FREE', IDLE: '💤 IDLE', DONE: '✓ DONE' }
@@ -125,16 +123,6 @@
   let map = null
   let markers = {}
   let infoWindows = {}
-
-  async function supabaseFetch(path) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-      }
-    })
-    return res.json()
-  }
 
   function getVehicleStatus(trips, now) {
     if (!trips || trips.length === 0) return 'IDLE'
@@ -150,23 +138,23 @@
   function pad2(n) { return String(n).padStart(2, '0') }
 
   async function loadAndUpdate() {
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
     const now = new Date()
 
-    // Carica sessioni GPS attive
-    const sessions = await supabaseFetch(
-      `vehicle_tracking_sessions?select=id,vehicle_id,driver_name,status,last_lat,last_lng,last_seen_at,ncc_driver_id&production_id=eq.${PROD_ID}&status=neq.ENDED&order=started_at.desc`
-    )
-
-    // Carica veicoli
-    const vehicles = await supabaseFetch(
-      `vehicles?select=id,sign_code,driver_name,ncc_driver_name,vehicle_type&production_id=eq.${PROD_ID}&active=eq.true&in_transport=eq.true`
-    )
-
-    // Carica trip di oggi
-    const trips = await supabaseFetch(
-      `trips?select=vehicle_id,status&production_id=eq.${PROD_ID}&date=eq.${today}`
-    )
+    // Carica tutti i dati dalla API route server-side (rispetta RLS con cookie sessione)
+    let sessions = [], vehicles = [], trips = []
+    try {
+      const res = await fetch(`/api/fleet/map-data?pid=${PROD_ID}`)
+      if (!res.ok) {
+        console.error('[fleet-map] API error', res.status, await res.text())
+      } else {
+        const data = await res.json()
+        sessions = data.sessions || []
+        vehicles = data.vehicles || []
+        trips    = data.trips    || []
+      }
+    } catch (err) {
+      console.error('[fleet-map] fetch error', err)
+    }
 
     // Mappa veicoli per id
     const vehicleMap = {}
