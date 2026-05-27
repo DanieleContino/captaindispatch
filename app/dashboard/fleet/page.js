@@ -180,8 +180,9 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
     // Carica Google Maps script se non presente
     if (!window.google?.maps) {
       const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}`
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&loading=async`
       script.async = true
+      script.defer = true
       script.onload = () => initMap()
       document.head.appendChild(script)
     } else {
