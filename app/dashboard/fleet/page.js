@@ -388,7 +388,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
             <div style={{ fontWeight: '900', fontSize: '17px', color: '#0f172a', letterSpacing: '-0.3px' }}>
               {vehicle.sign_code || vehicle.id}
             </div>
-            <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
               {[vehicle.driver_name || vehicle.ncc_driver_name, vehicle.id, vehicle.capacity ? `×${vehicle.capacity}` : null]
                 .filter(Boolean).join('  ·  ')}
             </div>
@@ -397,7 +397,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '5px', flexShrink: 0, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '5px', flexShrink: 0, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '50%' }}>
           <span style={{
             padding: '4px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '800',
             background: s.badgeBg, color: s.badge, border: `1px solid ${s.border}`,
@@ -962,7 +962,7 @@ export default function FleetMonitorPage() {
       )}
 
       {/* ── Body ── */}
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '12px' : '24px', overflowX: 'hidden' }}>
 
         {!PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '20px' }}>
