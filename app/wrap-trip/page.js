@@ -1013,7 +1013,7 @@ function WrapTripPageInner() {
             CAPTAIN <span style={{ color: '#2563eb' }}>Dispatch</span>
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setShowFleet(true)} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>🚗 Fleet</button>
+            <button onClick={() => window.open('/dashboard/fleet', 'captaindispatch_fleet')} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>🚗 Fleet</button>
             <a href="/dashboard" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#94a3b8', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>←</a>
           </div>
         </div>

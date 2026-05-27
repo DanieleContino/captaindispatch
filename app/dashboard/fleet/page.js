@@ -863,6 +863,7 @@ export default function FleetMonitorPage() {
         <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 30 }}>
           {/* Riga 1: titolo + data + badge */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px' }}>
+            <button onClick={() => window.location.href = '/wrap-trip'} style={{ background: '#0f2340', border: 'none', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', color: 'white', flexShrink: 0, whiteSpace: 'nowrap' }}>← Trip</button>
             <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1, flexShrink: 0 }}>◀</button>
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
