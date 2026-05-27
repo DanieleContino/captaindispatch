@@ -1,6 +1,5 @@
 'use client'
 
-import { Loader } from '@googlemaps/js-api-loader'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -180,11 +179,11 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
     if (!mapRef.current) return
     if (mapObjRef.current) return // già inizializzata
 
-    const loader = new Loader({ apiKey: MAPS_KEY, version: 'weekly' })
-
     async function initMap() {
-      // Carica le librerie necessarie in parallelo — il Loader gestisce
-      // deduplication e caching automaticamente (safe in React StrictMode)
+      // Dynamic import: eseguito solo nel browser, mai durante SSR.
+      // Il Loader gestisce deduplication e caching (safe in React StrictMode).
+      const { Loader } = await import('@googlemaps/js-api-loader')
+      const loader = new Loader({ apiKey: MAPS_KEY, version: 'weekly' })
       const [{ Map, SymbolPath }, { Marker, InfoWindow }] = await Promise.all([
         loader.importLibrary('maps'),
         loader.importLibrary('marker'),
