@@ -169,27 +169,26 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
   const mapRef     = useRef(null)
   const mapObjRef  = useRef(null)
   const markersRef = useRef({})
-  const mapsLibRef = useRef(null) // { Map, Marker, InfoWindow, SymbolPath }
   const MAPS_KEY   = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 
   const STATUS_COLOR = { BUSY: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#60a5fa' }
 
-  // ── Inizializzazione mappa con il loader ufficiale Google ──
+  // ── Inizializzazione mappa con script tag classico ──
   useEffect(() => {
     if (!mapRef.current) return
     if (mapObjRef.current) return // già inizializzata
 
-    async function initMap() {
-      // Dynamic import: eseguito solo nel browser, mai durante SSR.
-      // Il Loader gestisce deduplication e caching (safe in React StrictMode).
-      const { setOptions, importLibrary } = await import('@googlemaps/js-api-loader')
-      setOptions({ apiKey: MAPS_KEY, version: 'weekly' })
-      const [{ Map, Marker, InfoWindow }, { SymbolPath }] = await Promise.all([
-        importLibrary('maps'),
-        importLibrary('core'),
-      ])
-      mapsLibRef.current = { Map, Marker, InfoWindow, SymbolPath }
+    if (!window.google?.maps) {
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}`
+      script.async = true
+      script.onload = () => initMap()
+      document.head.appendChild(script)
+    } else {
+      setTimeout(() => initMap(), 100)
+    }
 
+    function initMap() {
       // Centro default: Puglia (produzione attiva)
       const center = { lat: 40.9, lng: 17.4 }
       const withPos = sessions.filter(s => s.last_lat && s.last_lng)
@@ -198,7 +197,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
         center.lng = withPos[0].last_lng
       }
 
-      mapObjRef.current = new Map(mapRef.current, {
+      mapObjRef.current = new window.google.maps.Map(mapRef.current, {
         center,
         zoom: 11,
         mapTypeControl: false,
@@ -209,19 +208,16 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
 
       updateMarkers()
     }
-
-    initMap()
   }, [])
 
   // ── Aggiorna marker quando cambiano sessions o vehicleData ──
   useEffect(() => {
-    if (!mapObjRef.current || !mapsLibRef.current) return
+    if (!mapObjRef.current || !window.google?.maps) return
     updateMarkers()
   }, [sessions, vehicleData])
 
   function updateMarkers() {
-    if (!mapObjRef.current || !mapsLibRef.current) return
-    const { Marker, InfoWindow, SymbolPath } = mapsLibRef.current
+    if (!mapObjRef.current || !window.google?.maps) return
 
     const activeVehicleIds = new Set()
 
@@ -242,12 +238,12 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
         markersRef.current[s.vehicle_id].marker.setPosition(pos)
       } else {
         // Crea nuovo marker
-        const marker = new Marker({
+        const marker = new window.google.maps.Marker({
           position: pos,
           map: mapObjRef.current,
           title: s.vehicle_id,
           icon: {
-            path: SymbolPath.CIRCLE,
+            path: window.google.maps.SymbolPath.CIRCLE,
             scale: 22,
             fillColor: color,
             fillOpacity: 1,
@@ -262,7 +258,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
           },
         })
 
-        const infoWindow = new InfoWindow({
+        const infoWindow = new window.google.maps.InfoWindow({
           content: `<div style="font-family:monospace;font-size:13px;font-weight:800;color:#0f172a">${s.vehicle_id}</div>
             <div style="font-size:11px;color:#64748b;margin-top:2px">👤 ${driverName}</div>
             <div style="font-size:11px;font-weight:700;color:${color};margin-top:2px">${status}</div>
