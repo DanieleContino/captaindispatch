@@ -123,6 +123,7 @@
   let map = null
   let markers = {}
   let infoWindows = {}
+  let mapFitted = false   // auto-center only on first load
 
   function getVehicleStatus(trips, now) {
     if (!trips || trips.length === 0) return 'IDLE'
@@ -188,6 +189,19 @@
     // Aggiorna marker sulla mappa
     const activeSessions = (sessions || []).filter(s => s.last_lat && s.last_lng)
     const activeIds = new Set()
+
+    // Auto-center sulla prima chiamata se ci sono GPS attivi
+    if (!mapFitted && activeSessions.length > 0 && map) {
+      mapFitted = true
+      if (activeSessions.length === 1) {
+        map.setCenter({ lat: activeSessions[0].last_lat, lng: activeSessions[0].last_lng })
+        map.setZoom(14)
+      } else {
+        const bounds = new google.maps.LatLngBounds()
+        activeSessions.forEach(s => bounds.extend({ lat: s.last_lat, lng: s.last_lng }))
+        map.fitBounds(bounds, { top: 60, right: 20, bottom: 20, left: 20 })
+      }
+    }
 
     for (const s of activeSessions) {
       const vehicle = vehicleMap[s.vehicle_id]
@@ -262,9 +276,15 @@
       }
     }
 
-    // Aggiorna lista drivers
+    // Aggiorna lista drivers — prima i veicoli con GPS, poi quelli senza
     const list = document.getElementById('drivers-list')
-    const rows = (vehicles || []).map(v => {
+    const sortedVehicles = [...(vehicles || [])].sort((a, b) => {
+      const aHasGps = (sessions || []).some(s => s.vehicle_id === a.id && s.last_lat && s.last_lng) ? 0 : 1
+      const bHasGps = (sessions || []).some(s => s.vehicle_id === b.id && s.last_lat && s.last_lng) ? 0 : 1
+      return aHasGps - bHasGps
+    })
+
+    const rows = sortedVehicles.map(v => {
       const session = (sessions || []).find(s => s.vehicle_id === v.id)
       const status  = getVehicleStatus(vehicleTrips[v.id], now)
       const color   = STATUS_COLOR[status] || '#94a3b8'
@@ -275,7 +295,7 @@
         : null
 
       return `
-        <div class="driver-row" onclick="${hasPos ? `map.setCenter({lat:${session.last_lat},lng:${session.last_lng}});map.setZoom(14)` : ''}" style="cursor:${hasPos ? 'pointer' : 'default'}">
+        <div class="driver-row" onclick="${hasPos ? `map.setCenter({lat:${session.last_lat},lng:${session.last_lng}});map.setZoom(14)` : ''}" style="cursor:${hasPos ? 'pointer' : 'default'}; opacity:${hasPos ? 1 : 0.5}">
           <div class="driver-dot" style="background:${color}; ${hasPos ? `box-shadow:0 0 6px ${color}` : ''}"></div>
           <div class="driver-name">${v.sign_code || v.id}<br><span style="font-size:10px;color:#64748b;font-weight:400">👤 ${driverName}</span></div>
           <span class="driver-status" style="background:${STATUS_BG[status]};color:${STATUS_TEXT[status]}">${STATUS_LABEL[status] || status}</span>
