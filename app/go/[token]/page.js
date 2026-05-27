@@ -423,6 +423,7 @@ export default function CaptainGoPage() {
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [tripAction,     setTripAction]     = useState(null) // trip.id in corso di update
   const [mapTrip,        setMapTrip]        = useState(null) // trip in visualizzazione mappa
+  const [trafficData,    setTrafficData]    = useState({})   // { [trip.id]: { delayMin, severity, loading } }
   const wakeLockRef = useRef(null)
   const [unreadCount,    setUnreadCount]    = useState(() => {
     try { return parseInt(localStorage.getItem(`unread_${token}`) || '0', 10) } catch { return 0 }
@@ -946,6 +947,59 @@ export default function CaptainGoPage() {
                     {isBusy ? '🗺 Naviga' : '🗺 Navigate to ' + dropoff?.name}
                   </button>
                 )}
+                {!isDone && dropoff && (() => {
+                  const td = trafficData[trip.id]
+                  const badgeColor = td?.severity === 'CRITICAL' ? '#dc2626'
+                    : td?.severity === 'WARNING' ? '#d97706'
+                    : td?.severity === 'INFO' ? '#2563eb'
+                    : td?.severity === 'OK' ? '#15803d'
+                    : '#64748b'
+                  const badgeBg = td?.severity === 'CRITICAL' ? '#fef2f2'
+                    : td?.severity === 'WARNING' ? '#fffbeb'
+                    : td?.severity === 'INFO' ? '#eff6ff'
+                    : td?.severity === 'OK' ? '#f0fdf4'
+                    : '#f8fafc'
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                      <button
+                        onClick={async () => {
+                          setTrafficData(p => ({ ...p, [trip.id]: { ...p[trip.id], loading: true } }))
+                          try {
+                            const res = await fetch('/api/go/traffic', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ token, trip_id: trip.id }),
+                            })
+                            const d = await res.json()
+                            setTrafficData(p => ({ ...p, [trip.id]: { ...d, loading: false } }))
+                          } catch {
+                            setTrafficData(p => ({ ...p, [trip.id]: { loading: false, error: true } }))
+                          }
+                        }}
+                        disabled={td?.loading}
+                        style={{
+                          padding: '6px 12px', borderRadius: '8px', border: 'none',
+                          background: td?.loading ? '#f1f5f9' : badgeBg,
+                          color: td?.loading ? '#94a3b8' : badgeColor,
+                          fontSize: '12px', fontWeight: '800', cursor: td?.loading ? 'default' : 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          border: `1px solid ${td?.loading ? '#e2e8f0' : badgeColor}22`,
+                        }}>
+                        {td?.loading ? '⏳ Checking...'
+                          : td?.severity === 'OK' ? '🟢 No delays'
+                          : td?.severity === 'INFO' ? `🔵 +${td.delayMin}min`
+                          : td?.severity === 'WARNING' ? `🟡 +${td.delayMin}min`
+                          : td?.severity === 'CRITICAL' ? `🔴 +${td.delayMin}min`
+                          : '🚦 Check Traffic'}
+                      </button>
+                      {td?.incidents?.length > 0 && (
+                        <span style={{ fontSize: '10px', color: badgeColor, fontWeight: '700' }}>
+                          {td.incidents[0]}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })()}
                 {isDone && (
                   <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', textAlign: 'center' }}>
                     ✅ Completed
