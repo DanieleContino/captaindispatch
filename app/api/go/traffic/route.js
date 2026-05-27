@@ -23,7 +23,7 @@ async function googleRoutes(olat, olng, dlat, dlng) {
       method: 'POST',
       headers: {
         'X-Goog-Api-Key':   GOOGLE_KEY,
-        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.travelAdvisory.incidents',
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.travelAdvisory',
         'Content-Type':     'application/json',
       },
       body: JSON.stringify({
