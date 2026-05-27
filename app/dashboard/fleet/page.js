@@ -8,6 +8,7 @@ import { useT } from '../../../lib/i18n'
 
 import { getProductionId } from '../../../lib/production'
 import { SendLinksModal } from '../../wrap-trip/components/SendLinksModal'
+import { useIsMobile } from '../../../lib/useIsMobile'
 
 const REFRESH_INTERVAL = 15_000  // auto-reload dati ogni 15s
 const NOW_TICK_MS      = 15_000  // aggiorna "adesso" ogni 15s per le progress bar
@@ -696,6 +697,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
 export default function FleetMonitorPage() {
   const t       = useT()
   const router  = useRouter()
+  const isMobile = useIsMobile()
   const PRODUCTION_ID = getProductionId()
   const [user,        setUser]        = useState(null)
   const [date,        setDate]        = useState(isoToday())
@@ -856,113 +858,108 @@ export default function FleetMonitorPage() {
       {/* ── Header ── */}
 
       {/* ── Sub-toolbar ── */}
-      <PageHeader
-        left={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>{t.fleetMonitorTitle}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '8px' }}>
-              <button onClick={() => setDate(isoAdd(date, -1))}
-                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>◀</button>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
-              <button onClick={() => setDate(isoAdd(date, 1))}
-                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>▶</button>
-              <button onClick={() => setDate(isoToday())}
-                style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
-            </div>
-            <div style={{ display: 'flex', gap: '5px', marginLeft: '4px' }}>
-              {Object.entries(counts).map(([s, n]) => n > 0 && (
-                <span key={s} style={{
-                  padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700',
-                  background: SS[s].badgeBg, color: SS[s].badge, border: `1px solid ${SS[s].border}`,
-                }}>
-                  {n} {s}
-                </span>
-              ))}
-            </div>
+      {/* ── Toolbar responsive ── */}
+      {isMobile ? (
+        <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 30 }}>
+          {/* Riga 1: titolo + data + badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px' }}>
+            <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1, flexShrink: 0 }}>◀</button>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)}
+              style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 8px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
+            <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1, flexShrink: 0 }}>▶</button>
+            <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8', flexShrink: 0 }}>{t.today}</button>
           </div>
-        }
-        right={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#94a3b8' }}>
-            {lastRefresh && <span>{fmtLastRefresh(lastRefresh)}</span>}
-            <span style={{ color: '#cbd5e1' }}>·</span>
-            <span>{autoRefresh ? `Refresh in ${countdown}s` : 'Auto-refresh paused'}</span>
-            <button onClick={() => setMapOpen(p => !p)}
-              style={{ background: mapOpen ? '#0f2340' : '#f8fafc', border: `1px solid ${mapOpen ? '#0f2340' : '#e2e8f0'}`, borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: mapOpen ? 'white' : '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              🗺 Map
-            </button>
-            <button onClick={() => setSendLinksOpen(true)}
-              style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              📱 Driver Links
-            </button>
-            <button onClick={() => loadData(date)}
-              style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {loading ? '…' : '↻'} {t.fleetRefreshBtn}
-            </button>
-            <button
-              onClick={() => { setAutoRefresh(p => !p); setCountdown(30) }}
-              style={{
-                background: autoRefresh ? '#fef2f2' : '#f0fdf4',
-                border: `1px solid ${autoRefresh ? '#fecaca' : '#bbf7d0'}`,
-                borderRadius: '7px',
-                padding: '5px 12px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '700',
-                color: autoRefresh ? '#dc2626' : '#15803d',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}>
-              {autoRefresh ? '⏸ Auto' : '▶ Auto'}
-            </button>
-            <button
-              onClick={async () => {
-                setRefreshingTraffic(true)
-                setTrafficMsg(null)
-                setTrafficAlerts([])
+          {/* Riga 2: badge + azioni icone */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 12px 8px', overflowX: 'auto' }}>
+            {Object.entries(counts).map(([s, n]) => n > 0 && (
+              <span key={s} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: SS[s].badgeBg, color: SS[s].badge, border: `1px solid ${SS[s].border}`, flexShrink: 0 }}>
+                {n} {s}
+              </span>
+            ))}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0 }}>
+              <button onClick={() => setMapOpen(p => !p)} title="Map"
+                style={{ background: mapOpen ? '#0f2340' : '#f8fafc', border: `1px solid ${mapOpen ? '#0f2340' : '#e2e8f0'}`, borderRadius: '7px', padding: '6px 10px', cursor: 'pointer', fontSize: '16px', color: mapOpen ? 'white' : '#374151' }}>🗺</button>
+              <button onClick={() => setSendLinksOpen(true)} title="Driver Links"
+                style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '7px', padding: '6px 10px', cursor: 'pointer', fontSize: '16px' }}>📱</button>
+              <button onClick={() => loadData(date)} title="Refresh"
+                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 10px', cursor: 'pointer', fontSize: '16px', color: '#374151' }}>{loading ? '⏳' : '↻'}</button>
+              <button onClick={() => { setAutoRefresh(p => !p); setCountdown(30) }} title="Auto-refresh"
+                style={{ background: autoRefresh ? '#fef2f2' : '#f0fdf4', border: `1px solid ${autoRefresh ? '#fecaca' : '#bbf7d0'}`, borderRadius: '7px', padding: '6px 10px', cursor: 'pointer', fontSize: '16px', color: autoRefresh ? '#dc2626' : '#15803d' }}>
+                {autoRefresh ? '⏸' : '▶'}
+              </button>
+              <button onClick={async () => {
+                setRefreshingTraffic(true); setTrafficMsg(null); setTrafficAlerts([])
                 try {
-                  const res  = await fetch('/api/routes/traffic-check', {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({ date }),
-                  })
+                  const res = await fetch('/api/routes/traffic-check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) })
                   const data = await res.json()
                   if (data.error) throw new Error(data.error)
                   setTrafficAlerts(data.alerts || [])
                   const w = data.warningsCount || 0
-                  setTrafficMsg(
-                    w > 0
-                      ? `${data.alerts.some(a => a.severity === 'CRITICAL') ? '🚨' : '⚠️'} ${w} warning${w > 1 ? 's' : ''} on ${data.checkedRoutes} routes`
-                      : `✅ No issues — ${data.checkedRoutes} routes checked`
-                  )
-                } catch (e) {
-                  setTrafficMsg(`⚠ ${e.message}`)
-                } finally {
-                  setRefreshingTraffic(false)
-                  setTimeout(() => setTrafficMsg(null), 10000)
-                }
-              }}
-              disabled={refreshingTraffic}
-              title="Aggiorna durate rotte con traffico reale Google"
-              style={{
-                background: '#f0fdf4',
-                border: '1px solid #bbf7d0', borderRadius: '7px',
-                padding: '5px 12px', cursor: refreshingTraffic ? 'wait' : 'pointer',
-                fontSize: '12px', fontWeight: '700', color: '#15803d',
-                display: 'flex', alignItems: 'center', gap: '4px',
-                opacity: refreshingTraffic ? 0.7 : 1,
-              }}>
-              {refreshingTraffic ? '⏳' : '🚦'} {t.fleetTrafficBtn}
-            </button>
-            {trafficMsg && (
-              <span style={{ fontSize: '11px', color: trafficMsg.startsWith('✅') ? '#15803d' : '#b91c1c', fontWeight: '600' }}>
-                {trafficMsg}
-              </span>
-            )}
+                  setTrafficMsg(w > 0 ? `${data.alerts.some(a => a.severity === 'CRITICAL') ? '🚨' : '⚠️'} ${w} warnings` : `✅ Clear`)
+                } catch (e) { setTrafficMsg(`⚠ ${e.message}`) }
+                finally { setRefreshingTraffic(false); setTimeout(() => setTrafficMsg(null), 10000) }
+              }} disabled={refreshingTraffic} title="Traffic Check"
+                style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '7px', padding: '6px 10px', cursor: refreshingTraffic ? 'wait' : 'pointer', fontSize: '16px', opacity: refreshingTraffic ? 0.7 : 1 }}>
+                {refreshingTraffic ? '⏳' : '🚦'}
+              </button>
+            </div>
           </div>
-        }
-      />
+          {trafficMsg && (
+            <div style={{ padding: '4px 12px 8px', fontSize: '11px', color: trafficMsg.startsWith('✅') ? '#15803d' : '#b91c1c', fontWeight: '600' }}>
+              {trafficMsg}
+            </div>
+          )}
+        </div>
+      ) : (
+        <PageHeader
+          left={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>{t.fleetMonitorTitle}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '8px' }}>
+                <button onClick={() => setDate(isoAdd(date, -1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>◀</button>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer' }} />
+                <button onClick={() => setDate(isoAdd(date, 1))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '14px', color: '#374151', lineHeight: 1 }}>▶</button>
+                <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8' }}>{t.today}</button>
+              </div>
+              <div style={{ display: 'flex', gap: '5px', marginLeft: '4px' }}>
+                {Object.entries(counts).map(([s, n]) => n > 0 && (
+                  <span key={s} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: SS[s].badgeBg, color: SS[s].badge, border: `1px solid ${SS[s].border}` }}>
+                    {n} {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          }
+          right={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#94a3b8' }}>
+              {lastRefresh && <span>{fmtLastRefresh(lastRefresh)}</span>}
+              <span style={{ color: '#cbd5e1' }}>·</span>
+              <span>{autoRefresh ? `Refresh in ${countdown}s` : 'Auto-refresh paused'}</span>
+              <button onClick={() => setMapOpen(p => !p)} style={{ background: mapOpen ? '#0f2340' : '#f8fafc', border: `1px solid ${mapOpen ? '#0f2340' : '#e2e8f0'}`, borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: mapOpen ? 'white' : '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>🗺 Map</button>
+              <button onClick={() => setSendLinksOpen(true)} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: '4px' }}>📱 Driver Links</button>
+              <button onClick={() => loadData(date)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px' }}>{loading ? '…' : '↻'} {t.fleetRefreshBtn}</button>
+              <button onClick={() => { setAutoRefresh(p => !p); setCountdown(30) }} style={{ background: autoRefresh ? '#fef2f2' : '#f0fdf4', border: `1px solid ${autoRefresh ? '#fecaca' : '#bbf7d0'}`, borderRadius: '7px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: autoRefresh ? '#dc2626' : '#15803d', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {autoRefresh ? '⏸ Auto' : '▶ Auto'}
+              </button>
+              <button onClick={async () => {
+                setRefreshingTraffic(true); setTrafficMsg(null); setTrafficAlerts([])
+                try {
+                  const res = await fetch('/api/routes/traffic-check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date }) })
+                  const data = await res.json()
+                  if (data.error) throw new Error(data.error)
+                  setTrafficAlerts(data.alerts || [])
+                  const w = data.warningsCount || 0
+                  setTrafficMsg(w > 0 ? `${data.alerts.some(a => a.severity === 'CRITICAL') ? '🚨' : '⚠️'} ${w} warning${w > 1 ? 's' : ''} on ${data.checkedRoutes} routes` : `✅ No issues — ${data.checkedRoutes} routes checked`)
+                } catch (e) { setTrafficMsg(`⚠ ${e.message}`) }
+                finally { setRefreshingTraffic(false); setTimeout(() => setTrafficMsg(null), 10000) }
+              }} disabled={refreshingTraffic} style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '7px', padding: '5px 12px', cursor: refreshingTraffic ? 'wait' : 'pointer', fontSize: '12px', fontWeight: '700', color: '#15803d', display: 'flex', alignItems: 'center', gap: '4px', opacity: refreshingTraffic ? 0.7 : 1 }}>
+                {refreshingTraffic ? '⏳' : '🚦'} {t.fleetTrafficBtn}
+              </button>
+              {trafficMsg && <span style={{ fontSize: '11px', color: trafficMsg.startsWith('✅') ? '#15803d' : '#b91c1c', fontWeight: '600' }}>{trafficMsg}</span>}
+            </div>
+          }
+        />
+      )}
 
       {/* ── Body ── */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
@@ -1073,7 +1070,7 @@ export default function FleetMonitorPage() {
             )}
 
             {/* Griglia veicoli */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(360px, 1fr))', gap: isMobile ? '10px' : '16px' }}>
               {vehicleData.map(({ vehicle, groups }) => (
                 <VehicleCard
                   key={vehicle.id}
