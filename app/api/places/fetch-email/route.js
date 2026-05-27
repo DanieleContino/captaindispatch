@@ -69,9 +69,54 @@ async function fetchPage(urlStr, timeout = 8000) {
   }
 }
 
+// Strategy 1: extract emails from mailto: href attributes
+function extractMailtoLinks(html) {
+  if (!html) return []
+  const regex = /href=["']mailto:([^"'?\s]+)/gi
+  const found = []
+  let match
+  while ((match = regex.exec(html)) !== null) {
+    found.push(match[1].toLowerCase())
+  }
+  return found.filter(isValidEmail)
+}
+
+// Strategy 2: extract emails from JSON-LD structured data (<script type="application/ld+json">)
+function collectEmails(obj, acc) {
+  if (!obj || typeof obj !== 'object') return
+  if (typeof obj.email === 'string' && obj.email.includes('@')) acc.push(obj.email.toLowerCase())
+  for (const val of Object.values(obj)) {
+    if (Array.isArray(val)) val.forEach(v => collectEmails(v, acc))
+    else if (typeof val === 'object') collectEmails(val, acc)
+  }
+}
+
+function extractJsonLd(html) {
+  if (!html) return []
+  const emails = []
+  const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  let match
+  while ((match = scriptRegex.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(match[1])
+      collectEmails(data, emails)
+    } catch { /* malformed JSON, skip */ }
+  }
+  return emails.filter(isValidEmail)
+}
+
 function extractEmails(html) {
   if (!html) return []
-  // Also decode HTML entities like &#64; → @  and obfuscated mailto:
+
+  // Strategy 1: mailto: href links (most reliable when present)
+  const mailtoEmails = extractMailtoLinks(html)
+  if (mailtoEmails.length > 0) return mailtoEmails
+
+  // Strategy 2: JSON-LD structured data (always in static HTML for SEO)
+  const jsonLdEmails = extractJsonLd(html)
+  if (jsonLdEmails.length > 0) return jsonLdEmails
+
+  // Strategy 3: generic regex with HTML entity decoding (fallback)
   const decoded = html
     .replace(/&#64;/g, '@')
     .replace(/&#x40;/gi, '@')
