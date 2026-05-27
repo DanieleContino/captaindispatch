@@ -40,7 +40,7 @@ export async function GET(request) {
   // Load today's trips (only vehicle_id and status needed)
   const { data: trips, error: tripsError } = await supabase
     .from('trips')
-    .select('vehicle_id,status')
+    .select('vehicle_id,status,start_dt')
     .eq('production_id', productionId)
     .eq('date', today)
 

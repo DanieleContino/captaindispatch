@@ -115,10 +115,10 @@
               || '0b4553e1-dd49-46af-aa9d-54ca5346796d'
   let MAPS_KEY = ''
 
-  const STATUS_COLOR = { BUSY: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#60a5fa' }
-  const STATUS_LABEL = { BUSY: '⏳ BUSY', FREE: '✅ FREE', IDLE: '💤 IDLE', DONE: '✓ DONE' }
-  const STATUS_BG    = { BUSY: '#fef3c7', FREE: '#dcfce7', IDLE: '#f1f5f9', DONE: '#dbeafe' }
-  const STATUS_TEXT  = { BUSY: '#92400e', FREE: '#14532d', IDLE: '#475569', DONE: '#1e40af' }
+  const STATUS_COLOR = { BUSY: '#ef4444', SOON: '#f59e0b', FREE: '#22c55e', IDLE: '#22c55e', DONE: '#22c55e' }
+  const STATUS_LABEL = { BUSY: '⏳ BUSY', SOON: '🟡 SOON', FREE: '✅ FREE', IDLE: '💤 IDLE', DONE: '✓ DONE' }
+  const STATUS_BG    = { BUSY: '#fee2e2', SOON: '#fef3c7', FREE: '#dcfce7', IDLE: '#f1f5f9', DONE: '#dcfce7' }
+  const STATUS_TEXT  = { BUSY: '#b91c1c', SOON: '#92400e', FREE: '#14532d', IDLE: '#475569', DONE: '#14532d' }
 
   let map = null
   let markers = {}
@@ -130,8 +130,16 @@
     for (const t of trips) {
       if (t.status === 'BUSY') return 'BUSY'
     }
+    // Cerca il prossimo trip PLANNED con pickup_min
     for (const t of trips) {
-      if (t.status === 'PLANNED') return 'FREE'
+      if (t.status === 'PLANNED') {
+        // Se ha start_dt, controlla se è entro 30 minuti
+        if (t.start_dt) {
+          const diff = (new Date(t.start_dt) - now) / 60000
+          if (diff >= 0 && diff <= 30) return 'SOON'
+        }
+        return 'FREE'
+      }
     }
     return 'DONE'
   }
