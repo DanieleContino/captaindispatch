@@ -33,6 +33,13 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
   const debounceRef = useRef(null)
   const dropdownRef = useRef(null)
 
+  // Email scraping state
+  const [emailLoading,     setEmailLoading]     = useState(false)
+  const [emailSuggestions, setEmailSuggestions] = useState([])
+  const [emailSuggestOpen, setEmailSuggestOpen] = useState(false)
+  const [emailError,       setEmailError]       = useState(null)
+  const emailDropdownRef = useRef(null)
+
   // ROOM TYPES state
   const [roomTypes,  setRoomTypes]  = useState([])
   const [roomForm,   setRoomForm]   = useState(null)
@@ -112,33 +119,59 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Close email suggestions dropdown on outside click
+  useEffect(() => {
+    function handler(e) { if (emailDropdownRef.current && !emailDropdownRef.current.contains(e.target)) setEmailSuggestOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   async function handleSelectPlace(prediction) {
     setPlaceOpen(false)
     setPlaceQuery(prediction.description)
     setPlaceLoading(true); setPlaceError(null)
+    // Reset email suggestions when a new place is selected
+    setEmailSuggestions([]); setEmailSuggestOpen(false); setEmailError(null)
     try {
       const res  = await fetch(`/api/places/details?place_id=${encodeURIComponent(prediction.place_id)}`)
       const data = await res.json()
       if (data.lat != null) {
-        // Parse city from formatted_address
-        let city = ''
-        if (data.formatted_address) {
-          const parts = data.formatted_address.split(',')
-          if (parts.length >= 2) city = parts[parts.length - 2]?.trim() || ''
-        }
         setForm(f => ({
           ...f,
+          name:     f.name || data.name || prediction.main_text || f.name,
           lat:      String(data.lat),
           lng:      String(data.lng),
-          address:  data.address || f.address,
-          city:     city || f.city,
+          address:  data.address  || f.address,
+          city:     data.city     || f.city,
+          zip:      data.zip      || f.zip,
+          country:  data.country  || f.country,
+          phone:    data.phone    || f.phone,
+          website:  data.website  || f.website,
           place_id: prediction.place_id,
           maps_url: `https://maps.google.com/?q=${data.lat},${data.lng}`,
-          name:     f.name || prediction.main_text || f.name,
         }))
       } else { setPlaceError(data.error || 'Details not available') }
     } catch { setPlaceError('Network error') }
     setPlaceLoading(false)
+  }
+
+  // ── Fetch email from hotel website ──
+  async function handleFetchEmail() {
+    if (!form.website.trim()) return
+    setEmailLoading(true); setEmailError(null); setEmailSuggestions([]); setEmailSuggestOpen(false)
+    try {
+      const res  = await fetch(`/api/places/fetch-email?url=${encodeURIComponent(form.website.trim())}`)
+      const data = await res.json()
+      if (data.emails && data.emails.length > 0) {
+        setEmailSuggestions(data.emails)
+        setEmailSuggestOpen(true)
+      } else if (data.error) {
+        setEmailError(data.error)
+      } else {
+        setEmailError('Nessuna email trovata sul sito')
+      }
+    } catch { setEmailError('Errore di rete') }
+    setEmailLoading(false)
   }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -421,22 +454,82 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
                   </div>
                 </div>
 
-                {/* Phone + Email */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-                  <div>
-                    <label style={lbl}>Phone</label>
-                    <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} placeholder="+39 06..." />
-                  </div>
-                  <div>
-                    <label style={lbl}>Email</label>
-                    <input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={inp} placeholder="info@hotel.com" />
-                  </div>
+                {/* Phone */}
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={lbl}>Phone</label>
+                  <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} placeholder="+39 06..." />
                 </div>
 
                 {/* Website */}
-                <div style={fld}>
+                <div style={{ marginBottom: '8px' }}>
                   <label style={lbl}>Website</label>
                   <input value={form.website} onChange={e => set('website', e.target.value)} style={inp} placeholder="https://..." />
+                </div>
+
+                {/* Email + Cerca email button */}
+                <div style={{ ...fld, position: 'relative' }} ref={emailDropdownRef}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <label style={{ ...lbl, marginBottom: 0 }}>Email</label>
+                    {form.website.trim() && (
+                      <button
+                        type="button"
+                        onClick={handleFetchEmail}
+                        disabled={emailLoading}
+                        style={{
+                          padding: '2px 8px', borderRadius: '5px', border: '1px solid #bfdbfe',
+                          background: emailLoading ? '#f1f5f9' : '#eff6ff',
+                          color: emailLoading ? '#94a3b8' : '#2563eb',
+                          fontSize: '10px', fontWeight: '800', cursor: emailLoading ? 'default' : 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                        }}
+                      >
+                        {emailLoading ? (
+                          <>
+                            <div style={{ width: '8px', height: '8px', border: '1.5px solid #bfdbfe', borderTop: '1.5px solid #2563eb', borderRadius: '50%', animation: 'spinRaw 0.7s linear infinite' }} />
+                            Ricerca…
+                          </>
+                        ) : '🔍 Cerca email'}
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={e => { set('email', e.target.value); setEmailSuggestOpen(false) }}
+                    style={{ ...inp, borderColor: emailSuggestOpen ? '#2563eb' : '#e2e8f0' }}
+                    placeholder="info@hotel.com"
+                  />
+                  {emailError && (
+                    <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '3px' }}>⚠ {emailError}</div>
+                  )}
+                  {emailSuggestOpen && emailSuggestions.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                      background: 'white', border: '1px solid #bfdbfe', borderRadius: '8px',
+                      boxShadow: '0 8px 24px rgba(37,99,235,0.12)', overflow: 'hidden', marginTop: '2px',
+                    }}>
+                      <div style={{ padding: '5px 10px', borderBottom: '1px solid #f1f5f9', fontSize: '10px', fontWeight: '800', color: '#2563eb', background: '#eff6ff', letterSpacing: '0.05em' }}>
+                        📧 EMAIL TROVATE SUL SITO — clicca per selezionare
+                      </div>
+                      {emailSuggestions.map((email, i) => (
+                        <button
+                          key={email}
+                          type="button"
+                          onMouseDown={() => { set('email', email); setEmailSuggestOpen(false) }}
+                          style={{
+                            display: 'block', width: '100%', textAlign: 'left',
+                            padding: '8px 12px', border: 'none',
+                            borderBottom: i < emailSuggestions.length - 1 ? '1px solid #f1f5f9' : 'none',
+                            background: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#0f172a',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                        >
+                          ✉ {email}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Contact name + phone */}
@@ -805,7 +898,10 @@ export default function HotelSettingsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
-      <style>{`@keyframes spin{from{transform:translateY(-50%) rotate(0deg)}to{transform:translateY(-50%) rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{from{transform:translateY(-50%) rotate(0deg)}to{transform:translateY(-50%) rotate(360deg)}}
+        @keyframes spinRaw{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+      `}</style>
 
       {/* ── Sticky Toolbar ── */}
       <div style={{
