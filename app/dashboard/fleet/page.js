@@ -185,7 +185,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
       script.onload = () => initMap()
       document.head.appendChild(script)
     } else {
-      initMap()
+      setTimeout(() => initMap(), 100)
     }
 
     function initMap() {
