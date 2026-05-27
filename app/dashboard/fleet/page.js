@@ -182,11 +182,11 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
     async function initMap() {
       // Dynamic import: eseguito solo nel browser, mai durante SSR.
       // Il Loader gestisce deduplication e caching (safe in React StrictMode).
-      const { Loader } = await import('@googlemaps/js-api-loader')
-      const loader = new Loader({ apiKey: MAPS_KEY, version: 'weekly' })
+      const { setOptions, importLibrary } = await import('@googlemaps/js-api-loader')
+      setOptions({ apiKey: MAPS_KEY, version: 'weekly' })
       const [{ Map, SymbolPath }, { Marker, InfoWindow }] = await Promise.all([
-        loader.importLibrary('maps'),
-        loader.importLibrary('marker'),
+        importLibrary('maps'),
+        importLibrary('marker'),
       ])
       mapsLibRef.current = { Map, Marker, InfoWindow, SymbolPath }
 
