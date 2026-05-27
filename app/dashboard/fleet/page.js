@@ -1,5 +1,6 @@
 'use client'
 
+import { Loader } from '@googlemaps/js-api-loader'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -166,41 +167,39 @@ function vehicleStatus(groups, now) {
 
 // ─── Mappa Fleet ──────────────────────────────────────────────
 function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
-  const mapRef    = useRef(null)
-  const mapObjRef = useRef(null)
+  const mapRef     = useRef(null)
+  const mapObjRef  = useRef(null)
   const markersRef = useRef({})
-  const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+  const mapsLibRef = useRef(null) // { Map, Marker, InfoWindow, SymbolPath }
+  const MAPS_KEY   = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 
   const STATUS_COLOR = { BUSY: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#60a5fa' }
 
+  // ── Inizializzazione mappa con il loader ufficiale Google ──
   useEffect(() => {
     if (!mapRef.current) return
     if (mapObjRef.current) return // già inizializzata
 
-    // Carica Google Maps script se non presente
-    if (!window.google?.maps) {
-      const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&loading=async`
-      script.async = true
-      script.defer = true
-      script.onload = () => initMap()
-      document.head.appendChild(script)
-    } else {
-      setTimeout(() => initMap(), 100)
-    }
+    const loader = new Loader({ apiKey: MAPS_KEY, version: 'weekly' })
 
-    function initMap() {
+    async function initMap() {
+      // Carica le librerie necessarie in parallelo — il Loader gestisce
+      // deduplication e caching automaticamente (safe in React StrictMode)
+      const [{ Map, SymbolPath }, { Marker, InfoWindow }] = await Promise.all([
+        loader.importLibrary('maps'),
+        loader.importLibrary('marker'),
+      ])
+      mapsLibRef.current = { Map, Marker, InfoWindow, SymbolPath }
+
       // Centro default: Puglia (produzione attiva)
       const center = { lat: 40.9, lng: 17.4 }
-
-      // Se ci sono sessioni con posizione, centra su quella
       const withPos = sessions.filter(s => s.last_lat && s.last_lng)
       if (withPos.length > 0) {
         center.lat = withPos[0].last_lat
         center.lng = withPos[0].last_lng
       }
 
-      mapObjRef.current = new window.google.maps.Map(mapRef.current, {
+      mapObjRef.current = new Map(mapRef.current, {
         center,
         zoom: 11,
         mapTypeControl: false,
@@ -211,16 +210,19 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
 
       updateMarkers()
     }
+
+    initMap()
   }, [])
 
-  // Aggiorna marker quando cambiano sessions o vehicleData
+  // ── Aggiorna marker quando cambiano sessions o vehicleData ──
   useEffect(() => {
-    if (!mapObjRef.current) return
+    if (!mapObjRef.current || !mapsLibRef.current) return
     updateMarkers()
   }, [sessions, vehicleData])
 
   function updateMarkers() {
-    if (!mapObjRef.current || !window.google?.maps) return
+    if (!mapObjRef.current || !mapsLibRef.current) return
+    const { Marker, InfoWindow, SymbolPath } = mapsLibRef.current
 
     const activeVehicleIds = new Set()
 
@@ -241,12 +243,12 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
         markersRef.current[s.vehicle_id].marker.setPosition(pos)
       } else {
         // Crea nuovo marker
-        const marker = new window.google.maps.Marker({
+        const marker = new Marker({
           position: pos,
           map: mapObjRef.current,
           title: s.vehicle_id,
           icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
+            path: SymbolPath.CIRCLE,
             scale: 22,
             fillColor: color,
             fillOpacity: 1,
@@ -261,7 +263,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
           },
         })
 
-        const infoWindow = new window.google.maps.InfoWindow({
+        const infoWindow = new InfoWindow({
           content: `<div style="font-family:monospace;font-size:13px;font-weight:800;color:#0f172a">${s.vehicle_id}</div>
             <div style="font-size:11px;color:#64748b;margin-top:2px">👤 ${driverName}</div>
             <div style="font-size:11px;font-weight:700;color:${color};margin-top:2px">${status}</div>
