@@ -31,7 +31,6 @@ async function googleRoutes(olat, olng, dlat, dlng) {
         destination:        { location: { latLng: { latitude: dlat, longitude: dlng } } },
         travelMode:         'DRIVE',
         routingPreference:  'TRAFFIC_AWARE_OPTIMAL',
-        departureTime:      new Date().toISOString(),
         languageCode:       'en-US',
         units:              'METRIC',
       }),
