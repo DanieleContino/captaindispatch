@@ -272,6 +272,10 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
             .maybeSingle()
           if (existing) {
             location_id = existing.id
+            // FIX: ensure the location is flagged as hotel (may have been deleted or was a non-hotel location)
+            await supabase.from('locations')
+              .update({ is_hotel: true, ...(lat != null && lng != null ? { lat, lng } : {}) })
+              .eq('id', location_id)
           } else {
           const genId = form.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 20)
           const { error: locErr } = await supabase.from('locations').insert({
