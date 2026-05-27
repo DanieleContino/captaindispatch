@@ -30,7 +30,7 @@ async function googleRoutes(olat, olng, dlat, dlng) {
         origin:             { location: { latLng: { latitude: olat, longitude: olng } } },
         destination:        { location: { latLng: { latitude: dlat, longitude: dlng } } },
         travelMode:         'DRIVE',
-        routingPreference:  'TRAFFIC_AWARE_OPTIMAL',
+        routingPreference:  'TRAFFIC_AWARE',
         languageCode:       'en-US',
         units:              'METRIC',
       }),
