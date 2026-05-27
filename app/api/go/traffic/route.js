@@ -36,7 +36,11 @@ async function googleRoutes(olat, olng, dlat, dlng) {
       }),
       signal: AbortSignal.timeout(9000),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '')
+      console.error('[go/traffic] Google 400:', errText.slice(0, 300))
+      return null
+    }
     const json  = await res.json()
     const route = json?.routes?.[0]
     if (!route?.duration) return null
