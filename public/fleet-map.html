@@ -111,7 +111,10 @@
 <script>
   const SUPABASE_URL = 'https://lvxtvgxyancpegvfcnsk.supabase.co'
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eHR2Z3h5YW5jcGVndmZjbnNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNTQyMjAsImV4cCI6MjA4OTkzMDIyMH0.nBLtWdnA_KxnMZ2wUTfbnzs4t-uv-J1EnSebdw0s1WU'
-  const PROD_ID     = '0b4553e1-dd49-46af-aa9d-54ca5346796d'
+  // Legge production_id da: 1) URL param ?pid=  2) localStorage  3) fallback hardcoded
+  const PROD_ID = new URLSearchParams(location.search).get('pid')
+              || localStorage.getItem('captainProductionId')
+              || '0b4553e1-dd49-46af-aa9d-54ca5346796d'
   let MAPS_KEY      = ''
 
   const STATUS_COLOR = { BUSY: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#60a5fa' }
