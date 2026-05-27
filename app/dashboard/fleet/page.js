@@ -184,9 +184,9 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
       // Il Loader gestisce deduplication e caching (safe in React StrictMode).
       const { setOptions, importLibrary } = await import('@googlemaps/js-api-loader')
       setOptions({ apiKey: MAPS_KEY, version: 'weekly' })
-      const [{ Map, SymbolPath }, { Marker, InfoWindow }] = await Promise.all([
+      const [{ Map, Marker, InfoWindow }, { SymbolPath }] = await Promise.all([
         importLibrary('maps'),
-        importLibrary('marker'),
+        importLibrary('core'),
       ])
       mapsLibRef.current = { Map, Marker, InfoWindow, SymbolPath }
 
