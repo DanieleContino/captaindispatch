@@ -33,12 +33,19 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
   const debounceRef = useRef(null)
   const dropdownRef = useRef(null)
 
-  // Email scraping state
-  const [emailLoading,     setEmailLoading]     = useState(false)
-  const [emailSuggestions, setEmailSuggestions] = useState([])
-  const [emailSuggestOpen, setEmailSuggestOpen] = useState(false)
-  const [emailError,       setEmailError]       = useState(null)
+  // Email + phone scraping state
+  const [contactsLoading,   setContactsLoading]   = useState(false)
+  const [emailSuggestions,  setEmailSuggestions]  = useState([])
+  const [emailSuggestOpen,  setEmailSuggestOpen]  = useState(false)
+  const [emailError,        setEmailError]        = useState(null)
   const emailDropdownRef = useRef(null)
+  const [phoneSuggestions,  setPhoneSuggestions]  = useState([])
+  const [phoneSuggestOpen,  setPhoneSuggestOpen]  = useState(false)
+  const phoneDropdownRef = useRef(null)
+
+  // Delete hotel state
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting,      setDeleting]      = useState(false)
 
   // ROOM TYPES state
   const [roomTypes,  setRoomTypes]  = useState([])
@@ -57,7 +64,10 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
     if (!open) return
     setActiveTab('info')
     setError(null)
+    setDeleteConfirm(false)
     setPlaceQuery(''); setPredictions([]); setPlaceOpen(false); setPlaceError(null)
+    setEmailSuggestions([]); setEmailSuggestOpen(false); setEmailError(null)
+    setPhoneSuggestions([]); setPhoneSuggestOpen(false)
     setRoomForm(null); setExtrasForm(null)
     if (mode === 'edit' && initial) {
       setForm({
@@ -126,6 +136,13 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Close phone suggestions dropdown on outside click
+  useEffect(() => {
+    function handler(e) { if (phoneDropdownRef.current && !phoneDropdownRef.current.contains(e.target)) setPhoneSuggestOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   async function handleSelectPlace(prediction) {
     setPlaceOpen(false)
     setPlaceQuery(prediction.description)
@@ -155,23 +172,44 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
     setPlaceLoading(false)
   }
 
-  // ── Fetch email from hotel website ──
-  async function handleFetchEmail() {
+  // ── Fetch email + phone from hotel website (single request) ──
+  async function handleFetchContacts() {
     if (!form.website.trim()) return
-    setEmailLoading(true); setEmailError(null); setEmailSuggestions([]); setEmailSuggestOpen(false)
+    setContactsLoading(true)
+    setEmailError(null); setEmailSuggestions([]); setEmailSuggestOpen(false)
+    setPhoneSuggestions([]); setPhoneSuggestOpen(false)
     try {
       const res  = await fetch(`/api/places/fetch-email?url=${encodeURIComponent(form.website.trim())}`)
       const data = await res.json()
       if (data.emails && data.emails.length > 0) {
         setEmailSuggestions(data.emails)
         setEmailSuggestOpen(true)
-      } else if (data.error) {
-        setEmailError(data.error)
-      } else {
+      } else if (!data.error) {
         setEmailError('Nessuna email trovata sul sito')
+      } else {
+        setEmailError(data.error)
+      }
+      if (data.phones && data.phones.length > 0) {
+        setPhoneSuggestions(data.phones)
+        setPhoneSuggestOpen(true)
       }
     } catch { setEmailError('Errore di rete') }
-    setEmailLoading(false)
+    setContactsLoading(false)
+  }
+
+  // ── Delete hotel ──
+  async function handleDeleteHotel() {
+    if (!initial?.hotel_id) return
+    setDeleting(true)
+    await supabase.from('hotel_room_types').delete().eq('hotel_id', initial.hotel_id)
+    await supabase.from('hotel_extra_costs').delete().eq('hotel_id', initial.hotel_id)
+    await supabase.from('hotels').delete().eq('id', initial.hotel_id)
+    // Keep the location row but mark it as non-hotel so it disappears from hotel-settings
+    if (initial?.location_id) {
+      await supabase.from('locations').update({ is_hotel: false }).eq('id', initial.location_id)
+    }
+    setDeleting(false)
+    onSaved()  // closes sidebar + reloads list
   }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -454,10 +492,61 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
                   </div>
                 </div>
 
-                {/* Phone */}
-                <div style={{ marginBottom: '8px' }}>
-                  <label style={lbl}>Phone</label>
-                  <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} placeholder="+39 06..." />
+                {/* Phone + Cerca tel button */}
+                <div style={{ ...fld, position: 'relative' }} ref={phoneDropdownRef}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+                    <label style={{ ...lbl, marginBottom: 0 }}>Phone</label>
+                    {form.website.trim() && (
+                      <button
+                        type="button"
+                        onClick={handleFetchContacts}
+                        disabled={contactsLoading}
+                        style={{
+                          padding: '2px 8px', borderRadius: '5px', border: '1px solid #bbf7d0',
+                          background: contactsLoading ? '#f1f5f9' : '#f0fdf4',
+                          color: contactsLoading ? '#94a3b8' : '#15803d',
+                          fontSize: '10px', fontWeight: '800', cursor: contactsLoading ? 'default' : 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                        }}
+                      >
+                        {contactsLoading ? (
+                          <>
+                            <div style={{ width: '8px', height: '8px', border: '1.5px solid #bbf7d0', borderTop: '1.5px solid #15803d', borderRadius: '50%', animation: 'spinRaw 0.7s linear infinite' }} />
+                            Ricerca…
+                          </>
+                        ) : '🔍 Cerca tel'}
+                      </button>
+                    )}
+                  </div>
+                  <input value={form.phone} onChange={e => { set('phone', e.target.value); setPhoneSuggestOpen(false) }} style={{ ...inp, borderColor: phoneSuggestOpen ? '#15803d' : '#e2e8f0' }} placeholder="+39 06..." />
+                  {phoneSuggestOpen && phoneSuggestions.length > 0 && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+                      background: 'white', border: '1px solid #bbf7d0', borderRadius: '8px',
+                      boxShadow: '0 8px 24px rgba(21,128,61,0.12)', overflow: 'hidden', marginTop: '2px',
+                    }}>
+                      <div style={{ padding: '5px 10px', borderBottom: '1px solid #f1f5f9', fontSize: '10px', fontWeight: '800', color: '#15803d', background: '#f0fdf4', letterSpacing: '0.05em' }}>
+                        📞 TELEFONI TROVATI SUL SITO — clicca per selezionare
+                      </div>
+                      {phoneSuggestions.map((phone, i) => (
+                        <button
+                          key={phone}
+                          type="button"
+                          onMouseDown={() => { set('phone', phone); setPhoneSuggestOpen(false) }}
+                          style={{
+                            display: 'block', width: '100%', textAlign: 'left',
+                            padding: '8px 12px', border: 'none',
+                            borderBottom: i < phoneSuggestions.length - 1 ? '1px solid #f1f5f9' : 'none',
+                            background: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: '600', color: '#0f172a',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                        >
+                          📞 {phone}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Website */}
@@ -473,17 +562,17 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
                     {form.website.trim() && (
                       <button
                         type="button"
-                        onClick={handleFetchEmail}
-                        disabled={emailLoading}
+                        onClick={handleFetchContacts}
+                        disabled={contactsLoading}
                         style={{
                           padding: '2px 8px', borderRadius: '5px', border: '1px solid #bfdbfe',
-                          background: emailLoading ? '#f1f5f9' : '#eff6ff',
-                          color: emailLoading ? '#94a3b8' : '#2563eb',
-                          fontSize: '10px', fontWeight: '800', cursor: emailLoading ? 'default' : 'pointer',
+                          background: contactsLoading ? '#f1f5f9' : '#eff6ff',
+                          color: contactsLoading ? '#94a3b8' : '#2563eb',
+                          fontSize: '10px', fontWeight: '800', cursor: contactsLoading ? 'default' : 'pointer',
                           display: 'flex', alignItems: 'center', gap: '4px',
                         }}
                       >
-                        {emailLoading ? (
+                        {contactsLoading ? (
                           <>
                             <div style={{ width: '8px', height: '8px', border: '1.5px solid #bfdbfe', borderTop: '1.5px solid #2563eb', borderRadius: '50%', animation: 'spinRaw 0.7s linear infinite' }} />
                             Ricerca…
@@ -564,6 +653,32 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
                   {saving ? 'Saving...' : mode === 'new' ? '+ Add Hotel' : 'Save Changes'}
                 </button>
                 <button type="button" onClick={onClose} style={{ padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+
+                {/* Delete Hotel — only in edit mode */}
+                {mode === 'edit' && initial?.hotel_id && (
+                  deleteConfirm ? (
+                    <div style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', marginBottom: '8px' }}>
+                        ⚠ Sicuro? Verranno eliminati hotel, room types ed extras. La location resterà.
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button type="button" onClick={handleDeleteHotel} disabled={deleting}
+                          style={{ flex: 1, padding: '7px', borderRadius: '7px', border: 'none', background: deleting ? '#94a3b8' : '#dc2626', color: 'white', fontSize: '12px', fontWeight: '800', cursor: deleting ? 'default' : 'pointer' }}>
+                          {deleting ? 'Eliminando...' : '🗑 Conferma elimina'}
+                        </button>
+                        <button type="button" onClick={() => setDeleteConfirm(false)}
+                          style={{ flex: 1, padding: '7px', borderRadius: '7px', border: '1px solid #fecaca', background: 'white', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                          Annulla
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => setDeleteConfirm(true)}
+                      style={{ padding: '7px', borderRadius: '8px', border: '1px solid #fecaca', background: 'white', color: '#dc2626', fontSize: '11px', cursor: 'pointer', fontWeight: '700' }}>
+                      🗑 Delete Hotel
+                    </button>
+                  )
+                )}
               </div>
             </form>
           )}

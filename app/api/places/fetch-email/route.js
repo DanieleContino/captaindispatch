@@ -18,6 +18,25 @@ const CONTACT_PATHS = [
 // Regex to find email addresses in HTML
 const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g
 
+// Regex to find phone numbers in HTML (international + Italian formats)
+const PHONE_REGEX = /(?:\+\d{1,3}[\s.\-]?)?(?:\(?\d{2,4}\)?[\s.\-]?)(?:\d{2,4}[\s.\-]?){2,4}\d{2,4}/g
+
+// Phone prefixes/strings to skip (false positives)
+const SKIP_PHONE_PATTERNS = [
+  /^0+$/, /^1+$/, /^9+$/, // all same digit
+]
+
+function isValidPhone(phone) {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length < 7 || digits.length > 15) return false
+  if (SKIP_PHONE_PATTERNS.some(p => p.test(digits))) return false
+  return true
+}
+
+function normalizePhone(phone) {
+  return phone.trim().replace(/\s+/g, ' ')
+}
+
 // Emails to skip (common false positives found in websites)
 const SKIP_DOMAINS = [
   'sentry.io', 'example.com', 'yourdomain', 'domain.com',
@@ -68,6 +87,69 @@ async function fetchPage(urlStr, timeout = 8000) {
     clearTimeout(timer)
   }
 }
+
+// ── Phone extraction ──────────────────────────────────────────
+
+// Strategy P1: extract phones from tel: href attributes
+function extractTelLinks(html) {
+  if (!html) return []
+  const regex = /href=["']tel:([^"'?\s]+)/gi
+  const found = []
+  let match
+  while ((match = regex.exec(html)) !== null) {
+    found.push(normalizePhone(decodeURIComponent(match[1])))
+  }
+  return found.filter(isValidPhone)
+}
+
+// Strategy P2: extract phones from JSON-LD structured data
+function collectPhones(obj, acc) {
+  if (!obj || typeof obj !== 'object') return
+  if (typeof obj.telephone === 'string') acc.push(normalizePhone(obj.telephone))
+  for (const val of Object.values(obj)) {
+    if (Array.isArray(val)) val.forEach(v => collectPhones(v, acc))
+    else if (typeof val === 'object') collectPhones(val, acc)
+  }
+}
+
+function extractJsonLdPhones(html) {
+  if (!html) return []
+  const phones = []
+  const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  let match
+  while ((match = scriptRegex.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(match[1])
+      collectPhones(data, phones)
+    } catch { /* malformed JSON, skip */ }
+  }
+  return phones.filter(isValidPhone)
+}
+
+// Strategy P3: generic phone regex fallback
+function extractPhonesFallback(html) {
+  if (!html) return []
+  const found = html.match(PHONE_REGEX) || []
+  return found.map(normalizePhone).filter(isValidPhone)
+}
+
+function extractPhones(html) {
+  if (!html) return []
+
+  // Strategy P1: tel: href (most reliable)
+  const telPhones = extractTelLinks(html)
+  if (telPhones.length > 0) return [...new Set(telPhones)].slice(0, 5)
+
+  // Strategy P2: JSON-LD telephone field
+  const jsonLdPhones = extractJsonLdPhones(html)
+  if (jsonLdPhones.length > 0) return [...new Set(jsonLdPhones)].slice(0, 5)
+
+  // Strategy P3: generic regex (fallback, noisier)
+  const fallback = extractPhonesFallback(html)
+  return [...new Set(fallback)].slice(0, 5)
+}
+
+// ── Email extraction ──────────────────────────────────────────
 
 // Strategy 1: extract emails from mailto: href attributes
 function extractMailtoLinks(html) {
@@ -153,6 +235,7 @@ export async function GET(request) {
   const base = baseUrl.origin  // e.g. https://grandhotel.it
 
   const allEmails = new Set()
+  const allPhones = new Set()
 
   // Scan pages in order, stop once we have at least one email
   for (const path of CONTACT_PATHS) {
@@ -160,14 +243,18 @@ export async function GET(request) {
     const html = await fetchPage(pageUrl)
     const emails = extractEmails(html)
     emails.forEach(e => allEmails.add(e.toLowerCase()))
+    const phones = extractPhones(html)
+    phones.forEach(p => allPhones.add(p))
     // If we found emails on a contact-specific page, stop
     if (allEmails.size > 0 && path !== '/') break
   }
 
-  // Sort by score descending, deduplicate
-  const sorted = Array.from(allEmails)
+  // Sort emails by score descending, deduplicate
+  const sortedEmails = Array.from(allEmails)
     .sort((a, b) => scoreEmail(b) - scoreEmail(a))
     .slice(0, 5)  // max 5 suggestions
 
-  return NextResponse.json({ emails: sorted, source: base })
+  const sortedPhones = Array.from(allPhones).slice(0, 5)
+
+  return NextResponse.json({ emails: sortedEmails, phones: sortedPhones, source: base })
 }
