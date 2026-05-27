@@ -56,10 +56,11 @@ function fmtLastRefresh(d) {
 
 // ─── Stili status ─────────────────────────────────────────────
 const SS = {
-  BUSY: { bg: '#fffbeb', border: '#fde68a', left: '#f59e0b', badge: '#92400e', badgeBg: '#fef3c7', label: '⏳ BUSY' },
+  BUSY: { bg: '#fff1f2', border: '#fecaca', left: '#ef4444', badge: '#b91c1c', badgeBg: '#fee2e2', label: '⏳ BUSY' },
+  SOON: { bg: '#fffbeb', border: '#fde68a', left: '#f59e0b', badge: '#92400e', badgeBg: '#fef3c7', label: '🟡 SOON' },
   FREE: { bg: '#f0fdf4', border: '#bbf7d0', left: '#22c55e', badge: '#14532d', badgeBg: '#dcfce7', label: '✅ FREE' },
   IDLE: { bg: '#f8fafc', border: '#e2e8f0', left: '#94a3b8', badge: '#475569', badgeBg: '#f1f5f9', label: '💤 IDLE' },
-  DONE: { bg: '#eff6ff', border: '#bfdbfe', left: '#60a5fa', badge: '#1e40af', badgeBg: '#dbeafe', label: '✓ DONE' },
+  DONE: { bg: '#f0fdf4', border: '#bbf7d0', left: '#22c55e', badge: '#14532d', badgeBg: '#dcfce7', label: '✓ DONE' },
 }
 
 const CLS = {
@@ -150,10 +151,12 @@ function vehicleStatus(groups, now) {
     return { status: 'BUSY', estimated: false, current: busyGroup, next, last: null }
   }
 
-  // FREE: ci sono trip PLANNED (futuri o con orario passato non ancora avviati)
+  // FREE / SOON: ci sono trip PLANNED
   if (plannedGroups.length > 0) {
     const next = plannedGroups.find(g => g.minStart && g.minStart > now) || plannedGroups[0]
-    return { status: 'FREE', estimated: false, current: null, next, last: null }
+    const diffMin = next?.minStart ? (next.minStart - now) / 60000 : Infinity
+    const status = (diffMin >= 0 && diffMin <= 30) ? 'SOON' : 'FREE'
+    return { status, estimated: false, current: null, next, last: null }
   }
 
   // DONE: nessun BUSY, nessun PLANNED — tutti i trip sono DONE
@@ -171,7 +174,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
   const markersRef = useRef({})
   const MAPS_KEY   = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 
-  const STATUS_COLOR = { BUSY: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#60a5fa' }
+  const STATUS_COLOR = { BUSY: '#ef4444', SOON: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#22c55e' }
 
   // ── Inizializzazione mappa con script tag classico ──
   useEffect(() => {
