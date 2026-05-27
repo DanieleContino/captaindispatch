@@ -975,7 +975,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
             )}
           </div>
           <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {member.role || '—'} · {member.id}
+            {member.role || '—'} · {member.id}{member.department ? ' · ' + member.department : ''}
           </div>
         </div>
       </div>
@@ -996,7 +996,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
         )}
         {member.no_transport_needed && (
           <span title="No Transport Needed — excluded from hub pickup/dropoff assignments."
-            style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1', cursor: 'help' }}>🚐 NTN</span>
+            style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', cursor: 'help' }}>🚐 NTN</span>
         )}
       </div>
 
