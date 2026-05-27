@@ -878,16 +878,8 @@ export default function FleetMonitorPage() {
               </span>
             ))}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0 }}>
-              <button onClick={() => {
-                const withPos = sessions.filter(s => s.last_lat && s.last_lng)
-                if (withPos.length > 0) {
-                  const first = withPos[0]
-                  window.open(`https://www.google.com/maps?q=${first.last_lat},${first.last_lng}`, '_blank')
-                } else {
-                  alert('No GPS positions available')
-                }
-              }} title="Map"
-                style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 10px', cursor: 'pointer', fontSize: '16px', color: '#374151' }}>🗺</button>
+              <button onClick={() => window.open('/fleet-map.html', 'captaindispatch_map')} title="Map"
+                style={{ background: mapOpen ? '#0f2340' : '#f8fafc', border: `1px solid ${mapOpen ? '#0f2340' : '#e2e8f0'}`, borderRadius: '7px', padding: '6px 10px', cursor: 'pointer', fontSize: '16px', color: mapOpen ? 'white' : '#374151' }}>🗺</button>
               <button onClick={() => setSendLinksOpen(true)} title="Driver Links"
                 style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '7px', padding: '6px 10px', cursor: 'pointer', fontSize: '16px' }}>📱</button>
               <button onClick={() => loadData(date)} title="Refresh"

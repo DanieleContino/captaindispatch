@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Fleet Map — CaptainDispatch</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f2340; height: 100vh; display: flex; flex-direction: column; }
+    #header {
+      background: #0f2340;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    #header .title { color: white; font-weight: 900; font-size: 15px; }
+    #header .title span { color: #2563eb; }
+    #header .actions { display: flex; gap: 8px; align-items: center; }
+    #header button {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    #header .refresh-btn {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+    #map { flex: 1; width: 100%; }
+    #drivers-list {
+      background: white;
+      max-height: 200px;
+      overflow-y: auto;
+      flex-shrink: 0;
+      border-top: 2px solid #e2e8f0;
+    }
+    .driver-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .driver-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .driver-name { font-weight: 700; font-size: 13px; color: #0f172a; flex: 1; }
+    .driver-status {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .driver-time { font-size: 10px; color: #94a3b8; white-space: nowrap; }
+    #status-bar {
+      background: #1e3a5f;
+      padding: 6px 16px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+    .status-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    #last-update { font-size: 10px; color: rgba(255,255,255,0.4); margin-left: auto; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <div class="title">CAPTAIN <span>Dispatch</span> · Fleet Map</div>
+  <div class="actions">
+    <button onclick="window.location.href='/dashboard/fleet'">← Fleet</button>
+    <button class="refresh-btn" onclick="loadAndUpdate()">↻</button>
+  </div>
+</div>
+
+<div id="status-bar">
+  <span id="badge-busy" class="status-badge" style="display:none; background:#fef3c7; color:#92400e;"></span>
+  <span id="badge-free" class="status-badge" style="display:none; background:#dcfce7; color:#14532d;"></span>
+  <span id="badge-idle" class="status-badge" style="display:none; background:#f1f5f9; color:#475569;"></span>
+  <span id="badge-done" class="status-badge" style="display:none; background:#dbeafe; color:#1e40af;"></span>
+  <span id="last-update"></span>
+</div>
+
+<div id="map"></div>
+
+<div id="drivers-list">
+  <div style="padding:10px 16px; font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">
+    📍 Live Drivers
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://lvxtvgxyancpegvfcnsk.supabase.co'
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2eHR2Z3h5YW5jcGVndmZjbnNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNTQyMjAsImV4cCI6MjA4OTkzMDIyMH0.nBLtWdnA_KxnMZ2wUTfbnzs4t-uv-J1EnSebdw0s1WU'
+  const MAPS_KEY    = 'AIzaSyCcVN76eheoftZGT4jF8bfXZgnydKBz_Is'
+  const PROD_ID     = '0b4553e1-dd49-46af-aa9d-54ca5346796d'
+
+  const STATUS_COLOR = { BUSY: '#f59e0b', FREE: '#22c55e', IDLE: '#94a3b8', DONE: '#60a5fa' }
+  const STATUS_LABEL = { BUSY: '⏳ BUSY', FREE: '✅ FREE', IDLE: '💤 IDLE', DONE: '✓ DONE' }
+  const STATUS_BG    = { BUSY: '#fef3c7', FREE: '#dcfce7', IDLE: '#f1f5f9', DONE: '#dbeafe' }
+  const STATUS_TEXT  = { BUSY: '#92400e', FREE: '#14532d', IDLE: '#475569', DONE: '#1e40af' }
+
+  let map = null
+  let markers = {}
+  let infoWindows = {}
+
+  async function supabaseFetch(path) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+      }
+    })
+    return res.json()
+  }
+
+  function getVehicleStatus(trips, now) {
+    if (!trips || trips.length === 0) return 'IDLE'
+    for (const t of trips) {
+      if (t.status === 'BUSY') return 'BUSY'
+    }
+    for (const t of trips) {
+      if (t.status === 'PLANNED') return 'FREE'
+    }
+    return 'DONE'
+  }
+
+  function pad2(n) { return String(n).padStart(2, '0') }
+
+  async function loadAndUpdate() {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
+    const now = new Date()
+
+    // Carica sessioni GPS attive
+    const sessions = await supabaseFetch(
+      `vehicle_tracking_sessions?select=id,vehicle_id,driver_name,status,last_lat,last_lng,last_seen_at,ncc_driver_id&production_id=eq.${PROD_ID}&status=neq.ENDED&order=started_at.desc`
+    )
+
+    // Carica veicoli
+    const vehicles = await supabaseFetch(
+      `vehicles?select=id,sign_code,driver_name,ncc_driver_name,vehicle_type&production_id=eq.${PROD_ID}&active=eq.true&in_transport=eq.true`
+    )
+
+    // Carica trip di oggi
+    const trips = await supabaseFetch(
+      `trips?select=vehicle_id,status&production_id=eq.${PROD_ID}&date=eq.${today}`
+    )
+
+    // Mappa veicoli per id
+    const vehicleMap = {}
+    for (const v of (vehicles || [])) vehicleMap[v.id] = v
+
+    // Status per veicolo
+    const vehicleTrips = {}
+    for (const t of (trips || [])) {
+      if (!vehicleTrips[t.vehicle_id]) vehicleTrips[t.vehicle_id] = []
+      vehicleTrips[t.vehicle_id].push(t)
+    }
+
+    // Aggiorna badge contatori
+    const counts = { BUSY: 0, FREE: 0, IDLE: 0, DONE: 0 }
+    for (const v of (vehicles || [])) {
+      const s = getVehicleStatus(vehicleTrips[v.id], now)
+      counts[s]++
+    }
+    for (const [s, n] of Object.entries(counts)) {
+      const el = document.getElementById(`badge-${s.toLowerCase()}`)
+      if (el) {
+        if (n > 0) { el.textContent = `${n} ${s}`; el.style.display = 'inline-block' }
+        else el.style.display = 'none'
+      }
+    }
+
+    // Aggiorna last update
+    const lu = document.getElementById('last-update')
+    if (lu) lu.textContent = `Updated ${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`
+
+    // Aggiorna marker sulla mappa
+    const activeSessions = (sessions || []).filter(s => s.last_lat && s.last_lng)
+    const activeIds = new Set()
+
+    for (const s of activeSessions) {
+      const vehicle = vehicleMap[s.vehicle_id]
+      const status  = getVehicleStatus(vehicleTrips[s.vehicle_id], now)
+      const color   = STATUS_COLOR[status] || '#94a3b8'
+      const driverName = vehicle?.driver_name || vehicle?.ncc_driver_name || s.driver_name || '–'
+      const signCode   = vehicle?.sign_code || s.vehicle_id || '–'
+      const lastSeen   = s.last_seen_at
+        ? new Date(s.last_seen_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+        : '–'
+
+      activeIds.add(s.vehicle_id)
+      const pos = { lat: s.last_lat, lng: s.last_lng }
+
+      if (markers[s.vehicle_id]) {
+        markers[s.vehicle_id].setPosition(pos)
+        // Aggiorna colore marker
+        markers[s.vehicle_id].setIcon({
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 22,
+          fillColor: color,
+          fillOpacity: 1,
+          strokeColor: 'white',
+          strokeWeight: 3,
+        })
+      } else {
+        const marker = new google.maps.Marker({
+          position: pos,
+          map: map,
+          title: signCode,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 22,
+            fillColor: color,
+            fillOpacity: 1,
+            strokeColor: 'white',
+            strokeWeight: 3,
+          },
+          label: {
+            text: signCode.slice(0, 4),
+            color: 'white',
+            fontSize: '11px',
+            fontWeight: '900',
+          },
+        })
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="font-family:monospace;font-size:13px;font-weight:800;color:#0f172a">${signCode}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px">👤 ${driverName}</div>
+            <div style="font-size:11px;font-weight:700;color:${color};margin-top:2px">${STATUS_LABEL[status] || status}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px">📍 ${lastSeen}</div>
+          `
+        })
+
+        marker.addListener('click', () => {
+          Object.values(infoWindows).forEach(iw => iw.close())
+          infoWindow.open(map, marker)
+        })
+
+        markers[s.vehicle_id] = marker
+        infoWindows[s.vehicle_id] = infoWindow
+      }
+    }
+
+    // Rimuovi marker non più attivi
+    for (const vid of Object.keys(markers)) {
+      if (!activeIds.has(vid)) {
+        markers[vid].setMap(null)
+        delete markers[vid]
+        delete infoWindows[vid]
+      }
+    }
+
+    // Aggiorna lista drivers
+    const list = document.getElementById('drivers-list')
+    const rows = (vehicles || []).map(v => {
+      const session = (sessions || []).find(s => s.vehicle_id === v.id)
+      const status  = getVehicleStatus(vehicleTrips[v.id], now)
+      const color   = STATUS_COLOR[status] || '#94a3b8'
+      const driverName = v.driver_name || v.ncc_driver_name || '–'
+      const hasPos  = session?.last_lat && session?.last_lng
+      const lastSeen = session?.last_seen_at
+        ? new Date(session.last_seen_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+        : null
+
+      return `
+        <div class="driver-row" onclick="${hasPos ? `map.setCenter({lat:${session.last_lat},lng:${session.last_lng}});map.setZoom(14)` : ''}" style="cursor:${hasPos ? 'pointer' : 'default'}">
+          <div class="driver-dot" style="background:${color}; ${hasPos ? `box-shadow:0 0 6px ${color}` : ''}"></div>
+          <div class="driver-name">${v.sign_code || v.id}<br><span style="font-size:10px;color:#64748b;font-weight:400">👤 ${driverName}</span></div>
+          <span class="driver-status" style="background:${STATUS_BG[status]};color:${STATUS_TEXT[status]}">${STATUS_LABEL[status] || status}</span>
+          <span class="driver-time">${hasPos ? `📍 ${lastSeen}` : '⚫ no GPS'}</span>
+        </div>
+      `
+    }).join('')
+
+    list.innerHTML = `
+      <div style="padding:10px 16px 6px; font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em;">
+        📍 Live Drivers — ${activeSessions.length} active
+      </div>
+      ${rows}
+    `
+  }
+
+  function initMap() {
+    const center = { lat: 40.9, lng: 17.4 }
+    map = new google.maps.Map(document.getElementById('map'), {
+      center,
+      zoom: 11,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+      zoomControl: true,
+    })
+    loadAndUpdate()
+    setInterval(loadAndUpdate, 15000)
+  }
+</script>
+
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCcVN76eheoftZGT4jF8bfXZgnydKBz_Is&callback=initMap"
+  async defer>
+</script>
+
+</body>
+</html>
