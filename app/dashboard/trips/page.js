@@ -2834,6 +2834,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       const newLeg = {
                         id: `new_${Date.now()}`,
                         trip_id: baseId + nextLetter,
+                        trip_group_id: initial.trip_group_id || null,
                         pickup_id: '', dropoff_id: '',
                         existing: false, isNew: true,
                       }
