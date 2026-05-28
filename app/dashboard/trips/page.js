@@ -3425,6 +3425,7 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, onD
         counter++
         const newBase = 'T' + String(counter).padStart(3, '0')
         const sibSuffixes = ['', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        const newGroupId = crypto.randomUUID()
 
         for (let i = 0; i < group.length; i++) {
           const src       = group[i]
@@ -3443,6 +3444,8 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, onD
           const newRow = {
             production_id:   PRODUCTION_ID,
             trip_id:         newTripId,
+            trip_group_id:   newGroupId,
+            leg_order:       i + 1,
             date:            targetDate,
             pickup_id:       src.pickup_id,
             dropoff_id:      src.dropoff_id,
