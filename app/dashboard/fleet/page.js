@@ -9,6 +9,7 @@ import { useT } from '../../../lib/i18n'
 import { getProductionId } from '../../../lib/production'
 import { SendLinksModal } from '../../wrap-trip/components/SendLinksModal'
 import { useIsMobile } from '../../../lib/useIsMobile'
+import { QuickTripModal } from './components/QuickTripModal'
 
 const REFRESH_INTERVAL = 15_000  // auto-reload dati ogni 15s
 const NOW_TICK_MS      = 15_000  // aggiorna "adesso" ogni 15s per le progress bar
@@ -311,7 +312,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
 }
 
 // ─── Card singolo veicolo ─────────────────────────────────────
-function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAlerts, now, session, productionId }) {
+function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAlerts, now, session, productionId, onQuickTrip }) {
   const t = useT()
   const [expanded, setExpanded] = useState(false)
   const [pingStatus, setPingStatus] = useState('idle') // idle | sending | sent | error
@@ -467,6 +468,17 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
             }}>
               {headerAlert.severity === 'CRITICAL' ? '🚨' : '⚠️'}
             </span>
+          )}
+          {status !== 'BUSY' && onQuickTrip && (
+            <button
+              onClick={() => onQuickTrip(vehicle)}
+              style={{
+                padding: '3px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '800',
+                background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+              ➕ Trip
+            </button>
           )}
         </div>
       </div>
@@ -722,6 +734,7 @@ export default function FleetMonitorPage() {
   const [sendLinksOpen, setSendLinksOpen] = useState(false)
   const [sessions,      setSessions]      = useState([])
   const [mapOpen,       setMapOpen]       = useState(false)
+  const [quickTripVehicle, setQuickTripVehicle] = useState(null)
 
   // Ref per evitare stale closure nel channel Realtime
   const dateRef = useRef(date)
@@ -1075,6 +1088,7 @@ export default function FleetMonitorPage() {
                   now={now}
                   session={sessions.find(s => s.vehicle_id === vehicle.id) || null}
                   productionId={PRODUCTION_ID}
+                  onQuickTrip={setQuickTripVehicle}
                 />
               ))}
             </div>
@@ -1132,6 +1146,17 @@ export default function FleetMonitorPage() {
         )}
       </div>
       <SendLinksModal open={sendLinksOpen} onClose={() => setSendLinksOpen(false)} productionId={PRODUCTION_ID} />
+      {quickTripVehicle && (
+        <QuickTripModal
+          vehicle={quickTripVehicle}
+          productionId={PRODUCTION_ID}
+          onClose={() => setQuickTripVehicle(null)}
+          onCreated={(tripId) => {
+            setQuickTripVehicle(null)
+            loadData(date)
+          }}
+        />
+      )}
     </div>
   )
 }
