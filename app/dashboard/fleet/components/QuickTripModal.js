@@ -328,16 +328,13 @@ export function QuickTripModal({ vehicle, productionId, onClose, onCreated }) {
       </div>
     </div>
 
-    {/* Location picker — rendered outside modal to avoid fixed-in-fixed clipping on mobile */}
+    {/* Location picker — centered modal on desktop */}
     {showPicker && (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 500, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-        <div style={{ background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '65vh', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '10px' }}>
-            <div style={{ width: '36px', height: '4px', background: '#e2e8f0', borderRadius: '2px' }} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 10px' }}>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+        <div style={{ background: 'white', borderRadius: '14px', width: '100%', maxWidth: '440px', maxHeight: '70vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
             <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a' }}>
-              {showPicker === 'pickup' ? 'Pickup Location' : 'Dropoff Location'}
+              {showPicker === 'pickup' ? '📍 Pickup Location' : '📍 Dropoff Location'}
             </span>
             <button onClick={() => setShowPicker(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>✕</button>
           </div>
@@ -349,14 +346,15 @@ export function QuickTripModal({ vehicle, productionId, onClose, onCreated }) {
                   if (showPicker === 'pickup') setPickupId(l.id)
                   else setDropoff(parseInt(showPicker.split('_')[1]), l.id)
                   setShowPicker(null)
-                }} style={{ padding: '13px 16px', borderBottom: '1px solid #f8fafc', background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                }} style={{ padding: '12px 16px', borderBottom: '1px solid #f8fafc', background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = '#f8fafc' }}
+                onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = isSel ? '#eff6ff' : 'white' }}>
                   <span style={{ fontSize: '14px', fontWeight: isSel ? '700' : '500', color: '#0f172a' }}>{l.name}</span>
                   {isSel && <span style={{ color: '#2563eb', fontSize: '16px' }}>✓</span>}
                 </div>
               )
             })}
           </div>
-          <div style={{ height: '20px' }} />
         </div>
       </div>
     )}
