@@ -3425,7 +3425,7 @@ function WaypointReviewModal({ open, group, locations, productionId, onClose, on
       await fetch('/api/routes/compute-chain', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ leg_ids: legs.map(l => l.id), production_id: productionId }),
+        body:    JSON.stringify({ leg_ids: legs.map(l => l.id), production_id: productionId, respect_leg_order: true }),
       })
       setSaving(false)
       onSaved()

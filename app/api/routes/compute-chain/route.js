@@ -118,7 +118,7 @@ async function getOrComputeDuration (fromId, toId, productionId, supabase) {
 export async function POST (request) {
   try {
     const body = await request.json()
-    const { production_id } = body
+    const { production_id, respect_leg_order } = body
     let leg_ids = body.leg_ids
     const trip_group_id = body.trip_group_id
 
@@ -140,7 +140,7 @@ export async function POST (request) {
       // Nuovo path: recupera tutti i leg del gruppo tramite trip_group_id
       const res = await supabase
         .from('trips')
-        .select('id,pickup_id,dropoff_id,duration_min,call_min,arr_time,date,transfer_class,pickup_min,start_dt,end_dt')
+        .select('id,pickup_id,dropoff_id,duration_min,call_min,arr_time,date,transfer_class,pickup_min,start_dt,end_dt,leg_order')
         .eq('production_id', production_id)
         .eq('trip_group_id', trip_group_id)
         .order('leg_order', { ascending: true })
@@ -150,7 +150,7 @@ export async function POST (request) {
       // Path legacy: leg_ids espliciti
       const res = await supabase
         .from('trips')
-        .select('id,pickup_id,dropoff_id,duration_min,call_min,arr_time,date,transfer_class,pickup_min,start_dt,end_dt')
+        .select('id,pickup_id,dropoff_id,duration_min,call_min,arr_time,date,transfer_class,pickup_min,start_dt,end_dt,leg_order')
         .in('id', leg_ids)
       legs = res.data
       legsError = res.error
@@ -305,9 +305,10 @@ export async function POST (request) {
         enriched.push({ ...leg, duration_min: dur })
       }
 
-      // Step 2: sort by duration DESC (farthest hotel from hub first = first pickup)
-      // Legs without duration go last (treat as 0)
-      const sorted = [...enriched].sort((a, b) => (b.duration_min ?? 0) - (a.duration_min ?? 0))
+      // Step 2: sort by leg_order (if respect_leg_order) or duration DESC (default)
+      const sorted = respect_leg_order
+        ? [...enriched].sort((a, b) => (a.leg_order ?? 999) - (b.leg_order ?? 999))
+        : [...enriched].sort((a, b) => (b.duration_min ?? 0) - (a.duration_min ?? 0))
 
       const callMin = sorted[0].call_min
       const date    = sorted[0].date
@@ -401,8 +402,10 @@ export async function POST (request) {
         enriched.push({ ...leg, duration_min: dur })
       }
 
-      // Sort by duration ASC (closest hotel first → driver drops there first)
-      const sorted = [...enriched].sort((a, b) => (a.duration_min ?? 9999) - (b.duration_min ?? 9999))
+      // Sort by leg_order (if respect_leg_order) or duration ASC (default)
+      const sorted = respect_leg_order
+        ? [...enriched].sort((a, b) => (a.leg_order ?? 999) - (b.leg_order ?? 999))
+        : [...enriched].sort((a, b) => (a.duration_min ?? 9999) - (b.duration_min ?? 9999))
 
       // Compute cumulative duration: each hotel's effective arrival = prev_arrival + drive(prev→this)
       const results = new Array(sorted.length)
