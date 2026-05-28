@@ -1307,6 +1307,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             body:    JSON.stringify({
               leg_ids:       [...allGroupLegs.map(g => g.id), newRow.id],
               production_id: PRODUCTION_ID,
+              trip_group_id: mainGroupId,
             }),
           })
         } catch (e) { console.warn('[handleAddToExisting] chain recalc (sibling):', e) }
