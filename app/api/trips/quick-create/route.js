@@ -46,75 +46,109 @@ export async function POST(request) {
       .single()
     if (!vehicle) return Response.json({ error: 'Vehicle not found' }, { status: 404 })
 
-    // 4. Calcola tempi
+    // 4. Carica nomi passeggeri se presenti
+    let passengerNames = []
+    if (passengerIds?.length > 0) {
+      const { data: crewData } = await serviceClient
+        .from('crew')
+        .select('id, full_name')
+        .in('id', passengerIds)
+      passengerNames = (crewData || []).map(c => c.full_name)
+    }
+    const passengerList = passengerNames.join(', ') || null
+
+    // 5. Calcola tempi base
     const callMin = timeStrToMin(callTime)
     const now = new Date()
     const tripId = 'Q_' + pad2(now.getHours()) + pad2(now.getMinutes()) + pad2(now.getSeconds())
-
-    // Cerca durata rotta pickup → primo dropoff
-    const { data: route } = await serviceClient
-      .from('routes')
-      .select('duration_min')
-      .eq('production_id', productionId)
-      .eq('from_id', pickupId)
-      .eq('to_id', dropoffIds[0])
-      .maybeSingle()
-    const durMin = route?.duration_min || 30
-
     const callIsPickup = ['Wrap', 'Charter', 'Other'].includes(serviceType)
-    const pickupMin = callMin !== null
-      ? (callIsPickup ? callMin : ((callMin - durMin) % 1440 + 1440) % 1440)
-      : null
+    const tripGroupId = crypto.randomUUID()
 
+    // 6. Calcola duration_min per ogni dropoff separatamente
+    async function getDurMin(toId) {
+      const { data: route } = await serviceClient
+        .from('routes')
+        .select('duration_min')
+        .eq('production_id', productionId)
+        .eq('from_id', pickupId)
+        .eq('to_id', toId)
+        .maybeSingle()
+      return route?.duration_min || 30
+    }
+
+    const durMins = await Promise.all(dropoffIds.map(getDurMin))
+
+    // 7. Costruisci righe per ogni dropoff
     const [y, mo, dd] = date.split('-').map(Number)
-    const startMs = pickupMin !== null
-      ? new Date(y, mo - 1, dd, Math.floor(pickupMin / 60), pickupMin % 60, 0, 0).getTime()
-      : null
-    const startDt = startMs ? new Date(startMs).toISOString() : null
-    const endDt   = startMs ? new Date(startMs + (callIsPickup ? 2 * durMin : durMin) * 60000).toISOString() : null
+    const rows = dropoffIds.map((dropoffId, i) => {
+      const durMin = durMins[i]
+      const pickupMin = callMin !== null
+        ? (callIsPickup ? callMin : ((callMin - durMin) % 1440 + 1440) % 1440)
+        : null
+      const startMs = pickupMin !== null
+        ? new Date(y, mo - 1, dd, Math.floor(pickupMin / 60), pickupMin % 60, 0, 0).getTime()
+        : null
+      const startDt = startMs ? new Date(startMs).toISOString() : null
+      const endDt   = startMs ? new Date(startMs + (callIsPickup ? 2 * durMin : durMin) * 60000).toISOString() : null
 
-    // 5. Inserisci una riga per ogni dropoff (stesso trip_id)
-    const rows = dropoffIds.map(dropoffId => ({
-      production_id: productionId,
-      trip_id:       tripId,
-      date,
-      service_type:  serviceType,
-      pickup_id:     pickupId,
-      dropoff_id:    dropoffId,
-      vehicle_id:    vehicle.id,
-      driver_name:   vehicle.driver_name || null,
-      sign_code:     vehicle.sign_code || null,
-      capacity:      vehicle.capacity || null,
-      duration_min:  durMin,
-      call_min:      callMin,
-      pickup_min:    pickupMin,
-      start_dt:      startDt,
-      end_dt:        endDt,
-      status:        'PLANNED',
-      pax_count:     passengerIds?.length || 0,
-      source:        'DISPATCHER',
-    }))
+      return {
+        production_id:  productionId,
+        trip_id:        tripId,
+        trip_group_id:  tripGroupId,
+        leg_order:      i + 1,
+        date,
+        service_type:   serviceType,
+        pickup_id:      pickupId,
+        dropoff_id:     dropoffId,
+        vehicle_id:     vehicle.id,
+        driver_name:    vehicle.driver_name || null,
+        sign_code:      vehicle.sign_code || null,
+        capacity:       vehicle.capacity || null,
+        duration_min:   durMin,
+        call_min:       callMin,
+        pickup_min:     pickupMin,
+        start_dt:       startDt,
+        end_dt:         endDt,
+        status:         'PLANNED',
+        pax_count:      passengerIds?.length || 0,
+        passenger_list: passengerList,
+        source:         'DISPATCHER',
+      }
+    })
 
     const { data: inserted, error: insErr } = await serviceClient
       .from('trips')
       .insert(rows)
-      .select('id')
+      .select('id, leg_order')
     if (insErr) return Response.json({ error: insErr.message }, { status: 500 })
 
-    // 6. Inserisci passeggeri sulla prima riga
+    // 8. Inserisci passeggeri su TUTTE le righe (non solo la prima)
     if (inserted?.length > 0 && passengerIds?.length > 0) {
-      await serviceClient
-        .from('trip_passengers')
-        .insert(passengerIds.map(crewId => ({
+      const paxRows = inserted.flatMap(row =>
+        passengerIds.map(crewId => ({
           production_id: productionId,
-          trip_row_id:   inserted[0].id,
+          trip_row_id:   row.id,
           crew_id:       crewId,
-        })))
+        }))
+      )
+      await serviceClient.from('trip_passengers').insert(paxRows)
     }
 
-    // 7. Notifica driver via dispatch_messages (opzionale)
+    // 9. Se multi-dropoff, chiama compute-chain per ottimizzare timing
+    if (inserted?.length > 1) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://captaindispatch.com'}/api/routes/compute-chain`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ trip_group_id: tripGroupId, production_id: productionId }),
+        })
+      } catch (e) {
+        console.warn('[quick-create] compute-chain failed:', e)
+      }
+    }
+
+    // 10. Notifica driver via dispatch_messages (opzionale)
     if (notifyDriver) {
-      // Trova driver_token
       let driver_token = null
       let ncc_driver_id = null
 
@@ -136,13 +170,12 @@ export async function POST(request) {
       }
 
       if (driver_token) {
-        // Carica nomi locations per il messaggio
         const { data: locs } = await serviceClient
           .from('locations')
           .select('id, name')
           .in('id', [pickupId, ...dropoffIds])
         const locsMap = Object.fromEntries((locs || []).map(l => [l.id, l.name]))
-        const pickupName  = locsMap[pickupId] || pickupId
+        const pickupName   = locsMap[pickupId] || pickupId
         const dropoffNames = dropoffIds.map(id => locsMap[id] || id).join(', ')
         const body = `New trip assigned: ${pickupName} → ${dropoffNames} · ${callTime} · ${passengerIds?.length || 0} pax`
 
@@ -160,7 +193,7 @@ export async function POST(request) {
       }
     }
 
-    return Response.json({ ok: true, trip_id: tripId, ids: inserted.map(r => r.id) })
+    return Response.json({ ok: true, trip_id: tripId, trip_group_id: tripGroupId, ids: inserted.map(r => r.id) })
 
   } catch (e) {
     console.error('[quick-create] error:', e)
