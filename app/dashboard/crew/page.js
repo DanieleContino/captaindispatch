@@ -1162,7 +1162,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
       else setLinkedCrewSearch('')
       setLinkedCrewResults([])
       if (PRODUCTION_ID) {
-        supabase.from('crew').select('id').eq('production_id', PRODUCTION_ID)
+        supabase.from('crew').select('id')
           .then(({ data }) => {
             let max = 0
             if (data) {
