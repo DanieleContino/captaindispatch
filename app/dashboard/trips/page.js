@@ -3685,11 +3685,12 @@ function TripsPageInner() {
   // ma editTripGroup era stale → ora si ricalcola automaticamente
   useEffect(() => {
     if (!editTripRow) return
-    const baseId = baseTripId(editTripRow.trip_id)
-    const vId    = editTripRow.vehicle_id || '__none__'
-    const newGroup = trips.filter(t =>
-      baseTripId(t.trip_id) === baseId && (t.vehicle_id || '__none__') === vId
-    )
+    const newGroup = editTripRow.trip_group_id
+      ? trips.filter(t => t.trip_group_id === editTripRow.trip_group_id)
+      : trips.filter(t =>
+          baseTripId(t.trip_id) === baseTripId(editTripRow.trip_id) &&
+          (t.vehicle_id || '__none__') === (editTripRow.vehicle_id || '__none__')
+        )
     if (newGroup.length === 0) {
       // Trip eliminato → chiudi sidebar
       setEditTripRow(null)
