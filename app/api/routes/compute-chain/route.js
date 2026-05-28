@@ -117,14 +117,16 @@ async function getOrComputeDuration (fromId, toId, productionId, supabase) {
 // ─── Handler ─────────────────────────────────────────────────────────────────
 export async function POST (request) {
   try {
-    const { leg_ids, production_id } = await request.json()
+    const body = await request.json()
+    const { production_id } = body
+    let leg_ids = body.leg_ids
+    const trip_group_id = body.trip_group_id
 
-    if (!Array.isArray(leg_ids) || leg_ids.length === 0 || !production_id) {
-      return NextResponse.json({ error: 'leg_ids[] and production_id required' }, { status: 400 })
+    if (!production_id) {
+      return NextResponse.json({ error: 'production_id required' }, { status: 400 })
     }
-    if (leg_ids.length < 2) {
-      // Single-leg trip: nothing to chain
-      return NextResponse.json({ results: [], skipped: 'single leg' })
+    if (!trip_group_id && (!Array.isArray(leg_ids) || leg_ids.length === 0)) {
+      return NextResponse.json({ error: 'leg_ids[] or trip_group_id required' }, { status: 400 })
     }
 
     const supabase = createClient(
@@ -133,14 +135,38 @@ export async function POST (request) {
     )
 
     // ── Fetch all legs ──────────────────────────────────────────────────────
-    const { data: legs, error } = await supabase
-      .from('trips')
-      .select('id,pickup_id,dropoff_id,duration_min,call_min,arr_time,date,transfer_class,pickup_min,start_dt,end_dt')
-      .in('id', leg_ids)
-
-    if (error || !legs?.length) {
-      return NextResponse.json({ error: 'legs not found', detail: error?.message }, { status: 404 })
+    let legs, legsError
+    if (trip_group_id) {
+      // Nuovo path: recupera tutti i leg del gruppo tramite trip_group_id
+      const res = await supabase
+        .from('trips')
+        .select('id,pickup_id,dropoff_id,duration_min,call_min,arr_time,date,transfer_class,pickup_min,start_dt,end_dt')
+        .eq('production_id', production_id)
+        .eq('trip_group_id', trip_group_id)
+        .order('leg_order', { ascending: true })
+      legs = res.data
+      legsError = res.error
+    } else {
+      // Path legacy: leg_ids espliciti
+      const res = await supabase
+        .from('trips')
+        .select('id,pickup_id,dropoff_id,duration_min,call_min,arr_time,date,transfer_class,pickup_min,start_dt,end_dt')
+        .in('id', leg_ids)
+      legs = res.data
+      legsError = res.error
     }
+
+    if (legsError || !legs?.length) {
+      return NextResponse.json({ error: 'legs not found', detail: legsError?.message }, { status: 404 })
+    }
+
+    // Single-leg trip: nothing to chain
+    if (legs.length < 2) {
+      return NextResponse.json({ results: [], skipped: 'single leg' })
+    }
+
+    // Aggiorna leg_ids con gli id reali recuperati (utile per i chiamanti legacy)
+    leg_ids = legs.map(l => l.id)
 
     // ── Detect MULTI-PKP vs MULTI-DRP ───────────────────────────────────────
     const uniquePickups  = new Set(legs.map(l => l.pickup_id))
