@@ -1884,6 +1884,8 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
     rental_insurance_exp: '',
     rental_km_included: '',
     rental_notes: '',
+    sign_code: '',
+    unit_default: '',
     active: true, in_transport: true,
     preferred_dept: '',
     preferred_crew_ids: [],
@@ -1972,6 +1974,8 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
         in_transport:               initial.in_transport !== false,
         preferred_dept:             initial.preferred_dept    || '',
         preferred_crew_ids:         Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [],
+        sign_code:                  initial.sign_code                 || '',
+        unit_default:               initial.unit_default              || '',
       })
       setDriverSearch(initial.driver_name || '')
       setDriver2Search(initial.rental_second_driver || '')
