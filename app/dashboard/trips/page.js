@@ -2544,6 +2544,12 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       const baseId   = baseTripId(initial.trip_id)
       const suffixes = ['B', 'C', 'D']
       const newLegIds = []
+      const editGroupId = initial.trip_group_id || crypto.randomUUID()
+      if (!initial.trip_group_id) {
+        await supabase.from('trips')
+          .update({ trip_group_id: editGroupId })
+          .eq('id', initial.id)
+      }
 
       for (const delId of toDelete) {
         await fetch('/api/trips/delete-sibling', {
@@ -2621,6 +2627,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         const siblingRow = {
           production_id:   PRODUCTION_ID,
           trip_id:         newTripId,
+          trip_group_id:   editGroupId,
+          leg_order:       (group ? group.length : 1) + i + 1,
           date:            form.date,
           pickup_id:       leg.pickup_id,
           dropoff_id:      leg.dropoff_id,
