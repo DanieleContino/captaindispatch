@@ -133,7 +133,7 @@ async function checkVehicleAvail(vehicleId, date, startDt, endDt, excludeRowIds)
 }
 
 // ─── Trip row (info completa) ─────────────────────────────────
-function TripRow({ group, locations, selected, onClick, isSuggested }) {
+function TripRow({ group, locations, selected, onClick, isSuggested, onOptimize }) {
   const i18n = useT()
   const t   = group[0]
   const cls = CLS[t.transfer_class] || CLS.STANDARD
@@ -3633,6 +3633,7 @@ function TripsPageInner() {
   const [assignCtx,     setAssignCtx]     = useState(null)
   const [showAssignInfo, setShowAssignInfo] = useState(false)
   const [replicaOpen,   setReplicaOpen]   = useState(false)
+  const [optimizeGroup, setOptimizeGroup] = useState(null) // gruppo da ottimizzare
 
   const anySidebarOpen = newTripOpen || !!editTripRow
   const isMobile = useIsMobile()
