@@ -4100,7 +4100,11 @@ function TripsPageInner() {
               const props = {
                 group,
                 locations: locsMap,
-                selected: !!editTripRow && baseTripId(editTripRow.trip_id) === baseTripId(group[0].trip_id),
+                selected: !!editTripRow && (
+                  editTripRow.trip_group_id
+                    ? group[0].trip_group_id === editTripRow.trip_group_id
+                    : baseTripId(editTripRow.trip_id) === baseTripId(group[0].trip_id)
+                ),
                 isSuggested: !!assignCtx && suggestedBaseIds.has(baseTripId(group[0].trip_id)),
                 onClick: () => { setEditTripRow(group[0]); setEditTripGroup(group); setNewTripOpen(false) },
                 onOptimize: group.length > 1 ? g => setOptimizeGroup(g) : null,
