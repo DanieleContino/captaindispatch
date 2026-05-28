@@ -84,8 +84,13 @@ function groupByTripId(tripRows) {
     const sd = t.start_dt ? new Date(t.start_dt) : null
     const ed = t.end_dt   ? new Date(t.end_dt)   : null
 
-    if (!map[t.trip_id]) {
-      map[t.trip_id] = {
+    // Usa trip_group_id come chiave di raggruppamento se disponibile,
+    // altrimenti fallback a trip_id per retrocompatibilità
+    const groupKey = t.trip_group_id || t.trip_id
+
+    if (!map[groupKey]) {
+      map[groupKey] = {
+        trip_group_id:  t.trip_group_id || null,
         trip_id:        t.trip_id,
         vehicle_id:     t.vehicle_id,
         pickup_id:      t.pickup_id,
@@ -105,7 +110,9 @@ function groupByTripId(tripRows) {
         rows:           [t],
       }
     } else {
-      const g = map[t.trip_id]
+      const g = map[groupKey]
+      // trip_id del gruppo = quello con leg_order più basso (leg principale)
+      if ((t.leg_order || 99) < (g.rows[0]?.leg_order || 99)) g.trip_id = t.trip_id
       if (t.dropoff_id && !g.dropoff_ids.includes(t.dropoff_id)) g.dropoff_ids.push(t.dropoff_id)
       g.rows.push(t)
       // Prende lo status più avanzato: DONE > BUSY > CANCELLED > PLANNED
@@ -128,7 +135,7 @@ function groupByTripId(tripRows) {
     if (aTime && bTime) return aTime - bTime
     if (aTime) return -1
     if (bTime) return 1
-    return a.trip_id.localeCompare(b.trip_id)
+    return (a.trip_id || '').localeCompare(b.trip_id || '')
   })
 }
 
@@ -763,7 +770,7 @@ export default function FleetMonitorPage() {
         .eq('in_transport', true)
         .order('vehicle_type').order('id'),
       supabase.from('trips')
-        .select('id,trip_id,vehicle_id,pickup_id,dropoff_id,transfer_class,pickup_min,call_min,start_dt,end_dt,arrived_at,started_at,status,pax_count,passenger_list,service_type,duration_min,date')
+        .select('id,trip_id,trip_group_id,leg_order,vehicle_id,pickup_id,dropoff_id,transfer_class,pickup_min,call_min,start_dt,end_dt,arrived_at,started_at,status,pax_count,passenger_list,service_type,duration_min,date')
         .eq('production_id', PRODUCTION_ID)
         .eq('date', d),
       supabase.from('locations')
