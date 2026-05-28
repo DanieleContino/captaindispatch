@@ -3562,7 +3562,7 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, onD
   // Raggruppa i trip del giorno precedente come nella lista principale
   const grouped = Object.values(
     prevTrips.reduce((acc, t) => {
-      const key = baseTripId(t.trip_id) + '::' + (t.vehicle_id || '__none__')
+      const key = t.trip_group_id || (baseTripId(t.trip_id) + '::' + (t.vehicle_id || '__none__'))
       if (!acc[key]) acc[key] = []
       acc[key].push(t)
       return acc
