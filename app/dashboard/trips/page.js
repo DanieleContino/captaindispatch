@@ -742,19 +742,24 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     let cancelled = false
     setSelCrew([]); setCrewList([])
     if (!PRODUCTION_ID || !form.pickup_id || !form.dropoff_id) return () => { cancelled = true }
-    let q = supabase.from('crew').select('id,full_name,department')
-      .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
-    if (transferClass === 'ARRIVAL')        q = q.eq('hotel_id', form.dropoff_id).eq('arrival_date', form.date)
-    else if (transferClass === 'DEPARTURE') q = q.eq('hotel_id', form.pickup_id).eq('departure_date', form.date)
-    else                                    q = q.or(`and(hotel_id.eq.${form.pickup_id},arrival_date.lte.${form.date},departure_date.gte.${form.date}),on_location.eq.true`)
-    q.order('department').order('full_name').then(({ data }) => {
+    const hotelId = transferClass === 'ARRIVAL' ? form.dropoff_id : form.pickup_id
+    let q = supabase.from('crew_stays')
+      .select('crew_id, departure_date, crew!inner(id, full_name, department, hotel_status)')
+      .eq('production_id', PRODUCTION_ID)
+      .eq('hotel_id', hotelId)
+    if (transferClass === 'ARRIVAL')        q = q.eq('arrival_date', form.date)
+    else if (transferClass === 'DEPARTURE') q = q.eq('departure_date', form.date)
+    else                                    q = q.lte('arrival_date', form.date).gte('departure_date', form.date)
+    q.then(({ data }) => {
       if (cancelled) return
-      if (data) {
-        setCrewList(data)
-        if (assignCtx?.id) {
-          const match = data.find(c => c.id === assignCtx.id)
-          if (match) setSelCrew(prev => prev.some(x => x.id === match.id) ? prev : [...prev, match])
-        }
+      const crew = (data || [])
+        .filter(s => s.crew?.hotel_status === 'CONFIRMED')
+        .map(s => ({ id: s.crew.id, full_name: s.crew.full_name, department: s.crew.department }))
+        .sort((a, b) => (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name))
+      setCrewList(crew)
+      if (assignCtx?.id) {
+        const match = crew.find(c => c.id === assignCtx.id)
+        if (match) setSelCrew(prev => prev.some(x => x.id === match.id) ? prev : [...prev, match])
       }
     })
     return () => { cancelled = true }
