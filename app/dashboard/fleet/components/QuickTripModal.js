@@ -90,6 +90,7 @@ export function QuickTripModal({ vehicle, productionId, onClose, onCreated }) {
   const lbl = { fontSize: '11px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }
 
   return (
+    <>
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
       <div style={{ background: '#f1f5f9', borderRadius: '16px', width: '100%', maxWidth: '480px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
@@ -324,40 +325,41 @@ export function QuickTripModal({ vehicle, productionId, onClose, onCreated }) {
           )}
         </div>
 
-        {/* Location picker modal */}
-        {showPicker && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-            <div style={{ background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '65vh', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '10px' }}>
-                <div style={{ width: '36px', height: '4px', background: '#e2e8f0', borderRadius: '2px' }} />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 10px' }}>
-                <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a' }}>
-                  {showPicker === 'pickup' ? 'Pickup Location' : 'Dropoff Location'}
-                </span>
-                <button onClick={() => setShowPicker(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>✕</button>
-              </div>
-              <div style={{ overflowY: 'auto', flex: 1 }}>
-                {locations.map(l => {
-                  const isSel = showPicker === 'pickup' ? pickupId === l.id : dropoffIds[parseInt(showPicker.split('_')[1])] === l.id
-                  return (
-                    <div key={l.id} onClick={() => {
-                      if (showPicker === 'pickup') setPickupId(l.id)
-                      else setDropoff(parseInt(showPicker.split('_')[1]), l.id)
-                      setShowPicker(null)
-                    }} style={{ padding: '13px 16px', borderBottom: '1px solid #f8fafc', background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '14px', fontWeight: isSel ? '700' : '500', color: '#0f172a' }}>{l.name}</span>
-                      {isSel && <span style={{ color: '#2563eb', fontSize: '16px' }}>✓</span>}
-                    </div>
-                  )
-                })}
-              </div>
-              <div style={{ height: '20px' }} />
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
+
+    {/* Location picker — rendered outside modal to avoid fixed-in-fixed clipping on mobile */}
+    {showPicker && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 500, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+        <div style={{ background: 'white', borderRadius: '20px 20px 0 0', maxHeight: '65vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '10px' }}>
+            <div style={{ width: '36px', height: '4px', background: '#e2e8f0', borderRadius: '2px' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 10px' }}>
+            <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a' }}>
+              {showPicker === 'pickup' ? 'Pickup Location' : 'Dropoff Location'}
+            </span>
+            <button onClick={() => setShowPicker(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ overflowY: 'auto', flex: 1 }}>
+            {locations.map(l => {
+              const isSel = showPicker === 'pickup' ? pickupId === l.id : dropoffIds[parseInt(showPicker.split('_')[1])] === l.id
+              return (
+                <div key={l.id} onClick={() => {
+                  if (showPicker === 'pickup') setPickupId(l.id)
+                  else setDropoff(parseInt(showPicker.split('_')[1]), l.id)
+                  setShowPicker(null)
+                }} style={{ padding: '13px 16px', borderBottom: '1px solid #f8fafc', background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '14px', fontWeight: isSel ? '700' : '500', color: '#0f172a' }}>{l.name}</span>
+                  {isSel && <span style={{ color: '#2563eb', fontSize: '16px' }}>✓</span>}
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ height: '20px' }} />
+        </div>
+      </div>
+    )}
+    </>
   )
 }
