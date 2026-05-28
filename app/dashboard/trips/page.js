@@ -90,6 +90,7 @@ const TRIP_COLS = [
   { key: 'trip',      label: 'TRIP',       width: '130px' },
   { key: 'vehicle',   label: 'VEHICLE',    width: '180px' },
   { key: 'route',     label: 'ROUTE',      width: '210px' },
+  { key: 'optimize',  label: '',           width: '100px' },
   { key: 'pax',       label: 'PASSENGERS', width: '220px' },
   { key: 'pax_count', label: 'PAX',        width: '70px'  },
 ]
@@ -326,6 +327,19 @@ function TripRow({ group, locations, selected, onClick, isSuggested, onOptimize 
               <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '1px' }}>⏱ {t.duration_min} min</div>
             )}
           </>
+        )}
+      </div>
+
+      {/* ── Optimize button (multi-leg only) ── */}
+      <div style={{ minWidth: 0, display: 'flex', alignItems: 'flex-start' }}>
+        {isMixed && onOptimize && (
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onOptimize(group) }}
+            style={{ padding: '3px 9px', borderRadius: '6px', border: 'none', background: '#1e3a5f', color: 'white', fontSize: '10px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '0.03em' }}
+          >
+            ⚡ Optimize
+          </button>
         )}
       </div>
 
@@ -4089,6 +4103,7 @@ function TripsPageInner() {
                 selected: !!editTripRow && baseTripId(editTripRow.trip_id) === baseTripId(group[0].trip_id),
                 isSuggested: !!assignCtx && suggestedBaseIds.has(baseTripId(group[0].trip_id)),
                 onClick: () => { setEditTripRow(group[0]); setEditTripGroup(group); setNewTripOpen(false) },
+                onOptimize: group.length > 1 ? g => setOptimizeGroup(g) : null,
               }
               return isMobile ? <TripCardMobile key={key} {...props} /> : <TripRow key={key} {...props} />
             })}
@@ -4152,6 +4167,16 @@ function TripsPageInner() {
         targetDate={date}
         locations={locsList}
         onDone={() => loadTrips(date)}
+      />
+
+      {/* ── Waypoint Review Modal ── */}
+      <WaypointReviewModal
+        open={!!optimizeGroup}
+        group={optimizeGroup}
+        locations={locsMap}
+        productionId={PRODUCTION_ID}
+        onClose={() => setOptimizeGroup(null)}
+        onSaved={() => { setOptimizeGroup(null); loadTrips(date) }}
       />
     </div>
   )
