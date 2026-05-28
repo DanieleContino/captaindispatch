@@ -914,6 +914,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
   async function handleMultiSubmit() {
     setError(null)
+    const multiGroupId = crypto.randomUUID()
     const allLegs = [...savedLegs]
     // Auto-include del form corrente come ultima leg se pickup e dropoff sono entrambi compilati
     // (il form è sempre vuoto dopo "+ Add Leg", quindi questo scatta solo se l'utente ha
@@ -941,6 +942,8 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         const row = {
           production_id:   PRODUCTION_ID,
           trip_id:         getLegTripId(i),
+          trip_group_id:   multiGroupId,
+          leg_order:       i + 1,
           date:            legForm.date,
           pickup_id:       legForm.pickup_id,
           dropoff_id:      legForm.dropoff_id,
@@ -978,7 +981,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         await fetch('/api/routes/compute-chain', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ leg_ids: insertedIds, production_id: PRODUCTION_ID }),
+          body:    JSON.stringify({ leg_ids: insertedIds, production_id: PRODUCTION_ID, trip_group_id: multiGroupId }),
         })
       }
       setMultiSaving(false); setSavedLegs([]); setEditingLegLocalId(null); setMultiMode(false)
