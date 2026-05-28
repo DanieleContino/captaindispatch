@@ -157,7 +157,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
       const r = await supabase.from('vehicles').insert(row); err = r.error
     } else {
       const { id, ...upd } = row
-      const r = await supabase.from('vehicles').update(upd).eq('id', initial.id); err = r.error
+      const r = await supabase.from('vehicles').update(upd).eq('id', initial.id).eq('production_id', PRODUCTION_ID); err = r.error
     }
     setSaving(false)
     if (err) { setError(err.message); return }
@@ -2053,7 +2053,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
         await supabase.from('rental_vouchers').update({ used: true, vehicle_id: form.id.trim().toUpperCase() }).eq('id', form.rental_voucher_id)
       }
     } else {
-      const r = await supabase.from('vehicles').update(row).eq('id', initial.id)
+      const r = await supabase.from('vehicles').update(row).eq('id', initial.id).eq('production_id', productionId)
       err = r.error
     }
     setSaving(false)
