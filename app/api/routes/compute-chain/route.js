@@ -189,8 +189,10 @@ export async function POST (request) {
         enriched.push({ ...leg, duration_min: dur })
       }
 
-      // Step 2: sort pickups by direct duration DESC (longest route = farthest hotel = first pickup)
-      const sortedByDur = [...enriched].sort((a, b) => (b.duration_min ?? 0) - (a.duration_min ?? 0))
+      // Step 2: sort pickups by leg_order (if respect_leg_order) or duration DESC (default)
+      const sortedByDur = respect_leg_order
+        ? [...enriched].sort((a, b) => (a.leg_order ?? 999) - (b.leg_order ?? 999))
+        : [...enriched].sort((a, b) => (b.duration_min ?? 0) - (a.duration_min ?? 0))
       const lastPickupId = sortedByDur[sortedByDur.length - 1].pickup_id
 
       // Step 3: sort dropoffs by distance from LAST pickup (ASC = closest first)
