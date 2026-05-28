@@ -2176,6 +2176,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     // Per leg nuovi: groupIds vuoti per trip_passengers (nessun pax ancora assegnato)
     // ma existingGroupIds serve per escludere da availableCrew i pax già nel gruppo
     const groupIds = isNewLeg ? [] : ((group && group.length > 1) ? group.map(g => g.id) : [tripId])
+    // existingGroupIds include sempre i leg già salvati nel DB — usato per escludere
+    // i pax già assegnati al gruppo da availableCrew anche quando si configura un nuovo leg
     const existingGroupIds = group ? group.map(g => g.id).filter(Boolean) : (tripId ? [tripId] : [])
     const legHotelDropoff = effectiveDropoff
     const legHotelPickup  = effectivePickup
@@ -2219,9 +2221,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (reqId !== loadPaxReqRef.current) return
 
     const assigned    = (paxRes.data || []).map(p => ({ ...p.crew, trip_row_id: p.trip_row_id }))
+    // assignedIds include SEMPRE tutti i pax del gruppo esistente —
+    // anche per leg nuovi, così non appaiono come disponibili in availableCrew
     const assignedIds = new Set(assigned.map(c => c.id))
-    // Per leg nuovi: non mostrare i pax del gruppo come "assegnati" (non appartengono a questa leg)
-    // ma usarli solo per escluderli da availableCrew
+    // Per leg nuovi: non mostrare i pax del gruppo come "assegnati" nella UI
+    // (non appartengono ancora a questa leg) ma sono già esclusi da availableCrew
     setAssignedPax(isNewLeg ? [] : assigned)
 
     // Build busy map: crewId → conflicting trip_id
