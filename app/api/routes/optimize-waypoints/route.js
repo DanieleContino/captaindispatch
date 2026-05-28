@@ -134,29 +134,29 @@ export async function POST(request) {
     const json  = await res.json()
     const route = json?.routes?.[0]
 
-    // DEBUG temporaneo — rimuovere dopo diagnosi
-    console.log('[optimize-waypoints] route raw:', JSON.stringify(route))
-    console.log('[optimize-waypoints] optimizedIntermediateWaypointIndex:', route?.optimizedIntermediateWaypointIndex)
-    console.log('[optimize-waypoints] intermediates sent:', JSON.stringify(intermediates))
-
     // 6. Build optimized order
     // optimizedIntermediateWaypointIndex tells us the new order of intermediates
-    // We reconstruct the full leg order from it
+    // Google returns -1 for intermediates that are already in optimal position
+    // We normalize: replace -1 with the original index (0-based among intermediates)
     let optimizedOrder // array of original leg indices in new order
+
+    const normalizeIdx = (rawIdx, count) => {
+      // rawIdx: array from Google (may contain -1 meaning "keep original position")
+      // Returns a valid 0-based reordering of `count` intermediates
+      if (!rawIdx || rawIdx.length === 0) return Array.from({ length: count }, (_, i) => i)
+      return rawIdx.map((v, i) => v === -1 ? i : v)
+    }
 
     if (isMultiPkp) {
       const hotelIds = legs.map(l => l.pickup_id)
-      // origin = hotelIds[0], intermediates = hotelIds[1..]
-      // optimizedIntermediateWaypointIndex = reordering of intermediates
-      const optIdx = route?.optimizedIntermediateWaypointIndex ?? intermediates.map((_, i) => i)
-      // Full hotel order: [hotelIds[0], ...optIdx.map(i => hotelIds[i+1])]
+      // origin = hotelIds[0], intermediates = hotelIds[1..], destination = hub
+      const optIdx = normalizeIdx(route?.optimizedIntermediateWaypointIndex, intermediates.length)
       const optimizedHotelIds = [hotelIds[0], ...optIdx.map(i => hotelIds[i + 1])]
       optimizedOrder = optimizedHotelIds.map(hId => legs.findIndex(l => l.pickup_id === hId))
     } else {
       const hotelIds = legs.map(l => l.dropoff_id)
-      // origin = hub, intermediates = hotelIds[0..-2], destination = hotelIds[-1]
-      const optIdx = route?.optimizedIntermediateWaypointIndex ?? intermediates.map((_, i) => i)
-      // Full hotel order: [...optIdx.map(i => hotelIds[i]), hotelIds[-1]]
+      // origin = hub, intermediates = hotelIds[0..N-2], destination = hotelIds[N-1]
+      const optIdx = normalizeIdx(route?.optimizedIntermediateWaypointIndex, intermediates.length)
       const optimizedHotelIds = [...optIdx.map(i => hotelIds[i]), hotelIds[hotelIds.length - 1]]
       optimizedOrder = optimizedHotelIds.map(hId => legs.findIndex(l => l.dropoff_id === hId))
     }
