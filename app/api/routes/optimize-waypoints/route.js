@@ -134,6 +134,11 @@ export async function POST(request) {
     const json  = await res.json()
     const route = json?.routes?.[0]
 
+    // DEBUG temporaneo — rimuovere dopo diagnosi
+    console.log('[optimize-waypoints] route raw:', JSON.stringify(route))
+    console.log('[optimize-waypoints] optimizedIntermediateWaypointIndex:', route?.optimizedIntermediateWaypointIndex)
+    console.log('[optimize-waypoints] intermediates sent:', JSON.stringify(intermediates))
+
     // 6. Build optimized order
     // optimizedIntermediateWaypointIndex tells us the new order of intermediates
     // We reconstruct the full leg order from it
