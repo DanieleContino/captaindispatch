@@ -1162,6 +1162,12 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         if (!usedLetters.has(l)) { nextLetter = l; break }
       }
       const newTripId = base + nextLetter
+      const mainGroupId = selExistingTrip.trip_group_id || crypto.randomUUID()
+      if (!selExistingTrip.trip_group_id) {
+        await supabase.from('trips')
+          .update({ trip_group_id: mainGroupId })
+          .eq('id', selExistingTrip.id)
+      }
 
       // Calcola timing del sibling usando calcTimes (come per un trip normale)
       // Per DEPARTURE multi-PKP: cerca la rotta hotelSibling→hub per ottenere duration_min
@@ -1246,6 +1252,8 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       const siblingRow = {
         production_id: PRODUCTION_ID,
         trip_id:        newTripId,
+        trip_group_id:  mainGroupId,
+        leg_order:      (allGroupLegs.length + 1),
         date:           selExistingTrip.date,
         // transfer_class is a GENERATED column — computed automatically from pickup_id/dropoff_id
         // ARRIVAL  → MULTI-DRP: stesso pickup (hub), dropoff = hotel del crew
