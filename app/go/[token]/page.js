@@ -706,6 +706,23 @@ export default function CaptainGoPage() {
     finally { setTripAction(null) }
   }
 
+  async function handlePickedUp(trip) {
+    if (tripAction) return
+    setTripAction(trip.id)
+    try {
+      const res = await fetch('/api/go/trip/pickup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, trip_id: trip.id }),
+      })
+      const d = await res.json()
+      if (d.error) { alert(d.error); return }
+      const updated = await fetch(`/api/go/session?token=${token}`).then(r => r.json())
+      if (!updated.error) setData(updated)
+    } catch { alert('Connection error') }
+    finally { setTripAction(null) }
+  }
+
   async function handleArrived(trip) {
     if (tripAction) return
     setTripAction(trip.id)
@@ -915,8 +932,13 @@ export default function CaptainGoPage() {
                       {tripAction === trip.id ? '⏳...' : '▶ Start Trip'}
                     </button>
                   )}
-                  {isBusy && (
-                    <button onClick={() => handleArrived(trip)} disabled={tripAction === trip.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === trip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: dropoff ? '8px' : '0' }}>
+                  {isBusy && !trip.picked_up_at && (
+                    <button onClick={() => handlePickedUp(trip)} disabled={tripAction === trip.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === trip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: dropoff ? '8px' : '0' }}>
+                      {tripAction === trip.id ? '⏳...' : '👥 Picked Up'}
+                    </button>
+                  )}
+                  {isBusy && trip.picked_up_at && (
+                    <button onClick={() => handleArrived(trip)} disabled={tripAction === trip.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#ea580c', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === trip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: dropoff ? '8px' : '0' }}>
                       {tripAction === trip.id ? '⏳...' : '✅ Arrived'}
                     </button>
                   )}
