@@ -1039,24 +1039,34 @@ export default function CaptainGoPage() {
                 </div>
 
                 {/* Azioni */}
-                {!allDone && activeLeg && session && (
-                  <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {(activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS' || activeLeg.status === 'ACTIVE') ? (
-                      <button onClick={() => handleArrived(activeLeg)} disabled={tripAction === activeLeg.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === activeLeg.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === activeLeg.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        {tripAction === activeLeg.id ? '⏳...' : `✅ Arrived — ${locsMap[activeLeg.dropoff_id]?.name || ''}`}
-                      </button>
-                    ) : (
-                      <button onClick={() => handleStartTrip(activeLeg)} disabled={tripAction === activeLeg.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === activeLeg.id ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === activeLeg.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        {tripAction === activeLeg.id ? '⏳...' : '▶ Start Trip'}
-                      </button>
-                    )}
-                    {locsMap[activeLeg.dropoff_id] && (
-                      <button onClick={() => (activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS' || activeLeg.status === 'ACTIVE') ? navigateAndTrack(activeLeg) : openMaps(activeLeg)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        🗺 Navigate → {locsMap[activeLeg.dropoff_id]?.name}
-                      </button>
-                    )}
-                  </div>
-                )}
+                {!allDone && activeLeg && session && (() => {
+                  const isLegBusy    = activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS' || activeLeg.status === 'ACTIVE'
+                  const isPickupLeg  = serviceLabel === 'Multi-Pick' || (serviceLabel === 'Mix' && (activeLeg.leg_order <= Math.ceil(legs.length / 2)))
+                  const confirmLabel = isPickupLeg
+                    ? `🙋 Picked Up — ${locsMap[activeLeg.pickup_id]?.name || ''}`
+                    : `✅ Arrived — ${locsMap[activeLeg.dropoff_id]?.name || ''}`
+                  const navigateLoc  = isPickupLeg ? locsMap[activeLeg.pickup_id] : locsMap[activeLeg.dropoff_id]
+                  const navigateName = navigateLoc?.name || ''
+
+                  return (
+                    <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {isLegBusy ? (
+                        <button onClick={() => handleArrived(activeLeg)} disabled={tripAction === activeLeg.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === activeLeg.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === activeLeg.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          {tripAction === activeLeg.id ? '⏳...' : confirmLabel}
+                        </button>
+                      ) : (
+                        <button onClick={() => handleStartTrip(activeLeg)} disabled={tripAction === activeLeg.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === activeLeg.id ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === activeLeg.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          {tripAction === activeLeg.id ? '⏳...' : '▶ Start Trip'}
+                        </button>
+                      )}
+                      {navigateLoc && (
+                        <button onClick={() => isLegBusy ? navigateAndTrack(activeLeg) : openMaps(activeLeg)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                          🗺 Navigate → {navigateName}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
                 {allDone && (
                   <div style={{ padding: '10px 14px', fontSize: '12px', fontWeight: '700', color: '#15803d', textAlign: 'center' }}>✅ All stops completed</div>
                 )}
