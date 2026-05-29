@@ -258,6 +258,23 @@ supabase.from('crew').select('id, full_name, department, hotel_id, travel_status
     const now = new Date()
     const currentTime = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`
 
+    // Carica ultimi 15 esempi confermati per questa produzione
+    let examplesBlock = ''
+    try {
+      const { data: examples } = await supabase
+        .from('ai_trip_examples')
+        .select('input_text, output_json')
+        .eq('production_id', productionId)
+        .order('created_at', { ascending: false })
+        .limit(15)
+      if (examples?.length > 0) {
+        examplesBlock = `\nEXAMPLES FROM THIS PRODUCTION (learn from these patterns):\n` +
+          examples.map(e => `User: "${e.input_text}"\nResult: ${JSON.stringify(e.output_json)}`).join('\n\n')
+      }
+    } catch (e) {
+      console.warn('[ai_trip_examples] load failed:', e)
+    }
+
     const crewList = crew.map(c => {
       const hotelName = locations.find(l => l.id === c.hotel_id)?.name || null
       return `- id:${c.id} name:"${c.full_name}" dept:${c.department || '–'} status:${c.travel_status || '–'}${hotelName ? ` hotel:"${hotelName}" hotel_id:${c.hotel_id}` : ' hotel:unknown'}`
@@ -321,6 +338,8 @@ AMBIGUITY RULES — only report if truly unresolvable:
 - DO NOT report missing time (use current_time)
 - DO NOT report missing hotel if person has hotel_id
 - DO NOT report obvious deductions
+
+${examplesBlock}
 
 Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation:
 {
