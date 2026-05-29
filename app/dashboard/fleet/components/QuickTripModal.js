@@ -297,21 +297,14 @@ Respond ONLY with a JSON object (no markdown, no backticks) with this exact stru
 }`
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/ai/trip-builder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: text }],
-        }),
+        body: JSON.stringify({ text, systemPrompt }),
       })
       const data = await res.json()
-      const raw = data.content?.find(b => b.type === 'text')?.text || ''
-      const clean = raw.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(clean)
-      setPreview(parsed)
+      if (data.error) throw new Error(data.error)
+      setPreview(data.result)
     } catch (e) {
       setErr('Could not parse trip. Try rephrasing or use Manual tab.')
     }
