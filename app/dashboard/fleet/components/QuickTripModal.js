@@ -255,22 +255,74 @@ supabase.from('crew').select('id, full_name, department, hotel_id, travel_status
     if (!text.trim()) return
     setLoading(true); setErr(''); setPreview(null)
 
-    const crewContext = crew
-    const locContext  = locations
+    const now = new Date()
+    const currentTime = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`
 
-    const systemPrompt = `You are a transportation coordinator assistant for film productions.
-Given a trip request in Italian or English, extract a structured itinerary.
+    const crewList = crew.map(c => {
+      const hotelName = locations.find(l => l.id === c.hotel_id)?.name || null
+      return `- id:${c.id} name:"${c.full_name}" dept:${c.department || '–'} status:${c.travel_status || '–'}${hotelName ? ` hotel:"${hotelName}" hotel_id:${c.hotel_id}` : ' hotel:unknown'}`
+    }).join('\n')
 
-Available crew:
-${crewContext.map(c => `- id:${c.id} name:"${c.full_name}" dept:${c.department || '–'}`).join('\n')}
+    const locationsList = locations.map(l => `- id:${l.id} name:"${l.name}"`).join('\n')
 
-Available locations:
-${locContext.map(l => `- id:${l.id} name:"${l.name}"`).join('\n')}
+    const systemPrompt = `You are an expert transportation coordinator assistant for film/TV productions.
+The user will describe a trip request in Italian or English, using natural conversational language.
+Your job is to extract a precise structured itinerary from the request.
 
+CONTEXT:
+Current time: ${currentTime}
 Today's date: ${date}
 Vehicle: ${vehicle.sign_code || vehicle.id}
 
-Respond ONLY with a JSON object (no markdown, no backticks) with this exact structure:
+AVAILABLE CREW:
+${crewList}
+
+AVAILABLE LOCATIONS:
+${locationsList}
+
+MATCHING RULES — CREW:
+- Match names flexibly: partial names, surnames only, first names only, nicknames, typos, mixed case, accents
+- "il gaffer" / "il fonico" / "il regista" etc → match by role/department
+- "i ragazzi della camera" / "il reparto elettrico" etc → match all crew of that department
+- "lui" / "lei" / "loro" → refer to previously mentioned people in the same request
+- "insieme a" / "con" / "anche" → multiple passengers same leg
+- If a name is ambiguous (multiple matches) → list in ambiguities
+
+MATCHING RULES — LOCATIONS:
+- Match location names flexibly: partial names, abbreviations, typos
+- "al set" / "sul set" / "in location" / "sul posto" → find SET location
+- "all'aeroporto" / "in aeroporto" → find location with id starting APT_
+- "alla stazione" / "in stazione" → find location with id starting STN_
+- "al porto" → find location with id starting PRT_
+- "al suo albergo" / "a casa sua" / "al suo hotel" / "dove sta" → use that person's hotel_id
+- "all'Astoria" / "al Marriott" etc → partial hotel name match
+- "qui" / "qua" / "dove siamo" → unknown location, set custom=true
+- If location not in list and is a real address → set custom=true, id=null
+
+MATCHING RULES — TIME:
+- No time specified → use current_time (${currentTime})
+- "subito" / "adesso" / "ora" / "subito" → current_time
+- "presto" / "il prima possibile" / "appena puoi" → current_time
+- "stamattina" → morning, use current_time if in morning else 08:00
+- "stasera" → use 19:00 as default if no time given
+- "dopo" / "più tardi" / "tra poco" → current_time + 30 minutes
+- "alle X" / "per le X" / "entro le X" → parse time, format HH:MM
+
+MULTI-LEG RULES:
+- "e poi" / "dopo" / "successivamente" / "e dopo" → new leg after the first
+- "torna indietro" / "riportalo" / "portalo di nuovo" → return leg (swap pickup/dropoff)
+- "prima... poi..." → sequential legs in order
+- Each passenger belongs to the leg where they board
+
+AMBIGUITY RULES — only report if truly unresolvable:
+- Person genuinely not found after flexible matching
+- Location genuinely not found and not a known address
+- Multiple people with same name
+- DO NOT report missing time (use current_time)
+- DO NOT report missing hotel if person has hotel_id
+- DO NOT report obvious deductions
+
+Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation:
 {
   "legs": [
     {
@@ -280,15 +332,13 @@ Respond ONLY with a JSON object (no markdown, no backticks) with this exact stru
       "dropoff_id": "location_id or null if custom",
       "dropoff_name": "display name",
       "dropoff_custom": true/false,
-      "time": "HH:MM or null",
+      "time": "HH:MM",
       "passenger_ids": ["crew_id1", ...],
-      "passenger_names": ["Name1", ...]
+      "passenger_names": ["Full Name 1", ...]
     }
   ],
-  "ambiguities": [
-    "Description of any unclear reference that needs user confirmation"
-  ],
-  "notes": "Optional brief explanation"
+  "ambiguities": [],
+  "notes": "optional brief explanation in same language as user"
 }`
 
     try {
