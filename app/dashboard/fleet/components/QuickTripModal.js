@@ -239,6 +239,23 @@ function AIBuilderTab({ vehicle, productionId, date, onDateChange, onCreated, on
   const [notify,     setNotify]     = useState(true)
   const [saving,     setSaving]     = useState(false)
   const [err,        setErr]        = useState('')
+  const [pickerLeg,  setPickerLeg]  = useState(null) // { legIndex, field: 'pickup'|'dropoff' }
+
+  function handleAIPickerSelect(loc) {
+    const { legIndex, field } = pickerLeg
+    setPreview(prev => {
+      const legs = prev.legs.map((leg, i) => {
+        if (i !== legIndex) return leg
+        if (field === 'pickup') {
+          return { ...leg, pickup_id: loc.id || ('TEMP_' + Date.now()), pickup_name: loc.name, pickup_custom: false, _pickup_temp: loc.is_temp ? loc : null }
+        } else {
+          return { ...leg, dropoff_id: loc.id || ('TEMP_' + Date.now()), dropoff_name: loc.name, dropoff_custom: false, _dropoff_temp: loc.is_temp ? loc : null }
+        }
+      })
+      return { ...prev, legs }
+    })
+    setPickerLeg(null)
+  }
 
   useEffect(() => {
     if (!productionId) return
@@ -386,17 +403,20 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
         let pickupId  = leg.pickup_id
         let dropoffId = leg.dropoff_id
 
-        if (leg.pickup_custom && !pickupId) {
-          // Location custom senza ID — non possiamo salvare senza coordinate
-          // Segnaliamo errore
-          setErr(`"${leg.pickup_name}" needs to be confirmed via Google Places. Edit the leg before confirming.`)
-          setSaving(false)
-          return
+        // Salva location temp dal picker AI
+        if (leg._pickup_temp && !leg.pickup_id.startsWith('TEMP_')) {
+          // già un ID reale da location salvata
+        } else if (leg._pickup_temp) {
+          const { data, error } = await supabase.from('locations').insert({ production_id: productionId, name: leg._pickup_temp.name, lat: leg._pickup_temp.lat, lng: leg._pickup_temp.lng, is_temp: true }).select('id').single()
+          if (error) { setErr('Failed to save pickup location'); setSaving(false); return }
+          pickupId = data.id
         }
-        if (leg.dropoff_custom && !dropoffId) {
-          setErr(`"${leg.dropoff_name}" needs to be confirmed via Google Places. Edit the leg before confirming.`)
-          setSaving(false)
-          return
+        if (leg._dropoff_temp && !leg.dropoff_id.startsWith('TEMP_')) {
+          // già un ID reale
+        } else if (leg._dropoff_temp) {
+          const { data, error } = await supabase.from('locations').insert({ production_id: productionId, name: leg._dropoff_temp.name, lat: leg._dropoff_temp.lat, lng: leg._dropoff_temp.lng, is_temp: true }).select('id').single()
+          if (error) { setErr('Failed to save dropoff location'); setSaving(false); return }
+          dropoffId = data.id
         }
 
         resolvedLegs.push({ ...leg, pickup_id: pickupId, dropoff_id: dropoffId })
@@ -444,7 +464,11 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
     }
   }
 
+  // Controlla se ci sono ancora custom non risolti
+  const hasUnresolvedCustom = preview?.legs?.some(l => l.pickup_custom || l.dropoff_custom)
+
   return (
+    <>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
       {/* Date row */}
@@ -498,11 +522,11 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>
                       {locIcon(leg.pickup_id)} {leg.pickup_name}
-                      {leg.pickup_custom && <span style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '700', marginLeft: '6px', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fde68a' }}>CUSTOM</span>}
+                      {leg.pickup_custom && <button onClick={() => setPickerLeg({ legIndex: i, field: 'pickup' })} style={{ fontSize: '10px', color: '#d97706', fontWeight: '700', marginLeft: '6px', background: '#fffbeb', padding: '2px 7px', borderRadius: '4px', border: '1px solid #fde68a', cursor: 'pointer', fontFamily: 'inherit' }}>📍 Confirm address</button>}
                     </div>
                     <div style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 6px' }}>
                       → {locIcon(leg.dropoff_id)} {leg.dropoff_name}
-                      {leg.dropoff_custom && <span style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '700', marginLeft: '6px', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fde68a' }}>CUSTOM</span>}
+                      {leg.dropoff_custom && <button onClick={() => setPickerLeg({ legIndex: i, field: 'dropoff' })} style={{ fontSize: '10px', color: '#d97706', fontWeight: '700', marginLeft: '6px', background: '#fffbeb', padding: '2px 7px', borderRadius: '4px', border: '1px solid #fde68a', cursor: 'pointer', fontFamily: 'inherit' }}>📍 Confirm address</button>}
                       {leg.time && <span style={{ marginLeft: '6px', fontWeight: '700', color: '#374151' }}>· {leg.time}</span>}
                     </div>
                     {leg.passenger_names?.length > 0 && (
@@ -554,13 +578,23 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
       {preview && (
         <button
           onClick={createTrip}
-          disabled={saving}
-          style={{ width: '100%', padding: '13px', borderRadius: '10px', border: 'none', background: saving ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '14px', fontWeight: '800', cursor: saving ? 'default' : 'pointer' }}
+          disabled={saving || hasUnresolvedCustom}
+          style={{ width: '100%', padding: '13px', borderRadius: '10px', border: 'none', background: saving || hasUnresolvedCustom ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '14px', fontWeight: '800', cursor: saving || hasUnresolvedCustom ? 'default' : 'pointer' }}
         >
-          {saving ? '⏳ Creating...' : '✅ Create Trip'}
+          {saving ? '⏳ Creating...' : hasUnresolvedCustom ? '📍 Confirm custom addresses first' : '✅ Create Trip'}
         </button>
       )}
     </div>
+
+    {pickerLeg && (
+      <LocationPicker
+        locations={locations}
+        title="📍 Confirm Address"
+        onSelect={handleAIPickerSelect}
+        onClose={() => setPickerLeg(null)}
+      />
+    )}
+    </>
   )
 }
 
