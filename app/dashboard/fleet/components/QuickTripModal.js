@@ -391,6 +391,17 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
       const allPassengerIds = [...new Set(resolvedLegs.flatMap(l => l.passenger_ids || []))]
       const callTime = resolvedLegs[0].time || '08:00'
 
+      // Salva esempio per apprendimento AI
+      try {
+        await supabase.from('ai_trip_examples').insert({
+          production_id: productionId,
+          input_text: text,
+          output_json: preview,
+        })
+      } catch (e) {
+        console.warn('[ai_trip_examples] save failed:', e)
+      }
+
       const res = await fetch('/api/trips/quick-create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
