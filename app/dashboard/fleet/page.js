@@ -94,6 +94,7 @@ function groupByTripId(tripRows) {
         trip_id:        t.trip_id,
         vehicle_id:     t.vehicle_id,
         pickup_id:      t.pickup_id,
+        pickup_ids:     [t.pickup_id].filter(Boolean),
         dropoff_ids:    [t.dropoff_id].filter(Boolean),
         lastDropoffId:  t.dropoff_id,   // dropoff dell'ultima riga per repositioning ETA
         transfer_class: t.transfer_class,
@@ -113,6 +114,7 @@ function groupByTripId(tripRows) {
       const g = map[groupKey]
       // trip_id del gruppo = quello con leg_order più basso (leg principale)
       if ((t.leg_order || 99) < (g.rows[0]?.leg_order || 99)) g.trip_id = t.trip_id
+      if (t.pickup_id && !g.pickup_ids.includes(t.pickup_id)) g.pickup_ids.push(t.pickup_id)
       if (t.dropoff_id && !g.dropoff_ids.includes(t.dropoff_id)) g.dropoff_ids.push(t.dropoff_id)
       g.rows.push(t)
       // Prende lo status più avanzato: DONE > BUSY > CANCELLED > PLANNED
@@ -363,6 +365,12 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
 
   const routeLabel = g => {
     if (!g) return '–'
+    const st = g.service_type || ''
+    if (st === 'Multi-Pick' || st === 'Mix') {
+      const froms = (g.pickup_ids?.length > 1 ? g.pickup_ids : [g.pickup_id]).map(shortLoc).join(' / ')
+      const tos   = g.dropoff_ids.map(shortLoc).join(' / ')
+      return `${froms} → ${tos}`
+    }
     const from = shortLoc(g.pickup_id)
     const to   = g.dropoff_ids.map(shortLoc).join(' / ')
     return `${from} → ${to}`
