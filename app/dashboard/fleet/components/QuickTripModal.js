@@ -255,13 +255,8 @@ function AIBuilderTab({ vehicle, productionId, date, onDateChange, onCreated, on
     if (!text.trim()) return
     setLoading(true); setErr(''); setPreview(null)
 
-    // Estrai candidate crew e locations con fuzzy search
-    const crewCandidates = fuzzySearchCrew(crew, text)
-    const locCandidates  = fuzzySearchLocs(locations, text)
-
-    // Se non troviamo niente, mandiamo tutto (fino a 50 crew)
-    const crewContext = crewCandidates.length > 0 ? crewCandidates : crew.slice(0, 50)
-    const locContext  = locCandidates.length > 0  ? locCandidates  : locations.slice(0, 30)
+    const crewContext = crew
+    const locContext  = locations
 
     const systemPrompt = `You are a transportation coordinator assistant for film productions.
 Given a trip request in Italian or English, extract a structured itinerary.
