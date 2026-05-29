@@ -243,7 +243,7 @@ function AIBuilderTab({ vehicle, productionId, date, onDateChange, onCreated, on
   useEffect(() => {
     if (!productionId) return
     Promise.all([
-      supabase.from('crew').select('id, full_name, department, hotel_id, travel_status').eq('production_id', productionId).eq('active', true).order('full_name'),
+supabase.from('crew').select('id, full_name, department, hotel_id, travel_status').eq('production_id', productionId).order('full_name'),
       supabase.from('locations').select('id, name, lat, lng').eq('production_id', productionId).order('name'),
     ]).then(([cR, lR]) => {
       setCrew(cR.data || [])
@@ -506,7 +506,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
     if (!productionId) return
     Promise.all([
       supabase.from('locations').select('id, name, lat, lng').eq('production_id', productionId).order('name'),
-      supabase.from('crew').select('id, full_name, department, hotel_id, travel_status').eq('production_id', productionId).eq('active', true).order('full_name'),
+      supabase.from('crew').select('id, full_name, department, hotel_id, travel_status').eq('production_id', productionId).order('full_name'),
     ]).then(([lR, cR]) => {
       setLocations(lR.data || [])
       setCrew(cR.data || [])
