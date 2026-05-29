@@ -68,59 +68,30 @@ function LocationPicker({ locations, onSelect, onClose, title }) {
     : locations
 
   async function searchPlaces(q) {
-    if (!q || q.length < 3) { setPlacesResults([]); return }
+    if (!q || q.length < 2) { setPlacesResults([]); return }
     setPlacesLoading(true)
     try {
-      if (!window.google?.maps?.places) {
-        await loadGoogleMaps()
-      }
-      const service = new window.google.maps.places.AutocompleteService()
-      service.getPlacePredictions({ input: q, language: 'it' }, (predictions, status) => {
-        if (status === 'OK' && predictions) {
-          setPlacesResults(predictions.slice(0, 5))
-        } else {
-          setPlacesResults([])
-        }
-        setPlacesLoading(false)
-      })
+      const res = await fetch(`/api/places/autocomplete?q=${encodeURIComponent(q)}`)
+      const data = await res.json()
+      setPlacesResults(data.predictions ? data.predictions.slice(0, 5) : [])
     } catch {
-      setPlacesLoading(false)
+      setPlacesResults([])
     }
-  }
-
-  async function loadGoogleMaps() {
-    return new Promise((resolve, reject) => {
-      if (window.google?.maps) { resolve(); return }
-      const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
-      const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`
-      script.onload = resolve
-      script.onerror = reject
-      document.head.appendChild(script)
-    })
+    setPlacesLoading(false)
   }
 
   async function resolvePlace(placeId, description) {
     setPlacesLoading(true)
     try {
-      if (!window.google?.maps?.places) await loadGoogleMaps()
-      const geocoder = new window.google.maps.Geocoder()
-      geocoder.geocode({ placeId }, (results, status) => {
-        setPlacesLoading(false)
-        if (status === 'OK' && results[0]) {
-          const loc = results[0].geometry.location
-          onSelect({
-            id: null,
-            name: description,
-            lat: loc.lat(),
-            lng: loc.lng(),
-            is_temp: true,
-          })
-        }
-      })
+      const res = await fetch(`/api/places/details?place_id=${encodeURIComponent(placeId)}`)
+      const data = await res.json()
+      if (data.lat != null) {
+        onSelect({ id: null, name: description, lat: data.lat, lng: data.lng, is_temp: true })
+      }
     } catch {
-      setPlacesLoading(false)
+      // silent
     }
+    setPlacesLoading(false)
   }
 
   async function useGPS() {
