@@ -579,6 +579,8 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
   const [suggested,    setSuggested]   = useState([])
   const [search,       setSearch]      = useState('')
   const [callTime,     setCallTime]    = useState('08:00')
+  const [pickupTime,   setPickupTime]  = useState('08:00')
+  const [timeMode,     setTimeMode]    = useState('call')  // 'call' | 'pickup' | 'now'
   const [picker,       setPicker]      = useState(null)
   const [notify,       setNotify]      = useState(true)
   const [saving,       setSaving]      = useState(false)
@@ -706,6 +708,8 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
           pickupId, dropoffIds,
           passengerIds: selCrew.map(c => c.id),
           notifyDriver: notify,
+          ...(timeMode === 'pickup' ? { pickupTime } : {}),
+          ...(timeMode === 'now'    ? { pickupTime: `${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}`, pickupTimeIsNow: true } : {}),
         }),
       })
       const d = await res.json()
@@ -779,6 +783,8 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
         body: JSON.stringify({
           productionId, vehicleId: vehicle.id, date, callTime, serviceType,
           legs, notifyDriver: notify,
+          ...(timeMode === 'pickup' ? { pickupTime } : {}),
+          ...(timeMode === 'now'    ? { pickupTime: `${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}`, pickupTimeIsNow: true } : {}),
         }),
       })
       const d = await res.json()
@@ -853,15 +859,41 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
     <>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-      {/* Date + Time */}
+      {/* Date + Time Toggle */}
       <div style={{ display: 'flex', gap: '10px' }}>
         <div style={{ flex: 1 }}>
           <label style={lbl}>Date</label>
           <input type="date" value={date} onChange={e => onDateChange(e.target.value)} style={inp} />
         </div>
         <div style={{ flex: 1 }}>
-          <label style={lbl}>Time</label>
-          <input type="time" value={callTime} onChange={e => setCallTime(e.target.value)} style={{ ...inp, fontWeight: '700', textAlign: 'center' }} />
+          <label style={lbl}>Time Mode</label>
+          <div style={{ display: 'flex', borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden', background: '#f1f5f9' }}>
+            {[
+              { key: 'call',   label: '🕐 Call' },
+              { key: 'pickup', label: '🚗 Pickup' },
+              { key: 'now',    label: '⚡ Now' },
+            ].map(opt => (
+              <button key={opt.key} onClick={() => setTimeMode(opt.key)} style={{
+                flex: 1, padding: '8px 4px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                background: timeMode === opt.key ? '#2563eb' : 'transparent',
+                color: timeMode === opt.key ? 'white' : '#64748b',
+                transition: 'background 0.15s',
+              }}>{opt.label}</button>
+            ))}
+          </div>
+          {timeMode !== 'now' && (
+            <input
+              type="time"
+              value={timeMode === 'call' ? callTime : pickupTime}
+              onChange={e => timeMode === 'call' ? setCallTime(e.target.value) : setPickupTime(e.target.value)}
+              style={{ ...inp, fontWeight: '700', textAlign: 'center', marginTop: '6px' }}
+            />
+          )}
+          {timeMode === 'now' && (
+            <div style={{ marginTop: '6px', padding: '8px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '12px', color: '#15803d', fontWeight: '700', textAlign: 'center' }}>
+              ⚡ Departs immediately
+            </div>
+          )}
         </div>
       </div>
 

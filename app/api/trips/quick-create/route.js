@@ -12,7 +12,7 @@ function timeStrToMin(str) {
 
 export async function POST(request) {
   try {
-    const { productionId, vehicleId, date, callTime, serviceType, pickupId, dropoffIds, passengerIds, notifyDriver, legs } = await request.json()
+    const { productionId, vehicleId, date, callTime, pickupTime, serviceType, pickupId, dropoffIds, passengerIds, notifyDriver, legs } = await request.json()
 
     const isLegsMode = Array.isArray(legs) && legs.length > 0
 
@@ -78,17 +78,21 @@ export async function POST(request) {
       const durMins = await Promise.all(legs.map(l => getLegDurMin(l.pickupId, l.dropoffId)))
 
       const [y, mo, dd] = date.split('-').map(Number)
-      const callMin = timeStrToMin(callTime)
-      const callIsPickup = ['Wrap', 'Charter', 'Other'].includes(serviceType)
+      const hasPickupTime = !!pickupTime
+      const callIsPickup = ['Wrap', 'Charter', 'Other'].includes(serviceType) || hasPickupTime
+      const callMin = hasPickupTime ? null : timeStrToMin(callTime)
+      const forcedPickupMin = hasPickupTime ? timeStrToMin(pickupTime) : null
       const tripGroupId = crypto.randomUUID()
       const now = new Date()
       const tripId = 'Q_' + pad2(now.getHours()) + pad2(now.getMinutes()) + pad2(now.getSeconds())
 
       const rows = legs.map((leg, i) => {
         const durMin = durMins[i]
-        const pickupMin = callMin !== null
-          ? (callIsPickup ? callMin : ((callMin - durMin) % 1440 + 1440) % 1440)
-          : null
+        const pickupMin = forcedPickupMin !== null
+          ? forcedPickupMin
+          : callMin !== null
+            ? (callIsPickup ? callMin : ((callMin - durMin) % 1440 + 1440) % 1440)
+            : null
         const startMs = pickupMin !== null
           ? new Date(y, mo - 1, dd, Math.floor(pickupMin / 60), pickupMin % 60, 0, 0).getTime()
           : null
@@ -197,10 +201,12 @@ export async function POST(request) {
     const passengerList = passengerNames.join(', ') || null
 
     // 5. Calcola tempi base
-    const callMin = timeStrToMin(callTime)
+    const hasPickupTime = !!pickupTime
+    const callIsPickup = ['Wrap', 'Charter', 'Other'].includes(serviceType) || hasPickupTime
+    const callMin = hasPickupTime ? null : timeStrToMin(callTime)
+    const forcedPickupMin = hasPickupTime ? timeStrToMin(pickupTime) : null
     const now = new Date()
     const tripId = 'Q_' + pad2(now.getHours()) + pad2(now.getMinutes()) + pad2(now.getSeconds())
-    const callIsPickup = ['Wrap', 'Charter', 'Other'].includes(serviceType)
     const tripGroupId = crypto.randomUUID()
 
     // 6. Calcola duration_min per ogni dropoff separatamente
@@ -221,9 +227,11 @@ export async function POST(request) {
     const [y, mo, dd] = date.split('-').map(Number)
     const rows = dropoffIds.map((dropoffId, i) => {
       const durMin = durMins[i]
-      const pickupMin = callMin !== null
-        ? (callIsPickup ? callMin : ((callMin - durMin) % 1440 + 1440) % 1440)
-        : null
+      const pickupMin = forcedPickupMin !== null
+        ? forcedPickupMin
+        : callMin !== null
+          ? (callIsPickup ? callMin : ((callMin - durMin) % 1440 + 1440) % 1440)
+          : null
       const startMs = pickupMin !== null
         ? new Date(y, mo - 1, dd, Math.floor(pickupMin / 60), pickupMin % 60, 0, 0).getTime()
         : null
