@@ -738,6 +738,23 @@ export default function CaptainGoPage() {
     setMapTrip(trip)
   }
 
+  function groupTrips(trips) {
+    const groups = []
+    const seen = new Set()
+    for (const trip of trips) {
+      if (!trip.trip_group_id || trips.filter(t => t.trip_group_id === trip.trip_group_id).length === 1) {
+        groups.push({ type: 'single', trip })
+      } else if (!seen.has(trip.trip_group_id)) {
+        seen.add(trip.trip_group_id)
+        const legs = trips.filter(t => t.trip_group_id === trip.trip_group_id).sort((a, b) => (a.leg_order || 0) - (b.leg_order || 0))
+        groups.push({ type: 'group', trip_group_id: trip.trip_group_id, legs })
+      }
+    }
+    return groups
+  }
+
+  const tripGroups = groupTrips(trips)
+
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
 
@@ -841,7 +858,6 @@ export default function CaptainGoPage() {
         </div>
       )}
 
-      {/* Trips del giorno */}
       <div style={{ padding: '20px 20px 0' }}>
         <div style={{ fontSize: '11px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
           {trips.length > 0 ? `${trips.length} Trip${trips.length !== 1 ? 's' : ''} Today` : 'No Trips Today'}
@@ -856,154 +872,169 @@ export default function CaptainGoPage() {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {trips.map((trip, idx) => {
-            const pickup  = locsMap[trip.pickup_id]
-            const dropoff = locsMap[trip.dropoff_id]
-            const cls     = CLS_COLOR[trip.transfer_class] || CLS_COLOR.STANDARD
-            const isDone  = trip.status === 'DONE' || trip.status === 'COMPLETED'
-            const isBusy  = trip.status === 'BUSY' || trip.status === 'IN_PROGRESS' || trip.status === 'ACTIVE'
+          {tripGroups.map((group, gIdx) => {
+
+            // ── SINGLE TRIP CARD (invariata) ──────────────────────────
+            if (group.type === 'single') {
+              const trip    = group.trip
+              const pickup  = locsMap[trip.pickup_id]
+              const dropoff = locsMap[trip.dropoff_id]
+              const cls     = CLS_COLOR[trip.transfer_class] || CLS_COLOR.STANDARD
+              const isDone  = trip.status === 'DONE' || trip.status === 'COMPLETED'
+              const isBusy  = trip.status === 'BUSY' || trip.status === 'IN_PROGRESS' || trip.status === 'ACTIVE'
+
+              return (
+                <div key={trip.id || gIdx} style={{ background: 'white', borderRadius: '14px', border: `1px solid ${isBusy ? '#fde68a' : isDone ? '#bbf7d0' : '#e2e8f0'}`, borderLeft: `5px solid ${isBusy ? '#f59e0b' : isDone ? '#22c55e' : cls.dot}`, padding: '14px 16px', opacity: isDone ? 0.6 : 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>{minToHHMM(trip.pickup_min ?? trip.call_min)}</span>
+                      <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '999px', background: '#f1f5f9', color: '#475569' }}>{cls.label}</span>
+                      {trip.service_type && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{trip.service_type}</span>}
+                    </div>
+                    <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>#{trip.trip_id}</span>
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '6px', lineHeight: 1.4 }}>
+                    {pickup?.name || trip.pickup_id || '–'} → {dropoff?.name || trip.dropoff_id || '–'}
+                  </div>
+                  {(trip.passenger_list || trip.pax_count > 0) && (
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>👥 {trip.passenger_list || `${trip.pax_count} pax`}</div>
+                  )}
+                  {!isDone && !isBusy && session && (
+                    <button onClick={() => handleStartTrip(trip)} disabled={tripAction === trip.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === trip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: dropoff ? '8px' : '0' }}>
+                      {tripAction === trip.id ? '⏳...' : '▶ Start Trip'}
+                    </button>
+                  )}
+                  {isBusy && (
+                    <button onClick={() => handleArrived(trip)} disabled={tripAction === trip.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === trip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: dropoff ? '8px' : '0' }}>
+                      {tripAction === trip.id ? '⏳...' : '✅ Arrived'}
+                    </button>
+                  )}
+                  {!isDone && dropoff && (
+                    <button onClick={() => isBusy ? navigateAndTrack(trip) : openMaps(trip)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: isBusy ? '#0f2340' : '#475569', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      {isBusy ? '🗺 Naviga' : '🗺 Navigate to ' + dropoff?.name}
+                    </button>
+                  )}
+                  {!isDone && dropoff && (() => {
+                    const td = trafficData[trip.id]
+                    const badgeColor = td?.severity === 'CRITICAL' ? '#dc2626' : td?.severity === 'WARNING' ? '#d97706' : td?.severity === 'INFO' ? '#2563eb' : td?.severity === 'OK' ? '#15803d' : '#64748b'
+                    const badgeBg = td?.severity === 'CRITICAL' ? '#fef2f2' : td?.severity === 'WARNING' ? '#fffbeb' : td?.severity === 'INFO' ? '#eff6ff' : td?.severity === 'OK' ? '#f0fdf4' : '#f8fafc'
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                        <button onClick={async () => { setTrafficData(p => ({ ...p, [trip.id]: { ...p[trip.id], loading: true } })); try { const res = await fetch('/api/go/traffic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, trip_id: trip.id }) }); const d = await res.json(); setTrafficData(p => ({ ...p, [trip.id]: { ...d, loading: false } })) } catch { setTrafficData(p => ({ ...p, [trip.id]: { loading: false, error: true } })) } }} disabled={td?.loading} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: td?.loading ? '#f1f5f9' : badgeBg, color: td?.loading ? '#94a3b8' : badgeColor, fontSize: '12px', fontWeight: '800', cursor: td?.loading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', border: `1px solid ${td?.loading ? '#e2e8f0' : badgeColor}22` }}>
+                          {td?.loading ? '⏳ Checking...' : td?.severity === 'OK' ? '🟢 No delays' : td?.severity === 'INFO' ? `🔵 +${td.delayMin}min` : td?.severity === 'WARNING' ? `🟡 +${td.delayMin}min` : td?.severity === 'CRITICAL' ? `🔴 +${td.delayMin}min` : '🚦 Check Traffic'}
+                        </button>
+                        {td?.incidents?.length > 0 && <span style={{ fontSize: '10px', color: badgeColor, fontWeight: '700' }}>{td.incidents[0]}</span>}
+                      </div>
+                    )
+                  })()}
+                  {isDone && <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', textAlign: 'center' }}>✅ Completed</div>}
+                </div>
+              )
+            }
+
+            // ── GROUP CARD (Multi-Pick / Multi-Drop / Mix) ────────────
+            const { legs } = group
+            const doneLegCount = legs.filter(l => l.status === 'DONE' || l.status === 'COMPLETED').length
+            const activeLeg    = legs.find(l => l.status === 'BUSY' || l.status === 'IN_PROGRESS' || l.status === 'ACTIVE')
+              || legs.find(l => l.status === 'PLANNED')
+            const allDone      = doneLegCount === legs.length
+            const firstLeg     = legs[0]
+            const serviceLabel = firstLeg.service_type || 'Multi-leg'
+
+            // Determina se Mix ha sezioni pickup/dropoff separate
+            const isMix = serviceLabel === 'Mix'
+            const pickupLegs  = isMix ? legs.filter((_, i) => i < Math.ceil(legs.length / 2)) : legs
+            const dropoffLegs = isMix ? legs.filter((_, i) => i >= Math.ceil(legs.length / 2)) : []
+
+            // Prossima destinazione
+            const nextDest = activeLeg ? (locsMap[activeLeg.dropoff_id]?.name || activeLeg.dropoff_id) : null
+
+            function renderLeg(leg, absoluteIndex) {
+              const isDoneLeg  = leg.status === 'DONE' || leg.status === 'COMPLETED'
+              const isBusyLeg  = leg.status === 'BUSY' || leg.status === 'IN_PROGRESS' || leg.status === 'ACTIVE'
+              const isActiveLeg = activeLeg?.id === leg.id
+              const pickup  = locsMap[leg.pickup_id]
+              const dropoff = locsMap[leg.dropoff_id]
+
+              return (
+                <div key={leg.id} style={{ display: 'flex', gap: '10px', padding: '7px 0', borderBottom: '1px solid #f8fafc' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '2px', width: '22px', flexShrink: 0 }}>
+                    <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: isDoneLeg ? '#dcfce7' : isActiveLeg ? '#f59e0b' : '#eff6ff', color: isDoneLeg ? '#15803d' : isActiveLeg ? 'white' : '#1d4ed8', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {isDoneLeg ? '✓' : absoluteIndex + 1}
+                    </div>
+                    {absoluteIndex < legs.length - 1 && <div style={{ width: '1px', flex: 1, background: '#e2e8f0', margin: '3px 0', minHeight: '10px' }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', lineHeight: 1.4, marginBottom: '2px' }}>
+                      {pickup?.name || leg.pickup_id || '–'} → {dropoff?.name || leg.dropoff_id || '–'}
+                    </div>
+                    {leg.passenger_list && <div style={{ fontSize: '11px', color: '#64748b' }}>{leg.passenger_list}</div>}
+                  </div>
+                  <div style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', alignSelf: 'flex-start', marginTop: '2px', flexShrink: 0, background: isDoneLeg ? '#f0fdf4' : isActiveLeg ? '#fffbeb' : '#eff6ff', color: isDoneLeg ? '#15803d' : isActiveLeg ? '#b45309' : '#1d4ed8' }}>
+                    {isDoneLeg ? 'Done' : isActiveLeg ? 'In corso' : 'Dopo'}
+                  </div>
+                </div>
+              )
+            }
 
             return (
-              <div key={trip.id || idx} style={{
-                background: 'white',
-                borderRadius: '14px',
-                border: `1px solid ${isBusy ? '#fde68a' : isDone ? '#bbf7d0' : '#e2e8f0'}`,
-                borderLeft: `5px solid ${isBusy ? '#f59e0b' : isDone ? '#22c55e' : cls.dot}`,
-                padding: '14px 16px',
-                opacity: isDone ? 0.6 : 1,
-              }}>
+              <div key={group.trip_group_id} style={{ background: 'white', borderRadius: '14px', border: `1px solid ${activeLeg && (activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS') ? '#fde68a' : allDone ? '#bbf7d0' : '#e2e8f0'}`, overflow: 'hidden' }}>
 
-                {/* Riga 1: orario + badge */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>
-                      {minToHHMM(trip.pickup_min ?? trip.call_min)}
-                    </span>
-                    <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '999px', background: '#f1f5f9', color: '#475569' }}>
-                      {cls.label}
-                    </span>
-                    {trip.service_type && (
-                      <span style={{ fontSize: '10px', color: '#94a3b8' }}>{trip.service_type}</span>
+                {/* Header gruppo */}
+                <div style={{ background: '#0f2340', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ color: 'white', fontSize: '13px', fontWeight: '700' }}>
+                    {serviceLabel} · {minToHHMM(firstLeg.pickup_min ?? firstLeg.call_min)}
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontFamily: 'monospace' }}>#{firstLeg.trip_id}</div>
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ padding: '6px 14px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '11px', color: '#64748b', flexShrink: 0 }}>{doneLegCount} / {legs.length} fermate</span>
+                  <div style={{ flex: 1, height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: '#22c55e', borderRadius: '2px', width: `${legs.length > 0 ? (doneLegCount / legs.length) * 100 : 0}%`, transition: 'width 0.3s' }} />
+                  </div>
+                  {nextDest && !allDone && (
+                    <span style={{ fontSize: '10px', fontWeight: '600', color: activeLeg && (activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS') ? '#b45309' : '#64748b', flexShrink: 0 }}>→ {nextDest}</span>
+                  )}
+                </div>
+
+                {/* Legs */}
+                <div style={{ padding: '8px 14px' }}>
+                  {isMix && pickupLegs.length > 0 && (
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 0 2px' }}>📥 Pickup</div>
+                  )}
+                  {(isMix ? pickupLegs : legs).map((leg, i) => renderLeg(leg, i))}
+                  {isMix && dropoffLegs.length > 0 && (
+                    <>
+                      <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 0 2px' }}>📤 Dropoff</div>
+                      {dropoffLegs.map((leg, i) => renderLeg(leg, pickupLegs.length + i))}
+                    </>
+                  )}
+                </div>
+
+                {/* Azioni */}
+                {!allDone && activeLeg && session && (
+                  <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {(activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS' || activeLeg.status === 'ACTIVE') ? (
+                      <button onClick={() => handleArrived(activeLeg)} disabled={tripAction === activeLeg.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === activeLeg.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === activeLeg.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        {tripAction === activeLeg.id ? '⏳...' : `✅ Arrived — ${locsMap[activeLeg.dropoff_id]?.name || ''}`}
+                      </button>
+                    ) : (
+                      <button onClick={() => handleStartTrip(activeLeg)} disabled={tripAction === activeLeg.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === activeLeg.id ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === activeLeg.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        {tripAction === activeLeg.id ? '⏳...' : '▶ Start Trip'}
+                      </button>
+                    )}
+                    {locsMap[activeLeg.dropoff_id] && (
+                      <button onClick={() => (activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS' || activeLeg.status === 'ACTIVE') ? navigateAndTrack(activeLeg) : openMaps(activeLeg)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        🗺 Navigate → {locsMap[activeLeg.dropoff_id]?.name}
+                      </button>
                     )}
                   </div>
-                  <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>
-                    #{trip.trip_id}
-                  </span>
-                </div>
-
-                {/* Rotta */}
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '6px', lineHeight: 1.4 }}>
-                  {pickup?.name || trip.pickup_id || '–'} → {dropoff?.name || trip.dropoff_id || '–'}
-                </div>
-
-                {/* Passeggeri */}
-                {(trip.passenger_list || trip.pax_count > 0) && (
-                  <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>
-                    👥 {trip.passenger_list || `${trip.pax_count} pax`}
-                  </div>
                 )}
-
-                {/* Bottoni azione trip */}
-                {!isDone && !isBusy && session && (
-                  <button
-                    onClick={() => handleStartTrip(trip)}
-                    disabled={tripAction === trip.id}
-                    style={{
-                      width: '100%', padding: '10px', borderRadius: '10px',
-                      border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#16a34a',
-                      color: 'white', fontSize: '14px', fontWeight: '800',
-                      cursor: tripAction === trip.id ? 'default' : 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      marginBottom: dropoff ? '8px' : '0',
-                    }}>
-                    {tripAction === trip.id ? '⏳...' : '▶ Start Trip'}
-                  </button>
-                )}
-                {isBusy && (
-                  <button
-                    onClick={() => handleArrived(trip)}
-                    disabled={tripAction === trip.id}
-                    style={{
-                      width: '100%', padding: '10px', borderRadius: '10px',
-                      border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#f59e0b',
-                      color: 'white', fontSize: '14px', fontWeight: '800',
-                      cursor: tripAction === trip.id ? 'default' : 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      marginBottom: dropoff ? '8px' : '0',
-                    }}>
-                    {tripAction === trip.id ? '⏳...' : '✅ Arrived'}
-                  </button>
-                )}
-                {!isDone && dropoff && (
-                  <button
-                    onClick={() => isBusy ? navigateAndTrack(trip) : openMaps(trip)}
-                    style={{
-                      width: '100%', padding: '10px', borderRadius: '10px',
-                      border: 'none', background: isBusy ? '#0f2340' : '#475569',
-                      color: 'white', fontSize: '14px', fontWeight: '800',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', gap: '8px',
-                    }}>
-                    {isBusy ? '🗺 Naviga' : '🗺 Navigate to ' + dropoff?.name}
-                  </button>
-                )}
-                {!isDone && dropoff && (() => {
-                  const td = trafficData[trip.id]
-                  const badgeColor = td?.severity === 'CRITICAL' ? '#dc2626'
-                    : td?.severity === 'WARNING' ? '#d97706'
-                    : td?.severity === 'INFO' ? '#2563eb'
-                    : td?.severity === 'OK' ? '#15803d'
-                    : '#64748b'
-                  const badgeBg = td?.severity === 'CRITICAL' ? '#fef2f2'
-                    : td?.severity === 'WARNING' ? '#fffbeb'
-                    : td?.severity === 'INFO' ? '#eff6ff'
-                    : td?.severity === 'OK' ? '#f0fdf4'
-                    : '#f8fafc'
-                  return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-                      <button
-                        onClick={async () => {
-                          setTrafficData(p => ({ ...p, [trip.id]: { ...p[trip.id], loading: true } }))
-                          try {
-                            const res = await fetch('/api/go/traffic', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ token, trip_id: trip.id }),
-                            })
-                            const d = await res.json()
-                            setTrafficData(p => ({ ...p, [trip.id]: { ...d, loading: false } }))
-                          } catch {
-                            setTrafficData(p => ({ ...p, [trip.id]: { loading: false, error: true } }))
-                          }
-                        }}
-                        disabled={td?.loading}
-                        style={{
-                          padding: '6px 12px', borderRadius: '8px', border: 'none',
-                          background: td?.loading ? '#f1f5f9' : badgeBg,
-                          color: td?.loading ? '#94a3b8' : badgeColor,
-                          fontSize: '12px', fontWeight: '800', cursor: td?.loading ? 'default' : 'pointer',
-                          display: 'flex', alignItems: 'center', gap: '6px',
-                          border: `1px solid ${td?.loading ? '#e2e8f0' : badgeColor}22`,
-                        }}>
-                        {td?.loading ? '⏳ Checking...'
-                          : td?.severity === 'OK' ? '🟢 No delays'
-                          : td?.severity === 'INFO' ? `🔵 +${td.delayMin}min`
-                          : td?.severity === 'WARNING' ? `🟡 +${td.delayMin}min`
-                          : td?.severity === 'CRITICAL' ? `🔴 +${td.delayMin}min`
-                          : '🚦 Check Traffic'}
-                      </button>
-                      {td?.incidents?.length > 0 && (
-                        <span style={{ fontSize: '10px', color: badgeColor, fontWeight: '700' }}>
-                          {td.incidents[0]}
-                        </span>
-                      )}
-                    </div>
-                  )
-                })()}
-                {isDone && (
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', textAlign: 'center' }}>
-                    ✅ Completed
-                  </div>
+                {allDone && (
+                  <div style={{ padding: '10px 14px', fontSize: '12px', fontWeight: '700', color: '#15803d', textAlign: 'center' }}>✅ All stops completed</div>
                 )}
               </div>
             )
