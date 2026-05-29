@@ -375,17 +375,15 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
         let dropoffId = leg.dropoff_id
 
         // Salva location temp dal picker AI
-        if (leg._pickup_temp && !leg.pickup_id.startsWith('TEMP_')) {
-          // già un ID reale da location salvata
-        } else if (leg._pickup_temp) {
-          const { data, error } = await supabase.from('locations').insert({ production_id: productionId, name: leg._pickup_temp.name, lat: leg._pickup_temp.lat, lng: leg._pickup_temp.lng, is_temp: true }).select('id').single()
+        if (leg._pickup_temp) {
+          const tmpId = 'TMP_' + Date.now() + '_P'
+          const { data, error } = await supabase.from('locations').insert({ id: tmpId, production_id: productionId, name: leg._pickup_temp.name, lat: leg._pickup_temp.lat, lng: leg._pickup_temp.lng, is_temp: true }).select('id').single()
           if (error) { setErr('Failed to save pickup location'); setSaving(false); return }
           pickupId = data.id
         }
-        if (leg._dropoff_temp && !leg.dropoff_id.startsWith('TEMP_')) {
-          // già un ID reale
-        } else if (leg._dropoff_temp) {
-          const { data, error } = await supabase.from('locations').insert({ production_id: productionId, name: leg._dropoff_temp.name, lat: leg._dropoff_temp.lat, lng: leg._dropoff_temp.lng, is_temp: true }).select('id').single()
+        if (leg._dropoff_temp) {
+          const tmpId = 'TMP_' + Date.now() + '_D'
+          const { data, error } = await supabase.from('locations').insert({ id: tmpId, production_id: productionId, name: leg._dropoff_temp.name, lat: leg._dropoff_temp.lat, lng: leg._dropoff_temp.lng, is_temp: true }).select('id').single()
           if (error) { setErr('Failed to save dropoff location'); setSaving(false); return }
           dropoffId = data.id
         }
@@ -666,10 +664,10 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
 
   async function ensureTempLocation(loc) {
     if (!loc || !loc.is_temp) return loc?.id || null
-    // Save as is_temp location in Supabase
+    const tmpId = 'TMP_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
     const { data, error } = await supabase
       .from('locations')
-      .insert({ production_id: productionId, name: loc.name, lat: loc.lat, lng: loc.lng, is_temp: true })
+      .insert({ id: tmpId, production_id: productionId, name: loc.name, lat: loc.lat, lng: loc.lng, is_temp: true })
       .select('id')
       .single()
     if (error) throw new Error('Failed to save custom location')
