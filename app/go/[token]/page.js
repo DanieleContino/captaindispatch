@@ -634,6 +634,12 @@ export default function CaptainGoPage() {
 
   const { driver, vehicle, trips, locsMap, session, today } = data
 
+  // Ritorna ETA label se disponibile
+  function etaLabel(trip) {
+    if (!trip.eta_to_pickup_min) return null
+    return `🚗 ${trip.eta_to_pickup_min} min to pickup${trip.eta_to_pickup_km ? ` · ${trip.eta_to_pickup_km} km` : ''}`
+  }
+
   async function handleStartSession() {
     if (starting || session) return
     setStarting(true)
@@ -897,7 +903,12 @@ export default function CaptainGoPage() {
                     {pickup?.name || trip.pickup_id || '–'} → {dropoff?.name || trip.dropoff_id || '–'}
                   </div>
                   {(trip.passenger_list || trip.pax_count > 0) && (
-                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '10px' }}>👥 {trip.passenger_list || `${trip.pax_count} pax`}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>👥 {trip.passenger_list || `${trip.pax_count} pax`}</div>
+                  )}
+                  {!isDone && !isBusy && etaLabel(trip) && (
+                    <div style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: '700', marginBottom: '10px', padding: '5px 8px', background: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                      {etaLabel(trip)}
+                    </div>
                   )}
                   {!isDone && !isBusy && session && (
                     <button onClick={() => handleStartTrip(trip)} disabled={tripAction === trip.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === trip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: dropoff ? '8px' : '0' }}>

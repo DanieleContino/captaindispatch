@@ -42,23 +42,71 @@ export async function POST(request) {
     .eq('id', trip_id)
     .single()
 
-  // 3. Calcola estimated_km via Distance Matrix API
+  // 2b. Leggi posizione attuale del driver dalla sessione attiva
+  let driverLat = null
+  let driverLng = null
+  try {
+    let sessionQ = supabase
+      .from('vehicle_tracking_sessions')
+      .select('last_lat, last_lng')
+      .eq('production_id', driver.production_id)
+      .neq('status', 'ENDED')
+      .order('started_at', { ascending: false })
+      .limit(1)
+    if (driverType === 'NCC') {
+      sessionQ = sessionQ.eq('ncc_driver_id', driver.id)
+    } else {
+      const { data: driverVehicle } = await supabase
+        .from('vehicles')
+        .select('id')
+        .eq('production_id', driver.production_id)
+        .eq('driver_crew_id', driver.id)
+        .eq('active', true)
+        .single()
+      if (driverVehicle) sessionQ = sessionQ.eq('vehicle_id', driverVehicle.id)
+    }
+    const { data: driverSession } = await sessionQ.single()
+    if (driverSession?.last_lat && driverSession?.last_lng) {
+      driverLat = driverSession.last_lat
+      driverLng = driverSession.last_lng
+    }
+  } catch {}
+
+  // 3. Calcola estimated_km (pickup→dropoff) e ETA driver→pickup via Distance Matrix API
   let estimatedKm = null
+  let etaToPickupMin = null
+  let etaToPickupKm = null
+
   if (tripRow?.pickup_id && tripRow?.dropoff_id) {
+    const locIds = [tripRow.pickup_id, tripRow.dropoff_id]
     const { data: locs } = await supabase
       .from('locations')
       .select('id, lat, lng')
-      .in('id', [tripRow.pickup_id, tripRow.dropoff_id])
+      .in('id', locIds)
     const pickup  = locs?.find(l => l.id === tripRow.pickup_id)
     const dropoff = locs?.find(l => l.id === tripRow.dropoff_id)
+    const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+    // estimated_km: pickup → dropoff
     if (pickup?.lat && pickup?.lng && dropoff?.lat && dropoff?.lng) {
       try {
-        const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
         const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${pickup.lat},${pickup.lng}&destinations=${dropoff.lat},${dropoff.lng}&mode=driving&key=${mapsKey}`
         const res  = await fetch(url)
         const data = await res.json()
         const meters = data?.rows?.[0]?.elements?.[0]?.distance?.value
-        if (meters) estimatedKm = Math.round(meters / 100) / 10 // es. 12.3 km
+        if (meters) estimatedKm = Math.round(meters / 100) / 10
+      } catch {}
+    }
+
+    // eta_to_pickup: driver position → pickup
+    if (driverLat && driverLng && pickup?.lat && pickup?.lng) {
+      try {
+        const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${driverLat},${driverLng}&destinations=${pickup.lat},${pickup.lng}&mode=driving&key=${mapsKey}`
+        const res  = await fetch(url)
+        const data = await res.json()
+        const el = data?.rows?.[0]?.elements?.[0]
+        if (el?.duration?.value) etaToPickupMin = Math.ceil(el.duration.value / 60)
+        if (el?.distance?.value) etaToPickupKm  = Math.round(el.distance.value / 100) / 10
       } catch {}
     }
   }
@@ -66,7 +114,13 @@ export async function POST(request) {
   // Aggiorna tutte le rows con lo stesso trip_id
   const { error: tripErr } = await supabase
     .from('trips')
-    .update({ status: 'BUSY', started_at: new Date().toISOString(), ...(estimatedKm !== null && { estimated_km: estimatedKm }) })
+    .update({
+      status: 'BUSY',
+      started_at: new Date().toISOString(),
+      ...(estimatedKm    !== null && { estimated_km: estimatedKm }),
+      ...(etaToPickupMin !== null && { eta_to_pickup_min: etaToPickupMin }),
+      ...(etaToPickupKm  !== null && { eta_to_pickup_km: etaToPickupKm }),
+    })
     .eq('trip_id', tripRow?.trip_id || trip_id)
     .eq('production_id', driver.production_id)
 
