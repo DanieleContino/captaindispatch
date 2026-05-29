@@ -742,39 +742,55 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
           }))
         )
       } else if (serviceType === 'Mix') {
-        const pickupLegs = await Promise.all(
+        // Risolvi location IDs per pickup e dropoff rows
+        const resolvedPickups = await Promise.all(
           pickupRows.filter(rowIsValid).map(async row => ({
-            pickupId:    row.locTemp ? await ensureTempLocation(row.locTemp) : row.locId,
-            dropoffId:   null,
-            passengerIds: row.personId ? [row.personId] : [],
-            _isMixPickup: true,
+            locId:      row.locTemp ? await ensureTempLocation(row.locTemp) : row.locId,
+            personId:   row.personId,
           }))
         )
-        const dropoffLegs = await Promise.all(
+        const resolvedDropoffs = await Promise.all(
           dropoffRows.filter(rowIsValid).map(async row => ({
-            pickupId:    null,
-            dropoffId:   row.locTemp ? await ensureTempLocation(row.locTemp) : row.locId,
-            passengerIds: row.personId ? [row.personId] : [],
-            _isMixPickup: false,
+            locId:    row.locTemp ? await ensureTempLocation(row.locTemp) : row.locId,
+            personId: row.personId,
           }))
         )
-        // Mix: abbina pickup e dropoff in ordine, il dropoffId dei pickup leg = primo dropoff disponibile
-        // Struttura semplificata: tutti i pickup leg prima, poi tutti i dropoff leg
-        // Ogni pickup leg ha dropoffId = il dropoff della stessa persona se trovato, altrimenti primo dropoff
-        const dropoffMap = {}
-        dropoffLegs.forEach(dl => { if (dl.passengerIds[0]) dropoffMap[dl.passengerIds[0]] = dl.dropoffId })
-        legs = [
-          ...pickupLegs.map(pl => ({
-            pickupId:    pl.pickupId,
-            dropoffId:   dropoffMap[pl.passengerIds[0]] || dropoffLegs[0]?.dropoffId || pl.pickupId,
-            passengerIds: pl.passengerIds,
-          })),
-          ...dropoffLegs.map(dl => ({
-            pickupId:    pickupLegs[pickupLegs.length - 1]?.pickupId || dl.dropoffId,
-            dropoffId:   dl.dropoffId,
-            passengerIds: dl.passengerIds,
-          })),
-        ]
+
+        // Struttura corretta Mix:
+        // Leg 1..N-1: hotel[i] → hotel[i+1]  (pax = persone da pickup[0] a pickup[i])
+        // Leg N:      lastHotel → firstDropoff (tutti i pax)
+        // Leg N+1..M: dropoff[j] → dropoff[j+1] (pax = persone che devono ancora scendere)
+
+        const pickupPersonIds = resolvedPickups.map(r => r.personId).filter(Boolean)
+        const dropoffPersonIds = resolvedDropoffs.map(r => r.personId).filter(Boolean)
+
+        // Leg pickup: hotel[i] → hotel[i+1]
+        // pax accumulati: pickup[0..i]
+        for (let i = 0; i < resolvedPickups.length - 1; i++) {
+          legs.push({
+            pickupId:    resolvedPickups[i].locId,
+            dropoffId:   resolvedPickups[i + 1].locId,
+            passengerIds: resolvedPickups.slice(0, i + 1).map(r => r.personId).filter(Boolean),
+          })
+        }
+
+        // Leg ponte: lastHotel → firstDropoff (tutti i pax a bordo)
+        legs.push({
+          pickupId:    resolvedPickups[resolvedPickups.length - 1].locId,
+          dropoffId:   resolvedDropoffs[0].locId,
+          passengerIds: [...pickupPersonIds],
+        })
+
+        // Leg dropoff: dropoff[j] → dropoff[j+1]
+        // pax residui: quelli che non sono ancora scesi
+        for (let j = 0; j < resolvedDropoffs.length - 1; j++) {
+          const alreadyDropped = resolvedDropoffs.slice(0, j + 1).map(r => r.personId)
+          legs.push({
+            pickupId:    resolvedDropoffs[j].locId,
+            dropoffId:   resolvedDropoffs[j + 1].locId,
+            passengerIds: pickupPersonIds.filter(id => !alreadyDropped.includes(id)),
+          })
+        }
       }
 
       const res = await fetch('/api/trips/quick-create', {
