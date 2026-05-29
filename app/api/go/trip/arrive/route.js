@@ -35,14 +35,16 @@ export async function POST(request) {
 
   if (!driver) return Response.json({ error: 'Invalid token' }, { status: 404 })
 
-  // 2. Trova trip_id testuale dalla row UUID
-  const { data: tripRow } = await supabase
+  // 2. Carica il leg corrente
+  const { data: currentLeg } = await supabase
     .from('trips')
-    .select('trip_id')
+    .select('id, trip_id, trip_group_id, leg_order, service_type, status, production_id')
     .eq('id', trip_id)
     .single()
 
-  // 3. Recupera sessione attiva (prima di aggiornare il trip)
+  if (!currentLeg) return Response.json({ error: 'Trip not found' }, { status: 404 })
+
+  // 3. Recupera sessione attiva
   let sessionQuery = supabase
     .from('vehicle_tracking_sessions')
     .select('id')
@@ -91,21 +93,75 @@ export async function POST(request) {
     }
   }
 
-  // 5. Aggiorna tutte le rows con lo stesso trip_id
-  const { error: tripErr } = await supabase
-    .from('trips')
-    .update({ status: 'DONE', arrived_at: new Date().toISOString(), ...(actualKm !== null && { actual_km: actualKm }) })
-    .eq('trip_id', tripRow?.trip_id || trip_id)
-    .eq('production_id', driver.production_id)
+  const now = new Date().toISOString()
 
-  if (tripErr) return Response.json({ error: tripErr.message }, { status: 500 })
+  // 5. Logica multi-leg vs single
+  const isMultiLeg = currentLeg.trip_group_id && true
 
-  // 6. Aggiorna sessione → STANDBY
-  if (session) {
+  if (isMultiLeg) {
+    // Carica tutti i leg del gruppo ordinati
+    const { data: allLegs } = await supabase
+      .from('trips')
+      .select('id, leg_order, status, service_type')
+      .eq('trip_group_id', currentLeg.trip_group_id)
+      .eq('production_id', driver.production_id)
+      .order('leg_order', { ascending: true })
+
+    const legs = allLegs || []
+    const currentIndex = legs.findIndex(l => l.id === trip_id)
+    const nextLeg = legs[currentIndex + 1] || null
+    const isLastLeg = !nextLeg
+
+    // Segna questo leg come DONE
     await supabase
-      .from('vehicle_tracking_sessions')
-      .update({ status: 'STANDBY', current_trip_id: null })
-      .eq('id', session.id)
+      .from('trips')
+      .update({
+        status: 'DONE',
+        arrived_at: now,
+        ...(isLastLeg && actualKm !== null ? { actual_km: actualKm } : {}),
+      })
+      .eq('id', trip_id)
+
+    // Avanza il prossimo leg a BUSY
+    if (nextLeg) {
+      await supabase
+        .from('trips')
+        .update({ status: 'BUSY', started_at: now })
+        .eq('id', nextLeg.id)
+    }
+
+    // Aggiorna sessione → STANDBY solo se era l'ultimo leg
+    if (isLastLeg && session) {
+      await supabase
+        .from('vehicle_tracking_sessions')
+        .update({ status: 'STANDBY', current_trip_id: null })
+        .eq('id', session.id)
+    }
+
+  } else {
+    // ── SINGLE TRIP: comportamento invariato ──────────────────
+    const { data: tripRow } = await supabase
+      .from('trips')
+      .select('trip_id')
+      .eq('id', trip_id)
+      .single()
+
+    await supabase
+      .from('trips')
+      .update({
+        status: 'DONE',
+        arrived_at: now,
+        ...(actualKm !== null ? { actual_km: actualKm } : {}),
+      })
+      .eq('trip_id', tripRow?.trip_id || trip_id)
+      .eq('production_id', driver.production_id)
+
+    if (session) {
+      await supabase
+        .from('vehicle_tracking_sessions')
+        .update({ status: 'STANDBY', current_trip_id: null })
+        .eq('id', session.id)
+    }
   }
 
   return Response.json({ ok: true })
