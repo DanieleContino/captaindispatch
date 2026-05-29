@@ -80,7 +80,7 @@ export async function GET(request) {
   if (vehicle) {
     const { data: tripData } = await supabase
       .from('trips')
-      .select('id, trip_id, pickup_id, dropoff_id, pickup_min, call_min, start_dt, end_dt, started_at, arrived_at, status, pax_count, passenger_list, service_type, transfer_class')
+      .select('id, trip_id, trip_group_id, leg_order, pickup_id, dropoff_id, pickup_min, call_min, start_dt, end_dt, started_at, arrived_at, status, pax_count, passenger_list, service_type, transfer_class')
       .eq('production_id', productionId)
       .eq('vehicle_id', vehicle.id)
       .eq('date', today)
