@@ -950,11 +950,35 @@ export default function CaptainGoPage() {
             const nextDest = activeLeg ? (locsMap[activeLeg.dropoff_id]?.name || activeLeg.dropoff_id) : null
 
             function renderLeg(leg, absoluteIndex) {
-              const isDoneLeg  = leg.status === 'DONE' || leg.status === 'COMPLETED'
-              const isBusyLeg  = leg.status === 'BUSY' || leg.status === 'IN_PROGRESS' || leg.status === 'ACTIVE'
-              const isActiveLeg = activeLeg?.id === leg.id
+              const isDoneLeg   = leg.status === 'DONE' || leg.status === 'COMPLETED'
+              const isBusyLeg   = leg.status === 'BUSY' || leg.status === 'IN_PROGRESS' || leg.status === 'ACTIVE'
+              const isActiveLeg = isBusyLeg && activeLeg?.id === leg.id
               const pickup  = locsMap[leg.pickup_id]
               const dropoff = locsMap[leg.dropoff_id]
+
+              // Label rotta: Multi-Pick → solo pickup, Multi-Drop → solo dropoff, altri → pickup → dropoff
+              const routeLabel = serviceLabel === 'Multi-Pick'
+                ? `📍 ${pickup?.name || leg.pickup_id || '–'}`
+                : serviceLabel === 'Multi-Drop'
+                ? `📍 ${dropoff?.name || leg.dropoff_id || '–'}`
+                : `${pickup?.name || leg.pickup_id || '–'} → ${dropoff?.name || leg.dropoff_id || '–'}`
+
+              // Badge progressivo: Done / In corso / First / Next / Dopo
+              const pendingLegs   = legs.filter(l => l.status !== 'DONE' && l.status !== 'COMPLETED')
+              const firstPending  = pendingLegs[0]
+              const secondPending = pendingLegs[1]
+              let badgeLabel, badgeBg, badgeColor
+              if (isDoneLeg) {
+                badgeLabel = 'Done';  badgeBg = '#f0fdf4'; badgeColor = '#15803d'
+              } else if (isActiveLeg) {
+                badgeLabel = 'In corso'; badgeBg = '#fffbeb'; badgeColor = '#b45309'
+              } else if (firstPending?.id === leg.id) {
+                badgeLabel = 'First'; badgeBg = '#fef9c3'; badgeColor = '#92400e'
+              } else if (secondPending?.id === leg.id) {
+                badgeLabel = 'Next';  badgeBg = '#eff6ff'; badgeColor = '#1d4ed8'
+              } else {
+                badgeLabel = 'Dopo';  badgeBg = '#f1f5f9'; badgeColor = '#64748b'
+              }
 
               return (
                 <div key={leg.id} style={{ display: 'flex', gap: '10px', padding: '7px 0', borderBottom: '1px solid #f8fafc' }}>
@@ -966,12 +990,12 @@ export default function CaptainGoPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', lineHeight: 1.4, marginBottom: '2px' }}>
-                      {pickup?.name || leg.pickup_id || '–'} → {dropoff?.name || leg.dropoff_id || '–'}
+                      {routeLabel}
                     </div>
                     {leg.passenger_list && <div style={{ fontSize: '11px', color: '#64748b' }}>{leg.passenger_list}</div>}
                   </div>
-                  <div style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', alignSelf: 'flex-start', marginTop: '2px', flexShrink: 0, background: isDoneLeg ? '#f0fdf4' : isActiveLeg ? '#fffbeb' : '#eff6ff', color: isDoneLeg ? '#15803d' : isActiveLeg ? '#b45309' : '#1d4ed8' }}>
-                    {isDoneLeg ? 'Done' : isActiveLeg ? 'In corso' : 'Dopo'}
+                  <div style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', alignSelf: 'flex-start', marginTop: '2px', flexShrink: 0, background: badgeBg, color: badgeColor }}>
+                    {badgeLabel}
                   </div>
                 </div>
               )
