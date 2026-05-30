@@ -2050,7 +2050,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
     }
     let err
     if (mode === 'new') {
-      const r = await supabase.from('vehicles').insert({ ...row, id: form.id.trim().toUpperCase() })
+      const r = await supabase.from('vehicles').insert({ ...row, display_id: form.id.trim().toUpperCase() })
       err = r.error
       // Mark voucher as used
       if (!err && form.rental_voucher_id) {
