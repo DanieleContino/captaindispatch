@@ -134,7 +134,7 @@ async function processFleet(supabase, productionId, insertRows, updateRows, erro
       const paxDefault = PAX_DEFAULT[safeType] ?? null
 
       return {
-        id:             autoId,
+        display_id:     autoId,
         production_id:  productionId,
         driver_name:    r.driver_name    ?? null,
         vehicle_type:   r.vehicle_type   || 'VAN',
@@ -152,7 +152,7 @@ async function processFleet(supabase, productionId, insertRows, updateRows, erro
     const { data: insertedData, error: insertErr } = await supabase
       .from('vehicles')
       .insert(toInsert)
-      .select('id')
+      .select('uuid')
 
     if (insertErr) {
       errors.push(`Errore insert veicoli: ${insertErr.message}`)
@@ -169,7 +169,7 @@ async function processFleet(supabase, productionId, insertRows, updateRows, erro
     const { data: existing } = await supabase
       .from('vehicles')
       .select('driver_name, vehicle_type, license_plate, capacity, pax_suggested, pax_max, sign_code, available_from, available_to')
-      .eq('id', r.existingId)
+      .eq('uuid', r.existingId)
       .single()
 
     if (!existing) { skipped++; continue }
@@ -190,7 +190,7 @@ async function processFleet(supabase, productionId, insertRows, updateRows, erro
     const { error: updateErr } = await supabase
       .from('vehicles')
       .update(updateFields)
-      .eq('id', r.existingId)
+      .eq('uuid', r.existingId)
       .eq('production_id', productionId)
 
     if (updateErr) {
@@ -232,7 +232,7 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
       const full_name = [r.first_name, r.last_name].filter(Boolean).join(' ') || null
 
       return {
-        id:             `CR${String(maxNum).padStart(4, '0')}`,
+        display_id:     `CR${String(maxNum).padStart(4, '0')}`,
         production_id:  productionId,
         full_name:      full_name,
         role:           r.role           || null,
@@ -246,18 +246,18 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
       }
     })
 
-    console.log(`[confirm/crew] INSERT ${toInsert.length} rows:`, toInsert.map(r => ({ id: r.id, full_name: r.full_name, dept: r.department })))
+    console.log(`[confirm/crew] INSERT ${toInsert.length} rows:`, toInsert.map(r => ({ display_id: r.display_id, full_name: r.full_name, dept: r.department })))
 
     const { data: insertedData, error: insertErr } = await supabase
       .from('crew')
       .insert(toInsert)
-      .select('id')
+      .select('uuid')
 
     if (insertErr) {
       console.error(`[confirm/crew] INSERT ERROR:`, insertErr.message, insertErr.details)
       errors.push(`Errore insert crew: ${insertErr.message}`)
     } else {
-      console.log(`[confirm/crew] INSERT OK: ${insertedData?.length || 0} rows`, insertedData?.map(r => r.id))
+      console.log(`[confirm/crew] INSERT OK: ${insertedData?.length || 0} rows`, insertedData?.map(r => r.uuid))
       inserted += insertedData?.length || 0
     }
   }
@@ -270,7 +270,7 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
     const { data: existing } = await supabase
       .from('crew')
       .select('full_name, role, department, phone, email, hotel_id, arrival_date, departure_date')
-      .eq('id', r.existingId)
+      .eq('uuid', r.existingId)
       .single()
 
     if (!existing) { skipped++; continue }
@@ -300,7 +300,7 @@ async function processCrew(supabase, productionId, insertRows, updateRows, newLo
     const { error: updateErr } = await supabase
       .from('crew')
       .update(updateFields)
-      .eq('id', r.existingId)
+      .eq('uuid', r.existingId)
       .eq('production_id', productionId)
 
     if (updateErr) {
@@ -396,7 +396,7 @@ async function processAccommodation(supabase, productionId, updateRows, newLocat
     }
 
     const { error: updateErr } = await supabase.from('crew').update(updateFields)
-      .eq('id', crewId).eq('production_id', productionId)
+      .eq('uuid', crewId).eq('production_id', productionId)
 
     if (updateErr) {
       errors.push(`Errore update crew ${crewId}: ${updateErr.message}`)
@@ -445,7 +445,7 @@ async function processTravelConfirm(supabase, productionId, insertRows, errors) 
       if (ntp !== null) {
         await supabase.from('crew')
           .update({ no_transport_needed: ntp })
-          .eq('id', r.existingId)
+          .eq('uuid', r.existingId)
           .eq('production_id', productionId)
       }
     }
