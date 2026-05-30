@@ -570,7 +570,7 @@ export default function HubCoveragePage() {
       if (!user) { router.push('/login'); return }
       setUser(user)
       if (PRODUCTION_ID) {
-        supabase.from('locations').select('id,name').eq('production_id', PRODUCTION_ID)
+        supabase.from('locations').select('uuid,id,name').eq('production_id', PRODUCTION_ID)
           .then(({ data }) => {
             if (data) {
             const m = {}
