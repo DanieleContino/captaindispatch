@@ -12,6 +12,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getProductionId } from '../../../lib/production'
+import { generateDisplayId } from '../../../lib/generateDisplayId'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
 import { AccommodationColumnsEditorSidebar } from '../../../lib/AccommodationColumnsEditorSidebar'
@@ -1137,18 +1138,9 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     if (!form.crew_id || !PRODUCTION_ID) return
     setFamilySaving(true)
     setFamilyError(null)
-    const { data: crewList } = await supabase.from('crew')
-      .select('id').eq('production_id', PRODUCTION_ID)
-    let max = 0
-    if (crewList) {
-      crewList.forEach(row => {
-        const m = row.id.match(/^CR(\d+)$/i)
-        if (m) max = Math.max(max, parseInt(m[1]))
-      })
-    }
-    const newId = 'CR' + String(max + 1).padStart(4, '0')
+    const newDisplayId = await generateDisplayId(supabase, 'crew', 'CR', PRODUCTION_ID)
     const { data: newCrew, error } = await supabase.from('crew').insert({
-      id:                  newId,
+      display_id:          newDisplayId,
       production_id:       PRODUCTION_ID,
       full_name:           familyForm.full_name.trim(),
       role:                familyForm.role.trim() || null,
