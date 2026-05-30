@@ -57,7 +57,7 @@ export async function GET(request) {
   if (driverType === 'NCC') {
     const { data: v } = await supabase
       .from('vehicles')
-      .select('id, vehicle_type, sign_code, capacity, license_plate')
+      .select('uuid, display_id, vehicle_type, sign_code, capacity, license_plate')
       .eq('production_id', productionId)
       .eq('ncc_driver_id', driver.id)
       .eq('active', true)
@@ -66,7 +66,7 @@ export async function GET(request) {
   } else {
     const { data: v } = await supabase
       .from('vehicles')
-      .select('id, vehicle_type, sign_code, capacity, license_plate')
+      .select('uuid, display_id, vehicle_type, sign_code, capacity, license_plate')
       .eq('production_id', productionId)
       .eq('driver_crew_id', driver.id)
       .eq('active', true)
@@ -106,9 +106,9 @@ export async function GET(request) {
   if (locationIds.length > 0) {
     const { data: locs } = await supabase
       .from('locations')
-      .select('id, name, lat, lng, address')
-      .in('id', locationIds)
-    ;(locs || []).forEach(l => { locsMap[l.id] = l })
+      .select('uuid, display_id, name, lat, lng, address')
+      .in('uuid', locationIds)
+    ;(locs || []).forEach(l => { locsMap[l.uuid] = l })
   }
 
   // 6. Sessione attiva oggi
