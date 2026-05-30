@@ -953,7 +953,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
 
       {/* Header: checkbox + nome */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-        <input type="checkbox" checked={selected} onChange={() => onToggleSelect(member.id)}
+        <input type="checkbox" checked={selected} onChange={() => onToggleSelect(member.uuid)}
           onClick={e => e.stopPropagation()}
           style={{ width: '14px', height: '14px', accentColor: '#2563eb', cursor: 'pointer', flexShrink: 0, marginTop: '3px' }} />
         <div style={{ flex: 1, minWidth: 0 }}>
