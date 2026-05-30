@@ -1225,7 +1225,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
       error = r.error
       setSaving(false)
       if (error) { setError(error.message); return }
-      onSaved(initial.id, row.full_name)
+      onSaved(initial.uuid, row.full_name)
     }
   }
 
