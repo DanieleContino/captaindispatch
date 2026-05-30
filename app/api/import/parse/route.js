@@ -986,7 +986,7 @@ async function processTravelRows(rawRows, supabase, productionId) {
         return parts.some(p => p.length > 3 && (locLower.includes(p) || p.includes(locLower)))
       })
       if (locMatch) {
-        hotel_id = locMatch.id
+        hotel_id = locMatch.uuid
       } else {
         hotelNotFound = true
         if (!newHotels.find(h => h.name.toLowerCase() === hotelLower)) {
