@@ -1006,7 +1006,7 @@ async function processTravelRows(rawRows, supabase, productionId) {
 
     if (match && !match.no_rooming_check) {
       // Cerca stays della persona
-      const personStays = (allStays || []).filter(s => s.crew_id === match.id)
+      const personStays = (allStays || []).filter(s => s.crew_id === match.uuid)
 
       if (personStays.length > 0) {
         // Verifica se travel_date è coperta da qualsiasi stay
