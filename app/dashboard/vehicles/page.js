@@ -157,7 +157,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
       const r = await supabase.from('vehicles').insert(row); err = r.error
     } else {
       const { id, ...upd } = row
-      const r = await supabase.from('vehicles').update(upd).eq('id', initial.id).eq('production_id', PRODUCTION_ID); err = r.error
+      const r = await supabase.from('vehicles').update(upd).eq('uuid', initial.uuid).eq('production_id', PRODUCTION_ID); err = r.error
     }
     setSaving(false)
     if (err) { setError(err.message); return }
