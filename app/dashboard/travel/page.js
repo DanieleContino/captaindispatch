@@ -869,7 +869,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     }
     const updates = { arrival_date: newArr, departure_date: newDep }
     if (newStatus) updates.travel_status = newStatus
-    await supabase.from('crew').update(updates).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    await supabase.from('crew').update(updates).eq('uuid', crewId).eq('production_id', PRODUCTION_ID)
   }
 
   async function handleDelete() {
