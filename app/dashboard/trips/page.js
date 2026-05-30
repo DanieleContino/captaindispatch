@@ -70,7 +70,7 @@ function TripsPageInner() {
           { onConflict: 'user_id,production_id', ignoreDuplicates: true }
         )
         const [locsR, vhcR, stR] = await Promise.all([
-          supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name'),
+          supabase.from('locations').select('uuid,display_id,id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name'),
           supabase.from('vehicles').select('id,driver_name,sign_code,capacity,vehicle_type,available_from,available_to,preferred_dept,preferred_crew_ids').eq('production_id', PRODUCTION_ID).eq('active', true).eq('in_transport', true).order('id'),
           supabase.from('service_types').select('id,name').eq('production_id', PRODUCTION_ID).order('sort_order'),
         ])
