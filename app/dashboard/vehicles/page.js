@@ -182,7 +182,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
       setError(`Cannot delete — this vehicle has ${count} trip${count > 1 ? 's' : ''} assigned. Remove the trips first.`)
       return
     }
-    const { error } = await supabase.from('vehicles').delete().eq('id', initial.id).eq('production_id', PRODUCTION_ID)
+    const { error } = await supabase.from('vehicles').delete().eq('uuid', initial.uuid).eq('production_id', PRODUCTION_ID)
     setDel(false)
     if (error) { setError(error.message); return }
     onSaved()
