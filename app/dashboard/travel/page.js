@@ -581,7 +581,7 @@ const SELECT_FIELDS = `
   to_location, to_time, needs_transport, match_status,
   pickup_dep, pickup_arr, accommodation, notes, cell_colors, journey_id,
   linked_stay_id,
-  crew:crew_id(full_name, role, department),
+  crew:crew_id(uuid, display_id, full_name, role, department),
   linked_stay:linked_stay_id(id, arrival_date, departure_date, hotel:hotel_id(name), room_type:room_type_id(name))
 `
 
@@ -690,7 +690,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     if (!q || q.length < 2 || !PRODUCTION_ID) { setCrewResults([]); return }
     setCrewSearching(true)
     const { data } = await supabase.from('crew')
-      .select('id, full_name, role, department')
+      .select('uuid, display_id, full_name, role, department')
       .eq('production_id', PRODUCTION_ID)
       .ilike('full_name', `%${q}%`)
       .limit(8)
@@ -994,7 +994,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
               {crewResults.length > 0 && (
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', overflow: 'hidden' }}>
                   {crewResults.map(c => (
-                    <div key={c.id} onClick={() => { set('crew_id', c.id); set('full_name_raw', c.full_name); setCrewSearch(c.full_name); setCrewResults([]) }}
+                    <div key={c.uuid} onClick={() => { set('crew_id', c.uuid); set('full_name_raw', c.full_name); setCrewSearch(c.full_name); setCrewResults([]) }}
                       style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = 'white'}>
