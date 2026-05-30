@@ -738,7 +738,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     const { data: crewRec } = await supabase
       .from('crew')
       .select('arrival_date, departure_date, travel_status')
-      .eq('id', crewId)
+      .eq('uuid', crewId)
       .eq('production_id', PRODUCTION_ID)
       .single()
     if (!crewRec) return
@@ -774,7 +774,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     if (newStatus && newStatus !== crewRec.travel_status) updates.travel_status = newStatus
     if (Object.keys(updates).length === 0) return
 
-    await supabase.from('crew').update(updates).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    await supabase.from('crew').update(updates).eq('uuid', crewId).eq('production_id', PRODUCTION_ID)
   }
 
   function buildRow() {
