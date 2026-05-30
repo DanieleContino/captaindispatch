@@ -922,7 +922,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
   async function handleDeleteClick() {
     if (!confirmDel) { setConfirmDel(true); return }
     setDeleting(true)
-    await onDelete(member.id)
+    await onDelete(member.uuid)
     setDeleting(false)
     setConfirmDel(false)
   }
