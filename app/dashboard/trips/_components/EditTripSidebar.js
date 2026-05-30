@@ -337,7 +337,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   async function handleSubmit(e) {
     e.preventDefault(); setError(null); setSaving(true)
     const isMulti    = group && group.length > 1
-    const selVehicle = vehicles.find(v => v.id === form.vehicle_id)
+    const selVehicle = vehicles.find(v => v.uuid === form.vehicle_id)
 
     const mainPickupId  = activeLeg?.isNew ? initial.pickup_id  : form.pickup_id
     const mainDropoffId = activeLeg?.isNew ? initial.dropoff_id : form.dropoff_id
@@ -743,7 +743,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                   const avail   = isVehicleAvailableForDate(v, form.date)
                   const hasPref = v.preferred_dept || v.preferred_crew_ids?.length > 0
                   return (
-                    <option key={v.id} value={v.id}>
+                    <option key={v.uuid} value={v.uuid}>
                       {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
                     </option>
                   )
