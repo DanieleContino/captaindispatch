@@ -658,7 +658,7 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
       <input
         type="checkbox"
         checked={selected}
-        onChange={() => onToggleSelect(v.id)}
+        onChange={() => onToggleSelect(v.uuid)}
         onClick={e => e.stopPropagation()}
         style={{ width: '16px', height: '16px', accentColor: '#2563eb', cursor: 'pointer', flexShrink: 0 }}
       />
