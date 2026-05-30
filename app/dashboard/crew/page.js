@@ -1233,8 +1233,8 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
     if (!confirmDel) { setConfirmDel(true); return }
     setDeleting(true)
     // Prima rimuovi assegnazioni ai trip
-    await supabase.from('trip_passengers').delete().eq('crew_id', initial.id)
-    const { error } = await supabase.from('crew').delete().eq('id', initial.id).eq('production_id', PRODUCTION_ID)
+    await supabase.from('trip_passengers').delete().eq('crew_id', initial.uuid)
+    const { error } = await supabase.from('crew').delete().eq('uuid', initial.uuid).eq('production_id', PRODUCTION_ID)
     setDeleting(false)
     if (error) { setError(error.message); return }
     onSaved(null, null)
