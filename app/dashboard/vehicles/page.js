@@ -174,7 +174,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
     const { count } = await supabase
       .from('trips')
       .select('id', { count: 'exact', head: true })
-      .eq('vehicle_id', initial.id)
+      .eq('vehicle_id', initial.uuid)
       .eq('production_id', PRODUCTION_ID)
     if (count > 0) {
       setDel(false)
