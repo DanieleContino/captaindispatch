@@ -1102,7 +1102,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   async function searchCrew(q) {
     if (!q || q.length < 2 || !PRODUCTION_ID) { setCrewResults([]); return }
     setCrewSearching(true)
-    const { data } = await supabase.from('crew').select('id, full_name, role, department').eq('production_id', PRODUCTION_ID).ilike('full_name', `%${q}%`).limit(8)
+    const { data } = await supabase.from('crew').select('uuid, display_id, full_name, role, department').eq('production_id', PRODUCTION_ID).ilike('full_name', `%${q}%`).limit(8)
     setCrewResults(data || []); setCrewSearching(false)
   }
 
@@ -1116,10 +1116,10 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     if (!q || q.length < 2 || !PRODUCTION_ID) { setRoommateResults([]); return }
     setRoommateSearching(true)
     const { data } = await supabase.from('crew')
-      .select('id, full_name, role, department')
+      .select('uuid, display_id, full_name, role, department')
       .eq('production_id', PRODUCTION_ID)
       .eq('person_type', 'CREW')
-      .neq('id', form.crew_id || '')
+      .neq('uuid', form.crew_id || '')
       .ilike('full_name', `%${q}%`)
       .limit(8)
     setRoommateResults(data || [])
@@ -1229,7 +1229,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       // Roommate has no existing stay — create one linked to the same room assignment
       const { data: newStay } = await supabase.from('crew_stays').insert({
         production_id:      PRODUCTION_ID,
-        crew_id:            crewMember.id,
+        crew_id:            crewMember.uuid,
         hotel_id:           form.hotel_id    || null,
         room_assignment_id: assignmentId,
         arrival_date:       form.arrival_date   || null,
@@ -1418,7 +1418,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
               {crewResults.length > 0 && (
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', overflow: 'hidden' }}>
                   {crewResults.map(c => (
-                    <div key={c.id} onClick={() => { set('crew_id', c.id); setCrewSearch(c.full_name); setCrewResults([]) }}
+                    <div key={c.uuid} onClick={() => { set('crew_id', c.uuid); setCrewSearch(c.full_name); setCrewResults([]) }}
                       style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = 'white'}>
@@ -1502,7 +1502,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
                     {roommateResults.length > 0 && (
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginBottom: '4px' }}>
                         {roommateResults.map(c => (
-                          <div key={c.id}
+                          <div key={c.uuid}
                             onClick={() => handleAddRoommate(c)}
                             style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center', background: 'white' }}
                             onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
