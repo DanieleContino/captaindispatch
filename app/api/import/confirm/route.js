@@ -34,13 +34,13 @@ async function insertNewLocations(supabase, productionId, newLocations) {
 
   const { data: existingLocs } = await supabase
     .from('locations')
-    .select('id')
+    .select('display_id')
     .eq('production_id', productionId)
-    .like('id', 'H%')
+    .like('display_id', 'H%')
 
   let maxLocNum = 0
   for (const l of (existingLocs || [])) {
-    const n = parseInt((l.id || '').replace(/^H/i, ''), 10)
+    const n = parseInt((l.display_id || '').replace(/^H/i, ''), 10)
     if (!isNaN(n) && n > maxLocNum) maxLocNum = n
   }
 
@@ -50,11 +50,11 @@ async function insertNewLocations(supabase, productionId, newLocations) {
     const autoLocId = `H${String(maxLocNum).padStart(3, '0')}`
     // Costruisci payload con lat/lng opzionali (vengono da Google Places via HotelPlacesModal)
     const locPayload = {
-      id:           autoLocId,
-      name:         loc.name.trim(),
+      display_id:    autoLocId,
+      name:          loc.name.trim(),
       production_id: productionId,
-      is_hub:       false,
-      is_hotel:     true,   // location da import accommodation → sempre hotel
+      is_hub:        false,
+      is_hotel:      true,   // location da import accommodation → sempre hotel
     }
     if (loc.lat != null) locPayload.lat = loc.lat
     if (loc.lng != null) locPayload.lng = loc.lng
@@ -62,10 +62,10 @@ async function insertNewLocations(supabase, productionId, newLocations) {
     const { data: newLoc, error: locErr } = await supabase
       .from('locations')
       .insert(locPayload)
-      .select('id, name')
+      .select('uuid, display_id, name')
       .single()
     if (!locErr && newLoc) {
-      newLocationMap[loc.name.trim().toLowerCase()] = newLoc.id
+      newLocationMap[loc.name.trim().toLowerCase()] = newLoc.uuid
     }
   }
   return newLocationMap
@@ -75,13 +75,13 @@ async function insertNewLocations(supabase, productionId, newLocations) {
 async function getMaxVehicleNums(supabase, productionId) {
   const { data: existingVhcs } = await supabase
     .from('vehicles')
-    .select('id')
+    .select('display_id')
     .eq('production_id', productionId)
 
   const maxByType = { VAN: 0, CAR: 0, BUS: 0 }
   for (const v of (existingVhcs || [])) {
-    if (!v.id) continue
-    const parts = v.id.split('-')
+    if (!v.display_id) continue
+    const parts = v.display_id.split('-')
     if (parts.length >= 2) {
       const type = parts[0].toUpperCase()
       const n = parseInt(parts[parts.length - 1], 10)
@@ -97,14 +97,14 @@ async function getMaxVehicleNums(supabase, productionId) {
 async function getMaxCrewNum(supabase, productionId) {
   const { data: existingCrew } = await supabase
     .from('crew')
-    .select('id')
+    .select('display_id')
     .eq('production_id', productionId)
-    .like('id', 'CR%')
-    .order('id', { ascending: false })
+    .like('display_id', 'CR%')
+    .order('display_id', { ascending: false })
 
   let maxNum = 0
   for (const c of (existingCrew || [])) {
-    const num = parseInt(c.id.replace(/^CR/i, ''), 10)
+    const num = parseInt(c.display_id.replace(/^CR/i, ''), 10)
     if (!isNaN(num) && num > maxNum) maxNum = num
   }
   return maxNum
