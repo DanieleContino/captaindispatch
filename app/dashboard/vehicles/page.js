@@ -4444,7 +4444,7 @@ export default function VehiclesPage() {
       alert(`Cannot delete — ${withTrips.length} vehicle${withTrips.length > 1 ? 's have' : ' has'} trips assigned:\n${withTrips.map(x => `• ${x.id}: ${x.count} trip${x.count > 1 ? 's' : ''}`).join('\n')}\nRemove the trips first.`)
       return
     }
-    const { error } = await supabase.from('vehicles').delete().in('id', selectedIds).eq('production_id', PRODUCTION_ID)
+    const { error } = await supabase.from('vehicles').delete().in('uuid', selectedIds).eq('production_id', PRODUCTION_ID)
     setBulkDel(false)
     if (!error) { setSelectedIds([]); setBulkConfirm(false); load() }
   }
