@@ -782,7 +782,7 @@ export default function FleetMonitorPage() {
         .eq('production_id', PRODUCTION_ID)
         .eq('date', d),
       supabase.from('locations')
-        .select('id,name')
+        .select('uuid,name')
         .eq('production_id', PRODUCTION_ID),
       supabase.from('routes')
         .select('from_id,to_id,duration_min')
@@ -798,7 +798,7 @@ export default function FleetMonitorPage() {
     if (tR.data) setTrips(tR.data)
     if (lR.data) {
       const m = {}
-      lR.data.forEach(l => { m[l.id] = l.name })
+      lR.data.forEach(l => { m[l.uuid] = l.name })
       setLocsMap(m)
     }
     if (rR.data) {
