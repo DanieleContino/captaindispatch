@@ -618,7 +618,7 @@ function normalizeFleet(r) {
 async function processFleetRows(rawRows, supabase, productionId) {
   const { data: existingVehicles } = await supabase
     .from('vehicles')
-    .select('id, license_plate, driver_name, vehicle_type, capacity, pax_suggested, pax_max, sign_code, available_from, available_to')
+    .select('uuid, display_id, license_plate, driver_name, vehicle_type, capacity, pax_suggested, pax_max, sign_code, available_from, available_to')
     .eq('production_id', productionId)
 
   return rawRows.map(raw => {
@@ -643,7 +643,7 @@ async function processFleetRows(rawRows, supabase, productionId) {
 
     if (matchedVehicle) {
       action = 'update'
-      existingId = matchedVehicle.id
+      existingId = matchedVehicle.uuid
       existingData = {
         driver_name:    matchedVehicle.driver_name    ?? null,
         vehicle_type:   matchedVehicle.vehicle_type   ?? null,
