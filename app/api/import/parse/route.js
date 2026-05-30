@@ -675,11 +675,11 @@ async function processCrewRows(rawRows, supabase, productionId) {
   const [{ data: existingCrew }, { data: locations }] = await Promise.all([
     supabase
       .from('crew')
-      .select('id, full_name, role, department, phone, email, hotel_id, arrival_date, departure_date')
+      .select('uuid, display_id, full_name, role, department, phone, email, hotel_id, arrival_date, departure_date')
       .eq('production_id', productionId),
     supabase
       .from('locations')
-      .select('id, name')
+      .select('uuid, name')
       .eq('production_id', productionId),
   ])
 
@@ -733,7 +733,7 @@ async function processCrewRows(rawRows, supabase, productionId) {
       }
       if (match) {
         action = 'update'
-        existingId = match.id
+        existingId = match.uuid
         existingData = {
           full_name:      match.full_name      ?? null,
           role:           match.role           ?? null,
@@ -761,7 +761,7 @@ async function processCrewRows(rawRows, supabase, productionId) {
         return false
       })
       if (locMatch) {
-        hotel_id = locMatch.id
+        hotel_id = locMatch.uuid
       } else {
         hotelNotFound = true
         if (!newHotels.find(h => h.name.toLowerCase() === hotelLower)) {
@@ -798,11 +798,11 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
   const [{ data: existingCrew }, { data: locations }] = await Promise.all([
     supabase
       .from('crew')
-      .select('id, full_name, hotel_id, arrival_date, departure_date')
+      .select('uuid, full_name, hotel_id, arrival_date, departure_date')
       .eq('production_id', productionId),
     supabase
       .from('locations')
-      .select('id, name')
+      .select('uuid, name')
       .eq('production_id', productionId),
   ])
 
@@ -850,7 +850,7 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
       }
       if (match) {
         action = 'update'
-        existingId = match.id
+        existingId = match.uuid
         existingData = {
           full_name:      match.full_name      ?? null,
           hotel_id:       match.hotel_id       ?? null,
@@ -878,7 +878,7 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
         return false
       })
       if (locMatch) {
-        hotel_id = locMatch.id
+        hotel_id = locMatch.uuid
       } else {
         hotelNotFound = true
         if (!newHotels.find(h => h.name.toLowerCase() === hotelLower)) {
