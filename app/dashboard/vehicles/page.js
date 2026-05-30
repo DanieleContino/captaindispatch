@@ -51,7 +51,7 @@ const DEPT_COLOR = {
 function suggestId(type, vehicles) {
   const prefix = type + '-'
   const nums = (vehicles || [])
-    .map(v => v.id)
+    .map(v => v.display_id)
     .filter(id => id && id.toUpperCase().startsWith(prefix))
     .map(id => parseInt(id.slice(prefix.length), 10))
     .filter(n => !isNaN(n))
