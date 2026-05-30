@@ -4415,7 +4415,7 @@ export default function VehiclesPage() {
       return
     }
 
-    const { error } = await supabase.from('vehicles').delete().eq('id', id).eq('production_id', PRODUCTION_ID)
+    const { error } = await supabase.from('vehicles').delete().eq('uuid', id).eq('production_id', PRODUCTION_ID)
     if (!error) {
       setSelectedIds(prev => prev.filter(x => x !== id))
       load()
