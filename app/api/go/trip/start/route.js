@@ -81,10 +81,10 @@ export async function POST(request) {
     const locIds = [tripRow.pickup_id, tripRow.dropoff_id]
     const { data: locs } = await supabase
       .from('locations')
-      .select('id, lat, lng')
-      .in('id', locIds)
-    const pickup  = locs?.find(l => l.id === tripRow.pickup_id)
-    const dropoff = locs?.find(l => l.id === tripRow.dropoff_id)
+      .select('uuid, lat, lng')
+      .in('uuid', locIds)
+    const pickup  = locs?.find(l => l.uuid === tripRow.pickup_id)
+    const dropoff = locs?.find(l => l.uuid === tripRow.dropoff_id)
     const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
     // estimated_km: pickup → dropoff
