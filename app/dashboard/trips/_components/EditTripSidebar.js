@@ -142,7 +142,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   useEffect(() => {
     if (crewLookupQ.length < 2 || !PRODUCTION_ID) { setCrewLookupResults([]); return }
-    supabase.from('crew').select('id,full_name,department,role')
+    supabase.from('crew').select('uuid,display_id,full_name,department,role')
       .eq('production_id', PRODUCTION_ID)
       .or(`full_name.ilike.%${crewLookupQ}%,department.ilike.%${crewLookupQ}%`)
       .limit(8)
@@ -507,7 +507,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           const [sy, smo, sdd] = form.date.split('-').map(Number)
           return new Date(sy, smo - 1, sdd, Math.floor(legPickupMin / 60), legPickupMin % 60, 0, 0).toISOString()
         })()
-        const selVehicleForLeg = vehicles.find(v => v.id === form.vehicle_id)
+        const selVehicleForLeg = vehicles.find(v => v.uuid === form.vehicle_id)
         const siblingRow = {
           production_id: PRODUCTION_ID, trip_id: newTripId, trip_group_id: editGroupId,
           leg_order: (group ? group.length : 1) + i + 1,
