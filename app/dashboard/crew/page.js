@@ -1219,7 +1219,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
       error = r.error
       setSaving(false)
       if (error) { setError(error.message); return }
-      onSaved(r.data?.id, row.full_name)
+      onSaved(r.data?.uuid, row.full_name)
     } else {
       const r = await supabase.from('crew').update(row).eq('id', initial.id).eq('production_id', PRODUCTION_ID)
       error = r.error
