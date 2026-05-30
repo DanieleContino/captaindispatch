@@ -909,9 +909,9 @@ async function processAccommodationRows(rawRows, supabase, productionId) {
 
 async function processTravelRows(rawRows, supabase, productionId) {
   const [{ data: existingCrew }, { data: hubs }, { data: locations }, { data: allStays }] = await Promise.all([
-    supabase.from('crew').select('id, full_name, arrival_date, departure_date, hotel_id, no_rooming_check').eq('production_id', productionId),
-    supabase.from('locations').select('id, name').eq('production_id', productionId).eq('is_hub', true),
-    supabase.from('locations').select('id, name').eq('production_id', productionId),
+    supabase.from('crew').select('uuid, full_name, arrival_date, departure_date, hotel_id, no_rooming_check').eq('production_id', productionId),
+    supabase.from('locations').select('uuid, name').eq('production_id', productionId).eq('is_hub', true),
+    supabase.from('locations').select('uuid, name').eq('production_id', productionId),
     supabase.from('crew_stays').select('crew_id, hotel_id, arrival_date, departure_date').eq('production_id', productionId),
   ])
 
