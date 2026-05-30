@@ -198,8 +198,8 @@ const SELECT_FIELDS = `
   room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
   total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
   room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status, row_color, room_assignment_id,
-  crew:crew_id(id, full_name, role, department, person_type),
-  hotel:hotel_id(id, name),
+  crew:crew_id(uuid, display_id, full_name, role, department, person_type),
+  hotel:hotel_id(uuid, display_id, name),
   subgroup:subgroup_id(id, name),
   room_type:room_type_id(id, name, rate_no_vat, vat_pct, city_tax_night)
 `
@@ -1437,7 +1437,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
               <label style={lbl}>Hotel</label>
               <select value={form.hotel_id} onChange={e => { set('hotel_id', e.target.value); set('subgroup_id', null) }} style={{ ...inp, cursor: 'pointer' }}>
                 <option value="">— Select hotel —</option>
-                {(hotels || []).map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+                {(hotels || []).map(h => <option key={h.uuid} value={h.uuid}>{h.name}</option>)}
               </select>
             </div>
 
@@ -1980,7 +1980,7 @@ export default function AccommodationPage() {
 
   const loadHotels = useCallback(async () => {
     if (!PRODUCTION_ID) return
-    const { data } = await supabase.from('locations').select('id, name').eq('production_id', PRODUCTION_ID).eq('is_hotel', true)
+    const { data } = await supabase.from('locations').select('uuid, display_id, name').eq('production_id', PRODUCTION_ID).eq('is_hotel', true)
     setHotels(data || [])
   }, [PRODUCTION_ID])
 
