@@ -1830,10 +1830,10 @@ export default function CrewPage() {
   // ─── Delete singolo dalla card ──────────────────────────
   async function handleDeleteSingle(id) {
     await supabase.from('trip_passengers').delete().eq('crew_id', id)
-    const { error } = await supabase.from('crew').delete().eq('id', id).eq('production_id', PRODUCTION_ID)
+    const { error } = await supabase.from('crew').delete().eq('uuid', id).eq('production_id', PRODUCTION_ID)
     if (!error) {
       setSelectedIds(prev => prev.filter(x => x !== id))
-      setCrew(prev => prev.filter(c => c.id !== id))
+      setCrew(prev => prev.filter(c => c.uuid !== id))
     }
   }
 
