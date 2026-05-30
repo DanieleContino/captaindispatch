@@ -82,7 +82,7 @@ export async function GET(request) {
       .from('trips')
       .select('id, trip_id, trip_group_id, leg_order, pickup_id, dropoff_id, pickup_min, call_min, start_dt, end_dt, started_at, arrived_at, picked_up_at, eta_to_pickup_min, eta_to_pickup_km, status, pax_count, passenger_list, service_type, transfer_class')
       .eq('production_id', productionId)
-      .eq('vehicle_id', vehicle.id)
+      .eq('vehicle_id', vehicle.uuid)
       .eq('date', today)
     const rawTrips = tripData || []
     // DONE → ordina per started_at reale, altri → per pickup_min pianificato
@@ -123,7 +123,7 @@ export async function GET(request) {
   if (driverType === 'NCC') {
     sessionQuery = sessionQuery.eq('ncc_driver_id', driver.id)
   } else if (vehicle) {
-    sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
+    sessionQuery = sessionQuery.eq('vehicle_id', vehicle.uuid)
   }
 
   const { data: activeSession } = await sessionQuery.single()
