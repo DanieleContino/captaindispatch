@@ -8,6 +8,7 @@ import { normalizeDept } from '../../../lib/normalizeDept'
 import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
+import { generateDisplayId } from '../../../lib/generateDisplayId'
 
 const SIDEBAR_W = 400
 
@@ -63,7 +64,7 @@ function TravelSelector({ crewId, current, onChange }) {
   async function pick(s) {
     if (s === current || saving) return
     setSaving(true)
-    const { error } = await supabase.from('crew').update({ travel_status: s }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    const { error } = await supabase.from('crew').update({ travel_status: s }).eq('uuid', crewId).eq('production_id', PRODUCTION_ID)
     setSaving(false)
     if (!error) onChange(crewId, s)
   }
@@ -90,7 +91,7 @@ function NTNToggle({ crewId, current, onChange }) {
     if (saving) return
     setSaving(true)
     const next = !current
-    const { error } = await supabase.from('crew').update({ no_transport_needed: next }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    const { error } = await supabase.from('crew').update({ no_transport_needed: next }).eq('uuid', crewId).eq('production_id', PRODUCTION_ID)
     setSaving(false)
     if (!error) onChange(crewId, next)
   }
@@ -111,7 +112,7 @@ function RemoteToggle({ crewId, current, onChange }) {
     if (saving) return
     setSaving(true)
     const next = current === false ? true : false
-    const { error } = await supabase.from('crew').update({ on_location: next }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    const { error } = await supabase.from('crew').update({ on_location: next }).eq('uuid', crewId).eq('production_id', PRODUCTION_ID)
     setSaving(false)
     if (!error) onChange(crewId, next)
   }
@@ -158,7 +159,7 @@ function ContactPopover({ crewId, email, phone, onSaved }) {
     setSaving(true)
     const { error } = await supabase.from('crew')
       .update({ email: eVal.trim() || null, phone: pVal.trim() || null })
-      .eq('id', crewId).eq('production_id', PRODUCTION_ID)
+      .eq('uuid', crewId).eq('production_id', PRODUCTION_ID)
     setSaving(false)
     if (!error) {
       onSaved(crewId, { email: eVal.trim() || null, phone: pVal.trim() || null })
@@ -334,7 +335,7 @@ function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
         hotel_id:       active.hotel_id || null,
         arrival_date:   active.arrival_date || null,
         departure_date: active.departure_date || null,
-      }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+      }).eq('uuid', crewId).eq('production_id', PRODUCTION_ID)
       onCrewDatesUpdated && onCrewDatesUpdated(active)
     }
   }
@@ -773,7 +774,7 @@ function FamilyAccordion({ crewId, personType, linkedCrewId }) {
       const { data } = await supabase
         .from('crew')
         .select('id, full_name, role, department')
-        .eq('id', linkedCrewId)
+        .eq('uuid', linkedCrewId)
         .single()
       setMembers(data ? [data] : [])
     } else {
@@ -1162,17 +1163,9 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
       else setLinkedCrewSearch('')
       setLinkedCrewResults([])
       if (PRODUCTION_ID) {
-        supabase.from('crew').select('id')
-          .then(({ data }) => {
-            let max = 0
-            if (data) {
-              data.forEach(row => {
-                const m = row.id.match(/^CR(\d+)$/i)
-                if (m) max = Math.max(max, parseInt(m[1]))
-              })
-            }
-            setForm(f => ({ ...f, id: 'CR' + String(max + 1).padStart(4, '0') }))
-          })
+        generateDisplayId(supabase, 'crew', 'CR', PRODUCTION_ID).then(newId => {
+          setForm(f => ({ ...f, id: newId }))
+        })
       }
     }
   }, [open, mode, initial])
@@ -1222,7 +1215,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
 
     let error
     if (mode === 'new') {
-      const r = await supabase.from('crew').insert({ ...row, id: form.id.trim().toUpperCase() }).select('id').single()
+      const r = await supabase.from('crew').insert({ ...row, display_id: form.id.trim().toUpperCase() }).select('uuid').single()
       error = r.error
       setSaving(false)
       if (error) { setError(error.message); return }
@@ -1672,9 +1665,9 @@ export default function CrewPage() {
         // Leggi il ruolo reale da DB (potrebbe essere CAPTAIN, TRAVEL, ACCOMMODATION, ecc.)
         const { data: roleRow } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('production_id', PRODUCTION_ID).single()
         if (roleRow?.role) setUserRole(roleRow.role)
-        const { data: locs } = await supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name')
+        const { data: locs } = await supabase.from('locations').select('uuid,display_id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name')
         if (locs) {
-          const m = {}; locs.forEach(l => { m[l.id] = l.name })
+          const m = {}; locs.forEach(l => { m[l.uuid] = l.name })
           setLocs(locs); setLocsMap(m)
         }
       }
