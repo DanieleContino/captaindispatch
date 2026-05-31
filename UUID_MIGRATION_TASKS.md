@@ -1,5 +1,5 @@
 # UUID Migration — Task File Completo
-> Branch: `uuid-migration` | Aggiornato: 2026-05-31 | Audit by Cline
+> Branch: `master` (uuid-migration mergiato — commit `2c68997`) | Aggiornato: 2026-05-31 S96
 
 ---
 
@@ -20,6 +20,38 @@
 - `routes.from_id`, `routes.to_id` → ora UUID (`locations.uuid`)
 
 **Pattern del fix:** `.eq('id', x)` → `.eq('uuid', x)` per le FK, ma `.eq('id', x)` resta OK per lookup con il vecchio text display id.
+
+**Pattern standard post-migrazione:**
+```js
+// SELECT — sempre includere uuid e display_id
+.select('uuid, display_id, ...')
+
+// ORDER — sempre su display_id, mai su id
+.order('display_id')
+
+// Lookup maps
+locsById = Object.fromEntries(locs.map(l => [l.uuid, l.name]))
+
+// Find in list — sempre uuid
+crewList.find(c => c.uuid === cid)
+vehicleList.find(v => v.uuid === vid)
+
+// Display label — sempre display_id con fallback
+{v.display_id || v.id}
+```
+
+---
+
+## ⚠️ REGOLA CRITICA PER CLINE: SEARCH/REPLACE SU RIGHE LUNGHE
+
+`vehicles/page.js` ha righe molto lunghe (template literals, inline queries).
+Cline fallisce i SEARCH/REPLACE quando la stringa è troppo lunga.
+
+**Strategia corretta:**
+1. Fare `read_file` sulle righe specifiche PRIMA di scrivere il SEARCH
+2. Usare solo una porzione CORTA e UNICA della riga come SEARCH (8-15 parole max)
+3. Per template literals (backtick), cercare solo la parte interna distintiva
+4. Mai incollare l'intera riga — trovare il sottostringa univoco più corto
 
 ---
 
@@ -49,208 +81,372 @@ S7 locations/page.js — refresh-location chiama con uuid ........ ✅ [1b66af0]
 S8 travel/page.js — audit: già corretto (crew uuid, .eq(uuid) ok) ✅ [S8]
 S9 TripSidebar.js — getClass usa locUuidToTextId, crew_id c.uuid ✅ [2538642]
 S9 EditTripSidebar.js — getClass×3 (L171/398/499) + busyMap×11 c.uuid ✅ [2538642]
+uuid-migration → master merge .................................. ✅ [2c68997]
+S96 vehicles T1 — VehicleRow mostra display_id || id .......... ✅
+S96 vehicles T2 — load() ordina per display_id ................ ✅
+S96 vehicles T3 — selectAll usa uuid .......................... ✅
+S96 vehicles preferred crew — lookup usa c.uuid ............... ✅
+S96 vehicles NccTab — select include uuid, display_id ......... ✅
+S11a accommodation A1-A4 — uuid in crew_stays insert/update ... ✅ [mergiato]
+S11a bridge B1-B4 — primaryCrewUuid + locations uuid select ... ✅ [mergiato]
+S11b bridge B5-B13 — TravelDiscrepanciesWidget eq uuid ........ ✅ [confermato lettura file]
+S12 vehicles T4 — ComodatoTab select uuid+display_id+order .... ✅
+S12 vehicles T5 — ComodatoTab mostra display_id || id .......... ✅
+S12 vehicles T6 — ComodatoTab owner lookup c.uuid ............. ✅
+S12 vehicles T7 — LoanVehicleSidebar ownerCrew lookup c.uuid .. ✅
+S13 vehicles T8a — rental filter productionFiltered display_id  ✅
+S13 vehicles T8b — rental filter filtered display_id .............. ✅
+Fix S14 F1 — fleet/page.js vehicles order by display_id ........... ✅
+Fix S14 Q1 — qr-codes/page.js vehicles order by display_id ........ ✅
+Fix S15 R1 — rocket loadData crew select includes uuid ............. ✅
+Fix S15 R2 — rocket loadData vehicles select includes uuid ......... ✅
+Fix S15 R3 — rocket handleConfirm vehicle_id uses uuid ............. ✅
+Fix S15 R4 — rocket handleConfirm trip_passengers uses crew uuid ... ✅
+Fix S15 R5 — rocket vehicle display label uses display_id .......... ✅
 ```
-
-> ✅ **Ultimo commit pushato:** `2538642` su branch `uuid-migration` (2026-05-31)
-> ⚠️ **Modifiche locali NON pushate (S11a):**
->   - `app/dashboard/accommodation/page.js` — fix A1-A4 applicati
->   - `app/dashboard/bridge/page.js` — fix B1-B4 applicati (B5-B13 ancora da fare)
 
 ---
 
 ## 📋 SESSIONI — STORICO E STATO
 
----
-
-### ~~🔧 SESSIONE 0-8~~ ✅ COMPLETATE
+### ~~🔧 SESSIONI 0-11a~~ ✅ COMPLETATE
 Vedi sezione "GIÀ COMPLETATO" sopra.
 
 ---
 
-### ~~🔧 SESSIONE 8 — travel/page.js~~ ✅ COMPLETATA
-> **Audit 2026-05-31**: file già corretto — nessuna modifica necessaria.
+### ~~🔧 SESSIONE S11b~~ ✅ Fix `bridge/page.js` B5-B13 COMPLETATO
+> `TravelDiscrepanciesWidget` — 9 fix su `.eq('id', ...)` → `.eq('uuid', ...)`
 
----
+**Pre-requisito:** Leggere `bridge/page.js` righe ~1000-1115 prima di ogni SEARCH.
 
-### ~~🔧 SESSIONE 9 — TripSidebar + EditTripSidebar getClass/busyMap~~ ✅ COMPLETATA
-> **2026-05-31**: commit `2538642`
+#### Fix da applicare:
 
-**Fix applicati:**
-- `TripSidebar.js`: `getClass()` ora usa `locUuidToTextId[uuid] || uuid` (L291), `trip_passengers.insert` usa `crew_id: c.uuid`
-- `EditTripSidebar.js`:
-  - `getClass()` in `loadPaxData` (L171): `locsDisplayMap?.[effectivePickup] || effectivePickup`
-  - `getClass()` in loop siblings (handleSubmit): `locsDisplayMap?.[sib.pickup_id] || sib.pickup_id`
-  - `getClass()` in loop extraLegs (handleSubmit): `locsDisplayMap?.[leg.pickup_id] || leg.pickup_id`
-  - `busyMap[c.id]` → `busyMap[c.uuid]` in 11 punti (freeCount, busyCount, "Add all", filtered.map×2, NTN headers×2, filteredNtn.map×4)
-
----
-
-### ~~🔧 SESSIONE 10 — lib/tripUtils.js (audit)~~ ✅ COMPLETATA
-> **Audit 2026-05-31**: file già corretto — nessuna modifica necessaria.
-
-**Risultato audit:**
-- `getClass(p, d)` → prende TEXT display id (controlla prefissi `APT_`, `STN_`, `PRT_`) — **by design, NON modificare**. Chiamanti (TripSidebar, EditTripSidebar) già fixati in S9.
-- `isHub(id)` → idem, lavora su TEXT id — nessuna modifica.
-- `checkVehicleAvail(vehicleId, ...)` → `.eq('vehicle_id', vehicleId)` su `trips` — colonna già UUID, i chiamanti passano `v.uuid` (auditati nelle sessioni precedenti) — **OK**.
-- Nessuna query diretta a `locations`, `crew`, `vehicles` nel file.
-
----
-
-### 🔧 SESSIONE 11a — Static Audit + Fix Parziali (2026-05-31) ⚠️ IN CORSO
-> **Audit automatico eseguito da Cline** — ricerca regex su tutto il codebase JS
-
-#### Schema confermato da audit:
-- `crew_stays.crew_id` = **UUID** (FK a `crew.uuid`) — confermato da `crew/page.js:338` e `accommodation/page.js:1413`
-- `travel_movements.crew_id` = **UUID** (FK a `crew.uuid`) — confermato da `crew/page.js:608`
-- `crew_stays.hotel_id` = **UUID** (FK a `locations.uuid`) — confermato da join PostgREST `hotel:hotel_id(uuid, ...)` in `accommodation/page.js:203`
-- `travel_movements.rooming_hotel_id` = **TEXT** (non migrato — TEXT location id) — il dato arriva dall'import fogli Google, non è una FK a `locations`
-
-#### File non-migrated confermati VALID (nessun fix necessario):
-- `locations/page.js:136/170/437/444` — update/delete locations row per TEXT `id` → OK (colonna `id` esiste ancora)
-- `productions/page.js:146/154`, `settings/production/page.js:124/132` — idem ✅
-- `vehicles/page.js:3992` — update vehicles row per TEXT `id` → OK ✅
-- `hotel-settings/page.js:278` — update locations per `location_id` TEXT → OK ✅
-- `hotel-settings/page.js:209/315` — `hotels.location_id` ancora TEXT → OK ✅
-- Tutte le tabelle non migrate (`trips.id`, `crew_stays.id`, `hotels.id`, `productions.id`, ecc.) → OK ✅
-
-#### ✅ Fix APPLICATI in S11a — `accommodation/page.js` (codice modificato, da committare):
-
-| # | Riga | Bug | Fix |
-|---|------|-----|-----|
-| A-1 | 1155 | `.select('id, full_name...')` — manca `uuid` nel select crew per insert family member | ✅ aggiunto `uuid` |
-| A-2 | 1175 | `crew_id: newCrew.id` (TEXT) in `crew_stays.insert` | ✅ → `newCrew.uuid` |
-| A-3 | 1212 | `.eq('crew_id', crewMember.id)` (TEXT) in `crew_stays` roommate query | ✅ → `crewMember.uuid` |
-| A-4 | 1289 | `crew.update().eq('id', crewId)` — ramo early-return di `syncCrewDates` | ✅ → `.eq('uuid', crewId)` |
-
-#### ✅ Fix APPLICATI in S11a — `bridge/page.js` (B1-B4, codice modificato, da committare):
-
-| # | Riga | Bug | Fix |
-|---|------|-----|-----|
-| B-1 | 206 | crew `.select(...)` manca `uuid` — serve per calcolare `primaryCrewUuid` | ✅ aggiunto `uuid` |
-| B-2 | 245/265 | `duplicate_ids` = TEXT array; `primary_id: primaryId` TEXT → API `/api/crew/merge` aspetta UUID | ✅ `primaryCrewUuid` + `duplicate_uuids` calcolati da `selCrew.find(c => c.id === id)?.uuid` |
-| B-3 | 278,292 | `crew_id: primaryId` (TEXT) in `crew_stays.upsert` per multi-stay | ✅ → `primaryCrewUuid` |
-| B-4 | 835 | `locations.select('id, name')` manca `uuid` — serve per resolver UUID hotel nei bug B6-B12 | ✅ → `'id, uuid, name'` |
-
-#### ❌ Fix DA FARE — `bridge/page.js` (B5-B13 in `TravelDiscrepanciesWidget`):
-
-| # | Riga approx. | Blocco | Bug | Fix da applicare |
-|---|-------------|--------|-----|-----------------|
-| B-5 | ~1007 | `travel_date_conflict` → "Use Calendar" btn | `crew.update().eq('id', item.crew_id)` | → `.eq('uuid', item.crew_id)` |
-| B-6 | ~1027 | `hotel_conflict` → calcolo `resolvedTravelHotelId` | `locations.find(...).id` ritorna TEXT | → `.uuid` (UUID) |
-| B-7 | ~1030 | `hotel_conflict` → calcolo `travelHotel` display | `locations.find(l => l.id === resolvedTravelHotelId)` | → `l.uuid ===` |
-| B-8 | ~1041 | `hotel_conflict` → "Use Rooming" btn, `crew.update` | `hotel_id: item.rooming_hotel_id` (TEXT su col UUID) | → `locations.find(l => l.id === item.rooming_hotel_id)?.uuid` |
-| B-9 | ~1041 | `hotel_conflict` → "Use Rooming" btn, `crew.update` | `.eq('id', item.crew_id)` | → `.eq('uuid', item.crew_id)` |
-| B-10 | ~1042 | `hotel_conflict` → "Use Rooming" btn, `crew_stays.update` | `hotel_id: item.rooming_hotel_id` (TEXT su col UUID) | → stesso UUID lookup di B-8 |
-| B-11 | ~1052 | `hotel_conflict` → "Use Calendar" btn, `crew.update` | `.eq('id', item.crew_id)` | → `.eq('uuid', item.crew_id)` |
-| B-12 | ~1080/1086 | `match_status === 'unmatched'` → sessionStorage `crewAddNewData` | `hotel_id = item.rooming_hotel_id` (TEXT) e `matchedLoc.id` (TEXT) | → UUID via `locations.find(l => l.id === ...).uuid` |
-| B-13 | ~1109 | "Skip future checks" → `crew.update({ no_rooming_check })` | `.eq('id', item.crew_id)` | → `.eq('uuid', item.crew_id)` |
-
-> **Nota B-8/B-10:** `item.rooming_hotel_id` è TEXT (dall'import fogli Google), ma `crew.hotel_id` e `crew_stays.hotel_id` sono colonne UUID. Serve il lookup `locations.find(l => l.id === item.rooming_hotel_id)?.uuid`. La `locations` array ha già `uuid` nel select dopo il fix B-4.
->
-> **Nota B-12:** `item.rooming_hotel_id` e `matchedLoc.id` sono entrambi TEXT → convertire in UUID prima di mettere in sessionStorage, che poi viene letto da `crew/page.js` per pre-popolare il form con `hotel_id`.
-
----
-
-### 🔧 SESSIONE 11b — Fix `bridge/page.js` B5-B13 (DA FARE)
-> Applicare i 9 fix rimanenti in `TravelDiscrepanciesWidget`, tutti nel componente `bridge/page.js`.
-
-**Cambio netto da fare nel codice:**
-
-1. **B-5** (~L1007): ramo `personStays.length === 0`, dentro `"Use Calendar"` button onClick:
-   ```js
-   // PRIMA
-   await supabase.from('crew').update({ [field]: item.travel_date }).eq('id', item.crew_id).eq('production_id', productionId)
-   // DOPO
-   await supabase.from('crew').update({ [field]: item.travel_date }).eq('uuid', item.crew_id).eq('production_id', productionId)
-   ```
-
-2. **B-6/B-7** (~L1022-1030): calcolo `resolvedTravelHotelId` e `travelHotel`:
-   ```js
-   // PRIMA
-   )?.id
-   const travelHotel = locations.find(l => l.id === resolvedTravelHotelId)?.name || ...
-   // DOPO
-   )?.uuid
-   const travelHotel = locations.find(l => l.uuid === resolvedTravelHotelId)?.name || ...
-   ```
-
-3. **B-8/B-9/B-10** (~L1039-1042): blocco `"Use Rooming"` button onClick:
-   ```js
-   // PRIMA
-   if (!item.crew_id || !item.rooming_hotel_id) return
-   await supabase.from('crew').update({ hotel_id: item.rooming_hotel_id }).eq('id', item.crew_id)...
-   await supabase.from('crew_stays').update({ hotel_id: item.rooming_hotel_id }).eq('crew_id', item.crew_id)...
-   // DOPO
-   if (!item.crew_id || !item.rooming_hotel_id) return
-   const roomingUuid = locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null
-   await supabase.from('crew').update({ hotel_id: roomingUuid }).eq('uuid', item.crew_id)...
-   await supabase.from('crew_stays').update({ hotel_id: roomingUuid }).eq('crew_id', item.crew_id)...
-   ```
-
-4. **B-11** (~L1052): blocco `"Use Calendar"` button onClick (hotel_conflict):
-   ```js
-   // PRIMA
-   await supabase.from('crew').update({ hotel_id: resolvedTravelHotelId }).eq('id', item.crew_id)...
-   // DOPO
-   await supabase.from('crew').update({ hotel_id: resolvedTravelHotelId }).eq('uuid', item.crew_id)...
-   ```
-
-5. **B-12** (~L1080-1088): blocco `match_status === 'unmatched'`, costruzione `hotel_id` per sessionStorage:
-   ```js
-   // PRIMA
-   let hotel_id = item.rooming_hotel_id || null
-   if (!hotel_id && item.hotel_raw) {
-     const matchedLoc = locations.find(...)
-     if (matchedLoc) hotel_id = matchedLoc.id
-   }
-   // DOPO
-   const rooming_hotel_uuid = item.rooming_hotel_id
-     ? (locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null) : null
-   let hotel_id = rooming_hotel_uuid || null
-   if (!hotel_id && item.hotel_raw) {
-     const matchedLoc = locations.find(...)
-     if (matchedLoc) hotel_id = matchedLoc.uuid
-   }
-   ```
-
-6. **B-13** (~L1109): blocco `"Skip future checks"` onClick:
-   ```js
-   // PRIMA
-   await supabase.from('crew').update({ no_rooming_check: true }).eq('id', item.crew_id)...
-   // DOPO
-   await supabase.from('crew').update({ no_rooming_check: true }).eq('uuid', item.crew_id)...
-   ```
-
----
-
-### 🔧 SESSIONE 11c — Commit + Push + Test + Merge Master (DA FARE)
-> Solo verifica e git operations
-
-**Checklist pre-merge:**
+**B-5** (~L1007): `crew.update` dentro `"Use Calendar"` (personStays.length === 0):
+```js
+// PRIMA
+.eq('id', item.crew_id).eq('production_id', productionId)
+// DOPO
+.eq('uuid', item.crew_id).eq('production_id', productionId)
 ```
-[ ] git add app/dashboard/accommodation/page.js app/dashboard/bridge/page.js
-[ ] git commit -m "S11a: UUID fix accommodation A1-A4 + bridge B1-B4 (merge, locations select)"
-[ ] git add app/dashboard/bridge/page.js
-[ ] git commit -m "S11b: UUID fix bridge TravelDiscrepanciesWidget B5-B13"
-[ ] git push origin uuid-migration
-[ ] Deploy Vercel su preview uuid-migration branch
-[ ] Test Captain Go: captaindispatch.com/go/[token]
-    - Sessione start/stop
-    - Visualizza trips con pickup/dropoff location names
-    - Wrap trip da Captain Go
-[ ] Test WrapTrip: /wrap-trip
-    - FleetMonitor mostra vehicle status correttamente
-    - Crea wrap trip con vehicle + crew
-[ ] Test Scan QR: /scan?qr=CR:xxx e /scan?qr=VH:xxx
-[ ] Test Quick-Create trip dal dashboard
-[ ] Test Trips page: crea/modifica trip, assegna passeggeri
-[ ] Test Locations page: crea/modifica location, verifica route refresh
-[ ] Test Bridge → Duplicate crew: merge due crew → verifica crew_stays create con UUID corretto
-[ ] Test Bridge → Travel Discrepancy: risolvi hotel conflict con "Use Rooming" e "Use Calendar"
-[ ] Test Bridge → Unmatched: crea nuovo crew da discrepancy, verifica hotel_id in sessionStorage
-[ ] Test Accommodation: aggiungi family member → stay creata con crew.uuid
-[ ] Test Accommodation: aggiungi roommate → crew_stays.crew_id = crewMember.uuid
-[ ] Se tutto ok → git checkout master && git merge uuid-migration && git push
+Commit: `"Fix bridge B5: crew update eq uuid in Use Calendar (travel_date_conflict)"`
+
+**B-6/B-7** (~L1022-1030): calcolo `resolvedTravelHotelId` e `travelHotel`:
+```js
+// PRIMA
+)?.id
+const travelHotel = locations.find(l => l.id === resolvedTravelHotelId)?.name || ...
+// DOPO
+)?.uuid
+const travelHotel = locations.find(l => l.uuid === resolvedTravelHotelId)?.name || ...
+```
+Commit: `"Fix bridge B6-B7: resolvedTravelHotelId uses uuid"`
+
+**B-8/B-9/B-10** (~L1039-1042): blocco `"Use Rooming"` onClick:
+```js
+// PRIMA
+await supabase.from('crew').update({ hotel_id: item.rooming_hotel_id }).eq('id', item.crew_id)...
+await supabase.from('crew_stays').update({ hotel_id: item.rooming_hotel_id }).eq('crew_id', item.crew_id)...
+// DOPO
+const roomingUuid = locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null
+await supabase.from('crew').update({ hotel_id: roomingUuid }).eq('uuid', item.crew_id)...
+await supabase.from('crew_stays').update({ hotel_id: roomingUuid }).eq('crew_id', item.crew_id)...
+```
+Commit: `"Fix bridge B8-B10: Use Rooming converts hotel_id to uuid"`
+
+**B-11** (~L1052): `"Use Calendar"` onClick in `hotel_conflict`:
+```js
+// PRIMA
+.eq('id', item.crew_id)...
+// DOPO
+.eq('uuid', item.crew_id)...
+```
+Commit: `"Fix bridge B11: crew update eq uuid in Use Calendar (hotel_conflict)"`
+
+**B-12** (~L1080-1088): blocco `match_status === 'unmatched'`, costruzione `hotel_id`:
+```js
+// PRIMA
+let hotel_id = item.rooming_hotel_id || null
+if (!hotel_id && item.hotel_raw) {
+  const matchedLoc = locations.find(...)
+  if (matchedLoc) hotel_id = matchedLoc.id
+}
+// DOPO
+const rooming_hotel_uuid = item.rooming_hotel_id
+  ? (locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null) : null
+let hotel_id = rooming_hotel_uuid || null
+if (!hotel_id && item.hotel_raw) {
+  const matchedLoc = locations.find(...)
+  if (matchedLoc) hotel_id = matchedLoc.uuid
+}
+```
+Commit: `"Fix bridge B12: sessionStorage hotel_id uses uuid"`
+
+**B-13** (~L1109): `"Skip future checks"` onClick:
+```js
+// PRIMA
+.eq('id', item.crew_id)...
+// DOPO
+.eq('uuid', item.crew_id)...
+```
+Commit: `"Fix bridge B13: no_rooming_check update uses uuid"`
+
+> **Nota B-8/B-10/B-12:** `item.rooming_hotel_id` è TEXT (dall'import Google Sheets), ma `crew.hotel_id` e `crew_stays.hotel_id` sono UUID. Serve lookup `locations.find(l => l.id === item.rooming_hotel_id)?.uuid`. La `locations` array ha già `uuid` nel select grazie al fix B-4.
+
+---
+
+### ~~🔧 SESSIONE S12~~ ✅ `vehicles/page.js` T4+T5+T6+T7 COMPLETATO
+> ComodatoTab + LoanVehicleSidebar — 4 fix
+
+**IMPORTANTE:** `vehicles/page.js` è ~5000 righe. Fare `read_file` delle righe specifiche PRIMA di ogni SEARCH.
+
+#### Task T4 — ComodatoTab: select aggiunge uuid, display_id, ordina per display_id
+
+Righe da leggere prima: 3760-3780
+
+SEARCH (sottostringa corta — solo la parte finale):
+```
+comodato_fuel_reimbursement, comodato_notes').eq('production_id', productionId).eq('is_comodato', true).order('id'),
+```
+REPLACE:
+```
+comodato_fuel_reimbursement, comodato_notes').eq('production_id', productionId).eq('is_comodato', true).order('display_id'),
+```
+
+Poi secondo SEARCH/REPLACE (file separato o seconda operazione):
+SEARCH:
+```
+vehicles').select('id, vehicle_type, license_plate, driver_name, active, is_comodato, comodato_owner_crew_id,
+```
+REPLACE:
+```
+vehicles').select('uuid, id, display_id, vehicle_type, license_plate, driver_name, active, is_comodato, comodato_owner_crew_id,
+```
+Commit: `"Fix vehicles: ComodatoTab select includes uuid display_id orders by display_id"`
+
+#### Task T5 — ComodatoTab: mostra display_id nel render
+
+Righe da leggere prima: 3830-3845
+
+SEARCH:
+```
+fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
+```
+REPLACE:
+```
+fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>{v.display_id || v.id}</span>
+```
+Commit: `"Fix vehicles: ComodatoTab shows display_id"`
+
+#### Task T6 — ComodatoTab: owner lookup usa uuid
+
+Righe da leggere prima: 3840-3852
+
+SEARCH:
+```
+                      const owner = crewList.find(c => c.id === v.comodato_owner_crew_id)
+```
+REPLACE:
+```
+                      const owner = crewList.find(c => c.uuid === v.comodato_owner_crew_id)
+```
+Commit: `"Fix vehicles: ComodatoTab owner lookup uses uuid"`
+
+#### Task T7 — LoanVehicleSidebar: ownerCrew lookup usa uuid
+
+Righe da leggere prima: 4010-4020
+
+SEARCH:
+```
+  const ownerCrew = crewList.find(c => c.id === form.comodato_owner_crew_id)
+```
+REPLACE:
+```
+  const ownerCrew = crewList.find(c => c.uuid === form.comodato_owner_crew_id)
+```
+Commit: `"Fix vehicles: LoanVehicleSidebar ownerCrew lookup uses uuid"`
+
+---
+
+### ~~🔧 SESSIONE S13~~ ✅ `vehicles/page.js` T8a+T8b COMPLETATO
+> ✅ T8a completato — ✅ T8b completato
+> Rental filter search — 2 occorrenze identiche
+
+**IMPORTANTE:** Le due righe (4459 e 4475) sono **identiche**. Disambiguare con il contesto circostante.
+
+#### Task T8a — prima occorrenza (~riga 4459, dentro `productionFiltered`)
+
+Righe da leggere prima: 4455-4465
+
+SEARCH (usa contesto `// Reset selezione` che segue solo la prima):
+```
+      if (!(v.id || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  // Reset selezione quando cambiano i filtri
+```
+REPLACE:
+```
+      if (!((v.display_id || v.id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  // Reset selezione quando cambiano i filtri
+```
+Commit: `"Fix vehicles: rental filter search uses display_id (first)"`
+
+#### Task T8b — seconda occorrenza (~riga 4475, dentro `filtered`)
+
+Righe da leggere prima: 4472-4482
+
+SEARCH (usa contesto `const counts` che segue solo la seconda):
+```
+      if (!(v.id || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  const counts = {
+```
+REPLACE:
+```
+      if (!((v.display_id || v.id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  const counts = {
+```
+Commit: `"Fix vehicles: rental filter search uses display_id (second)"`
+
+---
+
+### ~~🔧 SESSIONE S14~~ ✅ `fleet/page.js` F1 + `qr-codes/page.js` Q1 COMPLETATO
+> Due piccole modifiche su file diversi
+
+#### Task F1 — fleet: ordina vehicles per display_id
+
+Righe da leggere prima: `fleet/page.js` 775-785
+
+SEARCH:
+```
+        .order('vehicle_type').order('id'),
+```
+REPLACE:
+```
+        .order('vehicle_type').order('display_id'),
+```
+Commit: `"Fix fleet: vehicles order by display_id"`
+
+#### Task Q1 — qr-codes: ordina vehicles per display_id
+
+Righe da leggere prima: `qr-codes/page.js` 50-62
+
+SEARCH:
+```
+          .eq('production_id', PRODUCTION_ID).order('id'),
+```
+REPLACE:
+```
+          .eq('production_id', PRODUCTION_ID).order('display_id'),
+```
+Commit: `"Fix qr-codes: vehicles order by display_id"`
+
+---
+
+### ~~🔧 SESSIONE S15~~ ✅ `rocket/page.js` R1+R2+R3+R4+R5 COMPLETATO
+> loadData select + handleConfirm + display label
+
+**IMPORTANTE:** Leggere le righe specifiche PRIMA di ogni SEARCH.
+
+#### Task R1 — rocket: loadData crew select include uuid
+
+Righe da leggere prima: 1490-1510
+
+SEARCH:
+```
+      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
+```
+REPLACE:
+```
+      supabase.from('crew').select('id,uuid,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
+```
+Commit: `"Fix rocket: loadData crew select includes uuid"`
+
+#### Task R2 — rocket: loadData vehicles select include uuid
+
+Righe da leggere prima: 1495-1510
+
+SEARCH:
+```
+      supabase.from('vehicles').select('id,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active,preferred_dept,preferred_crew_ids')
+```
+REPLACE:
+```
+      supabase.from('vehicles').select('id,uuid,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active,preferred_dept,preferred_crew_ids')
+```
+Commit: `"Fix rocket: loadData vehicles select includes uuid"`
+
+#### Task R3 — rocket: handleConfirm vehicle_id usa uuid
+
+Righe da leggere prima: 1730-1745
+
+SEARCH:
+```
+          vehicle_id: t.vehicleId, driver_name: t.vehicle.driver_name || null,
+```
+REPLACE:
+```
+          vehicle_id: t.vehicle?.uuid || t.vehicleId, driver_name: t.vehicle.driver_name || null,
+```
+Commit: `"Fix rocket: handleConfirm vehicle_id uses uuid"`
+
+#### Task R4 — rocket: handleConfirm trip_passengers usa crew uuid
+
+Righe da leggere prima: 1750-1760
+
+SEARCH:
+```
+            g.crew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.id }))
+```
+REPLACE:
+```
+            g.crew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.uuid || c.id }))
+```
+Commit: `"Fix rocket: handleConfirm trip_passengers uses crew uuid"`
+
+#### Task R5 — rocket: display label usa display_id (~riga 349)
+
+Righe da leggere prima: 345-355
+
+> ⚠️ Leggere le righe prima di scrivere il SEARCH — riga 349 contiene `v.id can carry` (label display veicolo).
+
+SEARCH (leggere riga esatta prima):
+```
+{v.id} can carry
+```
+REPLACE:
+```
+{v.display_id || v.id} can carry
+```
+Commit: `"Fix rocket: vehicle display label uses display_id"`
+
+---
+
+### ~~🔧 SESSIONE S16~~ ✅ git push + test produzione
+> Completato 2026-05-31
+
+```
+[x] git push origin master ............................................. ✅
+[ ] Test produzione su captaindispatch.com
+[ ] Test vehicles: ComodatoTab mostra display_id, search funziona
+[ ] Test fleet: veicoli ordinati per display_id
+[ ] Test qr-codes: veicoli ordinati per display_id
+[ ] Test rocket: crea trip da rocket, verifica vehicle_id e crew_id UUID nel DB
+[ ] Test bridge: risolvi hotel conflict, verifica uuid corretto
+[ ] Se OK → chiudere migrazione UUID
 ```
 
 ---
@@ -260,67 +456,64 @@ Vedi sezione "GIÀ COMPLETATO" sopra.
 | File | Status | Sessione |
 |------|--------|---------|
 | `scripts/create-schema.sql` | ✅ SQL done | — |
-| `app/dashboard/accommodation/page.js` | ✅ A1/A2 vecchi + **S11a A1-A4** ⚠️ non pushato | S11a |
+| `app/dashboard/accommodation/page.js` | ✅ A1/A2 + S11a A1-A4 | S11a |
 | `app/dashboard/trips/_components/CrewInfoModal.js` | ✅ B | — |
 | `app/api/go/session/route.js` | ✅ B | — |
 | `app/api/go/trip/start/route.js` | ✅ B | — |
 | `app/dashboard/vehicles/components/NccDriverSidebar.js` | ✅ N | — |
 | `app/dashboard/vehicles/components/NccVehicleSidebar.js` | ✅ N | — |
-| `app/dashboard/vehicles/page.js` | ✅ V | — |
+| `app/dashboard/vehicles/page.js` | ✅ V1-V9 + S96 T1-T3 + NccTab + T4-T8b | S13 |
 | `lib/routeDuration.js` | ✅ C1 | — |
 | `app/dashboard/hub-coverage/page.js` | ✅ C2 | — |
 | `app/dashboard/pax-coverage/page.js` | ✅ C3 | — |
-| `app/api/go/data/route.js` | ✅ E (97e4fe8) | S1 |
-| `app/api/go/wrap/route.js` | ✅ E (97e4fe8) | S1 |
+| `app/api/go/data/route.js` | ✅ E [97e4fe8] | S1 |
+| `app/api/go/wrap/route.js` | ✅ E [97e4fe8] | S1 |
 | `app/api/qr/resolve/route.js` | ✅ D3+D4 | S2 |
-| `app/wrap-trip/page.js` | ✅ G (26135a9) | S3 |
-| `app/go/[token]/page.js` | ✅ H (ca92b70) | S4 |
-| `app/api/crew/merge/route.js` | ✅ D1 (95e966f) | S5 |
-| `app/api/go/ping/route.js` | ✅ D2 (95e966f) | S5 |
-| `app/api/trips/quick-create/route.js` | ✅ D5+D6 (c06facf) | S6 |
-| `app/api/fleet/map-data/route.js` | ✅ S7 (9deb3fd) | S7 |
-| `app/api/routes/compute/route.js` | ✅ S7 (9deb3fd) | S7 |
-| `app/api/routes/compute-chain/route.js` | ✅ S7 (9deb3fd) | S7 |
-| `app/api/routes/optimize-waypoints/route.js` | ✅ S7 (9deb3fd) | S7 |
-| `app/api/routes/refresh-all-locations/route.js` | ✅ S7 (9deb3fd) | S7 |
-| `app/api/routes/refresh-location/route.js` | ✅ S7 (9deb3fd) | S7 |
-| `app/api/routes/traffic-check/route.js` | ✅ S7 (1b66af0) | S7 |
-| `lib/refreshRoutesWithGoogle.js` | ✅ S7 (1b66af0) | S7 |
+| `app/wrap-trip/page.js` | ✅ G [26135a9] | S3 |
+| `app/go/[token]/page.js` | ✅ H [ca92b70] | S4 |
+| `app/api/crew/merge/route.js` | ✅ D1 [95e966f] | S5 |
+| `app/api/go/ping/route.js` | ✅ D2 [95e966f] | S5 |
+| `app/api/trips/quick-create/route.js` | ✅ D5+D6 [c06facf] | S6 |
+| `app/api/fleet/map-data/route.js` | ✅ S7 [9deb3fd] | S7 |
+| `app/api/routes/compute/route.js` | ✅ S7 [9deb3fd] | S7 |
+| `app/api/routes/compute-chain/route.js` | ✅ S7 [9deb3fd] | S7 |
+| `app/api/routes/optimize-waypoints/route.js` | ✅ S7 [9deb3fd] | S7 |
+| `app/api/routes/refresh-all-locations/route.js` | ✅ S7 [9deb3fd] | S7 |
+| `app/api/routes/refresh-location/route.js` | ✅ S7 [9deb3fd] | S7 |
+| `app/api/routes/traffic-check/route.js` | ✅ S7 [1b66af0] | S7 |
+| `lib/refreshRoutesWithGoogle.js` | ✅ S7 [1b66af0] | S7 |
 | `app/dashboard/trips/page.js` | ✅ S7 — OK già corretto | S7 |
-| `app/dashboard/trips/_components/TripSidebar.js` | ✅ S9 (2538642) getClass+crew_id fix | S9 |
-| `app/dashboard/trips/_components/EditTripSidebar.js` | ✅ S9 (2538642) getClass×3+busyMap×11 | S9 |
-| `app/dashboard/trips/_components/ReplicaDayModal.js` | ✅ S7 (9deb3fd) | S7 |
+| `app/dashboard/trips/_components/TripSidebar.js` | ✅ S9 [2538642] | S9 |
+| `app/dashboard/trips/_components/EditTripSidebar.js` | ✅ S9 [2538642] | S9 |
+| `app/dashboard/trips/_components/ReplicaDayModal.js` | ✅ S7 [9deb3fd] | S7 |
 | `app/dashboard/trips/_components/TripRow.js` | ✅ S7 — OK già corretto | S7 |
 | `app/dashboard/trips/_components/WaypointReviewModal.js` | ✅ S7 — OK già corretto | S7 |
-| `app/dashboard/locations/page.js` | ✅ S7 (1b66af0) fix refresh uuid | S7 |
+| `app/dashboard/locations/page.js` | ✅ S7 [1b66af0] | S7 |
 | `app/dashboard/travel/page.js` | ✅ S8 — OK già corretto | S8 |
-| `lib/tripUtils.js` | ✅ S10 — audit: nessuna modifica necessaria | S10 |
-| `app/dashboard/bridge/page.js` | ⚠️ **S11a B1-B4** applicati (non pushato) — **B5-B13 DA FARE** | S11a/S11b |
+| `lib/tripUtils.js` | ✅ S10 — nessuna modifica necessaria | S10 |
+| `app/dashboard/bridge/page.js` | ✅ S11a B1-B4 + S11b B5-B13 | S11b |
+| `app/dashboard/fleet/page.js` | ✅ F1 | S14 |
+| `app/dashboard/qr-codes/page.js` | ✅ Q1 | S14 |
+| `app/dashboard/rocket/page.js` | ✅ R1-R5 | S15 |
 
 ---
 
 ## ⚡ Ordine di esecuzione ottimale
 
 ```
-S0 → git push ✅
-S1 → go/data + go/wrap ✅ (Captain Go sbloccato)
-S2 → qr/resolve ✅ (sblocca scan QR badges)
-S3 → wrap-trip/page.js ✅ (sblocca WrapTrip)
-S4 → go/[token]/page.js ✅ (dipende da S1+S2)
-S5 → crew/merge + go/ping ✅
-S6 → quick-create ✅
-S7 → audit routes API + trips components ✅ → commit 9deb3fd + 1b66af0
-S8 → travel/page.js ✅ (audit: già corretto — nessuna modifica)
-S9 → TripSidebar + EditTripSidebar getClass/busyMap ✅ → commit 2538642
-S10 → lib/tripUtils.js audit ✅ (audit: già corretto — nessuna modifica)
-S11a → static audit + fix accommodation A1-A4 + bridge B1-B4 ✅ (locale, NON pushato)
-S11b → fix bridge TravelDiscrepanciesWidget B5-B13 ← DA FARE
-S11c → commit + push + test + merge master ← DOPO S11b
+S0-S10  ✅ completati
+S11a    ✅ completato (B1-B4 + accommodation A1-A4)
+S11b    ✅ completato (bridge B5-B13)
+S12     ✅ completato (vehicles T4-T7)
+S13     ✅ completato (vehicles T8a+T8b)
+S14     ✅ completato (fleet F1 + qr-codes Q1)
+S15     ✅ completato (rocket R1-R5)
+S16     ← PROSSIMA: git push + test produzione
 ```
 
 ---
 
-## 📌 Note importanti per Claude
+## 📌 Note importanti per Cline
 
 1. **NON rileggere file già fixati** — usa questa lista come riferimento
 2. **Ogni sessione leggi SOLO i file elencati** per quella sessione
@@ -329,7 +522,10 @@ S11c → commit + push + test + merge master ← DOPO S11b
 5. **QR codes** contengono il vecchio TEXT id → lookup per `.eq('id', ...)` è CORRETTO per i QR
 6. **hotel_id in crew** → è già UUID dopo migrazione → lookup locations per `.eq('uuid', ...)`
 7. **driver_crew_id in vehicles** → è già UUID dopo migrazione → lookup crew per `.eq('uuid', ...)`
-8. **getClass()** in `lib/tripUtils.js` prende il TEXT display id (non UUID) → i chiamanti devono fare la conversione uuid→textId prima di chiamarla. Pattern corretto: `getClass(locUuidToTextId[pickupUuid] || pickupUuid, ...)` oppure `getClass(locsDisplayMap?.[uuid] || uuid, ...)`
-9. **crew_stays.hotel_id** — **CONFERMATO UUID** (FK a `locations.uuid`) — join PostgREST `hotel:hotel_id(uuid, ...)` in accommodation/page.js:203
-10. **busyMap** in EditTripSidebar è keyed per `crew_id` (UUID di Supabase) → usare `busyMap[c.uuid]` non `busyMap[c.id]` ✅ fixato in S9
-11. **travel_movements.rooming_hotel_id** → è **TEXT** (non migrato, viene dall'import Google Sheets) — non è una FK UUID. Serve lookup `locations.find(l => l.id === item.rooming_hotel_id)?.uuid` per ottenere l'UUID da usare nelle colonne crew/crew_stays.
+8. **getClass()** in `lib/tripUtils.js` prende il TEXT display id (non UUID) → i chiamanti devono fare la conversione uuid→textId prima di chiamarla.
+9. **crew_stays.hotel_id** — CONFERMATO UUID (FK a `locations.uuid`)
+10. **busyMap** in EditTripSidebar è keyed per `crew_id` (UUID) → `busyMap[c.uuid]` ✅ fixato in S9
+11. **travel_movements.rooming_hotel_id** → è TEXT (non migrato, viene dall'import Google Sheets) — non è una FK UUID. Serve lookup `locations.find(l => l.id === item.rooming_hotel_id)?.uuid`
+12. **vehicles/page.js ~5000 righe** — SEMPRE fare `read_file` delle righe specifiche prima del SEARCH
+13. **Shell CMD** — usare `&&` tra comandi, non PowerShell syntax
+14. **NO git push automatico** — push manuale a fine sessione (S16)
