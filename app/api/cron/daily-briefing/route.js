@@ -46,12 +46,12 @@ export async function GET(request) {
       await Promise.all([
         supabase
           .from('crew')
-          .select('id, full_name, department, production_id')
+          .select('uuid, display_id, full_name, department, production_id')
           .eq('arrival_date', tomorrow)
           .eq('hotel_status', 'CONFIRMED'),
         supabase
           .from('crew')
-          .select('id, full_name, department, production_id')
+          .select('uuid, display_id, full_name, department, production_id')
           .eq('departure_date', tomorrow)
           .eq('hotel_status', 'CONFIRMED'),
       ])
