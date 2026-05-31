@@ -203,7 +203,7 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
     setLoading(true)
     const { data } = await supabase
       .from('crew')
-      .select('id, uuid, full_name, department, hotel_id, hotel_status, travel_status, arrival_date, departure_date, email, phone, notes, created_at')
+      .select('uuid, display_id, full_name, department, hotel_id, hotel_status, travel_status, arrival_date, departure_date, email, phone, notes, created_at')
       .eq('production_id', productionId)
       .order('created_at', { ascending: true })
     setLoading(false)
@@ -660,7 +660,7 @@ function DriveSyncWidget({ productionId, onPreview, refreshKey }) {
       const filename = dlRes.headers.get('X-File-Name') || file.file_name || 'file.xlsx'
       const fileObj = new File([blob], filename, { type: blob.type })
       // 3. Carica locations
-      const locRes = await supabase.from('locations').select('id, name').eq('production_id', productionId)
+      const locRes = await supabase.from('locations').select('uuid, display_id, name').eq('production_id', productionId)
       const locations = locRes.data || []
       // 4. Apri ImportModal con il file già pronto — il modal gestirà sheet-select
       onPreview({ fileObj, selMode: file.import_mode, locations, fileId: file.file_id })
@@ -834,7 +834,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
         .limit(50),
       supabase
         .from('locations')
-        .select('id, uuid, name')
+        .select('uuid, display_id, name')
         .eq('production_id', productionId),
     ]).then(async ([{ data: rawItems }, { data: locs }]) => {
       setLocations(locs || [])
@@ -1479,12 +1479,12 @@ function MiniWidgets({ productionId }) {
   useEffect(() => {
     if (!productionId) return
     supabase.from('vehicles')
-      .select('id, sign_code, vehicle_type, in_transport')
+        .select('uuid, display_id, sign_code, vehicle_type, in_transport')
       .eq('production_id', productionId)
       .eq('active', true)
       .then(({ data }) => setVehicles(data || []))
     supabase.from('crew')
-      .select('id, travel_status, hotel_status, no_transport_needed')
+      .select('uuid, display_id, travel_status, hotel_status, no_transport_needed')
       .eq('production_id', productionId)
       .then(({ data }) => setCrew(data || []))
   }, [productionId])
@@ -1573,7 +1573,7 @@ function VehicleRentalWidget({ productionId }) {
   useEffect(() => {
     if (!productionId) return
     supabase.from('vehicles')
-      .select('id, vehicle_type, driver_name, sign_code, available_from, available_to')
+      .select('uuid, display_id, vehicle_type, driver_name, sign_code, available_from, available_to')
       .eq('production_id', productionId)
       .eq('active', true)
       .then(({ data }) => setVehicles(data || []))
@@ -2653,7 +2653,7 @@ export default function BridgePage() {
 
   useEffect(() => {
     if (!productionId) return
-    supabase.from('locations').select('id, name').eq('production_id', productionId)
+    supabase.from('locations').select('uuid, display_id, name').eq('production_id', productionId)
       .then(({ data }) => setLocations(data || []))
   }, [productionId])
 
