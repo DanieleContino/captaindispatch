@@ -45,6 +45,7 @@ S7 trips components — TripSidebar, EditTripSidebar, ReplicaDayModal ✅ [9deb3
 S7 traffic+routes — traffic-check/route.js, refreshRoutesWithGoogle ✅ [1b66af0]
 S7 EditTripSidebar fix — pendingPax crew_id: c.uuid ............ ✅ [1b66af0]
 S7 locations/page.js — refresh-location chiama con uuid ........ ✅ [1b66af0]
+S8 travel/page.js — audit: già corretto (crew uuid, .eq(uuid) ok) ✅ [S8]
 ```
 
 > ✅ **Ultimo push:** `git push origin uuid-migration` — commit `1b66af0` (2026-05-31)
@@ -55,14 +56,14 @@ S7 locations/page.js — refresh-location chiama con uuid ........ ✅ [1b66af0]
 
 ---
 
-### ~~🔧 SESSIONE 0-7~~ ✅ COMPLETATE
+### ~~🔧 SESSIONE 0-8~~ ✅ COMPLETATE
 
 Vedi sezione "GIÀ COMPLETATO" sopra.
 
 ---
 
-### 🔧 SESSIONE 8 — travel/page.js + lib/tripUtils.js
-> File: 2 | Costo: MEDIO | **Da fare nella prossima chat**
+### ~~🔧 SESSIONE 8 — travel/page.js~~ ✅ COMPLETATA
+> **Audit 2026-05-31**: file già corretto — nessuna modifica necessaria.
 
 #### `app/dashboard/travel/page.js`
 
@@ -76,6 +77,13 @@ Vedi sezione "GIÀ COMPLETATO" sopra.
 
 **Pattern da cercare (regex):** `\.eq\('id',` nei contesti FK (non display lookup)
 
+**Commit suggerito:** `S8: fix UUID refs in travel/page.js`
+
+---
+
+### 🔧 SESSIONE 9 — lib/tripUtils.js
+> File: 1 | Costo: MEDIO | **Da fare dopo S8**
+
 #### `lib/tripUtils.js`
 
 **Cosa controllare:**
@@ -86,11 +94,11 @@ Vedi sezione "GIÀ COMPLETATO" sopra.
 **Nota importante su `getClass`:**
 La funzione `getClass` nel codice attuale viene chiamata con `locUuidToTextId[form.pickup_id]` (vedi TripSidebar L60) oppure `locsDisplayMap?.[form.pickup_id]` (vedi EditTripSidebar L131). Verificare che TUTTI i chiamanti usino questo pattern.
 
-**Commit suggerito:** `S8: fix UUID refs in travel/page.js + tripUtils.js`
+**Commit suggerito:** `S9: fix UUID refs in lib/tripUtils.js`
 
 ---
 
-### 🔧 SESSIONE 9 — Test finale + merge in master
+### 🔧 SESSIONE 10 — Test finale + merge in master
 > Solo verifica e git operations
 
 **Checklist pre-merge:**
@@ -151,8 +159,8 @@ La funzione `getClass` nel codice attuale viene chiamata con `locUuidToTextId[fo
 | `app/dashboard/trips/_components/TripRow.js` | ✅ S7 — OK già corretto | S7 |
 | `app/dashboard/trips/_components/WaypointReviewModal.js` | ✅ S7 — OK già corretto | S7 |
 | `app/dashboard/locations/page.js` | ✅ S7 (1b66af0) fix refresh uuid | S7 |
-| `app/dashboard/travel/page.js` | � NON CONTROLLATO | **S8** |
-| `lib/tripUtils.js` | 🔍 NON CONTROLLATO | **S8** |
+| `app/dashboard/travel/page.js` | ✅ S8 — OK già corretto | S8 |
+| `lib/tripUtils.js` | 🔍 NON CONTROLLATO | **S9** |
 
 ---
 
@@ -167,8 +175,9 @@ S4 → go/[token]/page.js ✅ (dipende da S1+S2)
 S5 → crew/merge + go/ping ✅
 S6 → quick-create ✅
 S7 → audit routes API + trips components ✅ → commit 9deb3fd + 1b66af0
-S8 → travel/page.js + tripUtils.js ← PROSSIMA SESSIONE
-S9 → test + merge master
+S8 → travel/page.js ✅ (audit: già corretto — nessuna modifica)
+S9 → tripUtils.js ← PROSSIMA SESSIONE
+S10 → test + merge master
 ```
 
 ---
