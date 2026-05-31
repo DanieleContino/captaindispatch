@@ -142,7 +142,7 @@ L90-100 RESPONSE:
 
 ---
 
-### 🔧 SESSIONE 3 — WrapTrip Page (FleetMonitor + WrapTripContent)
+### ~~🔧 SESSIONE 3~~ ✅ COMPLETATO — WrapTrip Page (FleetMonitor + WrapTripContent)
 > File: 1 grande | Righe da toccare: ~20 | Costo: ALTO (file 1033 righe)
 > ⚠️ Leggere in DUE parti: righe 1-480, poi 480-1033
 
@@ -229,11 +229,11 @@ L710: crew_id: c.id
   (c viene da selCrew, che ora include uuid dopo il fix L633)
 ```
 
-**Commit:** `Fix G: wrap-trip/page.js FleetMonitor + WrapTripContent use uuid`
+**Commit:** `Fix G: wrap-trip/page.js FleetMonitor + WrapTripContent use uuid` ✅ `[uuid-migration 26135a9]`
 
 ---
 
-### 🔧 SESSIONE 4 — Captain Go UI (dipende da S1+S2)
+### ~~🔧 SESSIONE 4~~ ✅ COMPLETATO — Captain Go UI (dipende da S1+S2)
 > File: 1 | Righe da toccare: ~5 | Costo: BASSO
 
 **Leggi prima:**
@@ -257,11 +257,11 @@ L141: passengerIds: selCrew.map(c => c.id)
   MOTIVO: go/wrap.L131 usa crew_id che deve essere UUID
 ```
 
-**Commit:** `Fix H: go/[token]/page.js locsMap + crew use uuid`
+**Commit:** `Fix H: go/[token]/page.js locsMap + crew use uuid` ✅ `[uuid-migration ca92b70]`
 
 ---
 
-### 🔧 SESSIONE 5 — API crew/merge + go/ping
+### ~~🔧 SESSIONE 5~~ ✅ COMPLETATO — API crew/merge + go/ping
 > File: 2 | Righe da toccare: ~6 | Costo: BASSO
 
 **Leggi prima:**
@@ -298,11 +298,11 @@ L54: crew.eq('id', vehicle.driver_crew_id)
   MOTIVO: driver_crew_id è già UUID dopo migrazione
 ```
 
-**Commit:** `Fix D1+D2: crew/merge + go/ping use uuid`
+**Commit:** `Fix D1+D2: crew/merge + go/ping use uuid` ✅ `[uuid-migration 95e966f]`
 
 ---
 
-### 🔧 SESSIONE 6 — API trips/quick-create
+### ~~🔧 SESSIONE 6~~ ✅ COMPLETATO — API trips/quick-create
 > File: 1 grande | Righe da toccare: ~12 | Costo: MEDIO
 
 **Leggi prima:**
@@ -352,40 +352,26 @@ L324: locsMap[l.id] = l.name
   → locsMap[l.uuid] = l.name
 ```
 
-**Commit:** `Fix D5+D6: trips/quick-create use uuid`
+**Commit:** `Fix D5+D6: trips/quick-create use uuid` ✅ `[uuid-migration c06facf]`
 
 ---
 
-### 🔧 SESSIONE 7 — Audit file non ancora letti (solo lettura + fix se serve)
-> File: ~6 | Costo: MEDIO — leggere solo le parti delle query Supabase
+### ~~🔧 SESSIONE 7~~ ✅ COMPLETATO — Audit + fix routes API + trips components
 
-**File da leggere e verificare:**
+**File fixati:**
 ```
-app/api/fleet/route.js (o cartella fleet/)
-  → Cerca: vehicles.select('id'), trips.eq('vehicle_id')
-
-app/api/routes/route.js (o file in routes/)
-  → Cerca: locations.eq('id'), vehicles.eq('id')
-
-app/dashboard/trips/_components/*.js e page.js
-  → Cerca: crew.eq('id'), vehicles.eq('id'), locations.eq('id')
-
-app/dashboard/locations/page.js
-  → Cerca: locations.eq('id')
-
-app/dashboard/travel/*.js
-  → Cerca: crew.eq('id'), locations.eq('id')
-
-lib/tripUtils.js
-  → Cerca: crew.eq('id'), vehicles.eq('id'), locations.eq('id')
+app/api/fleet/map-data/route.js          ✅ vehicles select uuid added
+app/api/routes/compute/route.js          ✅ locations keyed by uuid
+app/api/routes/compute-chain/route.js    ✅ getOrComputeDuration uses uuid
+app/api/routes/optimize-waypoints/route.js ✅ locations select/lookup by uuid
+app/api/routes/refresh-all-locations/route.js ✅ locations uuid, from_id/to_id uuid
+app/api/routes/refresh-location/route.js ✅ all location queries use uuid
+app/dashboard/trips/_components/TripSidebar.js     ✅ crew uuid, vehicle/location selects uuid
+app/dashboard/trips/_components/EditTripSidebar.js ✅ crew uuid, addPax/removePax crew_id→uuid
+app/dashboard/trips/_components/ReplicaDayModal.js ✅ locsMap keyed by l.uuid
 ```
 
-**Istruzioni per questa sessione:**
-Per ogni file, leggi SOLO le righe dove ci sono query Supabase.
-Se trovi `.eq('id', x)` su tables migrate → fix al volo.
-Se tutto ok → scrivi "✅ VERIFIED" accanto al file.
-
-**Commit:** `Fix I: audit remaining files (fleet/routes/trips/locations/travel/tripUtils)`
+**Commit:** `S7: UUID migration - routes API + TripSidebar + EditTripSidebar + ReplicaDayModal` ✅ `[uuid-migration 9deb3fd]`
 
 ---
 
@@ -428,11 +414,11 @@ Se tutto ok → scrivi "✅ VERIFIED" accanto al file.
 | `app/api/go/data/route.js` | ✅ E (97e4fe8) | S1 |
 | `app/api/go/wrap/route.js` | ✅ E (97e4fe8) | S1 |
 | `app/api/qr/resolve/route.js` | ✅ D3+D4 | S2 |
-| `app/wrap-trip/page.js` | ❌ UUID rotto | S3 |
-| `app/go/[token]/page.js` | ❌ UUID parziale | S4 |
-| `app/api/crew/merge/route.js` | ❌ UUID rotto | S5 |
-| `app/api/go/ping/route.js` | ❌ UUID rotto | S5 |
-| `app/api/trips/quick-create/route.js` | ❌ UUID rotto | S6 |
+| `app/wrap-trip/page.js` | ✅ G (26135a9) | S3 |
+| `app/go/[token]/page.js` | ✅ H (ca92b70) | S4 |
+| `app/api/crew/merge/route.js` | ✅ D1 (95e966f) | S5 |
+| `app/api/go/ping/route.js` | ✅ D2 (95e966f) | S5 |
+| `app/api/trips/quick-create/route.js` | ✅ D5+D6 (c06facf) | S6 |
 | `app/api/fleet/*` | 🔍 NON CONTROLLATO | S7 |
 | `app/api/routes/*` | 🔍 NON CONTROLLATO | S7 |
 | `app/dashboard/trips/*` | 🔍 NON CONTROLLATO | S7 |
