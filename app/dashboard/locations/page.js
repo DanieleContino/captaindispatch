@@ -133,7 +133,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
       err = r.error; newLocUuid = r.data?.uuid
     } else {
       const { id, ...upd } = row
-      const r = await supabase.from('locations').update(upd).eq('id', initial.id); err = r.error
+      const r = await supabase.from('locations').update(upd).eq('uuid', initial.uuid); err = r.error
     }
     setSaving(false)
     if (err) { setError(err.message); return }
@@ -167,7 +167,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
   async function handleDelete() {
     if (!confirmDel) { setCd(true); return }
     setDel(true)
-    const { error } = await supabase.from('locations').delete().eq('id', initial.id).eq('production_id', PRODUCTION_ID)
+    const { error } = await supabase.from('locations').delete().eq('uuid', initial.uuid).eq('production_id', PRODUCTION_ID)
     setDel(false)
     if (error) { setError(error.message); return }
     onSaved()
@@ -399,7 +399,7 @@ function HubLocationsSection({ productionId }) {
   const loadHubs = useCallback(async () => {
     if (!productionId) return
     const { data } = await supabase.from('locations')
-      .select('id, name')
+      .select('uuid, display_id, name')
       .eq('production_id', productionId)
       .eq('is_hub', true)
       .order('name')
@@ -424,7 +424,7 @@ function HubLocationsSection({ productionId }) {
     if (!search || search.length < 2) { setResults([]); return }
     setSearching(true)
     supabase.from('locations')
-      .select('id, name')
+      .select('uuid, display_id, name')
       .eq('production_id', productionId)
       .eq('is_hub', false)
       .ilike('name', `%${search}%`)
@@ -434,14 +434,14 @@ function HubLocationsSection({ productionId }) {
 
   async function addHub(loc) {
     setSaving(true)
-    await supabase.from('locations').update({ is_hub: true }).eq('id', loc.id)
+    await supabase.from('locations').update({ is_hub: true }).eq('uuid', loc.uuid)
     setSearch(''); setResults([])
     setSaving(false)
   }
 
   async function removeHub(loc) {
     setSaving(true)
-    await supabase.from('locations').update({ is_hub: false }).eq('id', loc.id)
+    await supabase.from('locations').update({ is_hub: false }).eq('uuid', loc.uuid)
     setSaving(false)
   }
 
