@@ -1718,15 +1718,15 @@ export default function CrewPage() {
     const toUpdate = (vData || [])
       .map(c => ({ c, exp: expectedStatus(c) }))
       .filter(({ c, exp }) => exp !== null && c.travel_status !== exp)
-      .map(({ c, exp }) => ({ id: c.id, travel_status: exp }))
+      .map(({ c, exp }) => ({ uuid: c.uuid, travel_status: exp }))
 
     for (const u of toUpdate) {
-      await supabase.from('crew').update({ travel_status: u.travel_status }).eq('id', u.id).eq('production_id', PRODUCTION_ID)
+      await supabase.from('crew').update({ travel_status: u.travel_status }).eq('uuid', u.uuid).eq('production_id', PRODUCTION_ID)
     }
 
     // Ricarica dopo aggiornamenti se necessario
     const finalCrew = toUpdate.length > 0
-      ? (vData || []).map(c => { const u = toUpdate.find(x => x.id === c.id); return u ? { ...c, travel_status: u.travel_status } : c })
+      ? (vData || []).map(c => { const u = toUpdate.find(x => x.uuid === c.uuid); return u ? { ...c, travel_status: u.travel_status } : c })
       : (vData || [])
     setCrew(finalCrew)
     const fMap = {}
