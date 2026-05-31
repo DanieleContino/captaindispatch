@@ -69,7 +69,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose, currentUser }) {
     setLoading(true)
     Promise.all([
       supabase.from('crew')
-        .select('id,full_name,role,department,phone,email,hotel_id,arrival_date,departure_date,no_transport_needed,hotel:hotel_id(id,name)')
+        .select('uuid,display_id,full_name,role,department,phone,email,hotel_id,arrival_date,departure_date,no_transport_needed,hotel:hotel_id(id,name)')
         .eq('uuid', member.uuid).single(),
       supabase.from('travel_movements')
         .select('travel_date,direction,travel_type,from_location,from_time,to_location,to_time,travel_number,needs_transport,pickup_dep,pickup_arr')
@@ -644,7 +644,7 @@ export default function HubCoveragePage() {
 
     const { data: crewWithDates } = await supabase
       .from('crew')
-      .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date, no_transport_needed')
+      .select('uuid, display_id, full_name, department, hotel_id, travel_status, arrival_date, departure_date, no_transport_needed')
       .eq('production_id', PRODUCTION_ID)
       .eq('hotel_status', 'CONFIRMED')
       .or(`arrival_date.eq.${d},departure_date.eq.${d}`)
@@ -658,9 +658,9 @@ export default function HubCoveragePage() {
     if (missingFromDates.length > 0) {
       const { data: extra } = await supabase
         .from('crew')
-        .select('id, full_name, department, hotel_id, travel_status, arrival_date, departure_date, no_transport_needed')
+        .select('uuid, display_id, full_name, department, hotel_id, travel_status, arrival_date, departure_date, no_transport_needed')
         .eq('production_id', PRODUCTION_ID)
-        .in('id', missingFromDates)
+        .in('uuid', missingFromDates)
       allCrewData    = [...allCrewData,    ...(extra || []).filter(c => !c.no_transport_needed)]
       allNtnCrewData = [...allNtnCrewData, ...(extra || []).filter(c =>  c.no_transport_needed)]
     }
