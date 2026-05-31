@@ -976,7 +976,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
             )}
           </div>
           <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {member.role || '—'} · {member.id}{member.department ? ' · ' + member.department : ''}
+            {member.role || '—'} · {member.display_id}{member.department ? ' · ' + member.department : ''}
           </div>
         </div>
       </div>
