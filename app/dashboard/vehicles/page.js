@@ -4395,7 +4395,7 @@ export default function VehiclesPage() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
   function selectAll() {
-    const allIds = filtered.map(v => v.id)
+    const allIds = filtered.map(v => v.uuid)
     const allSelected = allIds.every(id => selectedIds.includes(id))
     setSelectedIds(allSelected ? [] : allIds)
   }
