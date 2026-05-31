@@ -3986,7 +3986,7 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
     }
     let err
     if (mode === 'new') {
-      const r = await supabase.from('vehicles').insert({ ...row, id: form.id.trim().toUpperCase() })
+      const r = await supabase.from('vehicles').insert({ ...row, display_id: form.id.trim().toUpperCase() })
       err = r.error
     } else {
       const r = await supabase.from('vehicles').update(row).eq('id', initial.id).eq('production_id', productionId)
