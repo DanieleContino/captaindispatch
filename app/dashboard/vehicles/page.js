@@ -4012,7 +4012,7 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
   const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
   const fld = { marginBottom: '12px' }
 
-  const ownerCrew = crewList.find(c => c.id === form.comodato_owner_crew_id)
+  const ownerCrew = crewList.find(c => c.uuid === form.comodato_owner_crew_id)
 
   return (
     <>
