@@ -231,8 +231,8 @@ function AIBuilderTab({ vehicle, productionId, date, onDateChange, onCreated, on
   useEffect(() => {
     if (!productionId) return
     Promise.all([
-supabase.from('crew').select('id, full_name, department, hotel_id, travel_status').eq('production_id', productionId).order('full_name'),
-      supabase.from('locations').select('id, name, lat, lng').eq('production_id', productionId).order('name'),
+      supabase.from('crew').select('uuid, id, full_name, department, hotel_id, travel_status').eq('production_id', productionId).order('full_name'),
+      supabase.from('locations').select('uuid, id, name, lat, lng').eq('production_id', productionId).order('name'),
     ]).then(([cR, lR]) => {
       setCrew(cR.data || [])
       setLocations(lR.data || [])
@@ -394,9 +394,20 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
       // Costruisci payload per quick-create
       // Per semplicità usiamo il primo leg come pickup + dropoffs
       // Per Mix/multi-leg, usiamo il primo pickup e tutti i dropoff unici
-      const firstPickup = resolvedLegs[0].pickup_id
-      const allDropoffs = [...new Set(resolvedLegs.map(l => l.dropoff_id).filter(Boolean))]
-      const allPassengerIds = [...new Set(resolvedLegs.flatMap(l => l.passenger_ids || []))]
+      // Risolvi TEXT ids → UUID (l'AI restituisce TEXT id, l'API si aspetta UUID)
+      const locTextToUuid = {}
+      for (const loc of locations) { if (loc.id) locTextToUuid[loc.id] = loc.uuid }
+      const crewTextToUuid = {}
+      for (const c of crew) { if (c.id) crewTextToUuid[c.id] = c.uuid }
+      const uuidLegs = resolvedLegs.map(leg => ({
+        ...leg,
+        pickup_id:     locTextToUuid[leg.pickup_id]  || leg.pickup_id,
+        dropoff_id:    locTextToUuid[leg.dropoff_id] || leg.dropoff_id,
+        passenger_ids: (leg.passenger_ids || []).map(id => crewTextToUuid[id] || id),
+      }))
+      const firstPickup = uuidLegs[0].pickup_id
+      const allDropoffs = [...new Set(uuidLegs.map(l => l.dropoff_id).filter(Boolean))]
+      const allPassengerIds = [...new Set(uuidLegs.flatMap(l => l.passenger_ids || []))]
       const callTime = resolvedLegs[0].time || '08:00'
 
       // Salva esempio per apprendimento AI
@@ -415,7 +426,7 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productionId,
-          vehicleId:    vehicle.id,
+          vehicleId:    vehicle.uuid || vehicle.id,
           date,
           callTime,
           serviceType:  resolvedLegs.length > 1 ? 'Mix' : 'Other',
@@ -639,7 +650,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
   // Quando si seleziona una persona in una riga multi, autocompila la location con il suo hotel
   function handleRowPersonSelect(list, index, personId) {
     const person = crew.find(c => c.id === personId)
-    const hotel  = person?.hotel_id ? locations.find(l => l.id === person.hotel_id) : null
+    const hotel  = person?.hotel_id ? locations.find(l => l.uuid === person.hotel_id) : null
     const updater = list === 'pickup' ? setPickupRows : setDropoffRows
     updater(prev => prev.map((row, i) => i !== index ? row : {
       ...row,
