@@ -2070,7 +2070,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
   async function handleDelete() {
     if (!confirmDel) { setCd(true); return }
     setDel(true)
-    const { error } = await supabase.from('vehicles').delete().eq('id', initial.id).eq('production_id', productionId)
+    const { error } = await supabase.from('vehicles').delete().eq('uuid', initial.uuid).eq('production_id', productionId)
     setDel(false)
     if (error) { setError(error.message); return }
     onSaved()
