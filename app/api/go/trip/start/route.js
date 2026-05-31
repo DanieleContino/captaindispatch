@@ -27,7 +27,7 @@ export async function POST(request) {
   } else {
     const { data: crewDriver } = await supabase
       .from('crew')
-      .select('id, production_id')
+      .select('id, uuid, production_id')
       .eq('tracking_token', token)
       .single()
     if (crewDriver) { driver = crewDriver; driverType = 'CREW' }
@@ -60,7 +60,7 @@ export async function POST(request) {
         .from('vehicles')
         .select('id')
         .eq('production_id', driver.production_id)
-        .eq('driver_crew_id', driver.id)
+        .eq('driver_crew_id', driver.uuid)
         .eq('active', true)
         .single()
       if (driverVehicle) sessionQ = sessionQ.eq('vehicle_id', driverVehicle.id)
@@ -142,9 +142,9 @@ export async function POST(request) {
       .from('vehicles')
       .select('id')
       .eq('production_id', driver.production_id)
-      .eq('driver_crew_id', driver.id)
-      .eq('active', true)
-      .single()
+        .eq('driver_crew_id', driver.uuid)
+        .eq('active', true)
+        .single()
     if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
   }
 

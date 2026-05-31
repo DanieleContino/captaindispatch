@@ -32,7 +32,7 @@ export async function GET(request) {
   } else {
     const { data: crewDriver } = await supabase
       .from('crew')
-      .select('id, full_name, production_id, department')
+      .select('id, uuid, full_name, production_id, department')
       .eq('tracking_token', token)
       .single()
 
@@ -68,7 +68,7 @@ export async function GET(request) {
       .from('vehicles')
       .select('uuid, display_id, vehicle_type, sign_code, capacity, license_plate')
       .eq('production_id', productionId)
-      .eq('driver_crew_id', driver.id)
+      .eq('driver_crew_id', driver.uuid)
       .eq('active', true)
       .single()
     vehicle = v || null

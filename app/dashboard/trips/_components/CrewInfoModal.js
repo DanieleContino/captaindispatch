@@ -86,7 +86,7 @@ export default function CrewInfoModal({ crew, productionId, locations, onClose, 
     Promise.all([
       supabase.from('crew')
         .select('id, full_name, role, department, phone, email, hotel_id, arrival_date, departure_date, hotel:hotel_id(id, name)')
-        .eq('id', crew.id)
+        .eq('uuid', crew.uuid)
         .single(),
       supabase.from('travel_movements')
         .select('travel_date, direction, travel_type, from_location, from_time, to_location, to_time, travel_number, needs_transport, pickup_dep, pickup_arr')
