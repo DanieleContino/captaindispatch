@@ -44,14 +44,14 @@ export async function POST(request) {
     const { data: vehicle } = await supabase
       .from('vehicles')
       .select('driver_crew_id')
-      .eq('id', vehicle_id)
+      .eq('uuid', vehicle_id)
       .eq('production_id', production_id)
       .single()
     if (vehicle?.driver_crew_id) {
       const { data: crew } = await supabase
         .from('crew')
         .select('tracking_token')
-        .eq('id', vehicle.driver_crew_id)
+        .eq('uuid', vehicle.driver_crew_id)
         .single()
       driver_token = crew?.tracking_token || null
     }

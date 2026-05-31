@@ -52,8 +52,8 @@ export async function POST(req) {
     const allIds = [primary_id, ...duplicate_ids]
     const { data: crewCheck } = await supabase
       .from('crew')
-      .select('id')
-      .in('id', allIds)
+      .select('uuid')
+      .in('uuid', allIds)
       .eq('production_id', production_id)
 
     if (!crewCheck || crewCheck.length !== allIds.length) {
@@ -121,14 +121,14 @@ export async function POST(req) {
       }
     }
     if (Object.keys(updatePayload).length > 0) {
-      await service.from('crew').update(updatePayload).eq('id', primary_id)
+      await service.from('crew').update(updatePayload).eq('uuid', primary_id)
     }
 
     // ── 5. Delete duplicate crew records ───────────────
     const { error: deleteErr } = await service
       .from('crew')
       .delete()
-      .in('id', duplicate_ids)
+      .in('uuid', duplicate_ids)
       .eq('production_id', production_id)
 
     if (deleteErr) {
