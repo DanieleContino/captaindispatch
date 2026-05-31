@@ -516,7 +516,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                 {form.preferred_crew_ids.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
                     {form.preferred_crew_ids.map(cid => {
-                      const cm = crewList.find(c => c.id === cid)
+                      const cm = crewList.find(c => c.uuid === cid)
                       if (!cm) return null
                       return (
                         <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
