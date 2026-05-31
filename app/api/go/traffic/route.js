@@ -55,7 +55,7 @@ export async function POST(request) {
   const { data: nccDriver } = await supabase
     .from('ncc_drivers').select('id, production_id').eq('tracking_token', token).single()
   const { data: crewDriver } = !nccDriver ? await supabase
-    .from('crew').select('id, production_id').eq('tracking_token', token).single()
+    .from('crew').select('uuid, display_id, production_id').eq('tracking_token', token).single()
     : { data: null }
   const driver = nccDriver || crewDriver
   if (!driver) return Response.json({ error: 'Invalid token' }, { status: 404 })
@@ -67,10 +67,10 @@ export async function POST(request) {
   if (!trip?.pickup_id || !trip?.dropoff_id) return Response.json({ error: 'Trip not found' }, { status: 404 })
 
   const { data: locs } = await supabase
-    .from('locations').select('id, lat, lng')
-    .in('id', [trip.pickup_id, trip.dropoff_id])
-  const pickup  = locs?.find(l => l.id === trip.pickup_id)
-  const dropoff = locs?.find(l => l.id === trip.dropoff_id)
+    .from('locations').select('uuid, display_id, lat, lng')
+    .in('uuid', [trip.pickup_id, trip.dropoff_id])
+  const pickup  = locs?.find(l => l.uuid === trip.pickup_id)
+  const dropoff = locs?.find(l => l.uuid === trip.dropoff_id)
 
   if (!pickup?.lat || !dropoff?.lat) return Response.json({ error: 'Missing coordinates' }, { status: 422 })
 
