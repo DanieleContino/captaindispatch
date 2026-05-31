@@ -773,7 +773,7 @@ function FamilyAccordion({ crewId, personType, linkedCrewId }) {
       if (!linkedCrewId) { setMembers([]); setLoading(false); setLoaded(true); return }
       const { data } = await supabase
         .from('crew')
-        .select('id, full_name, role, department')
+          .select('uuid, display_id, full_name, role, department')
         .eq('uuid', linkedCrewId)
         .single()
       setMembers(data ? [data] : [])
@@ -781,7 +781,7 @@ function FamilyAccordion({ crewId, personType, linkedCrewId }) {
       // Mostra i family member collegati a questo crew
       const { data } = await supabase
         .from('crew')
-        .select('id, full_name, role, no_transport_needed, phone')
+        .select('uuid, display_id, full_name, role, no_transport_needed, phone')
         .eq('production_id', PRODUCTION_ID)
         .eq('person_type', 'FAMILY')
         .eq('linked_crew_id', crewId)
@@ -1175,7 +1175,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
   async function searchLinkedCrew(q) {
     if (!q || q.length < 2 || !PRODUCTION_ID) { setLinkedCrewResults([]); return }
     setLinkedCrewSearching(true)
-    const { data } = await supabase.from('crew').select('id, full_name, role, department').eq('production_id', PRODUCTION_ID).eq('person_type', 'CREW').ilike('full_name', `%${q}%`).limit(8)
+    const { data } = await supabase.from('crew').select('uuid, display_id, full_name, role, department').eq('production_id', PRODUCTION_ID).eq('person_type', 'CREW').ilike('full_name', `%${q}%`).limit(8)
     setLinkedCrewResults(data || [])
     setLinkedCrewSearching(false)
   }

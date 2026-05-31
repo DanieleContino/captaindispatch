@@ -62,7 +62,7 @@ export async function POST(req) {
 
     // ── Insert location ──────────────────────────────────────
     const insertPayload = {
-      id:           autoLocId,
+      display_id:   autoLocId,
       name:         name.trim(),
       production_id: productionId,
       is_hub:       locationType === 'HUB',
@@ -82,9 +82,9 @@ export async function POST(req) {
       return NextResponse.json({ error: insertErr.message }, { status: 500 })
     }
 
-    console.log(`[import/save-location] Salvata: ${newLoc.id} — "${newLoc.name}" (${locationType || 'HOTEL'})`)
+    console.log(`[import/save-location] Salvata: ${newLoc.display_id} — "${newLoc.name}" (${locationType || 'HOTEL'})`)
 
-    return NextResponse.json({ id: newLoc.id, name: newLoc.name })
+    return NextResponse.json({ id: newLoc.display_id, name: newLoc.name })
 
   } catch (e) {
     console.error('[import/save-location]', e)

@@ -14,7 +14,7 @@ export function SendLinksModal({ open, onClose, productionId }) {
     async function loadDrivers() {
       const { data: vehicles } = await supabase
         .from('vehicles')
-        .select('id, driver_name, driver_crew_id, ncc_driver_id, ncc_driver_name, ncc_driver_phone')
+        .select('uuid, display_id, driver_name, driver_crew_id, ncc_driver_id, ncc_driver_name, ncc_driver_phone')
         .eq('production_id', productionId)
         .eq('active', true)
         .eq('in_transport', true)
@@ -28,7 +28,7 @@ export function SendLinksModal({ open, onClose, productionId }) {
           ? supabase.from('ncc_drivers').select('id, name, phone, tracking_token').in('id', nccDriverIds)
           : { data: [] },
         crewDriverIds.length > 0
-          ? supabase.from('crew').select('id, full_name, phone, tracking_token').in('id', crewDriverIds)
+          ? supabase.from('crew').select('uuid, display_id, full_name, phone, tracking_token').in('uuid', crewDriverIds)
           : { data: [] },
       ])
 

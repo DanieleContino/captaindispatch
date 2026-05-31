@@ -377,13 +377,13 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
         // Salva location temp dal picker AI
         if (leg._pickup_temp) {
           const tmpId = 'TMP_' + Date.now() + '_P'
-          const { data, error } = await supabase.from('locations').insert({ id: tmpId, production_id: productionId, name: leg._pickup_temp.name, lat: leg._pickup_temp.lat, lng: leg._pickup_temp.lng, is_temp: true }).select('id').single()
+          const { data, error } = await supabase.from('locations').insert({ id: tmpId, production_id: productionId, name: leg._pickup_temp.name, lat: leg._pickup_temp.lat, lng: leg._pickup_temp.lng, is_temp: true }).select('uuid, display_id').single()
           if (error) { setErr('Failed to save pickup location'); setSaving(false); return }
           pickupId = data.id
         }
         if (leg._dropoff_temp) {
           const tmpId = 'TMP_' + Date.now() + '_D'
-          const { data, error } = await supabase.from('locations').insert({ id: tmpId, production_id: productionId, name: leg._dropoff_temp.name, lat: leg._dropoff_temp.lat, lng: leg._dropoff_temp.lng, is_temp: true }).select('id').single()
+          const { data, error } = await supabase.from('locations').insert({ id: tmpId, production_id: productionId, name: leg._dropoff_temp.name, lat: leg._dropoff_temp.lat, lng: leg._dropoff_temp.lng, is_temp: true }).select('uuid, display_id').single()
           if (error) { setErr('Failed to save dropoff location'); setSaving(false); return }
           dropoffId = data.id
         }
@@ -607,8 +607,8 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
   useEffect(() => {
     if (!productionId) return
     Promise.all([
-      supabase.from('locations').select('id, name, lat, lng').eq('production_id', productionId).order('name'),
-      supabase.from('crew').select('id, full_name, department, hotel_id, travel_status').eq('production_id', productionId).order('full_name'),
+      supabase.from('locations').select('uuid, display_id, name, lat, lng').eq('production_id', productionId).order('name'),
+      supabase.from('crew').select('uuid, display_id, full_name, department, hotel_id, travel_status').eq('production_id', productionId).order('full_name'),
     ]).then(([lR, cR]) => {
       setLocations(lR.data || [])
       setCrew(cR.data || [])

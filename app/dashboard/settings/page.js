@@ -85,7 +85,7 @@ function SettingsPage() {
   // ── Load locations (needed for ImportModal hotel matching) ──
   useEffect(() => {
     if (!PRODUCTION_ID) return
-    supabase.from('locations').select('id, name').eq('production_id', PRODUCTION_ID)
+    supabase.from('locations').select('uuid, display_id, name').eq('production_id', PRODUCTION_ID)
       .then(({ data }) => setLocations(data || []))
   }, [PRODUCTION_ID])
 

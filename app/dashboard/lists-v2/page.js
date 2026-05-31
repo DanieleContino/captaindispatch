@@ -282,7 +282,7 @@ export default function ListsPage() {
         .eq('production_id', id).eq('date', d)
         .neq('status', 'CANCELLED')
         .order('pickup_min', { ascending: true, nullsLast: true }),
-      supabase.from('locations').select('id,name,default_pickup_point').eq('production_id', id),
+      supabase.from('locations').select('uuid,display_id,name,default_pickup_point').eq('production_id', id),
       supabase.from('vehicles').select('display_id').eq('production_id', id).eq('in_transport', true),
       supabase.from('transport_list_sections').select('*')
         .eq('production_id', id).eq('date', d)
