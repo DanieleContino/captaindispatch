@@ -51,12 +51,13 @@ function TripsPageInner() {
   // Read assign crew context from URL params
   useEffect(() => {
     const id    = searchParams.get('assignCrewId')
+    const uuid  = searchParams.get('assignCrewUuid')
     const name  = searchParams.get('assignCrewName')
     const hotel = searchParams.get('assignHotelId')
     const ts    = searchParams.get('assignTS')
     const d     = searchParams.get('assignDate')
     if (id && name) {
-      setAssignCtx({ id, name, hotel: hotel || '', ts: ts || 'PRESENT' })
+      setAssignCtx({ id, uuid: uuid || null, name, hotel: hotel || '', ts: ts || 'PRESENT' })
       if (d) setDate(d)
     }
   }, [])

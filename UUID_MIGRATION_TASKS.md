@@ -51,16 +51,18 @@ S9 TripSidebar.js — getClass usa locUuidToTextId, crew_id c.uuid ✅ [2538642]
 S9 EditTripSidebar.js — getClass×3 (L171/398/499) + busyMap×11 c.uuid ✅ [2538642]
 ```
 
-> ✅ **Ultimo push:** commit `2538642` su branch `uuid-migration` (2026-05-31)
+> ✅ **Ultimo commit pushato:** `2538642` su branch `uuid-migration` (2026-05-31)
+> ⚠️ **Modifiche locali NON pushate (S11a):**
+>   - `app/dashboard/accommodation/page.js` — fix A1-A4 applicati
+>   - `app/dashboard/bridge/page.js` — fix B1-B4 applicati (B5-B13 ancora da fare)
 
 ---
 
-## 📋 SESSIONI DA FARE (in ordine)
+## 📋 SESSIONI — STORICO E STATO
 
 ---
 
 ### ~~🔧 SESSIONE 0-8~~ ✅ COMPLETATE
-
 Vedi sezione "GIÀ COMPLETATO" sopra.
 
 ---
@@ -94,24 +96,160 @@ Vedi sezione "GIÀ COMPLETATO" sopra.
 
 ---
 
-### 🔧 SESSIONE 11 — Test finale + merge in master
+### 🔧 SESSIONE 11a — Static Audit + Fix Parziali (2026-05-31) ⚠️ IN CORSO
+> **Audit automatico eseguito da Cline** — ricerca regex su tutto il codebase JS
+
+#### Schema confermato da audit:
+- `crew_stays.crew_id` = **UUID** (FK a `crew.uuid`) — confermato da `crew/page.js:338` e `accommodation/page.js:1413`
+- `travel_movements.crew_id` = **UUID** (FK a `crew.uuid`) — confermato da `crew/page.js:608`
+- `crew_stays.hotel_id` = **UUID** (FK a `locations.uuid`) — confermato da join PostgREST `hotel:hotel_id(uuid, ...)` in `accommodation/page.js:203`
+- `travel_movements.rooming_hotel_id` = **TEXT** (non migrato — TEXT location id) — il dato arriva dall'import fogli Google, non è una FK a `locations`
+
+#### File non-migrated confermati VALID (nessun fix necessario):
+- `locations/page.js:136/170/437/444` — update/delete locations row per TEXT `id` → OK (colonna `id` esiste ancora)
+- `productions/page.js:146/154`, `settings/production/page.js:124/132` — idem ✅
+- `vehicles/page.js:3992` — update vehicles row per TEXT `id` → OK ✅
+- `hotel-settings/page.js:278` — update locations per `location_id` TEXT → OK ✅
+- `hotel-settings/page.js:209/315` — `hotels.location_id` ancora TEXT → OK ✅
+- Tutte le tabelle non migrate (`trips.id`, `crew_stays.id`, `hotels.id`, `productions.id`, ecc.) → OK ✅
+
+#### ✅ Fix APPLICATI in S11a — `accommodation/page.js` (codice modificato, da committare):
+
+| # | Riga | Bug | Fix |
+|---|------|-----|-----|
+| A-1 | 1155 | `.select('id, full_name...')` — manca `uuid` nel select crew per insert family member | ✅ aggiunto `uuid` |
+| A-2 | 1175 | `crew_id: newCrew.id` (TEXT) in `crew_stays.insert` | ✅ → `newCrew.uuid` |
+| A-3 | 1212 | `.eq('crew_id', crewMember.id)` (TEXT) in `crew_stays` roommate query | ✅ → `crewMember.uuid` |
+| A-4 | 1289 | `crew.update().eq('id', crewId)` — ramo early-return di `syncCrewDates` | ✅ → `.eq('uuid', crewId)` |
+
+#### ✅ Fix APPLICATI in S11a — `bridge/page.js` (B1-B4, codice modificato, da committare):
+
+| # | Riga | Bug | Fix |
+|---|------|-----|-----|
+| B-1 | 206 | crew `.select(...)` manca `uuid` — serve per calcolare `primaryCrewUuid` | ✅ aggiunto `uuid` |
+| B-2 | 245/265 | `duplicate_ids` = TEXT array; `primary_id: primaryId` TEXT → API `/api/crew/merge` aspetta UUID | ✅ `primaryCrewUuid` + `duplicate_uuids` calcolati da `selCrew.find(c => c.id === id)?.uuid` |
+| B-3 | 278,292 | `crew_id: primaryId` (TEXT) in `crew_stays.upsert` per multi-stay | ✅ → `primaryCrewUuid` |
+| B-4 | 835 | `locations.select('id, name')` manca `uuid` — serve per resolver UUID hotel nei bug B6-B12 | ✅ → `'id, uuid, name'` |
+
+#### ❌ Fix DA FARE — `bridge/page.js` (B5-B13 in `TravelDiscrepanciesWidget`):
+
+| # | Riga approx. | Blocco | Bug | Fix da applicare |
+|---|-------------|--------|-----|-----------------|
+| B-5 | ~1007 | `travel_date_conflict` → "Use Calendar" btn | `crew.update().eq('id', item.crew_id)` | → `.eq('uuid', item.crew_id)` |
+| B-6 | ~1027 | `hotel_conflict` → calcolo `resolvedTravelHotelId` | `locations.find(...).id` ritorna TEXT | → `.uuid` (UUID) |
+| B-7 | ~1030 | `hotel_conflict` → calcolo `travelHotel` display | `locations.find(l => l.id === resolvedTravelHotelId)` | → `l.uuid ===` |
+| B-8 | ~1041 | `hotel_conflict` → "Use Rooming" btn, `crew.update` | `hotel_id: item.rooming_hotel_id` (TEXT su col UUID) | → `locations.find(l => l.id === item.rooming_hotel_id)?.uuid` |
+| B-9 | ~1041 | `hotel_conflict` → "Use Rooming" btn, `crew.update` | `.eq('id', item.crew_id)` | → `.eq('uuid', item.crew_id)` |
+| B-10 | ~1042 | `hotel_conflict` → "Use Rooming" btn, `crew_stays.update` | `hotel_id: item.rooming_hotel_id` (TEXT su col UUID) | → stesso UUID lookup di B-8 |
+| B-11 | ~1052 | `hotel_conflict` → "Use Calendar" btn, `crew.update` | `.eq('id', item.crew_id)` | → `.eq('uuid', item.crew_id)` |
+| B-12 | ~1080/1086 | `match_status === 'unmatched'` → sessionStorage `crewAddNewData` | `hotel_id = item.rooming_hotel_id` (TEXT) e `matchedLoc.id` (TEXT) | → UUID via `locations.find(l => l.id === ...).uuid` |
+| B-13 | ~1109 | "Skip future checks" → `crew.update({ no_rooming_check })` | `.eq('id', item.crew_id)` | → `.eq('uuid', item.crew_id)` |
+
+> **Nota B-8/B-10:** `item.rooming_hotel_id` è TEXT (dall'import fogli Google), ma `crew.hotel_id` e `crew_stays.hotel_id` sono colonne UUID. Serve il lookup `locations.find(l => l.id === item.rooming_hotel_id)?.uuid`. La `locations` array ha già `uuid` nel select dopo il fix B-4.
+>
+> **Nota B-12:** `item.rooming_hotel_id` e `matchedLoc.id` sono entrambi TEXT → convertire in UUID prima di mettere in sessionStorage, che poi viene letto da `crew/page.js` per pre-popolare il form con `hotel_id`.
+
+---
+
+### 🔧 SESSIONE 11b — Fix `bridge/page.js` B5-B13 (DA FARE)
+> Applicare i 9 fix rimanenti in `TravelDiscrepanciesWidget`, tutti nel componente `bridge/page.js`.
+
+**Cambio netto da fare nel codice:**
+
+1. **B-5** (~L1007): ramo `personStays.length === 0`, dentro `"Use Calendar"` button onClick:
+   ```js
+   // PRIMA
+   await supabase.from('crew').update({ [field]: item.travel_date }).eq('id', item.crew_id).eq('production_id', productionId)
+   // DOPO
+   await supabase.from('crew').update({ [field]: item.travel_date }).eq('uuid', item.crew_id).eq('production_id', productionId)
+   ```
+
+2. **B-6/B-7** (~L1022-1030): calcolo `resolvedTravelHotelId` e `travelHotel`:
+   ```js
+   // PRIMA
+   )?.id
+   const travelHotel = locations.find(l => l.id === resolvedTravelHotelId)?.name || ...
+   // DOPO
+   )?.uuid
+   const travelHotel = locations.find(l => l.uuid === resolvedTravelHotelId)?.name || ...
+   ```
+
+3. **B-8/B-9/B-10** (~L1039-1042): blocco `"Use Rooming"` button onClick:
+   ```js
+   // PRIMA
+   if (!item.crew_id || !item.rooming_hotel_id) return
+   await supabase.from('crew').update({ hotel_id: item.rooming_hotel_id }).eq('id', item.crew_id)...
+   await supabase.from('crew_stays').update({ hotel_id: item.rooming_hotel_id }).eq('crew_id', item.crew_id)...
+   // DOPO
+   if (!item.crew_id || !item.rooming_hotel_id) return
+   const roomingUuid = locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null
+   await supabase.from('crew').update({ hotel_id: roomingUuid }).eq('uuid', item.crew_id)...
+   await supabase.from('crew_stays').update({ hotel_id: roomingUuid }).eq('crew_id', item.crew_id)...
+   ```
+
+4. **B-11** (~L1052): blocco `"Use Calendar"` button onClick (hotel_conflict):
+   ```js
+   // PRIMA
+   await supabase.from('crew').update({ hotel_id: resolvedTravelHotelId }).eq('id', item.crew_id)...
+   // DOPO
+   await supabase.from('crew').update({ hotel_id: resolvedTravelHotelId }).eq('uuid', item.crew_id)...
+   ```
+
+5. **B-12** (~L1080-1088): blocco `match_status === 'unmatched'`, costruzione `hotel_id` per sessionStorage:
+   ```js
+   // PRIMA
+   let hotel_id = item.rooming_hotel_id || null
+   if (!hotel_id && item.hotel_raw) {
+     const matchedLoc = locations.find(...)
+     if (matchedLoc) hotel_id = matchedLoc.id
+   }
+   // DOPO
+   const rooming_hotel_uuid = item.rooming_hotel_id
+     ? (locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null) : null
+   let hotel_id = rooming_hotel_uuid || null
+   if (!hotel_id && item.hotel_raw) {
+     const matchedLoc = locations.find(...)
+     if (matchedLoc) hotel_id = matchedLoc.uuid
+   }
+   ```
+
+6. **B-13** (~L1109): blocco `"Skip future checks"` onClick:
+   ```js
+   // PRIMA
+   await supabase.from('crew').update({ no_rooming_check: true }).eq('id', item.crew_id)...
+   // DOPO
+   await supabase.from('crew').update({ no_rooming_check: true }).eq('uuid', item.crew_id)...
+   ```
+
+---
+
+### 🔧 SESSIONE 11c — Commit + Push + Test + Merge Master (DA FARE)
 > Solo verifica e git operations
 
 **Checklist pre-merge:**
 ```
-[ ] git push origin uuid-migration (dopo tutte le sessioni)
+[ ] git add app/dashboard/accommodation/page.js app/dashboard/bridge/page.js
+[ ] git commit -m "S11a: UUID fix accommodation A1-A4 + bridge B1-B4 (merge, locations select)"
+[ ] git add app/dashboard/bridge/page.js
+[ ] git commit -m "S11b: UUID fix bridge TravelDiscrepanciesWidget B5-B13"
+[ ] git push origin uuid-migration
 [ ] Deploy Vercel su preview uuid-migration branch
-[ ] Test Captain Go: go a captaindispatch.com/go/[token]
+[ ] Test Captain Go: captaindispatch.com/go/[token]
     - Sessione start/stop
     - Visualizza trips con pickup/dropoff location names
     - Wrap trip da Captain Go
-[ ] Test WrapTrip: go a /wrap-trip
-    - FleetMonitor mostra vehicle status correttamente  
+[ ] Test WrapTrip: /wrap-trip
+    - FleetMonitor mostra vehicle status correttamente
     - Crea wrap trip con vehicle + crew
-[ ] Test Scan QR: go a /scan?qr=CR:xxx e /scan?qr=VH:xxx
+[ ] Test Scan QR: /scan?qr=CR:xxx e /scan?qr=VH:xxx
 [ ] Test Quick-Create trip dal dashboard
 [ ] Test Trips page: crea/modifica trip, assegna passeggeri
 [ ] Test Locations page: crea/modifica location, verifica route refresh
+[ ] Test Bridge → Duplicate crew: merge due crew → verifica crew_stays create con UUID corretto
+[ ] Test Bridge → Travel Discrepancy: risolvi hotel conflict con "Use Rooming" e "Use Calendar"
+[ ] Test Bridge → Unmatched: crea nuovo crew da discrepancy, verifica hotel_id in sessionStorage
+[ ] Test Accommodation: aggiungi family member → stay creata con crew.uuid
+[ ] Test Accommodation: aggiungi roommate → crew_stays.crew_id = crewMember.uuid
 [ ] Se tutto ok → git checkout master && git merge uuid-migration && git push
 ```
 
@@ -122,7 +260,7 @@ Vedi sezione "GIÀ COMPLETATO" sopra.
 | File | Status | Sessione |
 |------|--------|---------|
 | `scripts/create-schema.sql` | ✅ SQL done | — |
-| `app/dashboard/accommodation/page.js` | ✅ A1/A2 | — |
+| `app/dashboard/accommodation/page.js` | ✅ A1/A2 vecchi + **S11a A1-A4** ⚠️ non pushato | S11a |
 | `app/dashboard/trips/_components/CrewInfoModal.js` | ✅ B | — |
 | `app/api/go/session/route.js` | ✅ B | — |
 | `app/api/go/trip/start/route.js` | ✅ B | — |
@@ -157,6 +295,7 @@ Vedi sezione "GIÀ COMPLETATO" sopra.
 | `app/dashboard/locations/page.js` | ✅ S7 (1b66af0) fix refresh uuid | S7 |
 | `app/dashboard/travel/page.js` | ✅ S8 — OK già corretto | S8 |
 | `lib/tripUtils.js` | ✅ S10 — audit: nessuna modifica necessaria | S10 |
+| `app/dashboard/bridge/page.js` | ⚠️ **S11a B1-B4** applicati (non pushato) — **B5-B13 DA FARE** | S11a/S11b |
 
 ---
 
@@ -174,7 +313,9 @@ S7 → audit routes API + trips components ✅ → commit 9deb3fd + 1b66af0
 S8 → travel/page.js ✅ (audit: già corretto — nessuna modifica)
 S9 → TripSidebar + EditTripSidebar getClass/busyMap ✅ → commit 2538642
 S10 → lib/tripUtils.js audit ✅ (audit: già corretto — nessuna modifica)
-S11 → test + merge master ← PROSSIMA SESSIONE
+S11a → static audit + fix accommodation A1-A4 + bridge B1-B4 ✅ (locale, NON pushato)
+S11b → fix bridge TravelDiscrepanciesWidget B5-B13 ← DA FARE
+S11c → commit + push + test + merge master ← DOPO S11b
 ```
 
 ---
@@ -189,5 +330,6 @@ S11 → test + merge master ← PROSSIMA SESSIONE
 6. **hotel_id in crew** → è già UUID dopo migrazione → lookup locations per `.eq('uuid', ...)`
 7. **driver_crew_id in vehicles** → è già UUID dopo migrazione → lookup crew per `.eq('uuid', ...)`
 8. **getClass()** in `lib/tripUtils.js` prende il TEXT display id (non UUID) → i chiamanti devono fare la conversione uuid→textId prima di chiamarla. Pattern corretto: `getClass(locUuidToTextId[pickupUuid] || pickupUuid, ...)` oppure `getClass(locsDisplayMap?.[uuid] || uuid, ...)`
-9. **crew_stays.hotel_id** — verificare se è già UUID come `crew.hotel_id` (probabile sì)
+9. **crew_stays.hotel_id** — **CONFERMATO UUID** (FK a `locations.uuid`) — join PostgREST `hotel:hotel_id(uuid, ...)` in accommodation/page.js:203
 10. **busyMap** in EditTripSidebar è keyed per `crew_id` (UUID di Supabase) → usare `busyMap[c.uuid]` non `busyMap[c.id]` ✅ fixato in S9
+11. **travel_movements.rooming_hotel_id** → è **TEXT** (non migrato, viene dall'import Google Sheets) — non è una FK UUID. Serve lookup `locations.find(l => l.id === item.rooming_hotel_id)?.uuid` per ottenere l'UUID da usare nelle colonne crew/crew_stays.

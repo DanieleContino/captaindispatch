@@ -494,7 +494,7 @@ export default function PaxCoveragePage() {
     setLoading(true)
 
     const [crewRes, tripsRes] = await Promise.all([
-      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,travel_status,arrival_date,departure_date,no_transport_needed,on_location')
+      supabase.from('crew').select('id,uuid,full_name,department,hotel_id,hotel_status,travel_status,arrival_date,departure_date,no_transport_needed,on_location')
         .eq('production_id', PRODUCTION_ID)
         .eq('hotel_status', 'CONFIRMED')
         .order('department', { nullsLast: true })
@@ -760,6 +760,7 @@ export default function PaxCoveragePage() {
                     <UnassignedRow key={c.id} member={c} locsMap={locsMap} onAssign={() => {
                       const params = new URLSearchParams({
                         assignCrewId:   c.id,
+                        assignCrewUuid: c.uuid || '',
                         assignCrewName: c.full_name,
                         assignHotelId:  c.hotel_id || '',
                         assignTS:       c.travel_status || 'PRESENT',
