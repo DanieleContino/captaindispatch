@@ -2102,8 +2102,8 @@ export default function CrewPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 16px' }}>
               <input
                 type="checkbox"
-                checked={filtered.length > 0 && filtered.every(m => selectedIds.includes(m.id))}
-                ref={el => { if (el) el.indeterminate = selectedIds.length > 0 && !filtered.every(m => selectedIds.includes(m.id)) }}
+              checked={filtered.length > 0 && filtered.every(m => selectedIds.includes(m.uuid))}
+              ref={el => { if (el) el.indeterminate = selectedIds.length > 0 && !filtered.every(m => selectedIds.includes(m.uuid)) }}
                 onChange={selectAll}
                 style={{ width: '16px', height: '16px', accentColor: '#2563eb', cursor: 'pointer' }}
                 title={t.selectAll}
