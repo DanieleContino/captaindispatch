@@ -1,5 +1,5 @@
 # UUID Migration — Task File Completo
-> Branch: `master` (uuid-migration mergiato — commit `2c68997`) | Aggiornato: 2026-05-31 S96
+> Branch: `master` (uuid-migration mergiato — commit `2c68997`) | Aggiornato: 2026-05-31 S17a
 
 ---
 
@@ -103,6 +103,10 @@ Fix S15 R2 — rocket loadData vehicles select includes uuid ......... ✅
 Fix S15 R3 — rocket handleConfirm vehicle_id uses uuid ............. ✅
 Fix S15 R4 — rocket handleConfirm trip_passengers uses crew uuid ... ✅
 Fix S15 R5 — rocket vehicle display label uses display_id .......... ✅
+Fix S17a V10 — NccTab vehicles select uuid+display_id, order(display_id) ✅ [7b576fd]
+Fix S17a V11 — VehicleSidebar preferred crew chips lookup c.uuid ... ✅ [7b576fd]
+Fix S17a V12 — VehicleRow preferred crew display lookup c.uuid ..... ✅ [7b576fd]
+Fix S17b W1/W2/W3 — wrap-trip SendLinksModal+page.js order display_id ✅ [fd9cccd]
 ```
 
 ---
@@ -117,326 +121,17 @@ Vedi sezione "GIÀ COMPLETATO" sopra.
 ### ~~🔧 SESSIONE S11b~~ ✅ Fix `bridge/page.js` B5-B13 COMPLETATO
 > `TravelDiscrepanciesWidget` — 9 fix su `.eq('id', ...)` → `.eq('uuid', ...)`
 
-**Pre-requisito:** Leggere `bridge/page.js` righe ~1000-1115 prima di ogni SEARCH.
-
-#### Fix da applicare:
-
-**B-5** (~L1007): `crew.update` dentro `"Use Calendar"` (personStays.length === 0):
-```js
-// PRIMA
-.eq('id', item.crew_id).eq('production_id', productionId)
-// DOPO
-.eq('uuid', item.crew_id).eq('production_id', productionId)
-```
-Commit: `"Fix bridge B5: crew update eq uuid in Use Calendar (travel_date_conflict)"`
-
-**B-6/B-7** (~L1022-1030): calcolo `resolvedTravelHotelId` e `travelHotel`:
-```js
-// PRIMA
-)?.id
-const travelHotel = locations.find(l => l.id === resolvedTravelHotelId)?.name || ...
-// DOPO
-)?.uuid
-const travelHotel = locations.find(l => l.uuid === resolvedTravelHotelId)?.name || ...
-```
-Commit: `"Fix bridge B6-B7: resolvedTravelHotelId uses uuid"`
-
-**B-8/B-9/B-10** (~L1039-1042): blocco `"Use Rooming"` onClick:
-```js
-// PRIMA
-await supabase.from('crew').update({ hotel_id: item.rooming_hotel_id }).eq('id', item.crew_id)...
-await supabase.from('crew_stays').update({ hotel_id: item.rooming_hotel_id }).eq('crew_id', item.crew_id)...
-// DOPO
-const roomingUuid = locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null
-await supabase.from('crew').update({ hotel_id: roomingUuid }).eq('uuid', item.crew_id)...
-await supabase.from('crew_stays').update({ hotel_id: roomingUuid }).eq('crew_id', item.crew_id)...
-```
-Commit: `"Fix bridge B8-B10: Use Rooming converts hotel_id to uuid"`
-
-**B-11** (~L1052): `"Use Calendar"` onClick in `hotel_conflict`:
-```js
-// PRIMA
-.eq('id', item.crew_id)...
-// DOPO
-.eq('uuid', item.crew_id)...
-```
-Commit: `"Fix bridge B11: crew update eq uuid in Use Calendar (hotel_conflict)"`
-
-**B-12** (~L1080-1088): blocco `match_status === 'unmatched'`, costruzione `hotel_id`:
-```js
-// PRIMA
-let hotel_id = item.rooming_hotel_id || null
-if (!hotel_id && item.hotel_raw) {
-  const matchedLoc = locations.find(...)
-  if (matchedLoc) hotel_id = matchedLoc.id
-}
-// DOPO
-const rooming_hotel_uuid = item.rooming_hotel_id
-  ? (locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null) : null
-let hotel_id = rooming_hotel_uuid || null
-if (!hotel_id && item.hotel_raw) {
-  const matchedLoc = locations.find(...)
-  if (matchedLoc) hotel_id = matchedLoc.uuid
-}
-```
-Commit: `"Fix bridge B12: sessionStorage hotel_id uses uuid"`
-
-**B-13** (~L1109): `"Skip future checks"` onClick:
-```js
-// PRIMA
-.eq('id', item.crew_id)...
-// DOPO
-.eq('uuid', item.crew_id)...
-```
-Commit: `"Fix bridge B13: no_rooming_check update uses uuid"`
-
-> **Nota B-8/B-10/B-12:** `item.rooming_hotel_id` è TEXT (dall'import Google Sheets), ma `crew.hotel_id` e `crew_stays.hotel_id` sono UUID. Serve lookup `locations.find(l => l.id === item.rooming_hotel_id)?.uuid`. La `locations` array ha già `uuid` nel select grazie al fix B-4.
+Vedi storico sessioni precedenti — completato.
 
 ---
 
-### ~~🔧 SESSIONE S12~~ ✅ `vehicles/page.js` T4+T5+T6+T7 COMPLETATO
-> ComodatoTab + LoanVehicleSidebar — 4 fix
-
-**IMPORTANTE:** `vehicles/page.js` è ~5000 righe. Fare `read_file` delle righe specifiche PRIMA di ogni SEARCH.
-
-#### Task T4 — ComodatoTab: select aggiunge uuid, display_id, ordina per display_id
-
-Righe da leggere prima: 3760-3780
-
-SEARCH (sottostringa corta — solo la parte finale):
-```
-comodato_fuel_reimbursement, comodato_notes').eq('production_id', productionId).eq('is_comodato', true).order('id'),
-```
-REPLACE:
-```
-comodato_fuel_reimbursement, comodato_notes').eq('production_id', productionId).eq('is_comodato', true).order('display_id'),
-```
-
-Poi secondo SEARCH/REPLACE (file separato o seconda operazione):
-SEARCH:
-```
-vehicles').select('id, vehicle_type, license_plate, driver_name, active, is_comodato, comodato_owner_crew_id,
-```
-REPLACE:
-```
-vehicles').select('uuid, id, display_id, vehicle_type, license_plate, driver_name, active, is_comodato, comodato_owner_crew_id,
-```
-Commit: `"Fix vehicles: ComodatoTab select includes uuid display_id orders by display_id"`
-
-#### Task T5 — ComodatoTab: mostra display_id nel render
-
-Righe da leggere prima: 3830-3845
-
-SEARCH:
-```
-fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
-```
-REPLACE:
-```
-fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>{v.display_id || v.id}</span>
-```
-Commit: `"Fix vehicles: ComodatoTab shows display_id"`
-
-#### Task T6 — ComodatoTab: owner lookup usa uuid
-
-Righe da leggere prima: 3840-3852
-
-SEARCH:
-```
-                      const owner = crewList.find(c => c.id === v.comodato_owner_crew_id)
-```
-REPLACE:
-```
-                      const owner = crewList.find(c => c.uuid === v.comodato_owner_crew_id)
-```
-Commit: `"Fix vehicles: ComodatoTab owner lookup uses uuid"`
-
-#### Task T7 — LoanVehicleSidebar: ownerCrew lookup usa uuid
-
-Righe da leggere prima: 4010-4020
-
-SEARCH:
-```
-  const ownerCrew = crewList.find(c => c.id === form.comodato_owner_crew_id)
-```
-REPLACE:
-```
-  const ownerCrew = crewList.find(c => c.uuid === form.comodato_owner_crew_id)
-```
-Commit: `"Fix vehicles: LoanVehicleSidebar ownerCrew lookup uses uuid"`
-
----
-
-### ~~🔧 SESSIONE S13~~ ✅ `vehicles/page.js` T8a+T8b COMPLETATO
-> ✅ T8a completato — ✅ T8b completato
-> Rental filter search — 2 occorrenze identiche
-
-**IMPORTANTE:** Le due righe (4459 e 4475) sono **identiche**. Disambiguare con il contesto circostante.
-
-#### Task T8a — prima occorrenza (~riga 4459, dentro `productionFiltered`)
-
-Righe da leggere prima: 4455-4465
-
-SEARCH (usa contesto `// Reset selezione` che segue solo la prima):
-```
-      if (!(v.id || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
-    }
-    return true
-  })
-
-  // Reset selezione quando cambiano i filtri
-```
-REPLACE:
-```
-      if (!((v.display_id || v.id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
-    }
-    return true
-  })
-
-  // Reset selezione quando cambiano i filtri
-```
-Commit: `"Fix vehicles: rental filter search uses display_id (first)"`
-
-#### Task T8b — seconda occorrenza (~riga 4475, dentro `filtered`)
-
-Righe da leggere prima: 4472-4482
-
-SEARCH (usa contesto `const counts` che segue solo la seconda):
-```
-      if (!(v.id || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
-    }
-    return true
-  })
-
-  const counts = {
-```
-REPLACE:
-```
-      if (!((v.display_id || v.id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
-    }
-    return true
-  })
-
-  const counts = {
-```
-Commit: `"Fix vehicles: rental filter search uses display_id (second)"`
-
----
-
-### ~~🔧 SESSIONE S14~~ ✅ `fleet/page.js` F1 + `qr-codes/page.js` Q1 COMPLETATO
-> Due piccole modifiche su file diversi
-
-#### Task F1 — fleet: ordina vehicles per display_id
-
-Righe da leggere prima: `fleet/page.js` 775-785
-
-SEARCH:
-```
-        .order('vehicle_type').order('id'),
-```
-REPLACE:
-```
-        .order('vehicle_type').order('display_id'),
-```
-Commit: `"Fix fleet: vehicles order by display_id"`
-
-#### Task Q1 — qr-codes: ordina vehicles per display_id
-
-Righe da leggere prima: `qr-codes/page.js` 50-62
-
-SEARCH:
-```
-          .eq('production_id', PRODUCTION_ID).order('id'),
-```
-REPLACE:
-```
-          .eq('production_id', PRODUCTION_ID).order('display_id'),
-```
-Commit: `"Fix qr-codes: vehicles order by display_id"`
-
----
-
-### ~~🔧 SESSIONE S15~~ ✅ `rocket/page.js` R1+R2+R3+R4+R5 COMPLETATO
-> loadData select + handleConfirm + display label
-
-**IMPORTANTE:** Leggere le righe specifiche PRIMA di ogni SEARCH.
-
-#### Task R1 — rocket: loadData crew select include uuid
-
-Righe da leggere prima: 1490-1510
-
-SEARCH:
-```
-      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
-```
-REPLACE:
-```
-      supabase.from('crew').select('id,uuid,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
-```
-Commit: `"Fix rocket: loadData crew select includes uuid"`
-
-#### Task R2 — rocket: loadData vehicles select include uuid
-
-Righe da leggere prima: 1495-1510
-
-SEARCH:
-```
-      supabase.from('vehicles').select('id,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active,preferred_dept,preferred_crew_ids')
-```
-REPLACE:
-```
-      supabase.from('vehicles').select('id,uuid,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active,preferred_dept,preferred_crew_ids')
-```
-Commit: `"Fix rocket: loadData vehicles select includes uuid"`
-
-#### Task R3 — rocket: handleConfirm vehicle_id usa uuid
-
-Righe da leggere prima: 1730-1745
-
-SEARCH:
-```
-          vehicle_id: t.vehicleId, driver_name: t.vehicle.driver_name || null,
-```
-REPLACE:
-```
-          vehicle_id: t.vehicle?.uuid || t.vehicleId, driver_name: t.vehicle.driver_name || null,
-```
-Commit: `"Fix rocket: handleConfirm vehicle_id uses uuid"`
-
-#### Task R4 — rocket: handleConfirm trip_passengers usa crew uuid
-
-Righe da leggere prima: 1750-1760
-
-SEARCH:
-```
-            g.crew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.id }))
-```
-REPLACE:
-```
-            g.crew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.uuid || c.id }))
-```
-Commit: `"Fix rocket: handleConfirm trip_passengers uses crew uuid"`
-
-#### Task R5 — rocket: display label usa display_id (~riga 349)
-
-Righe da leggere prima: 345-355
-
-> ⚠️ Leggere le righe prima di scrivere il SEARCH — riga 349 contiene `v.id can carry` (label display veicolo).
-
-SEARCH (leggere riga esatta prima):
-```
-{v.id} can carry
-```
-REPLACE:
-```
-{v.display_id || v.id} can carry
-```
-Commit: `"Fix rocket: vehicle display label uses display_id"`
+### ~~🔧 SESSIONI S12-S15~~ ✅ COMPLETATE
+Vedi sezione "GIÀ COMPLETATO" sopra.
 
 ---
 
 ### ~~🔧 SESSIONE S16~~ ✅ git push + test produzione
-> Completato 2026-05-31
+> Completato 2026-05-31 — git push eseguito
 
 ```
 [x] git push origin master ............................................. ✅
@@ -451,6 +146,203 @@ Commit: `"Fix rocket: vehicle display label uses display_id"`
 
 ---
 
+### ~~🔧 SESSIONE S17a~~ ✅ `vehicles/page.js` V10/V11/V12 COMPLETATO
+> Commit `7b576fd` — 3 fix — NccTab order display_id + preferred crew lookup uuid
+
+#### Task V10 — NccTab: vehicles ordina per display_id (~L2950)
+
+Righe da leggere prima: 2947-2953
+
+SEARCH:
+```
+supabase.from('vehicles').select('id, vehicle_type, ncc_agency_id').eq('production_id', productionId).eq('is_ncc', true).order('id')
+```
+REPLACE:
+```
+supabase.from('vehicles').select('uuid, id, display_id, vehicle_type, ncc_agency_id').eq('production_id', productionId).eq('is_ncc', true).order('display_id')
+```
+Commit: `"Fix vehicles S17a V10: NccTab vehicles order by display_id"`
+
+#### Task V11 — edit form preferred crew lookup usa uuid (~L2466)
+
+Righe da leggere prima: 2463-2468
+
+SEARCH (corta e univoca):
+```
+const cm = crewList.find(c => c.id === cid)
+          if (!cm) return null
+          return (
+            <span key={cid} style={{ display: 'inline-flex',
+```
+REPLACE:
+```
+const cm = crewList.find(c => c.uuid === cid)
+          if (!cm) return null
+          return (
+            <span key={cid} style={{ display: 'inline-flex',
+```
+Commit: `"Fix vehicles S17a V11: preferred_crew edit form lookup uses uuid"`
+
+#### Task V12 — VehicleRow preferred crew lookup usa uuid (~L4202)
+
+Righe da leggere prima: 4199-4207
+
+SEARCH (corta e univoca):
+```
+const cm = crewList.find(c => c.id === cid)
+                    if (!cm) return null
+                    return (
+                      <span key={cid} style={{ padding: '2px 10px',
+```
+REPLACE:
+```
+const cm = crewList.find(c => c.uuid === cid)
+                    if (!cm) return null
+                    return (
+                      <span key={cid} style={{ padding: '2px 10px',
+```
+Commit: `"Fix vehicles S17a V12: preferred_crew VehicleRow display uses uuid"`
+
+---
+
+### 🔧 SESSIONE S17b — `wrap-trip/` W1/W2/W3
+> Audit S97: 3 fix `.order('id')` → `.order('display_id')` su vehicles
+
+#### Task W1 — SendLinksModal.js: vehicles ordina per display_id (~L21)
+
+File: `app/wrap-trip/components/SendLinksModal.js`
+
+Righe da leggere prima: 15-22
+
+SEARCH:
+```
+        .eq('active', true)
+        .eq('in_transport', true)
+        .order('id')
+```
+REPLACE:
+```
+        .eq('active', true)
+        .eq('in_transport', true)
+        .order('display_id')
+```
+Commit: `"Fix wrap-trip S17b W1: SendLinksModal vehicles order by display_id"`
+
+#### Task W2 — wrap-trip/page.js: prima query vehicles ordina per display_id (~L206)
+
+File: `app/wrap-trip/page.js`
+
+Righe da leggere prima: 204-208
+
+SEARCH (prima occorrenza — ha `id,driver_name` senza display_id nel select):
+```
+      supabase.from('vehicles').select('uuid,id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
+```
+REPLACE:
+```
+      supabase.from('vehicles').select('uuid,id,display_id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('display_id'),
+```
+Commit: `"Fix wrap-trip S17b W2: wrap-trip page vehicles order by display_id (first)"`
+
+#### Task W3 — wrap-trip/page.js: seconda query vehicles ordina per display_id (~L538)
+
+Righe da leggere prima: 536-540 (DOPO W2, il select ha già display_id — leggere righe per testo esatto aggiornato)
+
+SEARCH (seconda occorrenza — dopo W2 avrà già `display_id` nel select):
+```
+      supabase.from('vehicles').select('uuid,id,display_id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
+```
+REPLACE:
+```
+      supabase.from('vehicles').select('uuid,id,display_id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('display_id'),
+```
+Commit: `"Fix wrap-trip S17b W3: wrap-trip page vehicles order by display_id (second)"`
+
+---
+
+### 🔧 SESSIONE S17c — `fleet/components/QuickTripModal.js` QT-1 + QT-2
+> Audit S97: 2 fix semplici — vehicleId uuid + hotel_id location lookup
+
+**IMPORTANTE:** Fare `read_file` delle righe specifiche PRIMA di ogni SEARCH.
+File: `app/dashboard/fleet/components/QuickTripModal.js` (~1193 righe)
+
+#### Task QT-1 — vehicleId usa uuid (~L418) — CRITICO
+
+L'API `quick-create` fa `.eq('uuid', vehicleId)` ma il client invia `vehicle.id` (TEXT) → veicolo mai trovato → trip creation fallisce silenziosamente.
+
+Righe da leggere prima: 413-427
+
+SEARCH:
+```
+          vehicleId:    vehicle.id,
+```
+REPLACE:
+```
+          vehicleId:    vehicle.uuid || vehicle.id,
+```
+Commit: `"Fix QuickTripModal S17c QT-1: vehicleId uses uuid (CRITICAL)"`
+
+#### Task QT-2 — handleRowPersonSelect hotel_id lookup usa l.uuid (~L642)
+
+`person.hotel_id` è ora UUID (FK a `locations.uuid`), ma il lookup usa `l.id` (TEXT) → hotel auto-fill sempre null.
+
+Righe da leggere prima: 639-650
+
+SEARCH:
+```
+    const hotel  = person?.hotel_id ? locations.find(l => l.id === person.hotel_id) : null
+```
+REPLACE:
+```
+    const hotel  = person?.hotel_id ? locations.find(l => l.uuid === person.hotel_id) : null
+```
+Commit: `"Fix QuickTripModal S17c QT-2: hotel_id lookup uses l.uuid"`
+
+---
+
+### 🔧 SESSIONE S17d — `fleet/components/QuickTripModal.js` QT-3 + QT-4
+> Audit S97: resolve TEXT→UUID per crew ids e location ids in createTrip()
+
+**Prerequisito:** S17c completato.
+
+**Contesto:** L'AI trip-builder restituisce TEXT ids (es. `"LOC-01"`, `"CREW-01"`) per pickup_id, dropoff_id, passenger_ids. Ma l'API `quick-create` (non-LEGS mode) si aspetta UUID:
+- L195-198: `.in('uuid', passengerIds)` — vuole UUID crew
+- L217-219: `.eq('from_id', pickupId)` — routes usa UUID
+- L248-249: `pickup_id: pickupId` / `dropoff_id: dropoffId` — trips FK UUID
+
+**Strategia fix in `createTrip()` (~L366-434):**
+
+Righe da leggere prima: 392-430
+
+SEARCH (righe 397-399 — leggere prima per testo esatto):
+```
+      const firstPickup = resolvedLegs[0].pickup_id
+      const allDropoffs = [...new Set(resolvedLegs.map(l => l.dropoff_id).filter(Boolean))]
+      const allPassengerIds = [...new Set(resolvedLegs.flatMap(l => l.passenger_ids || []))]
+```
+REPLACE:
+```
+      // Risolvi TEXT ids → UUID (l'AI restituisce TEXT id, l'API si aspetta UUID)
+      const locTextToUuid = {}
+      for (const loc of locations) { if (loc.id) locTextToUuid[loc.id] = loc.uuid }
+      const crewTextToUuid = {}
+      for (const c of crew) { if (c.id) crewTextToUuid[c.id] = c.uuid }
+      const uuidLegs = resolvedLegs.map(leg => ({
+        ...leg,
+        pickup_id:     locTextToUuid[leg.pickup_id]  || leg.pickup_id,
+        dropoff_id:    locTextToUuid[leg.dropoff_id] || leg.dropoff_id,
+        passenger_ids: (leg.passenger_ids || []).map(id => crewTextToUuid[id] || id),
+      }))
+      const firstPickup = uuidLegs[0].pickup_id
+      const allDropoffs = [...new Set(uuidLegs.map(l => l.dropoff_id).filter(Boolean))]
+      const allPassengerIds = [...new Set(uuidLegs.flatMap(l => l.passenger_ids || []))]
+```
+Commit: `"Fix QuickTripModal S17d QT-3/QT-4: resolve TEXT ids to UUID before API call"`
+
+> **Prerequisito crew/locations in scope:** verificare che `crew` e `locations` siano accessibili dentro `createTrip()`. Sono props del componente caricate da `fleet/page.js`. Se non in scope, aggiungere al destructuring dei props.
+
+---
+
 ## 🗂️ File con status UUID
 
 | File | Status | Sessione |
@@ -462,14 +354,15 @@ Commit: `"Fix rocket: vehicle display label uses display_id"`
 | `app/api/go/trip/start/route.js` | ✅ B | — |
 | `app/dashboard/vehicles/components/NccDriverSidebar.js` | ✅ N | — |
 | `app/dashboard/vehicles/components/NccVehicleSidebar.js` | ✅ N | — |
-| `app/dashboard/vehicles/page.js` | ✅ V1-V9 + S96 T1-T3 + NccTab + T4-T8b | S13 |
+| `app/dashboard/vehicles/page.js` | ✅ V1-V9+S96+T4-T8b+S17a V10-V12 [7b576fd] | S13→S17a |
 | `lib/routeDuration.js` | ✅ C1 | — |
 | `app/dashboard/hub-coverage/page.js` | ✅ C2 | — |
 | `app/dashboard/pax-coverage/page.js` | ✅ C3 | — |
 | `app/api/go/data/route.js` | ✅ E [97e4fe8] | S1 |
 | `app/api/go/wrap/route.js` | ✅ E [97e4fe8] | S1 |
 | `app/api/qr/resolve/route.js` | ✅ D3+D4 | S2 |
-| `app/wrap-trip/page.js` | ✅ G [26135a9] | S3 |
+| `app/wrap-trip/page.js` | ✅ G [26135a9] + S17b W2/W3 [fd9cccd] | S3→S17b |
+| `app/wrap-trip/components/SendLinksModal.js` | ✅ S17b W1 [fd9cccd] | S17b |
 | `app/go/[token]/page.js` | ✅ H [ca92b70] | S4 |
 | `app/api/crew/merge/route.js` | ✅ D1 [95e966f] | S5 |
 | `app/api/go/ping/route.js` | ✅ D2 [95e966f] | S5 |
@@ -495,6 +388,7 @@ Commit: `"Fix rocket: vehicle display label uses display_id"`
 | `app/dashboard/fleet/page.js` | ✅ F1 | S14 |
 | `app/dashboard/qr-codes/page.js` | ✅ Q1 | S14 |
 | `app/dashboard/rocket/page.js` | ✅ R1-R5 | S15 |
+| `app/dashboard/fleet/components/QuickTripModal.js` | ⚠️ QT-1/QT-2/QT-3/QT-4 da fare | S17c+S17d |
 
 ---
 
@@ -508,7 +402,11 @@ S12     ✅ completato (vehicles T4-T7)
 S13     ✅ completato (vehicles T8a+T8b)
 S14     ✅ completato (fleet F1 + qr-codes Q1)
 S15     ✅ completato (rocket R1-R5)
-S16     ← PROSSIMA: git push + test produzione
+S16     ✅ git push eseguito (test produzione pendente)
+S17a    ✅ completato (vehicles V10/V11/V12) [7b576fd]
+S17b    ✅ completato (wrap-trip W1/W2/W3) [fd9cccd]
+S17c    ← PROSSIMA: QuickTripModal QT-1/QT-2 (vehicleId uuid + hotel lookup) — CRITICO
+S17d    QuickTripModal QT-3/QT-4 (resolve TEXT→UUID in createTrip)
 ```
 
 ---
@@ -528,4 +426,6 @@ S16     ← PROSSIMA: git push + test produzione
 11. **travel_movements.rooming_hotel_id** → è TEXT (non migrato, viene dall'import Google Sheets) — non è una FK UUID. Serve lookup `locations.find(l => l.id === item.rooming_hotel_id)?.uuid`
 12. **vehicles/page.js ~5000 righe** — SEMPRE fare `read_file` delle righe specifiche prima del SEARCH
 13. **Shell CMD** — usare `&&` tra comandi, non PowerShell syntax
-14. **NO git push automatico** — push manuale a fine sessione (S16)
+14. **NO git push automatico** — push manuale a fine sessione
+15. **preferred_crew_ids in vehicles** → ora contiene UUID (non TEXT id) → lookup deve usare `c.uuid`
+16. **QuickTripModal** — `crew` e `locations` sono props del componente da `fleet/page.js`, disponibili in scope dentro `createTrip()`
