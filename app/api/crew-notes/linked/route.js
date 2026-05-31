@@ -73,7 +73,7 @@ export async function GET(request) {
       const { data: loc } = await supabase
         .from('locations')
         .select('name')
-        .eq('id', data.hotel_id)
+        .eq('uuid', data.hotel_id)
         .maybeSingle()
       if (loc?.name) hotel_name = loc.name
     }

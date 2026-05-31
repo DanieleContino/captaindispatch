@@ -30,7 +30,7 @@ export async function POST(request) {
   } else {
     const { data: crewDriver } = await supabase
       .from('crew')
-      .select('id, full_name, production_id')
+      .select('uuid, display_id, full_name, production_id')
       .eq('tracking_token', token)
       .single()
     if (crewDriver) {
@@ -50,7 +50,7 @@ export async function POST(request) {
   if (driverType === 'NCC') {
     const { data: v } = await supabase
       .from('vehicles')
-      .select('id')
+        .select('uuid')
       .eq('production_id', productionId)
       .eq('ncc_driver_id', driver.id)
       .eq('active', true)
@@ -59,7 +59,7 @@ export async function POST(request) {
   } else {
     const { data: v } = await supabase
       .from('vehicles')
-      .select('id')
+        .select('uuid')
       .eq('production_id', productionId)
       .eq('driver_crew_id', driver.id)
       .eq('active', true)

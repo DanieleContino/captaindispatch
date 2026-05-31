@@ -30,8 +30,8 @@ export async function GET(request) {
     const crewId = qr.slice(3)
     const { data, error } = await supabase
       .from('crew')
-      .select('uuid, id, full_name, department, hotel_id, hotel_status, travel_status, arrival_date, departure_date, notes, production_id')
-      .eq('id', crewId)
+      .select('uuid, display_id, full_name, department, hotel_id, hotel_status, travel_status, arrival_date, departure_date, notes, production_id')
+      .eq('uuid', crewId)
       .maybeSingle()
 
     if (error || !data) {
@@ -70,7 +70,7 @@ export async function GET(request) {
     const { data, error } = await supabase
       .from('vehicles')
       .select('*')
-      .eq('id', vehicleId)
+      .eq('uuid', vehicleId)
       .maybeSingle()
 
     if (error || !data) {

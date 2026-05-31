@@ -32,7 +32,7 @@ export async function GET(request) {
   } else {
     const { data: crewDriver } = await supabase
       .from('crew')
-      .select('id, uuid, full_name, production_id, department')
+      .select('uuid, display_id, full_name, production_id, department')
       .eq('tracking_token', token)
       .single()
 

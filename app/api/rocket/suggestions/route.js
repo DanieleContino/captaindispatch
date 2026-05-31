@@ -112,7 +112,7 @@ export async function GET(req) {
       // Recupera tutti i crew con il loro dipartimento (leggero)
       const { data: allCrew, error: crewErr } = await supabase
         .from('crew')
-        .select('id, department')
+        .select('uuid, display_id, department')
         .eq('production_id', PRODUCTION_ID)
 
       if (!crewErr && allCrew && allCrew.length > 0) {
