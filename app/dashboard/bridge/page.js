@@ -203,7 +203,7 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
     setLoading(true)
     const { data } = await supabase
       .from('crew')
-      .select('id, full_name, department, hotel_id, hotel_status, travel_status, arrival_date, departure_date, email, phone, notes, created_at')
+      .select('id, uuid, full_name, department, hotel_id, hotel_status, travel_status, arrival_date, departure_date, email, phone, notes, created_at')
       .eq('production_id', productionId)
       .order('created_at', { ascending: true })
     setLoading(false)
@@ -242,8 +242,10 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
 
   async function handleMerge() {
     if (!mergeCtx) return
-    const duplicate_ids = mergeCtx.selectedIds.filter(id => id !== primaryId)
-    if (!duplicate_ids.length) { setMergeError('Need at least 2 crew selected'); return }
+  const duplicate_ids = mergeCtx.selectedIds.filter(id => id !== primaryId)
+  if (!duplicate_ids.length) { setMergeError('Need at least 2 crew selected'); return }
+  const primaryCrewUuid = mergeCtx.selCrew.find(c => c.id === primaryId)?.uuid
+  const duplicate_uuids = duplicate_ids.map(id => mergeCtx.selCrew.find(c => c.id === id)?.uuid).filter(Boolean)
 
     const merged_data = {}
     CREW_MERGE_FIELDS.forEach(({ key }) => {
@@ -262,7 +264,7 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
       const res = await fetch('/api/crew/merge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ production_id: productionId, primary_id: primaryId, duplicate_ids, merged_data }),
+      body: JSON.stringify({ production_id: productionId, primary_id: primaryCrewUuid, duplicate_ids: duplicate_uuids, merged_data }),
       })
       const json = await res.json()
       if (!res.ok) { setMergeError(json.error || 'Merge failed'); setSaving(false); return }
@@ -275,7 +277,7 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
           const staysToCreate = mergeCtx.selCrew
             .filter(c => c.hotel_id || c.arrival_date || c.departure_date)
             .map(c => ({
-              crew_id:        primaryId,
+              crew_id:        primaryCrewUuid,
               production_id:  productionId,
               hotel_id:       c.hotel_id       || null,
               arrival_date:   c.arrival_date   || null,
@@ -289,7 +291,7 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
           const staysToCreate = mergeCtx.selCrew
             .filter(c => c.arrival_date || c.departure_date)
             .map(c => ({
-              crew_id:        primaryId,
+              crew_id:        primaryCrewUuid,
               production_id:  productionId,
               hotel_id:       c.hotel_id       || null,
               arrival_date:   c.arrival_date   || null,
@@ -832,7 +834,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
         .limit(50),
       supabase
         .from('locations')
-        .select('id, name')
+        .select('id, uuid, name')
         .eq('production_id', productionId),
     ]).then(async ([{ data: rawItems }, { data: locs }]) => {
       setLocations(locs || [])
@@ -1004,7 +1006,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                                 // Nessuna stay → aggiorna crew direttamente
                                 await supabase.from('crew')
                                   .update({ [field]: item.travel_date })
-                                  .eq('id', item.crew_id)
+                                  .eq('uuid', item.crew_id)
                                   .eq('production_id', productionId)
                               }
                               await resolve(item.id)
