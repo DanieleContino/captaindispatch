@@ -39,6 +39,7 @@ Fix G — wrap-trip/page.js FleetMonitor + WrapTripContent ....... ✅ [26135a9]
 Fix H — go/[token]/page.js locsMap + crew uuid ................ ✅ [ca92b70]
 Fix D1+D2 — crew/merge + go/ping use uuid ..................... ✅ [95e966f]
 Fix D5+D6 — trips/quick-create use uuid ....................... ✅ [c06facf]
+S10 lib/tripUtils.js — audit: nessuna modifica necessaria ...... ✅ [S10]
 S7 routes API audit — fleet/map-data, routes/compute, compute-chain,
   optimize-waypoints, refresh-all-locations, refresh-location ... ✅ [9deb3fd]
 S7 trips components — TripSidebar, EditTripSidebar, ReplicaDayModal ✅ [9deb3fd]
@@ -46,9 +47,11 @@ S7 traffic+routes — traffic-check/route.js, refreshRoutesWithGoogle ✅ [1b66a
 S7 EditTripSidebar fix — pendingPax crew_id: c.uuid ............ ✅ [1b66af0]
 S7 locations/page.js — refresh-location chiama con uuid ........ ✅ [1b66af0]
 S8 travel/page.js — audit: già corretto (crew uuid, .eq(uuid) ok) ✅ [S8]
+S9 TripSidebar.js — getClass usa locUuidToTextId, crew_id c.uuid ✅ [2538642]
+S9 EditTripSidebar.js — getClass×3 (L171/398/499) + busyMap×11 c.uuid ✅ [2538642]
 ```
 
-> ✅ **Ultimo push:** `git push origin uuid-migration` — commit `1b66af0` (2026-05-31)
+> ✅ **Ultimo push:** commit `2538642` su branch `uuid-migration` (2026-05-31)
 
 ---
 
@@ -65,40 +68,33 @@ Vedi sezione "GIÀ COMPLETATO" sopra.
 ### ~~🔧 SESSIONE 8 — travel/page.js~~ ✅ COMPLETATA
 > **Audit 2026-05-31**: file già corretto — nessuna modifica necessaria.
 
-#### `app/dashboard/travel/page.js`
+---
 
-**Cosa controllare:**
-- Qualsiasi `locations.select(...)` → deve includere `uuid`
-- Qualsiasi `locsMap[l.id]` → deve diventare `locsMap[l.uuid]`
-- Qualsiasi `crew.select(...)` → deve includere `uuid`
-- Qualsiasi `crew_stays.hotel_id` confrontato con location — verificare se è già UUID
-- Qualsiasi `trip_passengers.insert({ crew_id: c.id })` → deve essere `c.uuid`
-- Qualsiasi `vehicles.eq('id', ...)` per FK → deve essere `.eq('uuid', ...)`
+### ~~🔧 SESSIONE 9 — TripSidebar + EditTripSidebar getClass/busyMap~~ ✅ COMPLETATA
+> **2026-05-31**: commit `2538642`
 
-**Pattern da cercare (regex):** `\.eq\('id',` nei contesti FK (non display lookup)
-
-**Commit suggerito:** `S8: fix UUID refs in travel/page.js`
+**Fix applicati:**
+- `TripSidebar.js`: `getClass()` ora usa `locUuidToTextId[uuid] || uuid` (L291), `trip_passengers.insert` usa `crew_id: c.uuid`
+- `EditTripSidebar.js`:
+  - `getClass()` in `loadPaxData` (L171): `locsDisplayMap?.[effectivePickup] || effectivePickup`
+  - `getClass()` in loop siblings (handleSubmit): `locsDisplayMap?.[sib.pickup_id] || sib.pickup_id`
+  - `getClass()` in loop extraLegs (handleSubmit): `locsDisplayMap?.[leg.pickup_id] || leg.pickup_id`
+  - `busyMap[c.id]` → `busyMap[c.uuid]` in 11 punti (freeCount, busyCount, "Add all", filtered.map×2, NTN headers×2, filteredNtn.map×4)
 
 ---
 
-### 🔧 SESSIONE 9 — lib/tripUtils.js
-> File: 1 | Costo: MEDIO | **Da fare dopo S8**
+### ~~🔧 SESSIONE 10 — lib/tripUtils.js (audit)~~ ✅ COMPLETATA
+> **Audit 2026-05-31**: file già corretto — nessuna modifica necessaria.
 
-#### `lib/tripUtils.js`
-
-**Cosa controllare:**
-- `checkVehicleAvail(vehicleId, ...)` → la funzione fa query su `trips` con `vehicle_id` = UUID → verificare
-- `getClass(pickupId, dropoffId)` → usa il TEXT display id per il check hub prefix → assicurarsi che il chiamante passi `locUuidToTextId[uuid]` non l'UUID diretto
-- Qualsiasi query diretta a `locations`, `vehicles`, `crew` → verificare FK
-
-**Nota importante su `getClass`:**
-La funzione `getClass` nel codice attuale viene chiamata con `locUuidToTextId[form.pickup_id]` (vedi TripSidebar L60) oppure `locsDisplayMap?.[form.pickup_id]` (vedi EditTripSidebar L131). Verificare che TUTTI i chiamanti usino questo pattern.
-
-**Commit suggerito:** `S9: fix UUID refs in lib/tripUtils.js`
+**Risultato audit:**
+- `getClass(p, d)` → prende TEXT display id (controlla prefissi `APT_`, `STN_`, `PRT_`) — **by design, NON modificare**. Chiamanti (TripSidebar, EditTripSidebar) già fixati in S9.
+- `isHub(id)` → idem, lavora su TEXT id — nessuna modifica.
+- `checkVehicleAvail(vehicleId, ...)` → `.eq('vehicle_id', vehicleId)` su `trips` — colonna già UUID, i chiamanti passano `v.uuid` (auditati nelle sessioni precedenti) — **OK**.
+- Nessuna query diretta a `locations`, `crew`, `vehicles` nel file.
 
 ---
 
-### 🔧 SESSIONE 10 — Test finale + merge in master
+### 🔧 SESSIONE 11 — Test finale + merge in master
 > Solo verifica e git operations
 
 **Checklist pre-merge:**
@@ -153,14 +149,14 @@ La funzione `getClass` nel codice attuale viene chiamata con `locUuidToTextId[fo
 | `app/api/routes/traffic-check/route.js` | ✅ S7 (1b66af0) | S7 |
 | `lib/refreshRoutesWithGoogle.js` | ✅ S7 (1b66af0) | S7 |
 | `app/dashboard/trips/page.js` | ✅ S7 — OK già corretto | S7 |
-| `app/dashboard/trips/_components/TripSidebar.js` | ✅ S7 — OK già corretto | S7 |
-| `app/dashboard/trips/_components/EditTripSidebar.js` | ✅ S7 (1b66af0) fix pendingPax | S7 |
+| `app/dashboard/trips/_components/TripSidebar.js` | ✅ S9 (2538642) getClass+crew_id fix | S9 |
+| `app/dashboard/trips/_components/EditTripSidebar.js` | ✅ S9 (2538642) getClass×3+busyMap×11 | S9 |
 | `app/dashboard/trips/_components/ReplicaDayModal.js` | ✅ S7 (9deb3fd) | S7 |
 | `app/dashboard/trips/_components/TripRow.js` | ✅ S7 — OK già corretto | S7 |
 | `app/dashboard/trips/_components/WaypointReviewModal.js` | ✅ S7 — OK già corretto | S7 |
 | `app/dashboard/locations/page.js` | ✅ S7 (1b66af0) fix refresh uuid | S7 |
 | `app/dashboard/travel/page.js` | ✅ S8 — OK già corretto | S8 |
-| `lib/tripUtils.js` | 🔍 NON CONTROLLATO | **S9** |
+| `lib/tripUtils.js` | ✅ S10 — audit: nessuna modifica necessaria | S10 |
 
 ---
 
@@ -176,8 +172,9 @@ S5 → crew/merge + go/ping ✅
 S6 → quick-create ✅
 S7 → audit routes API + trips components ✅ → commit 9deb3fd + 1b66af0
 S8 → travel/page.js ✅ (audit: già corretto — nessuna modifica)
-S9 → tripUtils.js ← PROSSIMA SESSIONE
-S10 → test + merge master
+S9 → TripSidebar + EditTripSidebar getClass/busyMap ✅ → commit 2538642
+S10 → lib/tripUtils.js audit ✅ (audit: già corretto — nessuna modifica)
+S11 → test + merge master ← PROSSIMA SESSIONE
 ```
 
 ---
@@ -191,5 +188,6 @@ S10 → test + merge master
 5. **QR codes** contengono il vecchio TEXT id → lookup per `.eq('id', ...)` è CORRETTO per i QR
 6. **hotel_id in crew** → è già UUID dopo migrazione → lookup locations per `.eq('uuid', ...)`
 7. **driver_crew_id in vehicles** → è già UUID dopo migrazione → lookup crew per `.eq('uuid', ...)`
-8. **getClass()** in `lib/tripUtils.js` prende il TEXT display id (non UUID) → i chiamanti devono fare la conversione uuid→textId prima di chiamarla. Pattern corretto: `getClass(locUuidToTextId[pickupUuid], locUuidToTextId[dropoffUuid])`
+8. **getClass()** in `lib/tripUtils.js` prende il TEXT display id (non UUID) → i chiamanti devono fare la conversione uuid→textId prima di chiamarla. Pattern corretto: `getClass(locUuidToTextId[pickupUuid] || pickupUuid, ...)` oppure `getClass(locsDisplayMap?.[uuid] || uuid, ...)`
 9. **crew_stays.hotel_id** — verificare se è già UUID come `crew.hotel_id` (probabile sì)
+10. **busyMap** in EditTripSidebar è keyed per `crew_id` (UUID di Supabase) → usare `busyMap[c.uuid]` non `busyMap[c.id]` ✅ fixato in S9
