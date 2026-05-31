@@ -127,9 +127,10 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
       lng:  form.lng !== '' ? parseFloat(String(form.lng).replace(',', '.')) : null,
       default_pickup_point: form.default_pickup_point.trim() || null,
     }
-    let err
+    let err, newLocUuid = null
     if (mode === 'new') {
-      const r = await supabase.from('locations').insert(row); err = r.error
+      const r = await supabase.from('locations').insert(row).select('uuid').single()
+      err = r.error; newLocUuid = r.data?.uuid
     } else {
       const { id, ...upd } = row
       const r = await supabase.from('locations').update(upd).eq('id', initial.id); err = r.error
@@ -138,12 +139,12 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
     if (err) { setError(err.message); return }
 
     // ── Ricalcola rotte se lat/lng presenti ──────────────────
-    const savedId = mode === 'new' ? form.id.trim().toUpperCase() : initial.id
-    if (form.lat !== '' && form.lng !== '') {
+    const savedUuid = mode === 'new' ? newLocUuid : initial.uuid
+    if (form.lat !== '' && form.lng !== '' && savedUuid) {
       setRefresh(true)
       setRefMsg('🔄 Ricalcolo rotte con Google…')
       try {
-        const r    = await fetch(`/api/routes/refresh-location?id=${encodeURIComponent(savedId)}`)
+        const r    = await fetch(`/api/routes/refresh-location?id=${encodeURIComponent(savedUuid)}`)
         const data = await r.json()
         if (data.error) {
           setRefMsg(`⚠ Ricalcolo non riuscito: ${data.error}`)

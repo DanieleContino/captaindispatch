@@ -542,9 +542,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           const { data: newRow, error: legErr } = await supabase.from('trips').insert(siblingRow).select('id').single()
           if (legErr || !newRow?.id) { setError(`❌ Leg ${newTripId}: ${legErr?.message || 'insert failed'}`); break }
           newLegIds.push(newRow.id)
-          if (leg.pendingPax?.length > 0) {
+            if (leg.pendingPax?.length > 0) {
             await supabase.from('trip_passengers').insert(
-              leg.pendingPax.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: c.id }))
+              leg.pendingPax.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: c.uuid }))
             )
             await supabase.from('trips').update({
               pax_count: leg.pendingPax.length,

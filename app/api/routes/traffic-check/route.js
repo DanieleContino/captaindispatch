@@ -132,7 +132,7 @@ export async function POST(req) {
       .eq('date', dateISO)
       .neq('status', 'CANCELLED'),
     sb.from('locations')
-      .select('id,name,lat,lng')
+      .select('uuid,id,name,lat,lng')
       .eq('production_id', prodId),
   ])
 
@@ -144,9 +144,9 @@ export async function POST(req) {
   const coordMap = {}
   const nameMap  = {}
   for (const l of (locs || [])) {
-    nameMap[l.id] = l.name
+    nameMap[l.uuid] = l.name
     if (l.lat != null && l.lng != null)
-      coordMap[l.id] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
+      coordMap[l.uuid] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
   }
 
   // Raggruppa trip per trip_id (prende la prima row come rappresentativa)
