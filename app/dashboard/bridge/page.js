@@ -1081,13 +1081,15 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                         sessionStorage.setItem('crewAddNewMovementId', item.id)
 
                         // Cerca hotel_id da locations usando hotel_raw
-                        let hotel_id = item.rooming_hotel_id || null
+                        const rooming_hotel_uuid = item.rooming_hotel_id
+                          ? (locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null) : null
+                        let hotel_id = rooming_hotel_uuid || null
                         if (!hotel_id && item.hotel_raw) {
                           const matchedLoc = locations.find(l =>
                             l.name.toLowerCase().includes(item.hotel_raw.toLowerCase()) ||
                             item.hotel_raw.toLowerCase().includes(l.name.toLowerCase())
                           )
-                          if (matchedLoc) hotel_id = matchedLoc.id
+                          if (matchedLoc) hotel_id = matchedLoc.uuid
                         }
 
                         sessionStorage.setItem('crewAddNewData', JSON.stringify({
