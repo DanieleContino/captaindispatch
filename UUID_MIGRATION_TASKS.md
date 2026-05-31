@@ -93,7 +93,7 @@ L131: crew_id: crewId  (crewId viene da passengerIds)
 
 ---
 
-### 🔧 SESSIONE 2 — API QR Resolve (architetturale)
+### ~~🔧 SESSIONE 2~~ ✅ COMPLETATO — API QR Resolve (architetturale)
 > File: 1 | Righe da toccare: ~10 | Costo: MEDIO (file delicato)
 
 **Leggi prima:**
@@ -427,7 +427,7 @@ Se tutto ok → scrivi "✅ VERIFIED" accanto al file.
 | `app/dashboard/pax-coverage/page.js` | ✅ C3 | — |
 | `app/api/go/data/route.js` | ✅ E (97e4fe8) | S1 |
 | `app/api/go/wrap/route.js` | ✅ E (97e4fe8) | S1 |
-| `app/api/qr/resolve/route.js` | ❌ UUID parziale | S2 |
+| `app/api/qr/resolve/route.js` | ✅ D3+D4 | S2 |
 | `app/wrap-trip/page.js` | ❌ UUID rotto | S3 |
 | `app/go/[token]/page.js` | ❌ UUID parziale | S4 |
 | `app/api/crew/merge/route.js` | ❌ UUID rotto | S5 |

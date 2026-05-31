@@ -30,7 +30,7 @@ export async function GET(request) {
     const crewId = qr.slice(3)
     const { data, error } = await supabase
       .from('crew')
-      .select('id, full_name, department, hotel_id, hotel_status, travel_status, arrival_date, departure_date, notes, production_id')
+      .select('uuid, id, full_name, department, hotel_id, hotel_status, travel_status, arrival_date, departure_date, notes, production_id')
       .eq('id', crewId)
       .maybeSingle()
 
@@ -41,12 +41,13 @@ export async function GET(request) {
     // Resolve hotel name
     let hotelName = null
     if (data.hotel_id) {
-      const { data: loc } = await supabase.from('locations').select('name').eq('id', data.hotel_id).maybeSingle()
+      const { data: loc } = await supabase.from('locations').select('name').eq('uuid', data.hotel_id).maybeSingle()
       hotelName = loc?.name || data.hotel_id
     }
 
     return Response.json({
       type:       'crew',
+      uuid:       data.uuid,
       id:         data.id,
       full_name:  data.full_name,
       department: data.department,
@@ -81,7 +82,7 @@ export async function GET(request) {
     const { data: currentTrip } = await supabase
       .from('trips')
       .select('trip_id, status, pickup_id, dropoff_id, start_dt, end_dt, passenger_list, pax_count')
-      .eq('vehicle_id', vehicleId)
+      .eq('vehicle_id', data.uuid)
       .eq('production_id', data.production_id)
       .lte('start_dt', now)
       .gte('end_dt', now)
@@ -89,6 +90,7 @@ export async function GET(request) {
 
     return Response.json({
       type:         'vehicle',
+      uuid:         data.uuid,
       id:           data.id,
       vehicle_type: data.vehicle_type,
       capacity:     data.capacity,
