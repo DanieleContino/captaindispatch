@@ -4770,7 +4770,7 @@ export default function VehiclesPage() {
                 v={v}
                 onEdit={openEdit}
                 onDelete={handleDeleteSingle}
-                selected={selectedIds.includes(v.id)}
+                selected={selectedIds.includes(v.uuid)}
                 onToggleSelect={toggleSelect}
                 crewList={crewList}
               />
