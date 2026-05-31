@@ -360,7 +360,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     setNewLocSaving(true); setNewLocError(null); setNewLocDoneMsg(null)
     const row = {
       production_id: PRODUCTION_ID,
-      id:     newLocForm.id.trim().toUpperCase(),
+      display_id:     newLocForm.id.trim().toUpperCase(),
       name:   newLocForm.name.trim(),
       is_hub: newLocForm.is_hub,
       lat:    newLocLat !== '' ? parseFloat(String(newLocLat).replace(',', '.')) : null,
