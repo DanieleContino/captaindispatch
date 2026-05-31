@@ -71,8 +71,8 @@ function TripsPageInner() {
           { onConflict: 'user_id,production_id', ignoreDuplicates: true }
         )
         const [locsR, vhcR, stR] = await Promise.all([
-          supabase.from('locations').select('uuid,display_id,id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name'),
-          supabase.from('vehicles').select('uuid,display_id,id,driver_name,sign_code,capacity,vehicle_type,available_from,available_to,preferred_dept,preferred_crew_ids').eq('production_id', PRODUCTION_ID).eq('active', true).eq('in_transport', true).order('display_id'),
+          supabase.from('locations').select('uuid,display_id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name'),
+          supabase.from('vehicles').select('uuid,display_id,driver_name,sign_code,capacity,vehicle_type,available_from,available_to,preferred_dept,preferred_crew_ids').eq('production_id', PRODUCTION_ID).eq('active', true).eq('in_transport', true).order('display_id'),
           supabase.from('service_types').select('id,name').eq('production_id', PRODUCTION_ID).order('sort_order'),
         ])
         if (locsR.data) { const m = {}; locsR.data.forEach(l => { m[l.uuid] = l.name }); setLocsMap(m); setLocsList(locsR.data) }
@@ -359,7 +359,7 @@ function TripsPageInner() {
         trips={trips}
         onLocationCreated={async () => {
           if (!PRODUCTION_ID) return
-          const { data } = await supabase.from('locations').select('uuid,display_id,id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name')
+          const { data } = await supabase.from('locations').select('uuid,display_id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name')
           if (data) { const m = {}; data.forEach(l => { m[l.uuid] = l.name }); setLocsMap(m); setLocsList(data) }
         }}
         currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null}
