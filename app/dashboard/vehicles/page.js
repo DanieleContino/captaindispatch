@@ -4456,7 +4456,7 @@ export default function VehiclesPage() {
     if (filterType !== 'ALL' && v.vehicle_type !== filterType) return false
     if (search) {
       const q = search.toLowerCase()
-      if (!(v.id || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
+      if (!((v.display_id || v.id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
     }
     return true
   })
@@ -4472,7 +4472,7 @@ export default function VehiclesPage() {
     if (filterRental === 'COMODATO'   && !v.is_comodato) return false
     if (search) {
       const q = search.toLowerCase()
-      if (!(v.id || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
+      if (!((v.display_id || v.id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
     }
     return true
   })
