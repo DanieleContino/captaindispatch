@@ -4360,7 +4360,7 @@ export default function VehiclesPage() {
     if (!PRODUCTION_ID) return
     setLoad(true)
     const [{ data: vData }, { data: cData }] = await Promise.all([
-      supabase.from('vehicles').select('*').eq('production_id', PRODUCTION_ID).order('vehicle_type').order('id'),
+      supabase.from('vehicles').select('*').eq('production_id', PRODUCTION_ID).order('vehicle_type').order('display_id'),
       supabase.from('crew').select('uuid, display_id, full_name, department, no_transport_needed').eq('production_id', PRODUCTION_ID).order('full_name'),
     ])
     setVhcs(vData || [])
