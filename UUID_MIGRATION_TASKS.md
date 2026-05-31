@@ -31,11 +31,23 @@ Fix A1/A2 — accommodation/page.js (syncCrewDates, removeFamilyMember) ✅
 Fix B1/B2/B3 — CrewInfoModal + go/session/route.js + go/trip/start/route.js ✅
 Fix N1-N6 — NccDriverSidebar.js + NccVehicleSidebar.js ......... ✅
 Fix V1-V9 — dashboard/vehicles/page.js ........................ ✅
-Fix C1 — lib/routeDuration.js (locations uuid) ................ ✅ (non pushato)
-Fix C2-C3 — hub-coverage/page.js + pax-coverage/page.js ....... ✅ (non pushato)
+Fix C1 — lib/routeDuration.js (locations uuid) ................ ✅
+Fix C2-C3 — hub-coverage/page.js + pax-coverage/page.js ....... ✅
+Fix E — go/data/route.js + go/wrap/route.js ................... ✅ [97e4fe8]
+Fix D3+D4 — qr/resolve/route.js .............................. ✅
+Fix G — wrap-trip/page.js FleetMonitor + WrapTripContent ....... ✅ [26135a9]
+Fix H — go/[token]/page.js locsMap + crew uuid ................ ✅ [ca92b70]
+Fix D1+D2 — crew/merge + go/ping use uuid ..................... ✅ [95e966f]
+Fix D5+D6 — trips/quick-create use uuid ....................... ✅ [c06facf]
+S7 routes API audit — fleet/map-data, routes/compute, compute-chain,
+  optimize-waypoints, refresh-all-locations, refresh-location ... ✅ [9deb3fd]
+S7 trips components — TripSidebar, EditTripSidebar, ReplicaDayModal ✅ [9deb3fd]
+S7 traffic+routes — traffic-check/route.js, refreshRoutesWithGoogle ✅ [1b66af0]
+S7 EditTripSidebar fix — pendingPax crew_id: c.uuid ............ ✅ [1b66af0]
+S7 locations/page.js — refresh-location chiama con uuid ........ ✅ [1b66af0]
 ```
 
-> ✅ **Fix C1-C3 pushati** — `git push origin uuid-migration` eseguito (2026-05-31)
+> ✅ **Ultimo push:** `git push origin uuid-migration` — commit `1b66af0` (2026-05-31)
 
 ---
 
@@ -43,339 +55,42 @@ Fix C2-C3 — hub-coverage/page.js + pax-coverage/page.js ....... ✅ (non pusha
 
 ---
 
-### ~~🔧 SESSIONE 0~~ ✅ COMPLETATO — Push C1-C3
-> `git push origin uuid-migration` — eseguito 2026-05-31 → commit `45416ae..ee06fe7`
+### ~~🔧 SESSIONE 0-7~~ ✅ COMPLETATE
+
+Vedi sezione "GIÀ COMPLETATO" sopra.
 
 ---
 
-### ~~🔧 SESSIONE 1~~ ✅ COMPLETATO — API Captain Go Data + Wrap
-> File: 2 | Righe da toccare: ~8 | Costo: BASSO
+### 🔧 SESSIONE 8 — travel/page.js + lib/tripUtils.js
+> File: 2 | Costo: MEDIO | **Da fare nella prossima chat**
 
-**Leggi prima:**
-- `app/api/go/data/route.js` (61 righe)
-- `app/api/go/wrap/route.js` (136 righe)
+#### `app/dashboard/travel/page.js`
 
-**Fix in `app/api/go/data/route.js`:**
-```
-L43: locations.select('id, name, is_hub')
-  → select('uuid, id, name, is_hub')
-  Il campo 'id' resta per compatibilità display.
+**Cosa controllare:**
+- Qualsiasi `locations.select(...)` → deve includere `uuid`
+- Qualsiasi `locsMap[l.id]` → deve diventare `locsMap[l.uuid]`
+- Qualsiasi `crew.select(...)` → deve includere `uuid`
+- Qualsiasi `crew_stays.hotel_id` confrontato con location — verificare se è già UUID
+- Qualsiasi `trip_passengers.insert({ crew_id: c.id })` → deve essere `c.uuid`
+- Qualsiasi `vehicles.eq('id', ...)` per FK → deve essere `.eq('uuid', ...)`
 
-L53: crew.select('id, full_name, department, hotel_id')
-  → select('uuid, id, full_name, department, hotel_id')
-```
+**Pattern da cercare (regex):** `\.eq\('id',` nei contesti FK (non display lookup)
 
-**Fix in `app/api/go/wrap/route.js`:**
-```
-L40: vehicles.select('id, sign_code, ...')
-  → select('uuid, id, sign_code, capacity, vehicle_type, driver_name')
+#### `lib/tripUtils.js`
 
-L49: crew.select('id, full_name, production_id')
-  → select('uuid, id, full_name, production_id')
+**Cosa controllare:**
+- `checkVehicleAvail(vehicleId, ...)` → la funzione fa query su `trips` con `vehicle_id` = UUID → verificare
+- `getClass(pickupId, dropoffId)` → usa il TEXT display id per il check hub prefix → assicurarsi che il chiamante passi `locUuidToTextId[uuid]` non l'UUID diretto
+- Qualsiasi query diretta a `locations`, `vehicles`, `crew` → verificare FK
 
-L56: vehicles.eq('driver_crew_id', crewDriver.id)
-  → .eq('driver_crew_id', crewDriver.uuid)
-  MOTIVO: vehicles.driver_crew_id ora è UUID
+**Nota importante su `getClass`:**
+La funzione `getClass` nel codice attuale viene chiamata con `locUuidToTextId[form.pickup_id]` (vedi TripSidebar L60) oppure `locsDisplayMap?.[form.pickup_id]` (vedi EditTripSidebar L131). Verificare che TUTTI i chiamanti usino questo pattern.
 
-L56 anche: vehicles.select('id,...')
-  → aggiungere uuid alla select
-
-L106: vehicle_id: vehicle?.id || null
-  → vehicle_id: vehicle?.uuid || null
-  MOTIVO: trips.vehicle_id ora è UUID
-
-L131: crew_id: crewId  (crewId viene da passengerIds)
-  → ATTENZIONE: crewId arriverà come uuid da Captain Go UI dopo fix H
-  Nessun cambio qui, ma dipende dal fix H
-```
-
-**Commit:** `Fix E: go/data + go/wrap use uuid` ✅ `[uuid-migration 97e4fe8]`
+**Commit suggerito:** `S8: fix UUID refs in travel/page.js + tripUtils.js`
 
 ---
 
-### ~~🔧 SESSIONE 2~~ ✅ COMPLETATO — API QR Resolve (architetturale)
-> File: 1 | Righe da toccare: ~10 | Costo: MEDIO (file delicato)
-
-**Leggi prima:**
-- `app/api/qr/resolve/route.js` (104 righe)
-
-**Contesto importante:**  
-I QR code hanno formato `CR:CR0001` o `VH:VAN-01`.  
-Dopo la migrazione, `CR0001` / `VAN-01` = valore in `crew.id` / `vehicles.id` TEXT (ancora esiste!).  
-Quindi il lookup `crew` per QR resta `.eq('id', crewId)` — è corretto.  
-Ma `crew.hotel_id` ora è UUID, e `trips.vehicle_id` è UUID.
-
-**Fix in `app/api/qr/resolve/route.js`:**
-```
-SEZIONE CREW:
-L33: select('id, full_name, department, hotel_id, ...')
-  → select('uuid, id, full_name, department, hotel_id, ...')
-  AGGIUNGE uuid alla select, id resta per display
-
-L34: .eq('id', crewId)
-  → NESSUN CAMBIO — crewId è il vecchio text id "CR0001", ok!
-
-L44: locations.select('name').eq('id', data.hotel_id)
-  → locations.select('name').eq('uuid', data.hotel_id)
-  MOTIVO: crew.hotel_id ora è UUID
-
-L48-63 RESPONSE: aggiungere uuid nella response
-  → aggiungere: uuid: data.uuid
-
-SEZIONE VEHICLE:
-L69: vehicles.select('*')
-  → NESSUN CAMBIO select, * include uuid e id
-
-L72: .eq('id', vehicleId)
-  → NESSUN CAMBIO — vehicleId è il vecchio text "VAN-01", ok!
-
-L84: trips.eq('vehicle_id', vehicleId)
-  → trips.eq('vehicle_id', data.uuid)
-  MOTIVO: trips.vehicle_id ora è UUID, non il vecchio text id
-
-L90-100 RESPONSE: 
-  → aggiungere: uuid: data.uuid
-  → id: data.id  (TEXT, per display — lascia invariato)
-```
-
-**Commit:** `Fix D3+D4: qr/resolve use uuid for hotel_id + trips.vehicle_id`
-
----
-
-### ~~🔧 SESSIONE 3~~ ✅ COMPLETATO — WrapTrip Page (FleetMonitor + WrapTripContent)
-> File: 1 grande | Righe da toccare: ~20 | Costo: ALTO (file 1033 righe)
-> ⚠️ Leggere in DUE parti: righe 1-480, poi 480-1033
-
-**Leggi prima:**
-- `app/wrap-trip/page.js` righe 200-215 (FleetMonitor queries)
-- `app/wrap-trip/page.js` righe 525-545 (WrapTripContent queries)
-- `app/wrap-trip/page.js` righe 685-715 (handleConfirm)
-
-**Fix in FleetMonitor component:**
-```
-L206: vehicles.select('id,driver_name,sign_code,capacity,vehicle_type')
-  → select('uuid,id,driver_name,sign_code,capacity,vehicle_type')
-
-L208: locations.select('id,name')
-  → select('uuid,id,name')
-
-L212: lm[l.id] = l.name
-  → lm[l.uuid] = l.name
-  MOTIVO: trips.pickup_id/dropoff_id è UUID
-
-L245: trips.filter(t => t.vehicle_id === vId)
-  → NESSUN CAMBIO qui
-
-L267: vstatus(v.id)
-  → vstatus(v.uuid)
-
-L344: trips.filter(t => t.vehicle_id === v.id)
-  → trips.filter(t => t.vehicle_id === v.uuid)
-
-L346: expanded[v.id]
-  → expanded[v.uuid]
-
-L357-358: trafficAlerts.find(a => a.vehicleId === v.id)
-  → a.vehicleId === v.uuid
-
-L362: [v.id]: !ex[v.id]
-  → [v.uuid]: !ex[v.uuid]
-
-L364: v.id — v.sign_code (DISPLAY)
-  → v.id — v.sign_code  (LASCIA: v.id = text display, va bene)
-```
-
-**Fix in WrapTripContent component:**
-```
-L524: locations.map(l => [l.id, l.name])
-  → locations.map(l => [l.uuid, l.name])
-
-L537: locations.select('id,name,is_hub')
-  → select('uuid,id,name,is_hub')
-
-L538: vehicles.select('id,...').order('id')
-  → select('uuid,id,driver_name,sign_code,capacity,vehicle_type').order('id')
-  (ordine per 'id' TEXT per display — ok)
-
-L539: crew.select('id,full_name,department,hotel_id')
-  → select('uuid,id,full_name,department,hotel_id')
-
-L570: vehicles.find(x => x.id === preVehicle)
-  → vehicles.find(x => x.id === preVehicle || x.uuid === preVehicle)
-  MOTIVO: preVehicle può arrivare come old text (/scan) o uuid
-
-L612: v.id.toLowerCase() === qrId  (QR fallback lookup)
-  → v.id.toLowerCase() === qrId  (LASCIA — cerca per text display id)
-
-L628: c.id.toLowerCase() === qrId  (QR fallback crew)
-  → c.id.toLowerCase() === qrId  (LASCIA — cerca per text display id)
-
-L633: setSelCrew([...p, { id: found.id, full_name:..., department:..., hotel_id:... }])
-  → aggiungere: uuid: found.uuid
-
-L647: setVehicle({ id: data.id, driver_name:..., ... })  (da QR resolve)
-  → aggiungere: uuid: data.uuid
-
-L700-702: pickup_id: pickupId   (pickupId = l.id TEXT = SBAGLIATO)
-  PRIMA: setPickupId(l.id) → setPickupId(l.uuid)
-  Trova dove pickupId viene settato (picker locations) e usa l.uuid
-  NOTA: pickupId appare in locsMap[pickupId] per display — dopo fix locsMap è keyed per uuid → OK ✓
-
-L702: vehicle_id: vehicle?.id || null
-  → vehicle?.uuid || null
-
-L710: crew_id: c.id
-  → c.uuid
-  (c viene da selCrew, che ora include uuid dopo il fix L633)
-```
-
-**Commit:** `Fix G: wrap-trip/page.js FleetMonitor + WrapTripContent use uuid` ✅ `[uuid-migration 26135a9]`
-
----
-
-### ~~🔧 SESSIONE 4~~ ✅ COMPLETATO — Captain Go UI (dipende da S1+S2)
-> File: 1 | Righe da toccare: ~5 | Costo: BASSO
-
-**Leggi prima:**
-- `app/go/[token]/page.js` righe 85-150
-
-**Fix:**
-```
-L91: locsMap = Object.fromEntries(locations.map(l => [l.id, l.name]))
-  → locations.map(l => [l.uuid, l.name])
-  MOTIVO: locations ora ritorna uuid (dopo fix S1), trip.pickup_id è UUID
-
-L125: selCrew.find(c => c.id === data.id)
-  → selCrew.find(c => c.uuid === data.uuid)
-  MOTIVO: dopo fix S1+S2, data.uuid è disponibile e crew ha uuid
-
-L126: setSelCrew([...p, { id: data.id, full_name:..., department:..., hotel_id:... }])
-  → aggiungere: uuid: data.uuid
-
-L141: passengerIds: selCrew.map(c => c.id)
-  → selCrew.map(c => c.uuid)
-  MOTIVO: go/wrap.L131 usa crew_id che deve essere UUID
-```
-
-**Commit:** `Fix H: go/[token]/page.js locsMap + crew use uuid` ✅ `[uuid-migration ca92b70]`
-
----
-
-### ~~🔧 SESSIONE 5~~ ✅ COMPLETATO — API crew/merge + go/ping
-> File: 2 | Righe da toccare: ~6 | Costo: BASSO
-
-**Leggi prima:**
-- `app/api/crew/merge/route.js` (146 righe)
-- `app/api/go/ping/route.js` (80 righe)
-
-**Fix in `app/api/crew/merge/route.js`:**
-```
-L55: crew.select('id')
-  → select('uuid')
-
-L56: .in('id', allIds)
-  → .in('uuid', allIds)
-
-L124: crew.update(...).eq('id', primary_id)
-  → .eq('uuid', primary_id)
-
-L131: crew.delete().in('id', duplicate_ids)
-  → .in('uuid', duplicate_ids)
-
-NOTA: primary_id e duplicate_ids vengono dal body request.
-  Il frontend che chiama questo endpoint (dashboard crew page) 
-  deve passare gli UUID — verifica che lo faccia già dopo i fix V.
-```
-
-**Fix in `app/api/go/ping/route.js`:**
-```
-L47: vehicles.eq('id', vehicle_id)
-  → .eq('uuid', vehicle_id)
-  NOTA: vehicle_id nel body deve essere UUID (inviato dal dispatcher)
-
-L54: crew.eq('id', vehicle.driver_crew_id)
-  → .eq('uuid', vehicle.driver_crew_id)
-  MOTIVO: driver_crew_id è già UUID dopo migrazione
-```
-
-**Commit:** `Fix D1+D2: crew/merge + go/ping use uuid` ✅ `[uuid-migration 95e966f]`
-
----
-
-### ~~🔧 SESSIONE 6~~ ✅ COMPLETATO — API trips/quick-create
-> File: 1 grande | Righe da toccare: ~12 | Costo: MEDIO
-
-**Leggi prima:**
-- `app/api/trips/quick-create/route.js` righe 1-70 (vehicle + crew selects)
-- `app/api/trips/quick-create/route.js` righe 160-200 (legs notify)
-- `app/api/trips/quick-create/route.js` righe 295-330 (standard notify)
-
-**Fix:**
-```
-L50: vehicles.select('id, sign_code, ...')
-  → select('uuid, id, sign_code, ...')
-
-L51: vehicles.eq('id', vehicleId)
-  → .eq('uuid', vehicleId)
-
-L62: crew.select('id, full_name').in('id', allPassengerIds)
-  → select('uuid, full_name').in('uuid', allPassengerIds)
-
-L63: crewMap[c.id] = c.full_name
-  → crewMap[c.uuid] = c.full_name
-
-L113: vehicle_id: vehicle.id
-  → vehicle.uuid
-
-L167: crew.eq('id', vehicle.driver_crew_id)
-  → .eq('uuid', vehicle.driver_crew_id)
-
-L173: locations.select('id, name').in('id', [...])
-  → select('uuid, name').in('uuid', [...])
-
-L174: locsMap[l.id] = l.name
-  → locsMap[l.uuid] = l.name
-
-L196: crew.select('id, full_name').in('id', passengerIds)
-  → select('uuid, full_name').in('uuid', passengerIds)
-
-L250: vehicle_id: vehicle.id
-  → vehicle.uuid
-
-L314: crew.eq('id', vehicle.driver_crew_id)
-  → .eq('uuid', vehicle.driver_crew_id)
-
-L320: locations.select('id, name').in('id', [...])
-  → select('uuid, name').in('uuid', [...])
-
-L324: locsMap[l.id] = l.name
-  → locsMap[l.uuid] = l.name
-```
-
-**Commit:** `Fix D5+D6: trips/quick-create use uuid` ✅ `[uuid-migration c06facf]`
-
----
-
-### ~~🔧 SESSIONE 7~~ ✅ COMPLETATO — Audit + fix routes API + trips components
-
-**File fixati:**
-```
-app/api/fleet/map-data/route.js          ✅ vehicles select uuid added
-app/api/routes/compute/route.js          ✅ locations keyed by uuid
-app/api/routes/compute-chain/route.js    ✅ getOrComputeDuration uses uuid
-app/api/routes/optimize-waypoints/route.js ✅ locations select/lookup by uuid
-app/api/routes/refresh-all-locations/route.js ✅ locations uuid, from_id/to_id uuid
-app/api/routes/refresh-location/route.js ✅ all location queries use uuid
-app/dashboard/trips/_components/TripSidebar.js     ✅ crew uuid, vehicle/location selects uuid
-app/dashboard/trips/_components/EditTripSidebar.js ✅ crew uuid, addPax/removePax crew_id→uuid
-app/dashboard/trips/_components/ReplicaDayModal.js ✅ locsMap keyed by l.uuid
-```
-
-**Commit:** `S7: UUID migration - routes API + TripSidebar + EditTripSidebar + ReplicaDayModal` ✅ `[uuid-migration 9deb3fd]`
-
----
-
-### 🔧 SESSIONE 8 — Test finale + merge in master
+### 🔧 SESSIONE 9 — Test finale + merge in master
 > Solo verifica e git operations
 
 **Checklist pre-merge:**
@@ -391,6 +106,8 @@ app/dashboard/trips/_components/ReplicaDayModal.js ✅ locsMap keyed by l.uuid
     - Crea wrap trip con vehicle + crew
 [ ] Test Scan QR: go a /scan?qr=CR:xxx e /scan?qr=VH:xxx
 [ ] Test Quick-Create trip dal dashboard
+[ ] Test Trips page: crea/modifica trip, assegna passeggeri
+[ ] Test Locations page: crea/modifica location, verifica route refresh
 [ ] Se tutto ok → git checkout master && git merge uuid-migration && git push
 ```
 
@@ -419,12 +136,23 @@ app/dashboard/trips/_components/ReplicaDayModal.js ✅ locsMap keyed by l.uuid
 | `app/api/crew/merge/route.js` | ✅ D1 (95e966f) | S5 |
 | `app/api/go/ping/route.js` | ✅ D2 (95e966f) | S5 |
 | `app/api/trips/quick-create/route.js` | ✅ D5+D6 (c06facf) | S6 |
-| `app/api/fleet/*` | 🔍 NON CONTROLLATO | S7 |
-| `app/api/routes/*` | 🔍 NON CONTROLLATO | S7 |
-| `app/dashboard/trips/*` | 🔍 NON CONTROLLATO | S7 |
-| `app/dashboard/locations/page.js` | 🔍 NON CONTROLLATO | S7 |
-| `app/dashboard/travel/*` | 🔍 NON CONTROLLATO | S7 |
-| `lib/tripUtils.js` | 🔍 NON CONTROLLATO | S7 |
+| `app/api/fleet/map-data/route.js` | ✅ S7 (9deb3fd) | S7 |
+| `app/api/routes/compute/route.js` | ✅ S7 (9deb3fd) | S7 |
+| `app/api/routes/compute-chain/route.js` | ✅ S7 (9deb3fd) | S7 |
+| `app/api/routes/optimize-waypoints/route.js` | ✅ S7 (9deb3fd) | S7 |
+| `app/api/routes/refresh-all-locations/route.js` | ✅ S7 (9deb3fd) | S7 |
+| `app/api/routes/refresh-location/route.js` | ✅ S7 (9deb3fd) | S7 |
+| `app/api/routes/traffic-check/route.js` | ✅ S7 (1b66af0) | S7 |
+| `lib/refreshRoutesWithGoogle.js` | ✅ S7 (1b66af0) | S7 |
+| `app/dashboard/trips/page.js` | ✅ S7 — OK già corretto | S7 |
+| `app/dashboard/trips/_components/TripSidebar.js` | ✅ S7 — OK già corretto | S7 |
+| `app/dashboard/trips/_components/EditTripSidebar.js` | ✅ S7 (1b66af0) fix pendingPax | S7 |
+| `app/dashboard/trips/_components/ReplicaDayModal.js` | ✅ S7 (9deb3fd) | S7 |
+| `app/dashboard/trips/_components/TripRow.js` | ✅ S7 — OK già corretto | S7 |
+| `app/dashboard/trips/_components/WaypointReviewModal.js` | ✅ S7 — OK già corretto | S7 |
+| `app/dashboard/locations/page.js` | ✅ S7 (1b66af0) fix refresh uuid | S7 |
+| `app/dashboard/travel/page.js` | � NON CONTROLLATO | **S8** |
+| `lib/tripUtils.js` | 🔍 NON CONTROLLATO | **S8** |
 
 ---
 
@@ -433,13 +161,14 @@ app/dashboard/trips/_components/ReplicaDayModal.js ✅ locsMap keyed by l.uuid
 ```
 S0 → git push ✅
 S1 → go/data + go/wrap ✅ (Captain Go sbloccato)
-S2 → qr/resolve (sblocca scan QR badges)
-S3 → wrap-trip/page.js (sblocca WrapTrip)
-S4 → go/[token]/page.js (dipende da S1+S2)
-S5 → crew/merge + go/ping
-S6 → quick-create
-S7 → audit finale
-S8 → test + merge master
+S2 → qr/resolve ✅ (sblocca scan QR badges)
+S3 → wrap-trip/page.js ✅ (sblocca WrapTrip)
+S4 → go/[token]/page.js ✅ (dipende da S1+S2)
+S5 → crew/merge + go/ping ✅
+S6 → quick-create ✅
+S7 → audit routes API + trips components ✅ → commit 9deb3fd + 1b66af0
+S8 → travel/page.js + tripUtils.js ← PROSSIMA SESSIONE
+S9 → test + merge master
 ```
 
 ---
@@ -453,3 +182,5 @@ S8 → test + merge master
 5. **QR codes** contengono il vecchio TEXT id → lookup per `.eq('id', ...)` è CORRETTO per i QR
 6. **hotel_id in crew** → è già UUID dopo migrazione → lookup locations per `.eq('uuid', ...)`
 7. **driver_crew_id in vehicles** → è già UUID dopo migrazione → lookup crew per `.eq('uuid', ...)`
+8. **getClass()** in `lib/tripUtils.js` prende il TEXT display id (non UUID) → i chiamanti devono fare la conversione uuid→textId prima di chiamarla. Pattern corretto: `getClass(locUuidToTextId[pickupUuid], locUuidToTextId[dropoffUuid])`
+9. **crew_stays.hotel_id** — verificare se è già UUID come `crew.hotel_id` (probabile sì)
