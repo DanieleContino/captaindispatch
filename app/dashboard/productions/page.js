@@ -163,8 +163,8 @@ function HubLocationsSection({ productionId }) {
     setFormSaving(true)
     if (showForm === 'new') {
       const { error } = await supabase.from('locations').insert({
-        production_id: productionId,
-        id:   form.id.trim().toUpperCase(),
+          production_id: productionId,
+          display_id:   form.id.trim().toUpperCase(),
         name: form.name.trim(),
         is_hub: true,
         lat:  form.lat !== '' ? parseFloat(String(form.lat).replace(',', '.')) : null,

@@ -120,7 +120,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
     setSaving(true)
     const row = {
       production_id: PRODUCTION_ID,
-      id:   form.id.trim().toUpperCase(),
+      display_id:   form.id.trim().toUpperCase(),
       name: form.name.trim(),
       is_hub: form.is_hub,
       lat:  form.lat !== '' ? parseFloat(String(form.lat).replace(',', '.')) : null,
