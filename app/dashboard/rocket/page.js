@@ -1497,7 +1497,7 @@ export default function RocketPage() {
       supabase.from('crew').select('id,uuid,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
         .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
         .order('department').order('full_name'),
-      supabase.from('vehicles').select('id,uuid,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active,preferred_dept,preferred_crew_ids')
+      supabase.from('vehicles').select('uuid,display_id,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active,preferred_dept,preferred_crew_ids')
         .eq('production_id', PRODUCTION_ID).eq('active', true).order('vehicle_type').order('display_id'),
       supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('name'),
       supabase.from('routes').select('from_id,to_id,duration_min').eq('production_id', PRODUCTION_ID),

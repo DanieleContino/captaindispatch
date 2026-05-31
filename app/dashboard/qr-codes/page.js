@@ -52,7 +52,7 @@ export default function QrCodesPage() {
       setUser(user)
       if (!PRODUCTION_ID) { setLoading(false); return }
       Promise.all([
-        supabase.from('vehicles').select('id,driver_name,sign_code,capacity,vehicle_type,active')
+        supabase.from('vehicles').select('display_id,driver_name,sign_code,capacity,vehicle_type,active')
           .eq('production_id', PRODUCTION_ID).order('display_id'),
         supabase.from('crew').select('id,full_name,department,hotel_id')
           .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
