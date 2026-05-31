@@ -1052,7 +1052,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                             <button
                               onClick={async () => {
                                 if (!item.crew_id || !resolvedTravelHotelId) return
-                                await supabase.from('crew').update({ hotel_id: resolvedTravelHotelId }).eq('id', item.crew_id).eq('production_id', productionId)
+                                await supabase.from('crew').update({ hotel_id: resolvedTravelHotelId }).eq('uuid', item.crew_id).eq('production_id', productionId)
                                 await supabase.from('crew_stays').update({ hotel_id: resolvedTravelHotelId }).eq('crew_id', item.crew_id).eq('production_id', productionId)
                                 await resolve(item.id)
                               }}
