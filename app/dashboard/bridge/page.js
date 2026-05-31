@@ -1111,7 +1111,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                         // Mark crew as no_rooming_check so future imports skip conflict detection
                         await supabase.from('crew')
                           .update({ no_rooming_check: true })
-                          .eq('id', item.crew_id)
+                          .eq('uuid', item.crew_id)
                           .eq('production_id', productionId)
                         // Resolve the current discrepancy
                         await resolve(item.id)
