@@ -18,7 +18,7 @@ export function SendLinksModal({ open, onClose, productionId }) {
         .eq('production_id', productionId)
         .eq('active', true)
         .eq('in_transport', true)
-        .order('id')
+        .order('display_id')
 
       const nccDriverIds = (vehicles || []).map(v => v.ncc_driver_id).filter(Boolean)
       const crewDriverIds = (vehicles || []).map(v => v.driver_crew_id).filter(Boolean)

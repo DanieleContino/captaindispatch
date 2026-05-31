@@ -203,7 +203,7 @@ function FleetMonitor({ onBack }) {
     if (!PRODUCTION_ID) return
     setLoading(true)
     const [vRes, tRes, lRes] = await Promise.all([
-      supabase.from('vehicles').select('uuid,id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
+      supabase.from('vehicles').select('uuid,id,display_id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('display_id'),
       supabase.from('trips').select('id,trip_id,vehicle_id,start_dt,end_dt,status,pax_count,service_type,passenger_list,pickup_id,dropoff_id,duration_min,date,pickup_min,call_min').eq('production_id', PRODUCTION_ID).eq('date', d).neq('status', 'CANCELLED').order('start_dt'),
       supabase.from('locations').select('uuid,id,name').eq('production_id', PRODUCTION_ID),
     ])
@@ -535,7 +535,7 @@ function WrapTripContent() {
     if (!PRODUCTION_ID) { setLoadErr('PRODUCTION_ID not set'); return }
     Promise.all([
       supabase.from('locations').select('uuid,id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: true }).order('name'),
-      supabase.from('vehicles').select('uuid,id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
+      supabase.from('vehicles').select('uuid,id,display_id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('display_id'),
       supabase.from('crew').select('uuid,id,full_name,department,hotel_id').eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED').order('department').order('full_name'),
     ]).then(([lR, vR, cR]) => {
       if (lR.error) setLoadErr('DB error: ' + lR.error.message)
