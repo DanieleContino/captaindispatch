@@ -776,7 +776,7 @@ export default function FleetMonitorPage() {
         .eq('production_id', PRODUCTION_ID)
         .eq('active', true)
         .eq('in_transport', true)
-        .order('vehicle_type').order('id'),
+        .order('vehicle_type').order('display_id'),
       supabase.from('trips')
         .select('id,trip_id,trip_group_id,leg_order,vehicle_id,pickup_id,dropoff_id,transfer_class,pickup_min,call_min,start_dt,end_dt,arrived_at,started_at,status,pax_count,passenger_list,service_type,duration_min,date')
         .eq('production_id', PRODUCTION_ID)
