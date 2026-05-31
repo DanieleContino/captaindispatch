@@ -1,5 +1,5 @@
 # UUID Migration — Task File Completo
-> Branch: `master` (uuid-migration mergiato — commit `2c68997`) | Aggiornato: 2026-05-31 S17a
+> Branch: `master` (uuid-migration mergiato — commit `2c68997`) | Aggiornato: 2026-05-31 S17d
 
 ---
 
@@ -107,6 +107,10 @@ Fix S17a V10 — NccTab vehicles select uuid+display_id, order(display_id) ✅ [
 Fix S17a V11 — VehicleSidebar preferred crew chips lookup c.uuid ... ✅ [7b576fd]
 Fix S17a V12 — VehicleRow preferred crew display lookup c.uuid ..... ✅ [7b576fd]
 Fix S17b W1/W2/W3 — wrap-trip SendLinksModal+page.js order display_id ✅ [fd9cccd]
+Fix S17c QT-1 — QuickTripModal vehicleId usa vehicle.uuid ........... ✅ [b13624e]
+Fix S17c QT-2 — QuickTripModal hotel_id lookup usa l.uuid ........... ✅ [b13624e]
+Fix S17d QT-3/QT-4 — QuickTripModal resolve TEXT→UUID in createTrip . ✅ [b13624e]
+Fix S17c+S17d — AIBuilderTab crew+locations select include uuid ...... ✅ [b13624e]
 ```
 
 ---
@@ -388,7 +392,7 @@ Commit: `"Fix QuickTripModal S17d QT-3/QT-4: resolve TEXT ids to UUID before API
 | `app/dashboard/fleet/page.js` | ✅ F1 | S14 |
 | `app/dashboard/qr-codes/page.js` | ✅ Q1 | S14 |
 | `app/dashboard/rocket/page.js` | ✅ R1-R5 | S15 |
-| `app/dashboard/fleet/components/QuickTripModal.js` | ⚠️ QT-1/QT-2/QT-3/QT-4 da fare | S17c+S17d |
+| `app/dashboard/fleet/components/QuickTripModal.js` | ✅ QT-1/QT-2/QT-3/QT-4 [b13624e] | S17c+S17d |
 
 ---
 
@@ -405,8 +409,9 @@ S15     ✅ completato (rocket R1-R5)
 S16     ✅ git push eseguito (test produzione pendente)
 S17a    ✅ completato (vehicles V10/V11/V12) [7b576fd]
 S17b    ✅ completato (wrap-trip W1/W2/W3) [fd9cccd]
-S17c    ← PROSSIMA: QuickTripModal QT-1/QT-2 (vehicleId uuid + hotel lookup) — CRITICO
-S17d    QuickTripModal QT-3/QT-4 (resolve TEXT→UUID in createTrip)
+S17c    ✅ completato (QuickTripModal QT-1/QT-2) [b13624e]
+S17d    ✅ completato (QuickTripModal QT-3/QT-4) [b13624e]
+S18     ← PROSSIMA: test produzione + verifica migrazione UUID completa
 ```
 
 ---
