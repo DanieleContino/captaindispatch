@@ -1040,8 +1040,9 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                             <button
                               onClick={async () => {
                                 if (!item.crew_id || !item.rooming_hotel_id) return
-                                await supabase.from('crew').update({ hotel_id: item.rooming_hotel_id }).eq('id', item.crew_id).eq('production_id', productionId)
-                                await supabase.from('crew_stays').update({ hotel_id: item.rooming_hotel_id }).eq('crew_id', item.crew_id).eq('production_id', productionId)
+                                const roomingUuid = locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null
+                                await supabase.from('crew').update({ hotel_id: roomingUuid }).eq('uuid', item.crew_id).eq('production_id', productionId)
+                                await supabase.from('crew_stays').update({ hotel_id: roomingUuid }).eq('crew_id', item.crew_id).eq('production_id', productionId)
                                 await resolve(item.id)
                               }}
                               title={`Usa l'hotel della Rooming List: ${roomingHotel}`}
