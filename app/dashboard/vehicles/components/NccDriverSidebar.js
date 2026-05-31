@@ -14,12 +14,20 @@ export function NccDriverSidebar({ open, mode, initial, onClose, onSaved, produc
   const [confirmDel, setCd]   = useState(false)
   const [error, setError]     = useState(null)
   const [copied, setCopied]   = useState(false)
+  const [agencyName, setAgencyName] = useState(null)
 
   useEffect(() => {
     if (!open) return
     setError(null)
     setCd(false)
     setCopied(false)
+    // Fetch agency name for the banner
+    if (agencyId) {
+      supabase.from('ncc_agencies').select('name').eq('id', agencyId).single()
+        .then(({ data }) => setAgencyName(data?.name || null))
+    } else {
+      setAgencyName(null)
+    }
     if (mode === 'edit' && initial) {
       setForm({
         name:      initial.name      || '',
@@ -184,10 +192,12 @@ export function NccDriverSidebar({ open, mode, initial, onClose, onSaved, produc
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '16px 18px' }}>
 
-            {/* Agency ID — readonly banner */}
+            {/* Agency — readonly banner */}
             <div style={{ ...fld, padding: '10px 14px', borderRadius: '9px', border: '1px solid #bae6fd', background: '#f0f9ff' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '2px' }}>Agency</div>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1' }}>🏢 {agencyId}</div>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1' }}>
+                🏢 {agencyName || agencyId}
+              </div>
             </div>
 
             {/* Driver Name */}
