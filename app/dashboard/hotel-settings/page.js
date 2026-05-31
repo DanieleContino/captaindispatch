@@ -206,7 +206,7 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
     await supabase.from('hotels').delete().eq('id', initial.hotel_id)
     // Keep the location row but mark it as non-hotel so it disappears from hotel-settings
     if (initial?.location_id) {
-      await supabase.from('locations').update({ is_hotel: false }).eq('id', initial.location_id)
+      await supabase.from('locations').update({ is_hotel: false }).eq('uuid', initial.location_id)
     }
     setDeleting(false)
     onSaved()  // closes sidebar + reloads list
@@ -266,7 +266,7 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
           location_id = initial.location_id
         } else {
           const { data: existing } = await supabase.from('locations')
-            .select('id, name')
+            .select('uuid, display_id, name')
             .eq('production_id', productionId)
             .ilike('name', form.name.trim())
             .maybeSingle()
@@ -275,11 +275,11 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
             // FIX: ensure the location is flagged as hotel (may have been deleted or was a non-hotel location)
             await supabase.from('locations')
               .update({ is_hotel: true, ...(lat != null && lng != null ? { lat, lng } : {}) })
-              .eq('id', location_id)
+              .eq('uuid', location_id)
           } else {
           const genId = form.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 20)
           const { error: locErr } = await supabase.from('locations').insert({
-            id:           genId,
+            display_id: genId,
             production_id: productionId,
             name:         form.name.trim(),
             is_hotel:     true,
@@ -312,7 +312,7 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
           country: form.country.trim() || null,
         }
         if (lat != null && lng != null) { locUpdate.lat = lat; locUpdate.lng = lng }
-        await supabase.from('locations').update(locUpdate).eq('id', initial.location_id)
+        await supabase.from('locations').update(locUpdate).eq('uuid', initial.location_id)
       }
       onSaved()
     } finally { setSaving(false) }
@@ -907,7 +907,7 @@ export default function HotelSettingsPage() {
 
     // Load hotel locations
     const { data: locs } = await supabase.from('locations')
-      .select('id, name, lat, lng, default_pickup_point, address, city, zip, country')
+      .select('uuid, display_id, name, lat, lng, default_pickup_point, address, city, zip, country')
       .eq('production_id', PRODUCTION_ID)
       .eq('is_hotel', true)
       .order('name', { ascending: true })

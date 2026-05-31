@@ -48,9 +48,9 @@ export async function POST(req) {
     // ── Calcola prossimo ID H### ─────────────────────────────
     const { data: existingLocs } = await supabase
       .from('locations')
-      .select('id')
+      .select('display_id')
       .eq('production_id', productionId)
-      .like('id', 'H%')
+      .like('display_id', 'H%')
 
     let maxLocNum = 0
     for (const l of (existingLocs || [])) {
@@ -74,7 +74,7 @@ export async function POST(req) {
     const { data: newLoc, error: insertErr } = await supabase
       .from('locations')
       .insert(insertPayload)
-      .select('id, name')
+      .select('uuid, display_id, name')
       .single()
 
     if (insertErr) {

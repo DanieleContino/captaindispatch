@@ -77,7 +77,7 @@ function HubLocationsSection({ productionId }) {
   const loadHubs = useCallback(async () => {
     if (!productionId) return
     const { data } = await supabase.from('locations')
-      .select('id, name, lat, lng, default_pickup_point')
+      .select('uuid, display_id, name, lat, lng, default_pickup_point')
       .eq('production_id', productionId)
       .eq('is_hub', true)
       .order('name')
@@ -101,7 +101,7 @@ function HubLocationsSection({ productionId }) {
     if (!search || search.length < 2) { setResults([]); return }
     setSearching(true)
     supabase.from('locations')
-      .select('id, name')
+      .select('uuid, display_id, name')
       .eq('production_id', productionId)
       .eq('is_hub', false)
       .ilike('name', `%${search}%`)
@@ -143,7 +143,7 @@ function HubLocationsSection({ productionId }) {
 
   async function addExistingHub(loc) {
     setSaving(true)
-    await supabase.from('locations').update({ is_hub: true }).eq('id', loc.id)
+    await supabase.from('locations').update({ is_hub: true }).eq('uuid', loc.uuid)
     setSearch(''); setResults([])
     setSaving(false)
   }
@@ -151,7 +151,7 @@ function HubLocationsSection({ productionId }) {
   async function removeHub(loc) {
     if (!confirm(`Remove "${loc.name}" as hub?`)) return
     setSaving(true)
-    await supabase.from('locations').update({ is_hub: false }).eq('id', loc.id)
+    await supabase.from('locations').update({ is_hub: false }).eq('uuid', loc.uuid)
     setSaving(false)
   }
 

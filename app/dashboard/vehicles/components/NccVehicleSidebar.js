@@ -129,7 +129,7 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
     if (form.ncc_driver_id) {
       const { data: conflicts } = await supabase
         .from('vehicles')
-        .select('id, available_from, available_to')
+        .select('uuid, available_from, available_to')
         .eq('production_id', productionId)
         .eq('ncc_driver_id', form.ncc_driver_id)
         .eq('active', true)

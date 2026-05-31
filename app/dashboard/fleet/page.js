@@ -772,7 +772,7 @@ export default function FleetMonitorPage() {
 
     const [vR, tR, lR, rR, sR] = await Promise.all([
       supabase.from('vehicles')
-        .select('id,vehicle_type,driver_name,ncc_driver_name,is_ncc,sign_code,capacity,unit_default')
+        .select('uuid,display_id,vehicle_type,driver_name,ncc_driver_name,is_ncc,sign_code,capacity,unit_default')
         .eq('production_id', PRODUCTION_ID)
         .eq('active', true)
         .eq('in_transport', true)
