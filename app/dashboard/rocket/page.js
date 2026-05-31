@@ -346,7 +346,7 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
         const addable = Math.min(capMax - capSug, remaining.length)
         if (addable > 0) suggestions.push({ type: 'CAN_ADD', tripKey: `t${seq}`, vehicleId: v.id, addable,
           names: remaining.slice(0, addable).map(c => c.full_name),
-          msg: `${v.id} can carry ${addable} more (pax_max=${capMax}): ${remaining.slice(0, addable).map(c => c.full_name).join(', ')}` })
+          msg: `${v.display_id || v.id} can carry ${addable} more (pax_max=${capMax}): ${remaining.slice(0, addable).map(c => c.full_name).join(', ')}` })
       }
       // Tag each crew member with their effectiveDest for multi-pickup/dropoff detection
       draftTrips.push({ key: `t${seq++}`, vehicleId: v.id, vehicle: v,
@@ -1494,11 +1494,11 @@ export default function RocketPage() {
     if (!PRODUCTION_ID) return
     setLoading(true)
     const [cR, vR, lR, rR] = await Promise.all([
-      supabase.from('crew').select('id,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
+      supabase.from('crew').select('id,uuid,full_name,department,hotel_id,hotel_status,no_transport_needed,on_location,arrival_date,departure_date')
         .eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED')
         .order('department').order('full_name'),
-      supabase.from('vehicles').select('id,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active,preferred_dept,preferred_crew_ids')
-        .eq('production_id', PRODUCTION_ID).eq('active', true).order('vehicle_type').order('id'),
+      supabase.from('vehicles').select('id,uuid,vehicle_type,capacity,pax_suggested,pax_max,driver_name,sign_code,active,preferred_dept,preferred_crew_ids')
+        .eq('production_id', PRODUCTION_ID).eq('active', true).order('vehicle_type').order('display_id'),
       supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('name'),
       supabase.from('routes').select('from_id,to_id,duration_min').eq('production_id', PRODUCTION_ID),
     ])
@@ -1724,7 +1724,7 @@ export default function RocketPage() {
         const durActual = t.callMin - pkMin
         const row = {
           production_id: PRODUCTION_ID, trip_id: tripId, date,
-          vehicle_id: t.vehicleId, driver_name: t.vehicle.driver_name || null,
+          vehicle_id: t.vehicle?.uuid || t.vehicleId, driver_name: t.vehicle.driver_name || null,
           sign_code: t.vehicle.sign_code || null, capacity: t.vehicle.capacity || null,
           pickup_id: g.hotelId, dropoff_id: g.destId,
           call_min: t.callMin, pickup_min: pkMin, duration_min: durActual,
@@ -1736,7 +1736,7 @@ export default function RocketPage() {
         if (insErr) { setCreateError(`Trip ${tripId}: ${insErr.message}`); setSaving(false); return }
         if (ins?.id && g.crew.length > 0) {
           const { error: pErr } = await supabase.from('trip_passengers').insert(
-            g.crew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.id }))
+            g.crew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.uuid || c.id }))
           )
           if (pErr) { setCreateError(pErr.message); setSaving(false); return }
         }
