@@ -57,8 +57,8 @@ export async function POST(req) {
       const supabase = await createSupabaseServerClient()
       const { data: locs } = await supabase
         .from('locations')
-        .select('id,lat,lng,is_hub')
-        .in('id', [from_id, to_id])
+        .select('uuid,lat,lng,is_hub')
+        .in('uuid', [from_id, to_id])
 
       const fromLoc = locs?.find(l => l.id === from_id)
       const toLoc   = locs?.find(l => l.id === to_id)
