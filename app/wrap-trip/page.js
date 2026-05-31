@@ -203,13 +203,13 @@ function FleetMonitor({ onBack }) {
     if (!PRODUCTION_ID) return
     setLoading(true)
     const [vRes, tRes, lRes] = await Promise.all([
-      supabase.from('vehicles').select('id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
+      supabase.from('vehicles').select('uuid,id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
       supabase.from('trips').select('id,trip_id,vehicle_id,start_dt,end_dt,status,pax_count,service_type,passenger_list,pickup_id,dropoff_id,duration_min,date,pickup_min,call_min').eq('production_id', PRODUCTION_ID).eq('date', d).neq('status', 'CANCELLED').order('start_dt'),
-      supabase.from('locations').select('id,name').eq('production_id', PRODUCTION_ID),
+      supabase.from('locations').select('uuid,id,name').eq('production_id', PRODUCTION_ID),
     ])
     setVehicles(vRes.data || [])
     setTrips(tRes.data || [])
-    const lm = {}; (lRes.data || []).forEach(l => { lm[l.id] = l.name }); setLocsMap(lm)
+    const lm = {}; (lRes.data || []).forEach(l => { lm[l.uuid] = l.name }); setLocsMap(lm)
     setLoading(false)
   }, [])
 
@@ -264,7 +264,7 @@ function FleetMonitor({ onBack }) {
     IDLE: { c: '#64748b', bg: '#f1f5f9', lbl: '⚪ IDLE', bd: '#94a3b8' },
     DONE: { c: '#92400e', bg: '#fef9c3', lbl: '🟡 DONE', bd: '#f59e0b' },
   }
-  const counts = vehicles.reduce((a, v) => { const s = vstatus(v.id); a[s] = (a[s] || 0) + 1; return a }, {})
+  const counts = vehicles.reduce((a, v) => { const s = vstatus(v.uuid); a[s] = (a[s] || 0) + 1; return a }, {})
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8fafc' }}>
@@ -341,9 +341,9 @@ function FleetMonitor({ onBack }) {
         {loading
           ? <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Loading…</div>
           : vehicles.map(v => {
-            const s = vstatus(v.id); const cfg = sc[s]
-            const vt = trips.filter(t => t.vehicle_id === v.id)
-            const open = expanded[v.id]
+            const s = vstatus(v.uuid); const cfg = sc[s]
+            const vt = trips.filter(t => t.vehicle_id === v.uuid)
+            const open = expanded[v.uuid]
             const cur  = vt.find(t => tripStatus(t) === 'BUSY')
             const next = vt.filter(t => tripStatus(t) === 'PLANNED').sort((a, b) => { const wa = computeTripWindow(a), wb = computeTripWindow(b); return (wa?.s || 0) - (wb?.s || 0) })[0]
             const progress = cur ? tripProgress(cur) : null
@@ -354,12 +354,12 @@ function FleetMonitor({ onBack }) {
             const nextAt = !cur && nextW ? fmtTime(nextW.s.toISOString()) : null
             const minsLeft = curW ? Math.round((curW.e - now) / 60000) : null
             // Traffic alert per questo veicolo
-            const curAlert  = trafficAlerts.find(a => a.vehicleId === v.id && a.status === 'BUSY')  ?? null
-            const nextAlert = trafficAlerts.find(a => a.vehicleId === v.id && a.status === 'PLANNED') ?? null
+            const curAlert  = trafficAlerts.find(a => a.vehicleId === v.uuid && a.status === 'BUSY')  ?? null
+            const nextAlert = trafficAlerts.find(a => a.vehicleId === v.uuid && a.status === 'PLANNED') ?? null
 
             return (
               <div key={v.id} style={{ background: 'white', border: '1.5px solid #e2e8f0', borderLeft: `4px solid ${cfg.bd}`, borderRadius: '12px', marginBottom: '10px', overflow: 'hidden' }}>
-                <div onClick={() => setExpanded(ex => ({ ...ex, [v.id]: !ex[v.id] }))} style={{ padding: '10px 14px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div onClick={() => setExpanded(ex => ({ ...ex, [v.uuid]: !ex[v.uuid] }))} style={{ padding: '10px 14px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{v.id} — {v.sign_code}</div>
                     <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>{v.driver_name} · {v.vehicle_type} · {v.capacity} pax</div>
@@ -521,7 +521,7 @@ function WrapTripContent() {
   const [vehicles,  setVehicles]  = useState([])
   const [crew,      setCrew]      = useState([])
 
-  const locsMap = Object.fromEntries(locations.map(l => [l.id, l.name]))
+  const locsMap = Object.fromEntries(locations.map(l => [l.uuid, l.name]))
 
   // ── Auth check ──
   useEffect(() => {
@@ -534,9 +534,9 @@ function WrapTripContent() {
   useEffect(() => {
     if (!PRODUCTION_ID) { setLoadErr('PRODUCTION_ID not set'); return }
     Promise.all([
-      supabase.from('locations').select('id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: true }).order('name'),
-      supabase.from('vehicles').select('id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
-      supabase.from('crew').select('id,full_name,department,hotel_id').eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED').order('department').order('full_name'),
+      supabase.from('locations').select('uuid,id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: true }).order('name'),
+      supabase.from('vehicles').select('uuid,id,driver_name,sign_code,capacity,vehicle_type').eq('production_id', PRODUCTION_ID).eq('active', true).order('id'),
+      supabase.from('crew').select('uuid,id,full_name,department,hotel_id').eq('production_id', PRODUCTION_ID).eq('hotel_status', 'CONFIRMED').order('department').order('full_name'),
     ]).then(([lR, vR, cR]) => {
       if (lR.error) setLoadErr('DB error: ' + lR.error.message)
       setLocations(lR.data || [])
@@ -567,7 +567,7 @@ function WrapTripContent() {
   // ── Handle ?vehicle= from /scan ──
   useEffect(() => {
     if (!preVehicle || !vehicles.length) return
-    const v = vehicles.find(x => x.id === preVehicle)
+    const v = vehicles.find(x => x.id === preVehicle || x.uuid === preVehicle)
     if (v) { setVehicle(v); setStep(3) }
   }, [vehicles, preVehicle])
 
@@ -630,7 +630,7 @@ function WrapTripContent() {
           )
           if (found) {
             if (selCrew.find(x => x.id === found.id)) { showToast('⚠️ ' + found.full_name + ' already added', 'error'); return }
-            setSelCrew(p => [...p, { id: found.id, full_name: found.full_name, department: found.department, hotel_id: found.hotel_id || null }])
+            setSelCrew(p => [...p, { uuid: found.uuid, id: found.id, full_name: found.full_name, department: found.department, hotel_id: found.hotel_id || null }])
             showToast('✅ ' + found.full_name + ' added', 'success')
             return
           }
@@ -644,12 +644,12 @@ function WrapTripContent() {
         return
       }
       if (data.type === 'vehicle') {
-        setVehicle({ id: data.id, driver_name: data.driver_name, sign_code: data.sign_code, capacity: data.capacity, vehicle_type: data.vehicle_type })
+        setVehicle({ uuid: data.uuid, id: data.id, driver_name: data.driver_name, sign_code: data.sign_code, capacity: data.capacity, vehicle_type: data.vehicle_type })
         showToast('✅ Vehicle ' + data.id + ' assigned', 'success')
         setStep(3)
       } else if (data.type === 'crew') {
         if (selCrew.find(c => c.id === data.id)) { showToast('⚠️ ' + data.full_name + ' already added', 'error'); return }
-        setSelCrew(p => [...p, { id: data.id, full_name: data.full_name, department: data.department, hotel_id: data.hotel?.id || null }])
+        setSelCrew(p => [...p, { uuid: data.uuid, id: data.id, full_name: data.full_name, department: data.department, hotel_id: data.hotel?.id || null }])
         showToast('✅ ' + data.full_name + ' added', 'success')
         setStep(3)
       }
@@ -699,7 +699,7 @@ function WrapTripContent() {
         const row = {
           production_id: PRODUCTION_ID, trip_id: tripId, date, service_type: serviceType,
           pickup_id: pickupId, dropoff_id: effectiveDropoff,
-          vehicle_id: vehicle?.id || null, driver_name: vehicle?.driver_name || null,
+          vehicle_id: vehicle?.uuid || null, driver_name: vehicle?.driver_name || null,
           sign_code: vehicle?.sign_code || null, capacity: vehicle?.capacity || null,
           duration_min: durMin, call_min: callMin, pickup_min: pickupMin,
           start_dt: startDt, end_dt: endDt, status: 'PLANNED', pax_count: grouped[hotelId]?.length || 0,
@@ -707,7 +707,7 @@ function WrapTripContent() {
         const { data: ins, error: insErr } = await supabase.from('trips').insert(row).select('id').single()
         if (insErr) throw new Error(insErr.message)
         if (ins?.id && grouped[hotelId]?.length > 0) {
-          await supabase.from('trip_passengers').insert(grouped[hotelId].map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.id })))
+          await supabase.from('trip_passengers').insert(grouped[hotelId].map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.uuid })))
         }
       }
       clearSaved()
@@ -719,10 +719,10 @@ function WrapTripContent() {
   // ── Picker item lists ──
   const locationItems = [
     { value: '', label: '— Auto (passenger hotel) —', sub: '' },
-    ...locations.filter(l => !l.is_hub).map(l => ({ value: l.id, label: l.name, sub: 'Location / Set' })),
-    ...locations.filter(l => l.is_hub).map(l => ({ value: l.id, label: l.name + ' ✈', sub: 'Hub' })),
+    ...locations.filter(l => !l.is_hub).map(l => ({ value: l.uuid, label: l.name, sub: 'Location / Set' })),
+    ...locations.filter(l => l.is_hub).map(l => ({ value: l.uuid, label: l.name + ' ✈', sub: 'Hub' })),
   ]
-  const pickupItems = locations.map(l => ({ value: l.id, label: l.name + (l.is_hub ? ' ✈' : ''), sub: l.is_hub ? 'Hub' : 'Location / Set' }))
+  const pickupItems = locations.map(l => ({ value: l.uuid, label: l.name + (l.is_hub ? ' ✈' : ''), sub: l.is_hub ? 'Hub' : 'Location / Set' }))
   const serviceItems = SERVICE_TYPES.map(s => ({ value: s, label: s }))
 
   // ── Styles ──
