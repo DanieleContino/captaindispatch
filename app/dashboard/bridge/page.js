@@ -1026,10 +1026,10 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                           ? locations.find(l =>
                               l.name.toLowerCase().includes(item.hotel_raw.toLowerCase()) ||
                               item.hotel_raw.toLowerCase().includes(l.name.toLowerCase())
-                            )?.id
+                            )?.uuid
                           : null
                       )
-                      const travelHotel = locations.find(l => l.id === resolvedTravelHotelId)?.name || item.hotel_raw || '?'
+                      const travelHotel = locations.find(l => l.uuid === resolvedTravelHotelId)?.name || item.hotel_raw || '?'
                       const canUseCalendar = !!(item.crew_id && resolvedTravelHotelId)
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
