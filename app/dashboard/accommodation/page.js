@@ -1301,7 +1301,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       hotel_status:   activeStay.hotel_status || 'PENDING',
       arrival_date:   arrivals[0]             || null,
       departure_date: departures[departures.length - 1] || null,
-    }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+    }).eq('uuid', crewId).eq('production_id', PRODUCTION_ID)
   }
 
   // Load subgroups + room types when hotel changes
