@@ -88,7 +88,7 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
   const [err,         setErr]         = useState('')
   const [toast,       setToast]       = useState('')
 
-  const locsMap = Object.fromEntries(locations.map(l => [l.id, l.name]))
+  const locsMap = Object.fromEntries(locations.map(l => [l.uuid, l.name]))
 
   function showToast(msg) {
     setToast(msg)
@@ -122,8 +122,8 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
       const data = await res.json()
       if (data.error) { showToast('❌ QR not found'); return }
       if (data.type === 'crew') {
-        if (selCrew.find(c => c.id === data.id)) { showToast('⚠️ Already added'); return }
-        setSelCrew(p => [...p, { id: data.id, full_name: data.full_name, department: data.department, hotel_id: data.hotel?.id || null }])
+        if (selCrew.find(c => c.uuid === data.uuid)) { showToast('⚠️ Already added'); return }
+        setSelCrew(p => [...p, { uuid: data.uuid, id: data.id, full_name: data.full_name, department: data.department, hotel_id: data.hotel?.id || null }])
         showToast('✅ ' + data.full_name + ' added')
       }
     } catch { showToast('❌ Scan error') }
@@ -138,7 +138,7 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
         body: JSON.stringify({
           token, date, callTime, serviceType,
           pickupId, dropoffId: dropoffId || null,
-          passengerIds: selCrew.map(c => c.id),
+          passengerIds: selCrew.map(c => c.uuid),
         }),
       })
       const d = await res.json()
@@ -260,11 +260,11 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
                       </div>
                     )}
                     {locations.map(l => {
-                      const isSel = showPicker === 'pickup' ? pickupId === l.id : dropoffId === l.id
+                      const isSel = showPicker === 'pickup' ? pickupId === l.uuid : dropoffId === l.uuid
                       return (
-                        <div key={l.id} onClick={() => {
-                          if (showPicker === 'pickup') setPickupId(l.id)
-                          else setDropoffId(l.id)
+                        <div key={l.uuid} onClick={() => {
+                          if (showPicker === 'pickup') setPickupId(l.uuid)
+                          else setDropoffId(l.uuid)
                           setShowPicker(null)
                         }} style={{ padding: '14px 16px', borderBottom: '1px solid #f8fafc', background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '15px', fontWeight: isSel ? '700' : '500', color: '#0f172a' }}>{l.name}</span>
