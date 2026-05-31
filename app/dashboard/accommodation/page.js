@@ -1074,7 +1074,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       setRoommateSearchOpen(false)
       if (initial?.crew_id) {
         supabase.from('crew')
-          .select('id, full_name, role, phone, no_transport_needed')
+          .select('uuid, display_id, full_name, role, phone, no_transport_needed')
           .eq('production_id', PRODUCTION_ID)
           .eq('person_type', 'FAMILY')
           .eq('linked_crew_id', initial.crew_id)
