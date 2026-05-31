@@ -3842,7 +3842,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
                   <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     {v.driver_name && <span>👤 {v.driver_name}</span>}
                     {v.comodato_owner_crew_id && (() => {
-                      const owner = crewList.find(c => c.id === v.comodato_owner_crew_id)
+                      const owner = crewList.find(c => c.uuid === v.comodato_owner_crew_id)
                       return owner ? <span>🤝 {owner.full_name}{owner.department ? ` — ${owner.department}` : ''}</span> : null
                     })()}
                     {v.comodato_rate_per_km && <span>📍 EUR {v.comodato_rate_per_km}/km</span>}
