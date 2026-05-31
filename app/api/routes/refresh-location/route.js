@@ -87,8 +87,8 @@ export async function GET(request) {
     // 1a. Query la location stessa per production_id, lat, lng
     const { data: newLoc, error: newLocErr } = await supabase
       .from('locations')
-      .select('id, production_id, lat, lng')
-      .eq('id', locationId)
+      .select('production_id, lat, lng')
+      .eq('uuid', locationId)
       .single()
 
     if (newLocErr || !newLoc) {
@@ -101,9 +101,9 @@ export async function GET(request) {
     // 1b. Query tutte le altre location della produzione con coordinate
     const { data: otherLocs, error: otherLocsErr } = await supabase
       .from('locations')
-      .select('id, lat, lng')
+      .select('uuid, lat, lng')
       .eq('production_id', newLoc.production_id)
-      .neq('id', locationId)
+      .neq('uuid', locationId)
       .not('lat', 'is', null)
       .not('lng', 'is', null)
 
@@ -127,7 +127,7 @@ export async function GET(request) {
           {
             production_id: newLoc.production_id,
             from_id:       locationId,
-            to_id:         other.id,
+            to_id:         other.uuid,
             duration_min:  r1.duration_min,
             distance_km:   r1.distance_km,
             source:        'google',
@@ -149,7 +149,7 @@ export async function GET(request) {
         const { error: e2 } = await supabase.from('routes').upsert(
           {
             production_id: newLoc.production_id,
-            from_id:       other.id,
+            from_id:       other.uuid,
             to_id:         locationId,
             duration_min:  r2.duration_min,
             distance_km:   r2.distance_km,
@@ -177,14 +177,14 @@ export async function GET(request) {
 
   const { data: locs } = await supabase
     .from('locations')
-    .select('id, lat, lng')
-    .in('id', allLocIds)
+    .select('uuid, lat, lng')
+    .in('uuid', allLocIds)
 
   const coordMap = {}
   if (locs) {
     for (const l of locs) {
       if (l.lat != null && l.lng != null)
-        coordMap[l.id] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
+        coordMap[l.uuid] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
     }
   }
 

@@ -55,7 +55,9 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const [editingLegLocalId, setEditingLegLocalId] = useState(null)
   const [multiSaving,       setMultiSaving]       = useState(false)
 
-  const transferClass = getClass(form.pickup_id, form.dropoff_id)
+  // UUID→TEXT id lookup so getClass (which uses hub prefix patterns) still works after migration
+  const locUuidToTextId = Object.fromEntries(localLocs.map(l => [l.uuid, l.id]).filter(([k]) => k))
+  const transferClass = getClass(locUuidToTextId[form.pickup_id] || form.pickup_id, locUuidToTextId[form.dropoff_id] || form.dropoff_id)
   const arrMin  = timeStrToMin(form.arr_time)
   const callMin = timeStrToMin(form.call_time)
   const durMin  = parseInt(form.duration_min) || null
@@ -111,7 +113,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     if (!PRODUCTION_ID || !form.pickup_id || !form.dropoff_id) return () => { cancelled = true }
     const hotelId = transferClass === 'ARRIVAL' ? form.dropoff_id : form.pickup_id
     let q = supabase.from('crew_stays')
-      .select('crew_id, departure_date, crew!inner(id, full_name, department, hotel_status)')
+      .select('crew_id, departure_date, crew!inner(uuid, id, full_name, department, hotel_status)')
       .eq('production_id', PRODUCTION_ID)
       .eq('hotel_id', hotelId)
     if (transferClass === 'ARRIVAL')        q = q.eq('arrival_date', form.date)
@@ -121,7 +123,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       if (cancelled) return
       const crew = (data || [])
         .filter(s => s.crew?.hotel_status === 'CONFIRMED')
-        .map(s => ({ id: s.crew.id, full_name: s.crew.full_name, department: s.crew.department }))
+        .map(s => ({ id: s.crew.id, uuid: s.crew.uuid, full_name: s.crew.full_name, department: s.crew.department }))
         .sort((a, b) => (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name))
       setCrewList(crew)
       if (assignCtx?.id) {
@@ -134,7 +136,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
   useEffect(() => {
     if (crewLookupQ.length < 2 || !PRODUCTION_ID) { setCrewLookupResults([]); return }
-    supabase.from('crew').select('id,full_name,department,role')
+    supabase.from('crew').select('uuid,id,full_name,department,role')
       .eq('production_id', PRODUCTION_ID)
       .or(`full_name.ilike.%${crewLookupQ}%,department.ilike.%${crewLookupQ}%`)
       .limit(8)
@@ -163,7 +165,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const selVehicle    = vehicles.find(v => v.id === form.vehicle_id)
+  const selVehicle    = vehicles.find(v => v.uuid === form.vehicle_id)
   const suggestedCrew = (selVehicle && (selVehicle.preferred_dept || selVehicle.preferred_crew_ids?.length > 0))
     ? crewList.filter(c =>
         (selVehicle.preferred_crew_ids?.includes(c.id)) ||
@@ -208,7 +210,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     if (err) { setSaving(false); setError(err.message); return }
     if (selCrew.length > 0 && ins?.id) {
       await supabase.from('trip_passengers').insert(
-        selCrew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.id }))
+        selCrew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.uuid }))
       )
     }
     setSaving(false); onSaved()
@@ -224,7 +226,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     }
   }
 
-  const locsById = Object.fromEntries(locations.map(l => [l.id, l.name]))
+  const locsById = Object.fromEntries(locations.map(l => [l.uuid, l.name]))
   const locShort = id => (locsById[id] || id || '–').split(' ').slice(0, 3).join(' ')
 
   function getLegTripId(idx) {
@@ -239,7 +241,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       form:          { ...form },
       selCrew:       [...selCrew],
       computed:      computed ? { ...computed } : null,
-      transferClass: getClass(form.pickup_id, form.dropoff_id),
+      transferClass: getClass(locUuidToTextId[form.pickup_id] || form.pickup_id, locUuidToTextId[form.dropoff_id] || form.dropoff_id),
     }
     if (editingLegLocalId) {
       setSavedLegs(prev => prev.map(l => l.localId === editingLegLocalId ? { ...snap, localId: editingLegLocalId } : l))
@@ -299,7 +301,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         const legForm = leg.form
         const legComp = leg.computed
         const legDurMin = parseInt(legForm.duration_min) || null
-        const legVeh  = vehicles.find(v => v.id === legForm.vehicle_id)
+        const legVeh  = vehicles.find(v => v.uuid === legForm.vehicle_id)
         const row = {
           production_id:   PRODUCTION_ID,
           trip_id:         getLegTripId(i),
@@ -330,7 +332,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         insertedIds.push(ins.id)
         if (leg.selCrew.length > 0) {
           await supabase.from('trip_passengers').insert(
-            leg.selCrew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.id }))
+            leg.selCrew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.uuid }))
           )
           await supabase.from('trips').update({
             pax_count:      leg.selCrew.length,
@@ -364,24 +366,24 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       lat:    newLocLat !== '' ? parseFloat(String(newLocLat).replace(',', '.')) : null,
       lng:    newLocLng !== '' ? parseFloat(String(newLocLng).replace(',', '.')) : null,
     }
-    const { error: insErr } = await supabase.from('locations').insert(row)
-    if (insErr) { setNewLocSaving(false); setNewLocError(insErr.message); return }
+    const { data: newLocData, error: insErr } = await supabase.from('locations').insert(row).select('uuid').single()
+    if (insErr || !newLocData) { setNewLocSaving(false); setNewLocError(insErr?.message || 'Insert failed'); return }
     if (row.lat != null && row.lng != null) {
       try {
-        const r    = await fetch(`/api/routes/refresh-location?id=${encodeURIComponent(row.id)}`)
+        const r    = await fetch(`/api/routes/refresh-location?id=${encodeURIComponent(newLocData.uuid)}`)
         const data = await r.json()
         setNewLocDoneMsg(data.updated ? `✅ ${data.updated} rotte calcolate` : '✅ Location salvata')
       } catch { setNewLocDoneMsg('✅ Location salvata') }
     } else {
       setNewLocDoneMsg('✅ Location salvata')
     }
-    const newLoc = { ...row, default_pickup_point: null }
+    const newLoc = { ...row, uuid: newLocData.uuid, default_pickup_point: null }
     setLocalLocs(prev => [...prev, newLoc].sort((a, b) => {
       if (a.is_hub !== b.is_hub) return a.is_hub ? -1 : 1
       return a.name.localeCompare(b.name)
     }))
-    if (newLocTarget === 'pickup') set('pickup_id', row.id)
-    else set('dropoff_id', row.id)
+    if (newLocTarget === 'pickup') set('pickup_id', newLocData.uuid)
+    else set('dropoff_id', newLocData.uuid)
     setNewLocSaving(false)
     setTimeout(() => {
       setNewLocTarget(null)
@@ -892,8 +894,8 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                         <select value={sibDropoff} onChange={e => setSibDropoff(e.target.value)}
                           style={{ width: '100%', padding: '7px 10px', border: `1px solid ${sibDropoff ? '#fde68a' : '#fca5a5'}`, borderRadius: '8px', fontSize: '12px', background: 'white', boxSizing: 'border-box' }}>
                           <option value="">Select destination…</option>
-                          <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
-                          <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                          <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
+                           <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
                         </select>
                       </div>
                     )}
@@ -944,8 +946,8 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               }} style={inp} required>
                 <option value="">Select pickup…</option>
                 <option value="__NEW__" style={{ color: '#0369a1', fontWeight: '800' }}>➕ New location…</option>
-                <optgroup label="Hubs">{localLocs.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
-                <optgroup label="Hotels / Locations">{localLocs.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                <optgroup label="Hubs">{localLocs.filter(l => l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
+                <optgroup label="Hotels / Locations">{localLocs.filter(l => !l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
               </select>
             </div>
             {newLocTarget === 'pickup' && <NewLocForm target="pickup" />}
@@ -966,8 +968,8 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               }} style={inp} required>
                 <option value="">Select dropoff…</option>
                 <option value="__NEW__" style={{ color: '#0369a1', fontWeight: '800' }}>➕ New location…</option>
-                <optgroup label="Hubs">{localLocs.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
-                <optgroup label="Hotels / Locations">{localLocs.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>
+                <optgroup label="Hubs">{localLocs.filter(l => l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
+                <optgroup label="Hotels / Locations">{localLocs.filter(l => !l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
               </select>
             </div>
             {newLocTarget === 'dropoff' && <NewLocForm target="dropoff" />}
@@ -988,7 +990,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     const avail   = isVehicleAvailableForDate(v, form.date)
                     const hasPref = v.preferred_dept || v.preferred_crew_ids?.length > 0
                     return (
-                      <option key={v.id} value={v.id}>
+                      <option key={v.uuid} value={v.uuid}>
                         {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
                       </option>
                     )

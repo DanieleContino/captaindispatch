@@ -84,11 +84,11 @@ async function getOrComputeDuration (fromId, toId, productionId, supabase) {
   // 2. Google Maps
   if (!GOOGLE_KEY) return null
   const { data: locs } = await supabase
-    .from('locations').select('id,lat,lng').in('id', [fromId, toId])
+    .from('locations').select('uuid,lat,lng').in('uuid', [fromId, toId])
   const coordMap = {}
   for (const l of locs ?? []) {
     if (l.lat != null && l.lng != null)
-      coordMap[l.id] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
+      coordMap[l.uuid] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
   }
   const from = coordMap[fromId]
   const to   = coordMap[toId]

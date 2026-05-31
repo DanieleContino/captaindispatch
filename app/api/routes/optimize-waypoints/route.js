@@ -52,15 +52,15 @@ export async function POST(request) {
     const allLocIds = [...new Set(legs.flatMap(l => [l.pickup_id, l.dropoff_id]))]
     const { data: locs } = await supabase
       .from('locations')
-      .select('id, name, lat, lng')
-      .in('id', allLocIds)
+      .select('uuid, name, lat, lng')
+      .in('uuid', allLocIds)
 
     const coordMap = {}
     const nameMap  = {}
     for (const l of locs ?? []) {
-      nameMap[l.id] = l.name
+      nameMap[l.uuid] = l.name
       if (l.lat != null && l.lng != null) {
-        coordMap[l.id] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
+        coordMap[l.uuid] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
       }
     }
 

@@ -152,7 +152,7 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, onD
 
   if (!open) return null
 
-  const locsMap = Object.fromEntries(locations.map(l => [l.id, l.name]))
+  const locsMap = Object.fromEntries(locations.map(l => [l.uuid, l.name]))
   const locShort = id => (locsMap[id] || id || '–').split(' ').slice(0, 2).join(' ')
 
   return (

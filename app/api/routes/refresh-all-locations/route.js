@@ -75,7 +75,7 @@ export async function GET(request) {
   // 1. Carica tutte le location della produzione con coordinate
   const { data: locs, error: locsErr } = await supabase
     .from('locations')
-    .select('id, lat, lng')
+    .select('uuid, lat, lng')
     .eq('production_id', productionId)
     .not('lat', 'is', null)
     .not('lng', 'is', null)
@@ -107,7 +107,7 @@ export async function GET(request) {
       const to   = locs[j]
 
       // Salta rotte MANUAL
-      if (manualSet.has(`${from.id}|${to.id}`)) { skipped++; continue }
+      if (manualSet.has(`${from.uuid}|${to.uuid}`)) { skipped++; continue }
 
       const result = await googleDuration(
         parseFloat(from.lat), parseFloat(from.lng),
@@ -118,8 +118,8 @@ export async function GET(request) {
         const { error: upsertErr } = await supabase.from('routes').upsert(
           {
             production_id: productionId,
-            from_id:       from.id,
-            to_id:         to.id,
+            from_id:       from.uuid,
+            to_id:         to.uuid,
             duration_min:  result.duration_min,
             distance_km:   result.distance_km,
             source:        'google',

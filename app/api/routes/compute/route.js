@@ -85,14 +85,14 @@ export async function POST(request) {
     // Recupera coordinate delle due location
     const { data: locs } = await supabase
       .from('locations')
-      .select('id, lat, lng')
-      .in('id', [from_id, to_id])
+      .select('uuid, lat, lng')
+      .in('uuid', [from_id, to_id])
 
     const coordMap = {}
     if (locs) {
       for (const l of locs) {
         if (l.lat != null && l.lng != null)
-          coordMap[l.id] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
+          coordMap[l.uuid] = { lat: parseFloat(l.lat), lng: parseFloat(l.lng) }
       }
     }
 
