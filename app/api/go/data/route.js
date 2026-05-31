@@ -40,7 +40,7 @@ export async function GET(request) {
   if (type === 'locations') {
     const { data } = await supabase
       .from('locations')
-      .select('id, name, is_hub')
+      .select('uuid, id, name, is_hub')
       .eq('production_id', productionId)
       .order('name')
     return Response.json({ data: data || [] })
@@ -50,7 +50,7 @@ export async function GET(request) {
   if (type === 'crew') {
     const { data } = await supabase
       .from('crew')
-      .select('id, full_name, department, hotel_id')
+      .select('uuid, id, full_name, department, hotel_id')
       .eq('production_id', productionId)
       .eq('hotel_status', 'CONFIRMED')
       .order('full_name')
