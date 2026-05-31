@@ -1188,7 +1188,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   async function handleRemoveFamilyMember(memberId) {
     if (!PRODUCTION_ID) return
     await supabase.from('crew_stays').update({ room_assignment_id: null }).eq('crew_id', memberId).eq('production_id', PRODUCTION_ID)
-    await supabase.from('crew').delete().eq('id', memberId).eq('production_id', PRODUCTION_ID)
+    await supabase.from('crew').delete().eq('uuid', memberId).eq('production_id', PRODUCTION_ID)
     setFamilyMembers(prev => prev.filter(m => m.id !== memberId))
   }
 
