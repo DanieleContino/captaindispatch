@@ -1438,7 +1438,7 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
       `).eq('production_id', productionId).eq('is_rental', true).order('rental_supplier_id').order('rental_start'),
       supabase.from('rental_suppliers').select('id, name').eq('production_id', productionId).order('name'),
       supabase.from('rental_list_columns').select('*').eq('production_id', productionId).order('display_order').order('created_at'),
-      supabase.from('vehicles').select('id').eq('production_id', productionId),
+      supabase.from('vehicles').select('uuid, id, display_id').eq('production_id', productionId),
     ])
     setVehicles(vData || [])
     setSuppliers(sData || [])
@@ -2595,8 +2595,8 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
 
   useEffect(() => {
     if (!productionId) return
-    supabase.from('vehicles').select('id').eq('production_id', productionId)
-      .then(({ data }) => setAllVehicles(data || []))
+    supabase.from('vehicles').select('uuid, id, display_id').eq('production_id', productionId)
+        .then(({ data }) => setAllVehicles(data || []))
   }, [productionId])
 
   useEffect(() => { load() }, [load])
@@ -3334,7 +3334,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle, reloadT
           vehicles:vehicles(uuid, id, display_id, vehicle_type, ncc_driver_name, ncc_driver_phone, ncc_driver_id, license_plate, capacity, active, is_ncc, ncc_agency_id, available_from, available_to, pax_suggested, pax_max, sign_code, unit_default, preferred_dept, preferred_crew_ids)`)
         .eq('production_id', productionId)
         .order('name'),
-      supabase.from('vehicles').select('id').eq('production_id', productionId),
+      supabase.from('vehicles').select('uuid, id, display_id').eq('production_id', productionId),
     ])
     const agencyList = data || []
     setAgencies(agencyList)
@@ -3767,7 +3767,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
     setLoading(true)
     const [{ data: vData }, { data: allV }] = await Promise.all([
       supabase.from('vehicles').select('uuid, id, display_id, vehicle_type, license_plate, driver_name, active, is_comodato, comodato_owner_crew_id, comodato_rate_per_km, comodato_fuel_reimbursement, comodato_notes').eq('production_id', productionId).eq('is_comodato', true).order('display_id'),
-      supabase.from('vehicles').select('id').eq('production_id', productionId),
+      supabase.from('vehicles').select('uuid, id, display_id').eq('production_id', productionId),
     ])
     setVehicles(vData || [])
     setAllVehicles(allV || [])
