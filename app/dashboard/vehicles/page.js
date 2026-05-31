@@ -4000,9 +4000,9 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
   async function handleDelete() {
     if (!confirmDel) { setCd(true); return }
     setDel(true)
-    const { count } = await supabase.from('trips').select('id', { count: 'exact', head: true }).eq('vehicle_id', initial.id).eq('production_id', productionId)
+    const { count } = await supabase.from('trips').select('id', { count: 'exact', head: true }).eq('vehicle_id', initial.uuid).eq('production_id', productionId)
     if (count > 0) { setDel(false); setCd(false); setError(`Cannot delete — ${count} trip${count > 1 ? 's' : ''} assigned.`); return }
-    const { error } = await supabase.from('vehicles').delete().eq('id', initial.id).eq('production_id', productionId)
+    const { error } = await supabase.from('vehicles').delete().eq('uuid', initial.uuid).eq('production_id', productionId)
     setDel(false)
     if (error) { setError(error.message); return }
     onSaved()
