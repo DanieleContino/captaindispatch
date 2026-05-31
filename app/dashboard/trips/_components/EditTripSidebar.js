@@ -128,6 +128,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       .then(({ data }) => { if (data?.duration_min) set('duration_min', String(data.duration_min)); setDurLoading(false) })
   }, [form.pickup_id, form.dropoff_id])
 
+  const locsById = Object.fromEntries((locations || []).map(l => [l.uuid, l.name]))
+  const locsDisplayMap = Object.fromEntries((locations || []).map(l => [l.uuid, l.id]))
+
   const transferClass = getClass(locsDisplayMap?.[form.pickup_id], locsDisplayMap?.[form.dropoff_id])
   const arrMin  = timeStrToMin(form.arr_time)
   const callMin = timeStrToMin(form.call_time)
@@ -588,8 +591,6 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const inp = { width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }
   const lbl = { fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }
 
-  const locsById = Object.fromEntries((locations || []).map(l => [l.uuid, l.name]))
-  const locsDisplayMap = Object.fromEntries((locations || []).map(l => [l.uuid, l.id]))
   const locShortEdit = id => (locsById[id] || id || '–').split(' ').slice(0, 3).join(' ')
 
   const selVehicleEdit    = vehicles.find(v => v.uuid === form.vehicle_id)
