@@ -2947,7 +2947,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
   useEffect(() => {
     if (!open || !productionId) return
     setError(null); setCd(false)
-    supabase.from('vehicles').select('id, vehicle_type, ncc_agency_id').eq('production_id', productionId).eq('is_ncc', true).order('id')
+    supabase.from('vehicles').select('uuid, id, display_id, vehicle_type, ncc_agency_id').eq('production_id', productionId).eq('is_ncc', true).order('display_id')
       .then(({ data }) => setVehicles(data || []))
     if (mode === 'edit' && initial) {
       setForm({
