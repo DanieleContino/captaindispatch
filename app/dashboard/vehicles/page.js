@@ -703,7 +703,7 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
           {v.unit_default && <span>📋 {v.unit_default}</span>}
           {Array.isArray(v.preferred_crew_ids) && v.preferred_crew_ids.length > 0 && crewList.length > 0 && (
             <span style={{ color: '#1d4ed8' }}>
-              👥 {v.preferred_crew_ids.slice(0, 3).map(id => crewList.find(c => c.id === id)?.full_name).filter(Boolean).join(', ')}
+                        👥 {v.preferred_crew_ids.slice(0, 3).map(id => crewList.find(c => c.uuid === id)?.full_name).filter(Boolean).join(', ')}
               {v.preferred_crew_ids.length > 3 ? ` +${v.preferred_crew_ids.length - 3}` : ''}
             </span>
           )}
