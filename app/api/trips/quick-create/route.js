@@ -47,8 +47,8 @@ export async function POST(request) {
     // 3. Carica veicolo
     const { data: vehicle } = await serviceClient
       .from('vehicles')
-      .select('id, sign_code, capacity, vehicle_type, driver_name, ncc_driver_id, driver_crew_id')
-      .eq('id', vehicleId)
+      .select('uuid, id, sign_code, capacity, vehicle_type, driver_name, ncc_driver_id, driver_crew_id')
+      .eq('uuid', vehicleId)
       .eq('production_id', productionId)
       .single()
     if (!vehicle) return Response.json({ error: 'Vehicle not found' }, { status: 404 })
@@ -59,8 +59,8 @@ export async function POST(request) {
       const allPassengerIds = [...new Set(legs.flatMap(l => l.passengerIds || []))]
       let crewMap = {}
       if (allPassengerIds.length > 0) {
-        const { data: crewData } = await serviceClient.from('crew').select('id, full_name').in('id', allPassengerIds)
-        crewMap = Object.fromEntries((crewData || []).map(c => [c.id, c.full_name]))
+        const { data: crewData } = await serviceClient.from('crew').select('uuid, full_name').in('uuid', allPassengerIds)
+        crewMap = Object.fromEntries((crewData || []).map(c => [c.uuid, c.full_name]))
       }
 
       // Calcola duration_min per ogni leg
@@ -110,7 +110,7 @@ export async function POST(request) {
           service_type:   serviceType,
           pickup_id:      leg.pickupId,
           dropoff_id:     leg.dropoffId,
-          vehicle_id:     vehicle.id,
+          vehicle_id:     vehicle.uuid,
           driver_name:    vehicle.driver_name || null,
           sign_code:      vehicle.sign_code || null,
           capacity:       vehicle.capacity || null,
@@ -164,14 +164,14 @@ export async function POST(request) {
           const { data: nccDriver } = await serviceClient.from('ncc_drivers').select('tracking_token').eq('id', vehicle.ncc_driver_id).single()
           driver_token = nccDriver?.tracking_token || null
         } else if (vehicle.driver_crew_id) {
-          const { data: crew } = await serviceClient.from('crew').select('tracking_token').eq('id', vehicle.driver_crew_id).single()
+          const { data: crew } = await serviceClient.from('crew').select('tracking_token').eq('uuid', vehicle.driver_crew_id).single()
           driver_token = crew?.tracking_token || null
         }
         if (driver_token) {
           const allPickups  = [...new Set(legs.map(l => l.pickupId))]
           const allDropoffs = [...new Set(legs.map(l => l.dropoffId))]
-          const { data: locs } = await serviceClient.from('locations').select('id, name').in('id', [...allPickups, ...allDropoffs])
-          const locsMap = Object.fromEntries((locs || []).map(l => [l.id, l.name]))
+          const { data: locs } = await serviceClient.from('locations').select('uuid, name').in('uuid', [...allPickups, ...allDropoffs])
+          const locsMap = Object.fromEntries((locs || []).map(l => [l.uuid, l.name]))
           const body = `New trip assigned: ${legs.length} stops · ${callTime} · ${allPassengerIds.length} pax`
           await serviceClient.from('dispatch_messages').insert({
             production_id: productionId,
@@ -194,8 +194,8 @@ export async function POST(request) {
     if (passengerIds?.length > 0) {
       const { data: crewData } = await serviceClient
         .from('crew')
-        .select('id, full_name')
-        .in('id', passengerIds)
+        .select('uuid, full_name')
+        .in('uuid', passengerIds)
       passengerNames = (crewData || []).map(c => c.full_name)
     }
     const passengerList = passengerNames.join(', ') || null
@@ -247,7 +247,7 @@ export async function POST(request) {
         service_type:   serviceType,
         pickup_id:      pickupId,
         dropoff_id:     dropoffId,
-        vehicle_id:     vehicle.id,
+        vehicle_id:     vehicle.uuid,
         driver_name:    vehicle.driver_name || null,
         sign_code:      vehicle.sign_code || null,
         capacity:       vehicle.capacity || null,
@@ -311,7 +311,7 @@ export async function POST(request) {
         const { data: crew } = await serviceClient
           .from('crew')
           .select('tracking_token')
-          .eq('id', vehicle.driver_crew_id)
+          .eq('uuid', vehicle.driver_crew_id)
           .single()
         driver_token = crew?.tracking_token || null
       }
@@ -319,9 +319,9 @@ export async function POST(request) {
       if (driver_token) {
         const { data: locs } = await serviceClient
           .from('locations')
-          .select('id, name')
-          .in('id', [pickupId, ...dropoffIds])
-        const locsMap = Object.fromEntries((locs || []).map(l => [l.id, l.name]))
+          .select('uuid, name')
+          .in('uuid', [pickupId, ...dropoffIds])
+        const locsMap = Object.fromEntries((locs || []).map(l => [l.uuid, l.name]))
         const pickupName   = locsMap[pickupId] || pickupId
         const dropoffNames = dropoffIds.map(id => locsMap[id] || id).join(', ')
         const body = `New trip assigned: ${pickupName} → ${dropoffNames} · ${callTime} · ${passengerIds?.length || 0} pax`
