@@ -1185,7 +1185,7 @@ function RentalReportTab({ productionId }) {
     setLoading(true)
     const [{ data: vData }, { data: sData }] = await Promise.all([
       supabase.from('vehicles').select(`
-        id, vehicle_type, vehicle_class, license_plate, driver_name,
+        display_id, vehicle_type, vehicle_class, license_plate, driver_name,
         rental_brand, rental_model, rental_supplier_id, rental_start, rental_end,
         rental_status, rental_billing_unit, rental_daily_rate, rental_vat_pct,
         rental_currency, rental_voucher_id, rental_po_number, rental_contract_no,
@@ -1426,7 +1426,7 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
     setLoading(true)
     const [{ data: vData }, { data: sData }, { data: cData }, { data: allV }] = await Promise.all([
       supabase.from('vehicles').select(`
-        id, vehicle_type, vehicle_class, license_plate, driver_name, driver_crew_id,
+        display_id, vehicle_type, vehicle_class, license_plate, driver_name, driver_crew_id,
         rental_brand, rental_model, rental_supplier_id, rental_start, rental_end,
         rental_status, rental_billing_unit, rental_daily_rate, rental_vat_pct,
         rental_currency, rental_voucher_id, rental_po_number, rental_contract_no,
@@ -2567,7 +2567,7 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
         id, name, contact_name, phone, email, address, website, account_no, opening_hours, notes,
         locations:rental_supplier_locations(id, name, address, phone, email, opening_hours),
         vouchers:rental_vouchers(id, voucher_no, batch_code, amount, currency, used, vehicle_id),
-        vehicles:vehicles(id, vehicle_type, vehicle_class, license_plate, driver_name, rental_brand, rental_model, rental_start, rental_end, rental_status, rental_second_driver, rental_billing_unit, rental_daily_rate, rental_currency)
+        vehicles:vehicles(display_id, vehicle_type, vehicle_class, license_plate, driver_name, rental_brand, rental_model, rental_start, rental_end, rental_status, rental_second_driver, rental_billing_unit, rental_daily_rate, rental_currency)
       `)
       .eq('production_id', productionId)
       .order('name')
