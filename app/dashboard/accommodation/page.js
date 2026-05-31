@@ -1152,7 +1152,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       hotel_status:        'PENDING',
       travel_status:       'IN',
       on_location:         true,
-    }).select('id, full_name, role, phone, no_transport_needed').single()
+    }).select('id, uuid, full_name, role, phone, no_transport_needed').single()
     setFamilySaving(false)
     if (error) { setFamilyError(error.message); return }
     if (newCrew) {
@@ -1172,7 +1172,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       }
       await supabase.from('crew_stays').insert({
         production_id:      PRODUCTION_ID,
-        crew_id:            newCrew.id,
+        crew_id:            newCrew.uuid,
         hotel_id:           form.hotel_id || null,
         room_assignment_id: assignId || null,
         arrival_date:       form.arrival_date || null,
@@ -1209,7 +1209,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     }
     const { data: roommateStay } = await supabase.from('crew_stays')
       .select('id')
-      .eq('crew_id', crewMember.id)
+      .eq('crew_id', crewMember.uuid)
       .eq('production_id', PRODUCTION_ID)
       .order('arrival_date', { ascending: false })
       .limit(1)
@@ -1286,7 +1286,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     if (!crewId || !PRODUCTION_ID) return
     const { data: allStays } = await supabase.from('crew_stays').select('arrival_date, departure_date, hotel_id, hotel_status').eq('crew_id', crewId).eq('production_id', PRODUCTION_ID).order('arrival_date', { ascending: true })
     if (!allStays || allStays.length === 0) {
-      await supabase.from('crew').update({ hotel_status: 'PENDING', hotel_id: null, arrival_date: null, departure_date: null }).eq('id', crewId).eq('production_id', PRODUCTION_ID)
+      await supabase.from('crew').update({ hotel_status: 'PENDING', hotel_id: null, arrival_date: null, departure_date: null }).eq('uuid', crewId).eq('production_id', PRODUCTION_ID)
       return
     }
     const arrivals   = allStays.map(s => s.arrival_date).filter(Boolean).sort()
