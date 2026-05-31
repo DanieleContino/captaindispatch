@@ -646,7 +646,7 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
   async function handleDelete() {
     if (!confirmDel) { setConfirmDel(true); return }
     setDeleting(true)
-    await onDelete(v.id)
+    await onDelete(v.uuid)
     setDeleting(false)
     setConfirmDel(false)
   }
