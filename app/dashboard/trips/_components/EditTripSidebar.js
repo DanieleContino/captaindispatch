@@ -168,7 +168,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (!isNewLeg && !tripId) return
     const reqId = ++loadPaxReqRef.current
     setPaxLoading(true)
-    const tc = getClass(effectivePickup, effectiveDropoff)
+    const tc = getClass(locsDisplayMap?.[effectivePickup] || effectivePickup, locsDisplayMap?.[effectiveDropoff] || effectiveDropoff)
     const groupIds = isNewLeg ? [] : ((group && group.length > 1) ? group.map(g => g.id) : [tripId])
     const existingGroupIds = group ? group.map(g => g.id).filter(Boolean) : (tripId ? [tripId] : [])
     const legHotelDropoff = effectiveDropoff
@@ -395,7 +395,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         status:      form.status,
       }
       for (const sib of siblings) {
-        const sibTC = getClass(sib.pickup_id, sib.dropoff_id)
+        const sibTC = getClass(locsDisplayMap?.[sib.pickup_id] || sib.pickup_id, locsDisplayMap?.[sib.dropoff_id] || sib.dropoff_id)
         let sibDurMin = sib.duration_min || null
         if (!sibDurMin && PRODUCTION_ID) {
           const { data: sibRoute } = await supabase.from('routes')
@@ -496,7 +496,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           if (revRoute?.duration_min) legDurMin = revRoute.duration_min
         }
 
-        const legTC = getClass(leg.pickup_id, leg.dropoff_id)
+        const legTC = getClass(locsDisplayMap?.[leg.pickup_id] || leg.pickup_id, locsDisplayMap?.[leg.dropoff_id] || leg.dropoff_id)
         const legCalc = legDurMin ? calcTimes({
           date: form.date, arrTimeMin: arrMin, durationMin: legDurMin,
           transferClass: legTC, callMin: computed?.callMin ?? null,
@@ -602,8 +602,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
   const regularCrew  = availableCrew.filter(c => !c.no_transport_needed)
   const ntnCrew      = availableCrew.filter(c =>  c.no_transport_needed)
-  const freeCount    = regularCrew.filter(c => !busyMap[c.id]).length
-  const busyCount    = regularCrew.filter(c =>  busyMap[c.id]).length
+  const freeCount    = regularCrew.filter(c => !busyMap[c.uuid]).length
+  const busyCount    = regularCrew.filter(c =>  busyMap[c.uuid]).length
   const filtered     = regularCrew.filter(c => !paxSearch || c.full_name.toLowerCase().includes(paxSearch.toLowerCase()) || (c.department || '').toLowerCase().includes(paxSearch.toLowerCase()))
   const filteredNtn  = ntnCrew.filter(c => !paxSearch || c.full_name.toLowerCase().includes(paxSearch.toLowerCase()) || (c.department || '').toLowerCase().includes(paxSearch.toLowerCase()))
 
@@ -926,7 +926,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                           {busyCount > 0 && <span style={{ color: '#a16207', marginLeft: '6px' }}>· {busyCount} BUSY</span>}
                         </div>
                         {freeCount > 0 && (
-                          <button type="button" onClick={() => regularCrew.filter(c => !busyMap[c.id]).forEach(c => addPax(c))}
+                          <button type="button" onClick={() => regularCrew.filter(c => !busyMap[c.uuid]).forEach(c => addPax(c))}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', fontSize: '10px', fontWeight: '700' }}>
                             Add all ({freeCount})
                           </button>
@@ -938,7 +938,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                         {filtered.length === 0 ? (
                           <div style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>{t.noResults}</div>
                         ) : filtered.map(c => {
-                          const isBusy = !!busyMap[c.id]
+                          const isBusy = !!busyMap[c.uuid]
                           return (
                             <div key={c.id} onClick={() => !isBusy && addPax(c)}
                               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: isBusy ? 'default' : 'pointer', borderBottom: '1px solid #f8fafc', background: isBusy ? '#fffbeb' : 'white' }}
@@ -951,7 +951,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                                   {c.hotel_id && locsById[c.hotel_id] && <span style={{ background: '#f1f5f9', padding: '1px 4px', borderRadius: '3px', border: '1px solid #e2e8f0', color: '#475569' }}>🏨 {locShortEdit(c.hotel_id)}</span>}
                                   {c._checkoutToday && c.no_transport_needed && <span style={{ color: '#d97706', fontWeight: '700', background: '#fef9c3', padding: '1px 4px', borderRadius: '3px', border: '1px solid #fde68a' }}>⚠ CHK-OUT oggi · OA</span>}
                                   {c._checkoutToday && !c.no_transport_needed && <span style={{ color: '#d97706', fontWeight: '700', background: '#fef9c3', padding: '1px 4px', borderRadius: '3px', border: '1px solid #fde68a' }}>⚠ CHK-OUT oggi</span>}
-                                  {isBusy && <span style={{ color: '#a16207' }}>⚠ BUSY on {busyMap[c.id]}</span>}
+                                  {isBusy && <span style={{ color: '#a16207' }}>⚠ BUSY on {busyMap[c.uuid]}</span>}
                                 </div>
                               </div>
                               {!isBusy && <span style={{ fontSize: '14px', color: '#2563eb', fontWeight: '700', flexShrink: 0 }}>+</span>}
@@ -964,11 +964,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       {filteredNtn.length > 0 && (
                         <div style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
                           <div style={{ fontSize: '10px', fontWeight: '700', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                            🚐 {t.selfDrive} / {t.ntnShort} ({ntnCrew.filter(c => !busyMap[c.id]).length})
+                            🚐 {t.selfDrive} / {t.ntnShort} ({ntnCrew.filter(c => !busyMap[c.uuid]).length})
                           </div>
                           <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
                             {filteredNtn.map(c => {
-                              const isBusy = !!busyMap[c.id]
+                              const isBusy = !!busyMap[c.uuid]
                               return (
                                 <div key={c.id} onClick={() => !isBusy && addPax(c)}
                                   style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: isBusy ? 'default' : 'pointer', borderBottom: '1px solid #f1f5f9', background: isBusy ? '#fffbeb' : '#f8fafc' }}
@@ -981,7 +981,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                                     </div>
                                     <div style={{ fontSize: '10px', color: '#94a3b8' }}>
                                       {c.department}
-                                      {isBusy && <span style={{ color: '#a16207', marginLeft: '4px' }}>· ⚠ BUSY on {busyMap[c.id]}</span>}
+                                      {isBusy && <span style={{ color: '#a16207', marginLeft: '4px' }}>· ⚠ BUSY on {busyMap[c.uuid]}</span>}
                                     </div>
                                   </div>
                                   {!isBusy && <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: '700', flexShrink: 0 }}>+</span>}
@@ -996,11 +996,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                   ) : ntnCrew.length > 0 ? (
                     <div>
                       <div style={{ fontSize: '10px', fontWeight: '700', color: '#6b7280', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                        🚐 {t.selfDrive} / {t.ntnShort} ({ntnCrew.filter(c => !busyMap[c.id]).length})
+                        🚐 {t.selfDrive} / {t.ntnShort} ({ntnCrew.filter(c => !busyMap[c.uuid]).length})
                       </div>
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
                         {filteredNtn.map(c => {
-                          const isBusy = !!busyMap[c.id]
+                          const isBusy = !!busyMap[c.uuid]
                           return (
                             <div key={c.id} onClick={() => !isBusy && addPax(c)}
                               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: isBusy ? 'default' : 'pointer', borderBottom: '1px solid #f1f5f9', background: isBusy ? '#fffbeb' : '#f8fafc' }}
@@ -1013,7 +1013,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                                 </div>
                                 <div style={{ fontSize: '10px', color: '#94a3b8' }}>
                                   {c.department}
-                                  {isBusy && <span style={{ color: '#a16207', marginLeft: '4px' }}>· ⚠ BUSY on {busyMap[c.id]}</span>}
+                                  {isBusy && <span style={{ color: '#a16207', marginLeft: '4px' }}>· ⚠ BUSY on {busyMap[c.uuid]}</span>}
                                 </div>
                               </div>
                               {!isBusy && <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: '700', flexShrink: 0 }}>+</span>}

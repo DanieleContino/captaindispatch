@@ -288,7 +288,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         form:          { ...form },
         selCrew:       [...selCrew],
         computed:      computed ? { ...computed } : null,
-        transferClass: getClass(form.pickup_id, form.dropoff_id),
+        transferClass: getClass(locUuidToTextId[form.pickup_id] || form.pickup_id, locUuidToTextId[form.dropoff_id] || form.dropoff_id),
       })
     }
     if (allLegs.length < 2) { setError('Aggiungi almeno 2 leg: usa "+ Add Leg" o compila il form per l\'ultima leg'); return }
@@ -445,7 +445,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
     if (compatibleLeg) {
       const { error } = await supabase.from('trip_passengers').insert({
-        production_id: PRODUCTION_ID, trip_row_id: compatibleLeg.id, crew_id: assignCtx.id,
+        production_id: PRODUCTION_ID, trip_row_id: compatibleLeg.id, crew_id: assignCtx.uuid,
       })
       if (!error) {
         const prevList = compatibleLeg.passenger_list ? compatibleLeg.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
@@ -590,7 +590,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       if (tripErr || !newRow?.id) { setAddingToTrip(false); setError(tripErr?.message || t.errorSiblingTrip); return }
 
       const { error: paxErr } = await supabase.from('trip_passengers').insert({
-        production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: assignCtx.id,
+        production_id: PRODUCTION_ID, trip_row_id: newRow.id, crew_id: assignCtx.uuid,
       })
       if (!paxErr) {
         await supabase.from('trips').update({
