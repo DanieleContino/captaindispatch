@@ -386,7 +386,7 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
                     )
                   })()}
                   {Array.isArray(initial.preferred_crew_ids) && initial.preferred_crew_ids.map(cid => {
-                    const cm = crewList.find(c => c.id === cid)
+                    const cm = crewList.find(c => c.uuid === cid)
                     if (!cm) return null
                     return (
                       <span key={cid} style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
