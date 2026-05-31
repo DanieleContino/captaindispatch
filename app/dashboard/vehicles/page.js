@@ -2056,13 +2056,13 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
         await supabase.from('rental_vouchers').update({ used: true, vehicle_id: form.id.trim().toUpperCase() }).eq('id', form.rental_voucher_id)
       }
     } else {
-      const r = await supabase.from('vehicles').update(row).eq('id', initial.id).eq('production_id', productionId)
+      const r = await supabase.from('vehicles').update(row).eq('uuid', initial.uuid).eq('production_id', productionId)
       err = r.error
     }
     setSaving(false)
     if (err) { setError(err.message); return }
     if (form.driver_crew_id) {
-      await supabase.from('crew').update({ no_transport_needed: true }).eq('id', form.driver_crew_id).eq('production_id', productionId)
+      await supabase.from('crew').update({ no_transport_needed: true }).eq('uuid', form.driver_crew_id).eq('production_id', productionId)
     }
     onSaved()
   }
