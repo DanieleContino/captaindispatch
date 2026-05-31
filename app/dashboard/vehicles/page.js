@@ -125,7 +125,6 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
     setSaving(true)
     const row = {
       production_id:      PRODUCTION_ID,
-      id:                 form.id.trim().toUpperCase(),
       vehicle_type:       form.vehicle_type || null,
       vehicle_class:      form.vehicle_class.length > 0 ? form.vehicle_class : null,
       license_plate:      form.license_plate.trim().toUpperCase() || null,
@@ -163,7 +162,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
     if (err) { setError(err.message); return }
     // Se un crew è stato assegnato come driver, lo marchiamo automaticamente come NTN
     if (form.driver_crew_id) {
-      await supabase.from('crew').update({ no_transport_needed: true }).eq('id', form.driver_crew_id).eq('production_id', PRODUCTION_ID)
+      await supabase.from('crew').update({ no_transport_needed: true }).eq('uuid', form.driver_crew_id).eq('production_id', PRODUCTION_ID)
     }
     onSaved()
   }
