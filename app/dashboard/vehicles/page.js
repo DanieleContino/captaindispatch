@@ -3835,7 +3835,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
                 <span style={{ fontSize: '20px' }}>{TYPE_ICON[v.vehicle_type] || '🚗'}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
+                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>{v.display_id || v.id}</span>
                     {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 8px', borderRadius: '5px', border: '1px solid #d4d4d4' }}>{v.license_plate}</span>}
                     <span style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', padding: '1px 8px', borderRadius: '999px', border: '1px solid #86efac' }}>🤝 LOAN</span>
                   </div>
