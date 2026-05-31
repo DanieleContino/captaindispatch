@@ -3766,7 +3766,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
     if (!productionId) return
     setLoading(true)
     const [{ data: vData }, { data: allV }] = await Promise.all([
-      supabase.from('vehicles').select('id, vehicle_type, license_plate, driver_name, active, is_comodato, comodato_owner_crew_id, comodato_rate_per_km, comodato_fuel_reimbursement, comodato_notes').eq('production_id', productionId).eq('is_comodato', true).order('id'),
+      supabase.from('vehicles').select('uuid, id, display_id, vehicle_type, license_plate, driver_name, active, is_comodato, comodato_owner_crew_id, comodato_rate_per_km, comodato_fuel_reimbursement, comodato_notes').eq('production_id', productionId).eq('is_comodato', true).order('display_id'),
       supabase.from('vehicles').select('id').eq('production_id', productionId),
     ])
     setVehicles(vData || [])
