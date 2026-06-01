@@ -3278,7 +3278,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
 }
 
 // ─── NccTab ───────────────────────────────────────────────────
-function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle, reloadTrigger = 0 }) {
+function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle, reloadTrigger = 0, onVehicleSaved }) {
   const [agencies, setAgencies]         = useState([])
   const [loading, setLoading]           = useState(true)
   const [agencySidebarOpen, setAgencySidebarOpen] = useState(false)
@@ -3566,7 +3566,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle, reloadT
         mode="new"
         initial={null}
         onClose={() => setNccVehicleSidebarOpen(false)}
-        onSaved={() => { setNccVehicleSidebarOpen(false); load() }}
+        onSaved={() => { setNccVehicleSidebarOpen(false); load(); if (onVehicleSaved) onVehicleSaved() }}
         productionId={productionId}
         crewList={[]}
         vehicles={allVehicles}
@@ -4657,7 +4657,7 @@ export default function VehiclesPage() {
       )}
       {activeTab === 'ncc' && (
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px 16px' : '24px' }}>
-          <NccTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={nccAgencySidebarTriggerRef} onEditVehicle={openEdit} reloadTrigger={nccReloadTrigger} />
+          <NccTab productionId={PRODUCTION_ID} isMobile={isMobile} openTriggerRef={nccAgencySidebarTriggerRef} onEditVehicle={openEdit} reloadTrigger={nccReloadTrigger} onVehicleSaved={load} />
         </div>
       )}
       {activeTab === 'comodato' && (
