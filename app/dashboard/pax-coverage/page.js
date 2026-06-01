@@ -583,7 +583,7 @@ export default function PaxCoveragePage() {
     if (filterTS   !== 'ALL' && c.travel_status !== filterTS) return false
     if (filterDept !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
     if (filterHotel !== 'ALL' && c.hotel_id !== filterHotel) return false
-    const assigned = !!assignMap[c.id]
+    const assigned = !!assignMap[c.uuid]
     if (showOnly === 'ASSIGNED'   && !assigned) return false
     if (showOnly === 'UNASSIGNED' &&  assigned) return false
     if (search) {
@@ -593,11 +593,11 @@ export default function PaxCoveragePage() {
     return true
   })
 
-  const assigned   = filtered.filter(c =>  assignMap[c.id])
-  const unassigned = filtered.filter(c => !assignMap[c.id])
+  const assigned   = filtered.filter(c =>  assignMap[c.uuid])
+  const unassigned = filtered.filter(c => !assignMap[c.uuid])
 
-  const totalAssigned   = regularCrew.filter(c =>  assignMap[c.id]).length
-  const totalUnassigned = regularCrew.filter(c => !assignMap[c.id]).length
+  const totalAssigned   = regularCrew.filter(c =>  assignMap[c.uuid]).length
+  const totalUnassigned = regularCrew.filter(c => !assignMap[c.uuid]).length
   const pct = regularCrew.length > 0 ? Math.round(totalAssigned / regularCrew.length * 100) : 0
 
   if (!user) return (
@@ -785,7 +785,7 @@ export default function PaxCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {assigned.map(c => (
-                    <AssignedRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} />
+                    <AssignedRow key={c.id} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} />
                   ))}
                 </div>
               </div>

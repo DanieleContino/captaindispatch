@@ -396,9 +396,9 @@ Respond ONLY with a valid JSON object, no markdown, no backticks, no explanation
       // Per Mix/multi-leg, usiamo il primo pickup e tutti i dropoff unici
       // Risolvi TEXT ids → UUID (l'AI restituisce TEXT id, l'API si aspetta UUID)
       const locTextToUuid = {}
-      for (const loc of locations) { if (loc.id) locTextToUuid[loc.id] = loc.uuid }
+      for (const loc of locations) { if (loc.display_id) locTextToUuid[loc.display_id] = loc.uuid }
       const crewTextToUuid = {}
-      for (const c of crew) { if (c.id) crewTextToUuid[c.id] = c.uuid }
+      for (const c of crew) { if (c.display_id) crewTextToUuid[c.display_id] = c.uuid }
       const uuidLegs = resolvedLegs.map(leg => ({
         ...leg,
         pickup_id:     locTextToUuid[leg.pickup_id]  || leg.pickup_id,

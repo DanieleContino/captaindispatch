@@ -195,7 +195,7 @@ function getMajorityDept(groupCrew) {
 function pickBestVehicle(pool, groupCrew) {
   if (!pool.length) return null
   const dominantDept = getMajorityDept(groupCrew)
-  const crewIdSet = new Set(groupCrew.map(c => c.id))
+  const crewIdSet = new Set(groupCrew.map(c => c.uuid))
   let bestIdx = 0, bestScore = -Infinity
   for (let i = 0; i < pool.length; i++) {
     const v = pool[i]
@@ -226,12 +226,12 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
     const deptCfg = (c.department && deptDestOverrides[c.department]) || {}
     return {
       effectiveDest:        deptCfg.destId  ?? globalDestId,
-      effectiveCallMin:     crewCallOverrides[c.id] ?? deptCfg.callMin ?? globalCallMin,
+      effectiveCallMin:     crewCallOverrides[c.uuid] ?? deptCfg.callMin ?? globalCallMin,
       effectiveServiceType: deptCfg.serviceType ?? globalServiceType,
     }
   }
   const eligible = crew.filter(c => {
-    if (excludedCrewIds.has(c.id) || !c.hotel_id) return false
+    if (excludedCrewIds.has(c.uuid) || !c.hotel_id) return false
     if (c.hotel_status !== 'CONFIRMED' || c.no_transport_needed) return false
     // Stessa logica date-first di getCrewIneligibleReason
     if (c.arrival_date && c.departure_date) {
@@ -443,10 +443,10 @@ function enrichSuggestions(suggestions, draftTrips, routeMap, locMap) {
 // ─── Crew Quick-Edit Modal ────────────────────────────────────
 function CrewQuickEditModal({ crew, deptDestOverrides, crewCallOverrides, excludedCrewIds, globalCallMin, globalDestId, locMap, onUpdate, onClose }) {
   const t = useT()
-  const isExcluded = excludedCrewIds.has(crew.id)
+  const isExcluded = excludedCrewIds.has(crew.uuid)
   const deptCfg  = (crew.department && deptDestOverrides[crew.department]) || {}
   const deptBase = deptCfg.callMin ?? globalCallMin
-  const initCall = crewCallOverrides[crew.id] ?? deptBase
+  const initCall = crewCallOverrides[crew.uuid] ?? deptBase
   const effectDest = deptCfg.destId ?? globalDestId
   const [callMin, setCallMin] = useState(initCall)
   const [included, setIncluded] = useState(!isExcluded)
@@ -454,7 +454,7 @@ function CrewQuickEditModal({ crew, deptDestOverrides, crewCallOverrides, exclud
   const hasOverride = callMin !== deptBase
   const [bgC, txC] = deptColor(crew.department)
   function adjust(delta) { setCallMin(prev => Math.max(0, Math.min(1439, prev + delta))) }
-  function handleDone() { onUpdate({ crewId: crew.id, callMin, included }); onClose() }
+  function handleDone() { onUpdate({ crewId: crew.uuid, callMin, included }); onClose() }
   useEffect(() => {
     const h = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h)
@@ -859,7 +859,7 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
           {/* S43: Vehicle preferences row */}
           {!isUnassigned && (trip.vehicle?.preferred_dept || trip.vehicle?.preferred_crew_ids?.length > 0) && (() => {
             const prefCrewMatches = Array.isArray(trip.vehicle.preferred_crew_ids)
-              ? trip.vehicle.preferred_crew_ids.filter(id => trip.crewList.some(c => c.id === id)).length
+              ? trip.vehicle.preferred_crew_ids.filter(id => trip.crewList.some(c => c.uuid === id)).length
               : 0
             const [prefBg, prefTx] = trip.vehicle.preferred_dept ? deptColor(trip.vehicle.preferred_dept) : ['#f1f5f9', '#64748b']
             return (
@@ -895,7 +895,7 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {c.full_name}
-                          {Array.isArray(trip.vehicle?.preferred_crew_ids) && trip.vehicle.preferred_crew_ids.includes(c.id) && (
+                          {Array.isArray(trip.vehicle?.preferred_crew_ids) && trip.vehicle.preferred_crew_ids.includes(c.uuid) && (
                             <span style={{ color: '#d97706', marginLeft: '4px', fontSize: '11px' }} title="Preferred crew for this vehicle">★</span>
                           )}
                         </div>
@@ -1551,7 +1551,7 @@ export default function RocketPage() {
   const globalCallMin      = hhmmToMin(globalCallTime) ?? 420
   const allCrewWithHotel   = allCrew.filter(c => c.hotel_id)
   const eligibleCrew       = allCrewWithHotel.filter(c => !getCrewIneligibleReason(c, date))
-  const selectedCrew       = eligibleCrew.filter(c => !excludedCrewIds.has(c.id))
+  const selectedCrew       = eligibleCrew.filter(c => !excludedCrewIds.has(c.uuid))
   const activeVehicles     = vehicles.filter(v => v.active)
   const includedVehicles   = activeVehicles.filter(v => !excludedVehicleIds.has(v.id))
   const departments        = [...new Set(allCrewWithHotel.map(c => c.department).filter(Boolean))].sort()
@@ -1606,7 +1606,7 @@ export default function RocketPage() {
 
   function handleCrewModalUpdate({ crewId, callMin, included }) {
     setExcludedCrewIds(prev => { const next = new Set(prev); included ? next.delete(crewId) : next.add(crewId); return next })
-    const c = allCrew.find(x => x.id === crewId)
+    const c = allCrew.find(x => x.uuid === crewId)
     const deptBase = (c?.department && deptDestOverrides[c.department]?.callMin) ?? globalCallMin
     if (callMin === deptBase) { setCrewCallOverrides(prev => { const n = { ...prev }; delete n[crewId]; return n }) }
     else { setCrewCallOverrides(prev => ({ ...prev, [crewId]: callMin })) }
@@ -1656,10 +1656,10 @@ export default function RocketPage() {
     setDraftTrips(prev => {
       const next = prev.map(t => ({ ...t, crewList: [...t.crewList] }))
       const from = next.find(t => t.key === fromKey)
-      if (from) from.crewList = from.crewList.filter(c => c.id !== crewMember.id)
+      if (from) from.crewList = from.crewList.filter(c => c.uuid !== crewMember.uuid)
       if (toKey !== '__remove__') {
         const to = next.find(t => t.key === toKey)
-        if (to && !to.crewList.find(c => c.id === crewMember.id)) to.crewList = [...to.crewList, crewMember]
+        if (to && !to.crewList.find(c => c.uuid === crewMember.uuid)) to.crewList = [...to.crewList, crewMember]
       }
       return next
     })
@@ -2074,7 +2074,7 @@ export default function RocketPage() {
                         </div>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                           <button onClick={() => setExcludedCrewIds(new Set())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '700', color: '#1d4ed8' }}>✓ All</button>
-                          <button onClick={() => setExcludedCrewIds(new Set(eligibleCrew.map(c => c.id)))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>✗ None</button>
+                          <button onClick={() => setExcludedCrewIds(new Set(eligibleCrew.map(c => c.uuid)))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>✗ None</button>
                           <button onClick={() => setCrewCallOverrides({})} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>{t.rocketResetTimes}</button>
                           <button onClick={() => setExpandedDepts(new Set(accordionKeys))} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>{t.rocketExpandAll}</button>
                           <button onClick={() => setExpandedDepts(new Set())} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>{t.rocketCollapse}</button>
@@ -2120,7 +2120,7 @@ export default function RocketPage() {
                         const deptEffDest = deptCfg.destId ?? destId
                         const deptEffCall = deptCfg.callMin ?? globalCallMin
                         const eligibleInDept  = deptCrew.filter(c => !getCrewIneligibleReason(c, date)).length
-                        const selectedInDept  = deptCrew.filter(c => !excludedCrewIds.has(c.id) && !getCrewIneligibleReason(c, date)).length
+                        const selectedInDept  = deptCrew.filter(c => !excludedCrewIds.has(c.uuid) && !getCrewIneligibleReason(c, date)).length
                         // TASK 7: hasOvr now includes service type
                         const hasOvr = deptCfg.destId != null || (deptCfg.callMin != null && deptCfg.callMin !== globalCallMin) || deptCfg.serviceType != null
                         return (
@@ -2134,9 +2134,9 @@ export default function RocketPage() {
                               <span style={{ fontSize: '11px', color: hasOvr ? '#7c3aed' : '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 → {locMap[deptEffDest] || deptEffDest || '?'} · {minToHHMM(deptEffCall)}{deptCfg.serviceType ? ` · ${deptCfg.serviceType}` : ''}
                               </span>
-                              <button onClick={e => { e.stopPropagation(); setExcludedCrewIds(prev => { const next = new Set(prev); deptCrew.forEach(c => next.delete(c.id)); return next }) }}
+                              <button onClick={e => { e.stopPropagation(); setExcludedCrewIds(prev => { const next = new Set(prev); deptCrew.forEach(c => next.delete(c.uuid)); return next }) }}
                                 style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '5px', padding: '2px 6px', cursor: 'pointer', fontSize: '10px', fontWeight: '700', color: '#1d4ed8', flexShrink: 0 }}>✓</button>
-                              <button onClick={e => { e.stopPropagation(); setExcludedCrewIds(prev => { const next = new Set(prev); deptCrew.forEach(c => next.add(c.id)); return next }) }}
+                              <button onClick={e => { e.stopPropagation(); setExcludedCrewIds(prev => { const next = new Set(prev); deptCrew.forEach(c => next.add(c.uuid)); return next }) }}
                                 style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '5px', padding: '2px 6px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b', flexShrink: 0 }}>✗</button>
                             </div>
                             {expanded && deptCrew.map(c => {
@@ -2158,8 +2158,8 @@ export default function RocketPage() {
                                 )
                               }
                               // ── Eligible crew: interactive as before ──
-                              const excluded    = excludedCrewIds.has(c.id)
-                              const crewOvr     = crewCallOverrides[c.id]
+                              const excluded    = excludedCrewIds.has(c.uuid)
+                              const crewOvr     = crewCallOverrides[c.uuid]
                               const displayCall = crewOvr ?? deptEffCall
                               const hasCallOvr  = crewOvr != null
                               const destOvr     = deptCfg.destId && deptCfg.destId !== destId
@@ -2169,7 +2169,7 @@ export default function RocketPage() {
                                     background: excluded ? '#fafafa' : 'white', opacity: excluded ? 0.45 : 1, transition: 'background 0.1s' }}>
                                   <input type="checkbox" checked={!excluded}
                                     onClick={e => e.stopPropagation()}
-                                    onChange={e => setExcludedCrewIds(prev => { const next = new Set(prev); e.target.checked ? next.delete(c.id) : next.add(c.id); return next })}
+                                    onChange={e => setExcludedCrewIds(prev => { const next = new Set(prev); e.target.checked ? next.delete(c.uuid) : next.add(c.uuid); return next })}
                                     style={{ width: '14px', height: '14px', cursor: 'pointer', accentColor: '#2563eb', flexShrink: 0 }} />
                                   <span style={{ flex: 1, fontSize: '13px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.full_name}</span>
                                   {c.on_location === false && <span style={{ fontSize: '9px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', border: '1px solid #e2e8f0', flexShrink: 0 }}>🏠</span>}
