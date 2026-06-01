@@ -751,7 +751,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               {crewLookupResults.length > 0 && (
                 <div style={{ marginTop: '4px', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden', background: 'white' }}>
                   {crewLookupResults.map(c => (
-                    <div key={c.id} onClick={() => setCrewInfoCrew(c)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: 'white' }} onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                    <div key={c.uuid} onClick={() => setCrewInfoCrew(c)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: 'white' }} onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
                         <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
@@ -1077,7 +1077,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               {selCrew.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
                   {selCrew.map(c => (
-                    <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', fontWeight: '600' }}>
+                    <span key={c.uuid} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', fontWeight: '600' }}>
                       {c.full_name.split(' ')[0]} {c.full_name.split(' ').slice(-1)[0]}
                       <button type="button" onClick={() => setSelCrew(p => p.filter(x => x.uuid !== c.uuid))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '11px', padding: 0, lineHeight: 1, marginLeft: '1px' }}>×</button>
                     </span>
@@ -1094,7 +1094,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                         {suggestedCrew.map(c => {
                           const alreadySel = selCrew.some(x => x.uuid === c.uuid)
                           return (
-                            <div key={c.id} onClick={() => !alreadySel && setSelCrew(p => [...p, c])}
+                            <div key={c.uuid} onClick={() => !alreadySel && setSelCrew(p => [...p, c])}
                               style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: alreadySel ? '#eff6ff' : 'white', border: `1px solid ${alreadySel ? '#bfdbfe' : '#fde68a'}`, borderRadius: '6px', cursor: alreadySel ? 'default' : 'pointer' }}
                               onMouseEnter={e => { if (!alreadySel) e.currentTarget.style.background = '#fef9c3' }}
                               onMouseLeave={e => { if (!alreadySel) e.currentTarget.style.background = alreadySel ? '#eff6ff' : 'white' }}>
@@ -1118,7 +1118,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     ) : crewList.filter(c => !crewSearch || c.full_name.toLowerCase().includes(crewSearch.toLowerCase()) || (c.department || '').toLowerCase().includes(crewSearch.toLowerCase())).map(c => {
                       const sel = selCrew.some(x => x.uuid === c.uuid)
                       return (
-                        <div key={c.id} onClick={() => setSelCrew(p => sel ? p.filter(x => x.uuid !== c.uuid) : [...p, c])}
+                        <div key={c.uuid} onClick={() => setSelCrew(p => sel ? p.filter(x => x.uuid !== c.uuid) : [...p, c])}
                           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', background: sel ? '#eff6ff' : 'white', borderBottom: '1px solid #f1f5f9' }}>
                           <div style={{ width: '14px', height: '14px', borderRadius: '3px', border: `2px solid ${sel ? '#2563eb' : '#cbd5e1'}`, background: sel ? '#2563eb' : 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {sel && <span style={{ color: 'white', fontSize: '9px', fontWeight: '900' }}>✓</span>}

@@ -684,7 +684,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               {crewLookupResults.length > 0 && (
                 <div style={{ marginTop: '4px', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden', background: 'white' }}>
                   {crewLookupResults.map(c => (
-                    <div key={c.id} onClick={() => setCrewInfoCrew(c)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: 'white' }} onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                    <div key={c.uuid} onClick={() => setCrewInfoCrew(c)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: 'white' }} onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
                         <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
@@ -863,7 +863,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingLeft: '4px' }}>
                                   {legPax.length > 0 ? legPax.map(c => (
-                                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
+                                    <div key={c.uuid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', minWidth: 0 }}>
                                         <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
                                         {c.no_transport_needed && <span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1', flexShrink: 0 }}>🚐 SD</span>}
@@ -883,7 +883,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                           {assignedPax.map(c => (
-                            <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
+                            <div key={c.uuid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', minWidth: 0 }}>
                                 <span style={{ fontWeight: '600', color: '#0f172a' }}>{c.full_name}</span>
                                 {c.no_transport_needed && <span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#6b7280', border: '1px solid #cbd5e1' }}>🚐 SD</span>}
@@ -904,7 +904,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.06em', marginBottom: '6px' }}>📌 Suggeriti per {selVehicleEdit.id}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         {suggestedCrewEdit.map(c => (
-                          <div key={c.id} onClick={() => addPax(c)}
+                          <div key={c.uuid} onClick={() => addPax(c)}
                             style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: 'white', border: '1px solid #fde68a', borderRadius: '6px', cursor: 'pointer' }}
                             onMouseEnter={e => e.currentTarget.style.background = '#fef9c3'}
                             onMouseLeave={e => e.currentTarget.style.background = 'white'}>
@@ -941,7 +941,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                         ) : filtered.map(c => {
                           const isBusy = !!busyMap[c.uuid]
                           return (
-                            <div key={c.id} onClick={() => !isBusy && addPax(c)}
+                            <div key={c.uuid} onClick={() => !isBusy && addPax(c)}
                               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: isBusy ? 'default' : 'pointer', borderBottom: '1px solid #f8fafc', background: isBusy ? '#fffbeb' : 'white' }}
                               onMouseEnter={e => { if (!isBusy) e.currentTarget.style.background = '#eff6ff' }}
                               onMouseLeave={e => { if (!isBusy) e.currentTarget.style.background = 'white' }}>
@@ -971,7 +971,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                             {filteredNtn.map(c => {
                               const isBusy = !!busyMap[c.uuid]
                               return (
-                                <div key={c.id} onClick={() => !isBusy && addPax(c)}
+                                <div key={c.uuid} onClick={() => !isBusy && addPax(c)}
                                   style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: isBusy ? 'default' : 'pointer', borderBottom: '1px solid #f1f5f9', background: isBusy ? '#fffbeb' : '#f8fafc' }}
                                   onMouseEnter={e => { if (!isBusy) e.currentTarget.style.background = '#f1f5f9' }}
                                   onMouseLeave={e => { if (!isBusy) e.currentTarget.style.background = '#f8fafc' }}>
@@ -1003,7 +1003,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                         {filteredNtn.map(c => {
                           const isBusy = !!busyMap[c.uuid]
                           return (
-                            <div key={c.id} onClick={() => !isBusy && addPax(c)}
+                            <div key={c.uuid} onClick={() => !isBusy && addPax(c)}
                               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: isBusy ? 'default' : 'pointer', borderBottom: '1px solid #f1f5f9', background: isBusy ? '#fffbeb' : '#f8fafc' }}
                               onMouseEnter={e => { if (!isBusy) e.currentTarget.style.background = '#f1f5f9' }}
                               onMouseLeave={e => { if (!isBusy) e.currentTarget.style.background = '#f8fafc' }}>
