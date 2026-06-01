@@ -271,23 +271,23 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
             .ilike('name', form.name.trim())
             .maybeSingle()
           if (existing) {
-            location_id = existing.id
-            // FIX: ensure the location is flagged as hotel (may have been deleted or was a non-hotel location)
+            // UUID migration: location_id must be the UUID FK, not the TEXT display id
+            location_id = existing.uuid
             await supabase.from('locations')
               .update({ is_hotel: true, ...(lat != null && lng != null ? { lat, lng } : {}) })
               .eq('uuid', location_id)
           } else {
           const genId = form.name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 20)
-          const { error: locErr } = await supabase.from('locations').insert({
+          const { data: newLoc, error: locErr } = await supabase.from('locations').insert({
             display_id: genId,
             production_id: productionId,
             name:         form.name.trim(),
             is_hotel:     true,
             lat,
             lng,
-          })
+          }).select('uuid').single()
           if (locErr) { setError(locErr.message); return }
-          location_id = genId
+          location_id = newLoc.uuid
           }
         }
 
@@ -990,9 +990,11 @@ export default function HotelSettingsPage() {
 
   // Build merged list: one entry per location, with hotel data if exists
   const hotelCards = locations.map(loc => {
-    const hotelRow = hotelsMap[loc.id] || null
+    // UUID migration: hotelsMap is keyed by h.location_id which is UUID FK to locations.uuid
+    const hotelRow = hotelsMap[loc.uuid] || null
     return {
-      location_id:          loc.id,
+      location_id:          loc.uuid,      // UUID — used as FK
+      display_id:           loc.display_id, // TEXT — used only for display
       name:                 loc.name,
       lat:                  loc.lat,
       lng:                  loc.lng,
@@ -1092,7 +1094,7 @@ export default function HotelSettingsPage() {
                         <span style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a', lineHeight: 1.3 }}>{hotel.name}</span>
                       </div>
                       <span style={{ fontFamily: 'monospace', fontSize: '10px', fontWeight: '700', background: '#f1f5f9', color: '#475569', padding: '1px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                        {hotel.location_id}
+                        {hotel.display_id || hotel.location_id}
                       </span>
                     </div>
                     <button onClick={() => hotel.hotel_id ? openEdit(hotel) : openNew(hotel)} style={{

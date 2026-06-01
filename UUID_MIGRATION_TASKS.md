@@ -393,6 +393,7 @@ Commit: `"Fix QuickTripModal S17d QT-3/QT-4: resolve TEXT ids to UUID before API
 | `app/dashboard/qr-codes/page.js` | ✅ Q1 | S14 |
 | `app/dashboard/rocket/page.js` | ✅ R1-R5 | S15 |
 | `app/dashboard/fleet/components/QuickTripModal.js` | ✅ QT-1/QT-2/QT-3/QT-4 [b13624e] | S17c+S17d |
+| `app/dashboard/hotel-settings/page.js` | ✅ H1-H4 — uuid insert+lookup+map | S18a |
 
 ---
 
@@ -411,6 +412,7 @@ S17a    ✅ completato (vehicles V10/V11/V12) [7b576fd]
 S17b    ✅ completato (wrap-trip W1/W2/W3) [fd9cccd]
 S17c    ✅ completato (QuickTripModal QT-1/QT-2) [b13624e]
 S17d    ✅ completato (QuickTripModal QT-3/QT-4) [b13624e]
+S18a    ✅ completato (hotel-settings H1-H4) — fix uuid in Hotel Settings
 S18     ← PROSSIMA: test produzione + verifica migrazione UUID completa
 ```
 
