@@ -1936,7 +1936,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
     setDriverNotFound(false); setDriver2NotFound(false)
     if (mode === 'edit' && initial) {
       setForm({
-        id:                         initial.id                        || '',
+        id:                         initial.display_id                        || '',
         vehicle_type:               initial.vehicle_type              || 'VAN',
         vehicle_class:              Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []),
         rental_brand:               initial.rental_brand              || '',
@@ -3933,7 +3933,7 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
     setError(null); setCd(false)
     if (mode === 'edit' && initial) {
       setForm({
-        id:                          initial.id                          || '',
+        id:                         initial.display_id                        || '',
         vehicle_type:                initial.vehicle_type                || 'VAN',
         license_plate:               initial.license_plate               || '',
         capacity:                    initial.capacity                    ?? '',

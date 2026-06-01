@@ -63,7 +63,7 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
     }
     setError(null); setCd(false); setRefMsg(null)
     if (mode === 'edit' && initial) {
-      setForm({ id: initial.id || '', name: initial.name || '', is_hub: !!initial.is_hub, lat: initial.lat ?? '', lng: initial.lng ?? '', default_pickup_point: initial.default_pickup_point || '' })
+      setForm({ id: initial.display_id || '', name: initial.name || '', is_hub: !!initial.is_hub, lat: initial.lat ?? '', lng: initial.lng ?? '', default_pickup_point: initial.default_pickup_point || '' })
     } else {
       setForm({ ...EMPTY })
     }

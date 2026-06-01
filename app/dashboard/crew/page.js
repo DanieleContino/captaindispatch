@@ -1137,7 +1137,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
     setError(null); setConfirmDel(false)
     if (mode === 'edit' && initial) {
       setForm({
-        id:             initial.id || '',
+        id:             initial.display_id || '',
         full_name:      initial.full_name || '',
         role:           initial.role || '',
         department:     initial.department || '',

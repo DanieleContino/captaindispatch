@@ -77,7 +77,7 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
       .then(({ data }) => setAgencies(data || []))
     if (mode === 'edit' && initial) {
       setForm({
-        id:               initial.id               || '',
+        id:               initial.display_id               || '',
         vehicle_type:     initial.vehicle_type      || 'VAN',
         license_plate:    initial.license_plate     || '',
         capacity:         initial.capacity          ?? '',
