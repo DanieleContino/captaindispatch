@@ -2129,7 +2129,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.id] || []} stays={staysMap[m.id] || []} unreadCount={unreadMap[m.id] || 0} notesCount={notesMap[m.id] || 0} isLocal={m.is_local || false} familyCount={familyCountMap[m.id] || 0} onFamilyClick={() => openFamilyModal(m.id, m.full_name)} />
+                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.uuid] || []} stays={staysMap[m.uuid] || []} unreadCount={unreadMap[m.uuid] || 0} notesCount={notesMap[m.uuid] || 0} isLocal={m.is_local || false} familyCount={familyCountMap[m.uuid] || 0} onFamilyClick={() => openFamilyModal(m.id, m.full_name)} />
                   ))}
                 </div>
               </div>

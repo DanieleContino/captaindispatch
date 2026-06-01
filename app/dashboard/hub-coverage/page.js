@@ -721,12 +721,12 @@ export default function HubCoveragePage() {
   const hotels      = [...new Set(crew.map(c => c.hotel_id).filter(Boolean))].sort()
 
   const filtered = crew.filter(c => {
-    if (filterTS !== 'ALL') { const movs = travelMap[c.id] || []; const hasDir = movs.some(m => m.direction === filterTS); if (!hasDir) return false }
+    if (filterTS !== 'ALL') { const movs = travelMap[c.uuid] || []; const hasDir = movs.some(m => m.direction === filterTS); if (!hasDir) return false }
     if (filterDept  !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
     if (filterHotel !== 'ALL' && c.hotel_id !== filterHotel) return false
-    const hasTravel = (travelMap[c.id] || []).length > 0
-    const isCovered = hasTravel && !!assignMap[c.id]
-    const isMissing = hasTravel && !assignMap[c.id]
+    const hasTravel = (travelMap[c.uuid] || []).length > 0
+    const isCovered = hasTravel && !!assignMap[c.uuid]
+    const isMissing = hasTravel && !assignMap[c.uuid]
     const isNoInfo  = !hasTravel
     if (showOnly === 'COVERED' && !isCovered) return false
     if (showOnly === 'MISSING' && !isMissing) return false
@@ -738,13 +738,13 @@ export default function HubCoveragePage() {
     return true
   })
 
-  const noInfo  = filtered.filter(c => !travelMap[c.id] || travelMap[c.id].length === 0)
-  const covered = filtered.filter(c => travelMap[c.id]?.length > 0 && assignMap[c.id])
-  const missing = filtered.filter(c => travelMap[c.id]?.length > 0 && !assignMap[c.id])
+  const noInfo  = filtered.filter(c => !travelMap[c.uuid] || travelMap[c.uuid].length === 0)
+  const covered = filtered.filter(c => travelMap[c.uuid]?.length > 0 && assignMap[c.uuid])
+  const missing = filtered.filter(c => travelMap[c.uuid]?.length > 0 && !assignMap[c.uuid])
 
-  const totalCovered = crew.filter(c => (travelMap[c.id] || []).length > 0 &&  assignMap[c.id]).length
-  const totalMissing = crew.filter(c => (travelMap[c.id] || []).length > 0 && !assignMap[c.id]).length
-  const totalNoInfo  = crew.filter(c => !travelMap[c.id] || travelMap[c.id].length === 0).length
+  const totalCovered = crew.filter(c => (travelMap[c.uuid] || []).length > 0 &&  assignMap[c.uuid]).length
+  const totalMissing = crew.filter(c => (travelMap[c.uuid] || []).length > 0 && !assignMap[c.uuid]).length
+  const totalNoInfo  = crew.filter(c => !travelMap[c.uuid] || travelMap[c.uuid].length === 0).length
   const pct = crew.length > 0 ? Math.round(totalCovered / crew.length * 100) : 0
 
   const rawTotal     = rawMovements.length
@@ -990,7 +990,7 @@ export default function HubCoveragePage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               {ntnCrew.map(c => (
-                <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} />
+                <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
               ))}
             </div>
           </div>
@@ -1017,7 +1017,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {missing.map(c => (
-                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} onAssign={() => {
+                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} onAssign={() => {
                       const params = new URLSearchParams({
                         assignCrewId:   c.id,
                         assignCrewName: c.full_name,
@@ -1044,7 +1044,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {covered.map(c => (
-                    <CoveredRow key={c.id} member={c} trips={assignMap[c.id] || []} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} />
+                    <CoveredRow key={c.id} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
                   ))}
                 </div>
               </div>
@@ -1061,7 +1061,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {noInfo.map(c => (
-                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={[]} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} onAssign={() => {
+                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={[]} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} onAssign={() => {
                       const params = new URLSearchParams({
                         assignCrewId:   c.id,
                         assignCrewName: c.full_name,
@@ -1089,7 +1089,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {ntnCrew.map(c => (
-                    <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.id] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.id] || 0} notesCount={notesMap[c.id] || 0} />
+                    <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
                   ))}
                 </div>
               </div>
