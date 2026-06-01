@@ -127,8 +127,8 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         .sort((a, b) => (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name))
       setCrewList(crew)
       if (assignCtx?.id) {
-        const match = crew.find(c => c.id === assignCtx.id)
-        if (match) setSelCrew(prev => prev.some(x => x.id === match.id) ? prev : [...prev, match])
+        const match = crew.find(c => c.uuid === assignCtx.id)
+        if (match) setSelCrew(prev => prev.some(x => x.uuid === match.uuid) ? prev : [...prev, match])
       }
     })
     return () => { cancelled = true }
@@ -168,7 +168,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const selVehicle    = vehicles.find(v => v.uuid === form.vehicle_id)
   const suggestedCrew = (selVehicle && (selVehicle.preferred_dept || selVehicle.preferred_crew_ids?.length > 0))
     ? crewList.filter(c =>
-        (selVehicle.preferred_crew_ids?.includes(c.id)) ||
+        (selVehicle.preferred_crew_ids?.includes(c.uuid)) ||
         (selVehicle.preferred_dept && c.department === selVehicle.preferred_dept)
       )
     : []
@@ -991,7 +991,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     const hasPref = v.preferred_dept || v.preferred_crew_ids?.length > 0
                     return (
                       <option key={v.uuid} value={v.uuid}>
-                        {avail ? '' : '⚠ '}{v.id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
+                        {avail ? '' : '⚠ '}{v.display_id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
                       </option>
                     )
                   })}
@@ -1079,7 +1079,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                   {selCrew.map(c => (
                     <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', fontWeight: '600' }}>
                       {c.full_name.split(' ')[0]} {c.full_name.split(' ').slice(-1)[0]}
-                      <button type="button" onClick={() => setSelCrew(p => p.filter(x => x.id !== c.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '11px', padding: 0, lineHeight: 1, marginLeft: '1px' }}>×</button>
+                      <button type="button" onClick={() => setSelCrew(p => p.filter(x => x.uuid !== c.uuid))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: '11px', padding: 0, lineHeight: 1, marginLeft: '1px' }}>×</button>
                     </span>
                   ))}
                   <button type="button" onClick={() => setSelCrew([])} style={{ background: 'none', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '999px', padding: '2px 8px', fontSize: '10px', cursor: 'pointer', fontWeight: '700' }}>Clear</button>
@@ -1092,7 +1092,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                       <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', letterSpacing: '0.06em', marginBottom: '6px' }}>📌 Suggeriti per {selVehicle.id}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         {suggestedCrew.map(c => {
-                          const alreadySel = selCrew.some(x => x.id === c.id)
+                          const alreadySel = selCrew.some(x => x.uuid === c.uuid)
                           return (
                             <div key={c.id} onClick={() => !alreadySel && setSelCrew(p => [...p, c])}
                               style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: alreadySel ? '#eff6ff' : 'white', border: `1px solid ${alreadySel ? '#bfdbfe' : '#fde68a'}`, borderRadius: '6px', cursor: alreadySel ? 'default' : 'pointer' }}
@@ -1116,9 +1116,9 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                         {t.noCrewStatus} ({transferClass === 'ARRIVAL' ? 'IN' : transferClass === 'DEPARTURE' ? 'OUT' : 'PRESENT'})
                       </div>
                     ) : crewList.filter(c => !crewSearch || c.full_name.toLowerCase().includes(crewSearch.toLowerCase()) || (c.department || '').toLowerCase().includes(crewSearch.toLowerCase())).map(c => {
-                      const sel = selCrew.some(x => x.id === c.id)
+                      const sel = selCrew.some(x => x.uuid === c.uuid)
                       return (
-                        <div key={c.id} onClick={() => setSelCrew(p => sel ? p.filter(x => x.id !== c.id) : [...p, c])}
+                        <div key={c.id} onClick={() => setSelCrew(p => sel ? p.filter(x => x.uuid !== c.uuid) : [...p, c])}
                           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', background: sel ? '#eff6ff' : 'white', borderBottom: '1px solid #f1f5f9' }}>
                           <div style={{ width: '14px', height: '14px', borderRadius: '3px', border: `2px solid ${sel ? '#2563eb' : '#cbd5e1'}`, background: sel ? '#2563eb' : 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {sel && <span style={{ color: 'white', fontSize: '9px', fontWeight: '900' }}>✓</span>}

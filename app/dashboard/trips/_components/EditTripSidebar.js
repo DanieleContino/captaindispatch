@@ -180,7 +180,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     const [paxRes, crewRes, dayTripsRes] = await Promise.all([
       existingGroupIds.length > 0
         ? supabase.from('trip_passengers')
-            .select('crew_id, trip_row_id, crew!inner(uuid,id,full_name,department,no_transport_needed,hotel_id)')
+            .select('crew_id, trip_row_id, crew!inner(uuid,full_name,department,no_transport_needed,hotel_id)')
             .in('trip_row_id', existingGroupIds)
         : Promise.resolve({ data: [] }),
 
@@ -208,7 +208,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (reqId !== loadPaxReqRef.current) return
 
     const assigned    = (paxRes.data || []).map(p => ({ ...p.crew, trip_row_id: p.trip_row_id }))
-    const assignedIds = new Set(assigned.map(c => c.id))
+    const assignedIds = new Set(assigned.map(c => c.uuid))
     setAssignedPax(isNewLeg ? [] : assigned)
 
     const dayTrips   = dayTripsRes.data || []
@@ -232,7 +232,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       .filter(s => s.crew?.hotel_status === 'CONFIRMED')
       .map(s => ({ ...s.crew, _checkoutToday: s.departure_date === today }))
       .sort((a, b) => (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name))
-    setAvailableCrew(crewFromStays.filter(c => !assignedIds.has(c.id)))
+    setAvailableCrew(crewFromStays.filter(c => !assignedIds.has(c.uuid)))
     setPaxLoading(false)
   }
 
@@ -244,7 +244,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (activeLeg?.isNew) {
       const newPax = [...assignedPax, { ...crew, trip_row_id: targetId }]
       setAssignedPax(newPax)
-      setAvailableCrew(p => p.filter(c => c.id !== crew.id))
+      setAvailableCrew(p => p.filter(c => c.uuid !== crew.uuid))
       setExtraLegs(prev => prev.map(l =>
         l.id === activeLeg.id ? { ...l, pendingPax: [...(l.pendingPax || []), crew] } : l
       ))
@@ -257,7 +257,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (!error) {
       const newPax = [...assignedPax, { ...crew, trip_row_id: targetId }]
       setAssignedPax(newPax)
-      setAvailableCrew(p => p.filter(c => c.id !== crew.id))
+      setAvailableCrew(p => p.filter(c => c.uuid !== crew.uuid))
       const legPax = newPax.filter(p => p.trip_row_id === targetId)
       await supabase.from('trips').update({
         pax_count: legPax.length,
@@ -272,14 +272,14 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
     const isNewLegPax = extraLegs.some(l => l.isNew === true && l.id === crew.trip_row_id)
     if (isNewLegPax) {
-      setAssignedPax(assignedPax.filter(c => c.id !== crew.id))
+      setAssignedPax(assignedPax.filter(c => c.uuid !== crew.uuid))
       setAvailableCrew(p =>
-        [...p, { id: crew.id, full_name: crew.full_name, department: crew.department }].sort((a, b) =>
+        [...p, { uuid: crew.uuid, full_name: crew.full_name, department: crew.department }].sort((a, b) =>
           (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name)
         )
       )
       setExtraLegs(prev => prev.map(l =>
-        l.id === crew.trip_row_id ? { ...l, pendingPax: (l.pendingPax || []).filter(c => c.id !== crew.id) } : l
+        l.id === crew.trip_row_id ? { ...l, pendingPax: (l.pendingPax || []).filter(c => c.uuid !== crew.uuid) } : l
       ))
       return
     }
@@ -289,10 +289,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       .delete().eq('trip_row_id', targetTripId).eq('crew_id', crew.uuid)
     if (error) { setError(error.message); return }
 
-    const newPax = assignedPax.filter(c => c.id !== crew.id)
+    const newPax = assignedPax.filter(c => c.uuid !== crew.uuid)
     setAssignedPax(newPax)
     setAvailableCrew(p =>
-      [...p, { id: crew.id, full_name: crew.full_name, department: crew.department }].sort((a, b) =>
+      [...p, { uuid: crew.uuid, full_name: crew.full_name, department: crew.department }].sort((a, b) =>
         (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name)
       )
     )
@@ -596,7 +596,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   const selVehicleEdit    = vehicles.find(v => v.uuid === form.vehicle_id)
   const suggestedCrewEdit = (selVehicleEdit && (selVehicleEdit.preferred_dept || selVehicleEdit.preferred_crew_ids?.length > 0))
     ? availableCrew.filter(c =>
-        (selVehicleEdit.preferred_crew_ids?.includes(c.id)) ||
+        (selVehicleEdit.preferred_crew_ids?.includes(c.uuid)) ||
         (selVehicleEdit.preferred_dept && c.department === selVehicleEdit.preferred_dept)
       )
     : []

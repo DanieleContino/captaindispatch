@@ -117,7 +117,7 @@ export async function GET(req) {
 
       if (!crewErr && allCrew && allCrew.length > 0) {
         const crewDeptMap = {}
-        for (const c of allCrew) crewDeptMap[c.id] = c.department || null
+        for (const c of allCrew) crewDeptMap[c.uuid] = c.department || null
 
         // Recupera i trip_passengers dei trip del giorno
         // Limita a date più recenti per contenere i tripIds
