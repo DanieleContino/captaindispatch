@@ -344,12 +344,12 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
       const toAssign = remaining.splice(0, capSug)
       if (remaining.length > 0 && toAssign.length === capSug && capSug < capMax) {
         const addable = Math.min(capMax - capSug, remaining.length)
-        if (addable > 0) suggestions.push({ type: 'CAN_ADD', tripKey: `t${seq}`, vehicleId: v.id, addable,
+        if (addable > 0) suggestions.push({ type: 'CAN_ADD', tripKey: `t${seq}`, vehicleId:   v.uuid, addable,
           names: remaining.slice(0, addable).map(c => c.full_name),
           msg: `${v.display_id || v.id} can carry ${addable} more (pax_max=${capMax}): ${remaining.slice(0, addable).map(c => c.full_name).join(', ')}` })
       }
       // Tag each crew member with their effectiveDest for multi-pickup/dropoff detection
-      draftTrips.push({ key: `t${seq++}`, vehicleId: v.id, vehicle: v,
+      draftTrips.push({ key: `t${seq++}`, vehicleId:   v.uuid, vehicle: v,
         hotelId: g.hotelId, destId: g.destId, callMin: g.callMin, pickupMin, durationMin: dur,
         serviceType: g.serviceType,
         crewList: toAssign.map(c => ({ ...c, _effectiveDest: g.destId })) })
@@ -573,12 +573,12 @@ function AddVehicleModal({ vehicles, locations, routeMap, locMap, defaultDestId,
 
   function handleAdd() {
     if (!canAdd) return
-    const v = vehicles.find(x => x.id === selVehicleId)
+    const v = vehicles.find(x => x.uuid === selVehicleId)
     if (!v) return
     const callM = hhmmToMin(callTime) ?? 420
     const dur   = (selPickupId && routeMap[`${selPickupId}||${selDropoffId}`]) ?? 30
     onAdd({
-      vehicleId:   v.id,
+      vehicleId:   v.uuid,
       vehicle:     v,
       hotelId:     selPickupId || null,
       destId:      selDropoffId,

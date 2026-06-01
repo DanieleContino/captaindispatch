@@ -610,13 +610,13 @@ function WrapTripContent() {
         if (text.startsWith('VH:')) {
           const qrId = text.slice(3).toLowerCase().trim()
           const found = vehicles.find(v =>
-            v.id.toLowerCase() === qrId ||
-            v.id.toLowerCase().replace(/[^a-z0-9]/g, '') === qrId.replace(/[^a-z0-9]/g, '') ||
+            v.display_id.toLowerCase() === qrId ||
+            v.display_id.toLowerCase().replace(/[^a-z0-9]/g, '') === qrId.replace(/[^a-z0-9]/g, '') ||
             v.sign_code?.toLowerCase() === qrId
           )
           if (found) {
             setVehicle(found)
-            showToast('✅ Vehicle ' + found.id + ' assigned', 'success')
+            showToast('✅ Vehicle ' + found.display_id + ' assigned', 'success')
             setStep(3)
             return
           }
@@ -625,12 +625,12 @@ function WrapTripContent() {
           const qrId = text.slice(3).toLowerCase().trim()
           // 1) try exact / fuzzy match in local list
           const found = crew.find(c =>
-            c.id.toLowerCase() === qrId ||
-            c.id.toLowerCase().replace(/[^a-z0-9]/g, '') === qrId.replace(/[^a-z0-9]/g, '')
+            c.display_id.toLowerCase() === qrId ||
+            c.display_id.toLowerCase().replace(/[^a-z0-9]/g, '') === qrId.replace(/[^a-z0-9]/g, '')
           )
           if (found) {
-            if (selCrew.find(x => x.id === found.id)) { showToast('⚠️ ' + found.full_name + ' already added', 'error'); return }
-            setSelCrew(p => [...p, { uuid: found.uuid, id: found.id, full_name: found.full_name, department: found.department, hotel_id: found.hotel_id || null }])
+            if (selCrew.find(x => x.uuid === found.uuid)) { showToast('⚠️ ' + found.full_name + ' already added', 'error'); return }
+            setSelCrew(p => [...p, { uuid: found.uuid, display_id: found.display_id, full_name: found.full_name, department: found.department, hotel_id: found.hotel_id || null }])
             showToast('✅ ' + found.full_name + ' added', 'success')
             return
           }
