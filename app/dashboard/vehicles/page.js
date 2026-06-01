@@ -1333,7 +1333,7 @@ function RentalReportTab({ productionId }) {
                       const rowBg = idx % 2 === 0 ? 'white' : '#fafafa'
                       return (
                         <tr key={v.id} style={{ background: rowBg }}>
-                          <td style={{ ...tdStyle, background: rowBg, fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>{v.id}</td>
+                          <td style={{ ...tdStyle, background: rowBg, fontFamily: 'monospace', fontWeight: '700', color: '#0f172a' }}>{v.display_id}</td>
                           <td style={{ ...tdStyle, background: rowBg }}>{[v.rental_brand, v.rental_model].filter(Boolean).join(' ') || '—'}</td>
                           <td style={{ ...tdStyle, background: rowBg, fontFamily: 'monospace' }}>{v.license_plate || '—'}</td>
                           <td style={{ ...tdStyle, background: rowBg }}>{v.driver_name || '—'}</td>
@@ -1492,7 +1492,7 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
 
     switch (col.source_field) {
       case 'vehicle_id':
-        return <td key={col.source_field} onClick={() => onEditVehicle ? onEditVehicle(v) : (() => { setRentalSidebarMode('edit'); setRentalTarget(v); setRentalSidebarOpen(true) })()} style={{ padding: '6px 8px', fontFamily: 'monospace', fontWeight: '700', fontSize: '12px', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(37,99,235,0.06)'} onMouseLeave={e => e.currentTarget.style.background = ''}>{v.id}</td>
+        return <td key={col.source_field} onClick={() => onEditVehicle ? onEditVehicle(v) : (() => { setRentalSidebarMode('edit'); setRentalTarget(v); setRentalSidebarOpen(true) })()} style={{ padding: '6px 8px', fontFamily: 'monospace', fontWeight: '700', fontSize: '12px', color: '#0f172a', cursor: 'pointer', whiteSpace: 'nowrap' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(37,99,235,0.06)'} onMouseLeave={e => e.currentTarget.style.background = ''}>{v.display_id}</td>
       case 'brand_model':
         return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '12px', color: '#374151', whiteSpace: 'nowrap' }}>{[v.rental_brand, v.rental_model].filter(Boolean).join(' ') || '—'}</td>
       case 'plate':
