@@ -238,7 +238,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
       if (!s.last_lat || !s.last_lng) return
       activeVehicleIds.add(s.vehicle_id)
 
-      const vd = vehicleData.find(v => v.vehicle.id === s.vehicle_id)
+      const vd = vehicleData.find(v => v.vehicle.uuid === s.vehicle_id)
       const status = vd?.status || 'IDLE'
       const color  = STATUS_COLOR[status] || '#94a3b8'
       const vehicle = vd?.vehicle
@@ -407,10 +407,10 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
           <span style={{ fontSize: '24px', flexShrink: 0 }}>{icon}</span>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: '900', fontSize: '17px', color: '#0f172a', letterSpacing: '-0.3px' }}>
-              {vehicle.sign_code || vehicle.id}
+              {vehicle.sign_code || vehicle.display_id}
             </div>
             <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
-              {[vehicle.driver_name || vehicle.ncc_driver_name, vehicle.id, vehicle.capacity ? `×${vehicle.capacity}` : null]
+              {[vehicle.driver_name || vehicle.ncc_driver_name, vehicle.display_id, vehicle.capacity ? `×${vehicle.capacity}` : null]
                 .filter(Boolean).join('  ·  ')}
             </div>
             {vehicle.is_ncc && (
@@ -444,7 +444,7 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
                   const res = await fetch('/api/go/ping', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ vehicle_id: vehicle.id, production_id: productionId }),
+                    body: JSON.stringify({ vehicle_id: vehicle.uuid, production_id: productionId }),
                   })
                   const d = await res.json()
                   if (d.error) setPingStatus('error')
@@ -1021,7 +1021,7 @@ export default function FleetMonitorPage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {sessions.map((s, i) => {
-                    const vd = vehicleData.find(v => v.vehicle.id === s.vehicle_id)
+                    const vd = vehicleData.find(v => v.vehicle.uuid === s.vehicle_id)
                     const status = vd?.status || 'IDLE'
                     const st = SS[status] || SS.IDLE
                     const vehicle = vd?.vehicle
@@ -1094,14 +1094,14 @@ export default function FleetMonitorPage() {
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(360px, 1fr))', gap: isMobile ? '10px' : '16px' }}>
               {vehicleData.map(({ vehicle, groups }) => (
                 <VehicleCard
-                  key={vehicle.id}
+                  key={vehicle.uuid}
                   vehicle={vehicle}
                   groups={groups}
                   locsMap={locsMap}
                   routeDurMap={routeDurMap}
-                  vehicleTrafficAlerts={trafficAlerts.filter(a => a.vehicleId === vehicle.id)}
+                  vehicleTrafficAlerts={trafficAlerts.filter(a => a.vehicleId === vehicle.uuid)}
                   now={now}
-                  session={sessions.find(s => s.vehicle_id === vehicle.id) || null}
+                  session={sessions.find(s => s.vehicle_id === vehicle.uuid) || null}
                   productionId={PRODUCTION_ID}
                   onQuickTrip={setQuickTripVehicle}
                 />

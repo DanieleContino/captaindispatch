@@ -264,7 +264,7 @@ function AIBuilderTab({ vehicle, productionId, date, onDateChange, onCreated, on
     }
 
     const crewList = crew.map(c => {
-      const hotelName = locations.find(l => l.id === c.hotel_id)?.name || null
+      const hotelName = locations.find(l => l.uuid === c.hotel_id)?.name || null
       return `- id:${c.id} name:"${c.full_name}" dept:${c.department || '–'} status:${c.travel_status || '–'}${hotelName ? ` hotel:"${hotelName}" hotel_id:${c.hotel_id}` : ' hotel:unknown'}`
     }).join('\n')
 
@@ -638,7 +638,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
     if (tc === 'ARRIVAL' && dropoffId) candidates = crew.filter(c => c.travel_status === 'IN' && c.hotel_id === dropoffId)
     else if (tc === 'DEPARTURE' && pickupId) candidates = crew.filter(c => c.travel_status === 'OUT' && c.hotel_id === pickupId)
     else if (tc === 'STANDARD' && pickupId) candidates = crew.filter(c => c.travel_status === 'PRESENT' && c.hotel_id === pickupId)
-    setSuggested(candidates.filter(c => !selCrew.find(s => s.id === c.id)))
+    setSuggested(candidates.filter(c => !selCrew.find(s => s.uuid === c.uuid)))
   }
 
   function handlePickerSelect(loc) {
@@ -649,7 +649,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
 
   // Quando si seleziona una persona in una riga multi, autocompila la location con il suo hotel
   function handleRowPersonSelect(list, index, personId) {
-    const person = crew.find(c => c.id === personId)
+    const person = crew.find(c => c.uuid === personId)
     const hotel  = person?.hotel_id ? locations.find(l => l.uuid === person.hotel_id) : null
     const updater = list === 'pickup' ? setPickupRows : setDropoffRows
     updater(prev => prev.map((row, i) => i !== index ? row : {
@@ -841,7 +841,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
             {/* Persona */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: row.personId ? '#eff6ff' : '#f1f5f9', color: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', flexShrink: 0 }}>
-                {row.personId ? crew.find(c => c.id === row.personId)?.full_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() : '?'}
+                {row.personId ? crew.find(c => c.uuid === row.personId)?.full_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() : '?'}
               </div>
               <select
                 value={row.personId}
@@ -986,7 +986,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
                     <div style={{ fontWeight: '700', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
                     <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
                   </div>
-                  <button onClick={() => setSelCrew(p => p.filter(x => x.id !== c.id))} style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                  <button onClick={() => setSelCrew(p => p.filter(x => x.uuid !== c.uuid))} style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
                 </div>
               ))}
             </div>
@@ -999,7 +999,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {suggested.slice(0, 10).map(c => (
-                  <div key={c.id} onClick={() => { setSelCrew(p => [...p, c]); setSuggested(p => p.filter(x => x.id !== c.id)) }}
+                  <div key={c.id} onClick={() => { setSelCrew(p => [...p, c]); setSuggested(p => p.filter(x => x.uuid !== c.uuid)) }}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', cursor: 'pointer' }}>
                     <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#dcfce7', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '10px', flexShrink: 0 }}>
                       {c.full_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()}
@@ -1019,7 +1019,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
             <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', background: 'white' }}>
               {(() => {
                 const q = search.toLowerCase()
-                const filtered = crew.filter(c => !selCrew.find(x => x.id === c.id) && !suggested.find(x => x.id === c.id) && (c.full_name.toLowerCase().includes(q) || (c.department || '').toLowerCase().includes(q)))
+                const filtered = crew.filter(c => !selCrew.find(x => x.uuid === c.uuid) && !suggested.find(x => x.uuid === c.uuid) && (c.full_name.toLowerCase().includes(q) || (c.department || '').toLowerCase().includes(q)))
                 if (!filtered.length) return <div style={{ padding: '14px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No results</div>
                 return filtered.map(c => (
                   <div key={c.id} onClick={() => { setSelCrew(p => [...p, c]); setSearch('') }}

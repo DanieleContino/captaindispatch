@@ -81,7 +81,7 @@ export default function CrewInfoModal({ crew, productionId, locations, onClose, 
   const [loading,   setLoading]   = useState(true)
 
   useEffect(() => {
-    if (!crew?.id || !productionId) return
+    if (!crew?.uuid || !productionId) return
     setLoading(true)
     Promise.all([
       supabase.from('crew')
@@ -90,7 +90,7 @@ export default function CrewInfoModal({ crew, productionId, locations, onClose, 
         .single(),
       supabase.from('travel_movements')
         .select('travel_date, direction, travel_type, from_location, from_time, to_location, to_time, travel_number, needs_transport, pickup_dep, pickup_arr')
-        .eq('crew_id', crew.id)
+        .eq('crew_id', crew.uuid)
         .eq('production_id', productionId)
         .order('travel_date', { ascending: true }),
     ]).then(([crewRes, movRes]) => {
@@ -98,7 +98,7 @@ export default function CrewInfoModal({ crew, productionId, locations, onClose, 
       setMovements(movRes.data || [])
       setLoading(false)
     })
-  }, [crew?.id, productionId])
+  }, [crew?.uuid, productionId])
 
   const locsById  = Object.fromEntries((locations || []).map(l => [l.id, l.name]))
   const hotelName = details?.hotel?.name || (details?.hotel_id ? (locsById[details.hotel_id] || details.hotel_id) : '–')

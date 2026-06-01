@@ -140,7 +140,7 @@ function defaultFieldChoices(selCrew) {
 function ResultPreview({ selCrew, fieldChoices, hotelLabel }) {
   const [open, setOpen] = useState(true)
   const getVal = (key) => {
-    const src = selCrew.find(c => c.id === fieldChoices[key])
+    const src = selCrew.find(c => c.uuid === fieldChoices[key])
     return src?.[key] ?? null
   }
   return (
@@ -196,7 +196,7 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
     } catch {}
   }, [productionId])
 
-  const hotelLabel = id => locations?.find(l => l.id === id)?.name || id || '—'
+  const hotelLabel = id => locations?.find(l => l.uuid === id)?.name || id || '—'
 
   const load = useCallback(async () => {
     if (!productionId) return
@@ -244,17 +244,17 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
     if (!mergeCtx) return
   const duplicate_ids = mergeCtx.selectedIds.filter(id => id !== primaryId)
   if (!duplicate_ids.length) { setMergeError('Need at least 2 crew selected'); return }
-  const primaryCrewUuid = mergeCtx.selCrew.find(c => c.id === primaryId)?.uuid
-  const duplicate_uuids = duplicate_ids.map(id => mergeCtx.selCrew.find(c => c.id === id)?.uuid).filter(Boolean)
+  const primaryCrewUuid = mergeCtx.selCrew.find(c => c.uuid === primaryId)?.uuid
+  const duplicate_uuids = duplicate_ids.map(id => mergeCtx.selCrew.find(c => c.uuid === id)?.uuid).filter(Boolean)
 
     const merged_data = {}
     CREW_MERGE_FIELDS.forEach(({ key }) => {
       if (multiStay[key]) {
         // For multi-stay fields keep the primary record's existing value
-        const primary = mergeCtx.selCrew.find(c => c.id === primaryId)
+        const primary = mergeCtx.selCrew.find(c => c.uuid === primaryId)
         merged_data[key] = primary?.[key] ?? null
       } else {
-        const src = mergeCtx.selCrew.find(c => c.id === fieldChoices[key])
+        const src = mergeCtx.selCrew.find(c => c.uuid === fieldChoices[key])
         merged_data[key] = src?.[key] ?? null
       }
     })
@@ -516,8 +516,8 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
               {/* Warning — with real names, not IDs */}
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', marginBottom: '18px', fontSize: '12px', color: '#dc2626' }}>
                 ⚠️ <strong>Irreversible.</strong>{' '}
-                {mergeCtx.selCrew.filter(c => c.id !== primaryId).length === 1 ? 'This record' : 'These records'} will be <strong>permanently deleted</strong>:{' '}
-                {mergeCtx.selCrew.filter(c => c.id !== primaryId).map((c, i) => (
+                {mergeCtx.selCrew.filter(c => c.uuid !== primaryId).length === 1 ? 'This record' : 'These records'} will be <strong>permanently deleted</strong>:{' '}
+                {mergeCtx.selCrew.filter(c => c.uuid !== primaryId).map((c, i) => (
                   <span key={c.id}>{i > 0 && ', '}<strong>{c.full_name}</strong>{' '}
                     <code style={{ background: '#fee2e2', padding: '1px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '10px' }}>({c.id})</code>
                   </span>
@@ -1019,7 +1019,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                       </div>
                     )}
                     {item.hotel_conflict && (() => {
-                      const roomingHotel = locations.find(l => l.id === item.rooming_hotel_id)?.name || item.rooming_hotel_id || '?'
+                      const roomingHotel = locations.find(l => l.uuid === item.rooming_hotel_id)?.name || item.rooming_hotel_id || '?'
                       // Resolve travel hotel ID: use item.hotel_id if set, otherwise try fuzzy-match hotel_raw against locations
                       const resolvedTravelHotelId = item.hotel_id || (
                         item.hotel_raw
@@ -1040,7 +1040,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
                             <button
                               onClick={async () => {
                                 if (!item.crew_id || !item.rooming_hotel_id) return
-                                const roomingUuid = locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null
+                                const roomingUuid = locations.find(l => l.uuid === item.rooming_hotel_id)?.uuid || null
                                 await supabase.from('crew').update({ hotel_id: roomingUuid }).eq('uuid', item.crew_id).eq('production_id', productionId)
                                 await supabase.from('crew_stays').update({ hotel_id: roomingUuid }).eq('crew_id', item.crew_id).eq('production_id', productionId)
                                 await resolve(item.id)
@@ -1082,7 +1082,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
 
                         // Cerca hotel_id da locations usando hotel_raw
                         const rooming_hotel_uuid = item.rooming_hotel_id
-                          ? (locations.find(l => l.id === item.rooming_hotel_id)?.uuid || null) : null
+                          ? (locations.find(l => l.uuid === item.rooming_hotel_id)?.uuid || null) : null
                         let hotel_id = rooming_hotel_uuid || null
                         if (!hotel_id && item.hotel_raw) {
                           const matchedLoc = locations.find(l =>

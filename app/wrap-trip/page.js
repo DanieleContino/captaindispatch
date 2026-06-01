@@ -567,7 +567,7 @@ function WrapTripContent() {
   // ── Handle ?vehicle= from /scan ──
   useEffect(() => {
     if (!preVehicle || !vehicles.length) return
-    const v = vehicles.find(x => x.id === preVehicle || x.uuid === preVehicle)
+    const v = vehicles.find(x => x.uuid === preVehicle)
     if (v) { setVehicle(v); setStep(3) }
   }, [vehicles, preVehicle])
 
@@ -648,7 +648,7 @@ function WrapTripContent() {
         showToast('✅ Vehicle ' + data.id + ' assigned', 'success')
         setStep(3)
       } else if (data.type === 'crew') {
-        if (selCrew.find(c => c.id === data.id)) { showToast('⚠️ ' + data.full_name + ' already added', 'error'); return }
+        if (selCrew.find(c => c.uuid === data.uuid)) { showToast('⚠️ ' + data.full_name + ' already added', 'error'); return }
         setSelCrew(p => [...p, { uuid: data.uuid, id: data.id, full_name: data.full_name, department: data.department, hotel_id: data.hotel?.id || null }])
         showToast('✅ ' + data.full_name + ' added', 'success')
         setStep(3)
@@ -907,7 +907,7 @@ function WrapTripContent() {
                         <div style={{ fontWeight: '700', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
                         <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department} · {locsMap[c.hotel_id] || '?'}</div>
                       </div>
-                      <button onClick={() => setSelCrew(p => p.filter(x => x.id !== c.id))} style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                      <button onClick={() => setSelCrew(p => p.filter(x => x.uuid !== c.uuid))} style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
                     </div>
                   ))}
                 </div>
@@ -926,7 +926,7 @@ function WrapTripContent() {
               <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', background: 'white' }}>
                 {(() => {
                   const q = search.toLowerCase()
-                  const filtered = crew.filter(c => !selCrew.find(x => x.id === c.id) && (c.full_name.toLowerCase().includes(q) || (c.department || '').toLowerCase().includes(q)))
+                  const filtered = crew.filter(c => !selCrew.find(x => x.uuid === c.uuid) && (c.full_name.toLowerCase().includes(q) || (c.department || '').toLowerCase().includes(q)))
                   if (!filtered.length) return <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No results</div>
                   return filtered.map(c => (
                     <div key={c.id} onClick={() => { setSelCrew(p => [...p, c]); setSearch('') }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f8fafc' }}>

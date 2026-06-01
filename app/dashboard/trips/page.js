@@ -339,7 +339,7 @@ function TripsPageInner() {
       {/* Assign crew info modal */}
       {showAssignInfo && assignCtx && (
         <CrewInfoModal
-          crew={{ id: assignCtx.id, full_name: assignCtx.name }}
+          crew={{ id: assignCtx.uuid || assignCtx.id, uuid: assignCtx.uuid || assignCtx.id, full_name: assignCtx.name }}
           productionId={PRODUCTION_ID}
           locations={locsList}
           onClose={() => setShowAssignInfo(false)}

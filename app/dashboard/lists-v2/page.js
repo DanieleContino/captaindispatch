@@ -295,7 +295,7 @@ export default function ListsPage() {
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: true }),
     ])
-    const inTransportIds = new Set((vR.data || []).map(v => v.id))
+    const inTransportIds = new Set((vR.data || []).map(v => v.uuid))
     const tripsFiltered = (tR.data || []).filter(t => !t.vehicle_id || inTransportIds.has(t.vehicle_id))
     setTrips(tripsFiltered)
     if (lR.data) {
