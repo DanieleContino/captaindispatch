@@ -264,7 +264,7 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
 
   // Build full pool first (needed for vehiclePreferredDepts calculation)
   const fullPool = [...vehicles]
-    .filter(v => v.active && !excludedVehicleIds.has(v.id))
+    .filter(v => v.active && !excludedVehicleIds.has(v.uuid))
     .sort((a, b) => (b.pax_suggested || b.capacity || 0) - (a.pax_suggested || a.capacity || 0))
 
   // Identify which preferred depts actually have a reserved vehicle in this run
@@ -604,16 +604,16 @@ function AddVehicleModal({ vehicles, locations, routeMap, locMap, defaultDestId,
           <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>Vehicle</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '200px', overflowY: 'auto', paddingRight: '2px' }}>
             {vehicles.map(v => {
-              const alreadyIn = usedVehicleIds.has(v.id)
-              const selected  = selVehicleId === v.id
+              const alreadyIn = usedVehicleIds.has(v.uuid)
+              const selected  = selVehicleId === v.uuid
               const cap = v.pax_suggested || v.capacity || '?'
               return (
-                <div key={v.id} onClick={() => setSelVehicleId(v.id)}
+                <div key={v.uuid} onClick={() => setSelVehicleId(v.uuid)}
                   style={{ flexShrink: 0, borderRadius: '9px', border: `2px solid ${selected ? '#2563eb' : '#e2e8f0'}`, background: selected ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'all 0.1s', overflow: 'hidden' }}>
                   {/* Row 1: main info */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px' }}>
                     <span style={{ fontSize: '16px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
-                    <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '13px', color: '#0f172a', minWidth: '60px' }}>{v.id}</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '13px', color: '#0f172a', minWidth: '60px' }}>{v.display_id}</span>
                     <span style={{ fontSize: '12px', color: '#64748b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {v.driver_name || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No driver</span>}
                     </span>
@@ -887,7 +887,7 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
                 const cDest = c._effectiveDest || trip.destId
                 const destMismatch = cDest !== trip.destId
                 return (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 14px', borderBottom: '1px solid #f8fafc', gap: '8px' }}>
+                  <div key={c.uuid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 14px', borderBottom: '1px solid #f8fafc', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                       <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: bgC, color: textC, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '10px', flexShrink: 0 }}>
                         {(c.full_name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
@@ -1553,7 +1553,7 @@ export default function RocketPage() {
   const eligibleCrew       = allCrewWithHotel.filter(c => !getCrewIneligibleReason(c, date))
   const selectedCrew       = eligibleCrew.filter(c => !excludedCrewIds.has(c.uuid))
   const activeVehicles     = vehicles.filter(v => v.active)
-  const includedVehicles   = activeVehicles.filter(v => !excludedVehicleIds.has(v.id))
+  const includedVehicles   = activeVehicles.filter(v => !excludedVehicleIds.has(v.uuid))
   const departments        = [...new Set(allCrewWithHotel.map(c => c.department).filter(Boolean))].sort()
   const ineligibleCount    = allCrewWithHotel.filter(c => !!getCrewIneligibleReason(c, date)).length
 
@@ -1736,7 +1736,7 @@ export default function RocketPage() {
         if (insErr) { setCreateError(`Trip ${tripId}: ${insErr.message}`); setSaving(false); return }
         if (ins?.id && g.crew.length > 0) {
           const { error: pErr } = await supabase.from('trip_passengers').insert(
-            g.crew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.uuid || c.id }))
+            g.crew.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.uuid }))
           )
           if (pErr) { setCreateError(pErr.message); setSaving(false); return }
         }
@@ -1972,22 +1972,22 @@ export default function RocketPage() {
                         <div style={{ display: 'flex', gap: '5px' }}>
                           <button onClick={() => setExcludedVehicleIds(new Set())}
                             style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '700', color: '#1d4ed8' }}>✓ All</button>
-                          <button onClick={() => setExcludedVehicleIds(new Set(activeVehicles.map(v => v.id)))}
+                          <button onClick={() => setExcludedVehicleIds(new Set(activeVehicles.map(v => v.uuid)))}
                             style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', color: '#64748b' }}>✗ None</button>
                         </div>
                       </div>
                       {activeVehicles.length === 0 ? (
                         <div style={{ padding: '14px 16px', fontSize: '12px', color: '#dc2626' }}>{t.rocketNoVehicles} <a href="/dashboard/vehicles" style={{ color: '#2563eb' }}>{t.rocketAddVehicles}</a></div>
                       ) : activeVehicles.map(v => {
-                        const excluded = excludedVehicleIds.has(v.id)
-                        const reason   = excludedVehicleReasons[v.id] || ''
+                        const excluded = excludedVehicleIds.has(v.uuid)
+                        const reason   = excludedVehicleReasons[v.uuid] || ''
                         const isPreset  = PRESET_REASONS.includes(reason)
                         const selectVal = !reason ? '' : isPreset ? reason : OTHER_REASON_SENTINEL
                         const sug = v.pax_suggested || v.capacity || '?'
                         const max = v.pax_max || v.capacity || '?'
                         const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌' }
                         return (
-                          <div key={v.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                          <div key={v.uuid} style={{ borderBottom: '1px solid #f8fafc' }}>
                             {/* ── Main vehicle row ── */}
                             <div
                               onClick={() => {
@@ -1997,7 +1997,7 @@ export default function RocketPage() {
                                     next.delete(v.id)
                                     setExcludedVehicleReasons(prev2 => { const n = { ...prev2 }; delete n[v.id]; return n })
                                   } else {
-                                    next.add(v.id)
+                                    next.add(v.uuid)
                                   }
                                   return next
                                 })
@@ -2005,7 +2005,7 @@ export default function RocketPage() {
                               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', cursor: 'pointer', background: excluded ? '#fef9f0' : 'white', opacity: excluded ? 0.85 : 1, transition: 'all 0.12s' }}>
                               <input type="checkbox" checked={!excluded} readOnly style={{ width: '14px', height: '14px', accentColor: '#2563eb', flexShrink: 0, cursor: 'pointer' }} />
                               <span style={{ fontSize: '14px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
-                              <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '12px', color: '#0f172a', minWidth: '60px' }}>{v.id}</span>
+                              <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '12px', color: '#0f172a', minWidth: '60px' }}>{v.display_id}</span>
                               <span style={{ fontSize: '11px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.driver_name || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>{t.rocketNoDriver}</span>}</span>
                               <span style={{ background: '#eff6ff', color: '#1d4ed8', padding: '1px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '700', flexShrink: 0 }}>{sug}/{max}</span>
                               {excluded && (
@@ -2024,9 +2024,9 @@ export default function RocketPage() {
                                   onChange={e => {
                                     const val = e.target.value
                                     if (val === OTHER_REASON_SENTINEL) {
-                                      setExcludedVehicleReasons(prev => ({ ...prev, [v.id]: '' }))
+                                      setExcludedVehicleReasons(prev => ({ ...prev, [v.uuid]: '' }))
                                     } else {
-                                      setExcludedVehicleReasons(prev => ({ ...prev, [v.id]: val }))
+                                      setExcludedVehicleReasons(prev => ({ ...prev, [v.uuid]: val }))
                                     }
                                   }}
                                   style={{ padding: '3px 6px', border: '1px solid #fed7aa', borderRadius: '6px', fontSize: '11px', background: 'white', color: '#374151', cursor: 'pointer', outline: 'none' }}>
@@ -2039,7 +2039,7 @@ export default function RocketPage() {
                                     autoFocus
                                     type="text"
                                     value={reason}
-                                    onChange={e => setExcludedVehicleReasons(prev => ({ ...prev, [v.id]: e.target.value }))}
+                                    onChange={e => setExcludedVehicleReasons(prev => ({ ...prev, [v.uuid]: e.target.value }))}
                                     placeholder="Describe reason…"
                                     style={{ flex: 1, minWidth: '120px', padding: '3px 8px', border: '1px solid #fed7aa', borderRadius: '6px', fontSize: '11px', outline: 'none', background: 'white', color: '#0f172a' }}
                                   />
@@ -2164,7 +2164,7 @@ export default function RocketPage() {
                               const hasCallOvr  = crewOvr != null
                               const destOvr     = deptCfg.destId && deptCfg.destId !== destId
                               return (
-                                <div key={c.id} onClick={() => setEditingCrew(c)}
+                                <div key={c.uuid} onClick={() => setEditingCrew(c)}
                                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px 8px 36px', cursor: 'pointer', borderTop: '1px solid #f8fafc',
                                     background: excluded ? '#fafafa' : 'white', opacity: excluded ? 0.45 : 1, transition: 'background 0.1s' }}>
                                   <input type="checkbox" checked={!excluded}
@@ -2315,7 +2315,7 @@ export default function RocketPage() {
 
                 {/* ── TASK 6: Excluded vehicles summary ── */}
                 {excludedVehicleIds.size > 0 && (() => {
-                  const excludedList = activeVehicles.filter(v => excludedVehicleIds.has(v.id))
+                  const excludedList = activeVehicles.filter(v => excludedVehicleIds.has(v.uuid))
                   return (
                     <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '12px', padding: '14px 16px', marginBottom: '20px', textAlign: 'left' }}>
                       <div style={{ fontWeight: '800', fontSize: '12px', color: '#ea580c', marginBottom: '8px' }}>
@@ -2323,12 +2323,12 @@ export default function RocketPage() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         {excludedList.map(v => {
-                          const reason = excludedVehicleReasons[v.id] || ''
+                          const reason = excludedVehicleReasons[v.uuid] || ''
                           const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌' }
                           return (
-                            <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                            <div key={v.uuid} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
                               <span style={{ fontSize: '13px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
-                              <span style={{ fontFamily: 'monospace', fontWeight: '800', color: '#0f172a', flexShrink: 0, minWidth: '55px' }}>{v.id}</span>
+                              <span style={{ fontFamily: 'monospace', fontWeight: '800', color: '#0f172a', flexShrink: 0, minWidth: '55px' }}>{v.display_id}</span>
                               <span style={{ color: '#64748b', flex: 1, fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.driver_name || t.rocketNoDriver}</span>
                               {reason ? (
                                 <span style={{ fontSize: '11px', background: '#ffedd5', color: '#c2410c', border: '1px solid #fed7aa', padding: '1px 8px', borderRadius: '999px', fontWeight: '700', flexShrink: 0 }}>
