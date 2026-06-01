@@ -70,9 +70,9 @@ export async function GET(request) {
   const { data: updated, error: updateErr } = await supabase
     .from('crew')
     .update({ travel_status: 'PRESENT' })
-    .in('id', crewIds)
+    .in('uuid', crewIds)
     .eq('travel_status', 'IN')   // NON toccare chi è già PRESENT o OUT
-    .select('id, full_name, travel_status')
+    .select('uuid, display_id, full_name, travel_status')
 
   if (updateErr) {
     console.error('[cron/arrival-status] update error:', updateErr)
