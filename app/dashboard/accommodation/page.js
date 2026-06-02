@@ -230,33 +230,21 @@ function ClickableCell({ value, onClick, style, emptyLabel = '—' }) {
 }
 
 // ─── renderCell — data-driven ──────────────────────────────────
-function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, openWarningId, setOpenWarningId }) {
+function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal }) {
   const field = col.source_field
   switch (field) {
     case 'full_name':
       return (
         <td key={field} onClick={() => onEditRow(stay, 'full_name')}
-          style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'relative' }}
+          style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
           onMouseLeave={e => { e.currentTarget.style.background = '' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             {stay.crew?.full_name || '—'}
             {warningsMap && stay.crew_id && (warningsMap[stay.crew_id] || []).length > 0 && (
-              <span style={{ position: 'relative', flexShrink: 0 }}>
-                <button
-                  onClick={e => { e.stopPropagation(); setOpenWarningId(openWarningId === stay.id ? null : stay.id) }}
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1 }}>!</button>
-                {openWarningId === stay.id && (
-                  <>
-                    <div onClick={e => { e.stopPropagation(); setOpenWarningId(null) }} style={{ position: 'fixed', inset: 0, zIndex: 98 }} />
-                    <div style={{ position: 'absolute', top: '24px', left: 0, zIndex: 99, background: 'white', border: '1px solid #fecaca', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px', minWidth: '260px', maxWidth: '320px' }}>
-                      {(warningsMap[stay.crew_id] || []).map((w, i) => (
-                        <div key={i} style={{ fontSize: '11px', color: '#7f1d1d', lineHeight: 1.5, marginBottom: i < (warningsMap[stay.crew_id] || []).length - 1 ? '6px' : 0 }}>{w.message}</div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </span>
+              <button
+                onClick={e => { e.stopPropagation(); setWarningModal({ warnings: warningsMap[stay.crew_id], crewName: stay.crew?.full_name || '—' }) }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
             )}
           </span>
         </td>
@@ -388,7 +376,7 @@ function stayComputedCosts(stay) {
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
-function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {}, warningsMap = {}, openWarningId, setOpenWarningId }) {
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {}, warningsMap = {}, setWarningModal }) {
   const NAME_W        = 180
   const ROLE_W        = 100
   const DEPT_W        = 90
@@ -542,18 +530,8 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                       {stay.crew?.full_name || '—'}
                       {warningsMap && stay.crew_id && (warningsMap[stay.crew_id] || []).length > 0 && (
                         <button
-                          onClick={e => { e.stopPropagation(); setOpenWarningId(openWarningId === stay.id ? null : stay.id) }}
+                          onClick={e => { e.stopPropagation(); setWarningModal({ warnings: warningsMap[stay.crew_id], crewName: stay.crew?.full_name || '—' }) }}
                           style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
-                      )}
-                      {openWarningId === stay.id && (
-                        <>
-                          <div onClick={e => { e.stopPropagation(); setOpenWarningId(null) }} style={{ position: 'fixed', inset: 0, zIndex: 98 }} />
-                          <div style={{ position: 'absolute', top: '24px', left: 0, zIndex: 99, background: 'white', border: '1px solid #fecaca', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px', minWidth: '260px', maxWidth: '320px' }}>
-                            {(warningsMap[stay.crew_id] || []).map((w, i) => (
-                              <div key={i} style={{ fontSize: '11px', color: '#7f1d1d', lineHeight: 1.5, marginBottom: i < (warningsMap[stay.crew_id] || []).length - 1 ? '6px' : 0 }}>{w.message}</div>
-                            ))}
-                          </div>
-                        </>
                       )}
                       {stay.room_assignment_id && (roommateMap[stay.room_assignment_id] || []).some(r => r.is_family) && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', borderRadius: '50%', background: '#FAEEDA', color: '#633806', fontSize: '9px', fontWeight: '800', border: '1px solid #FAC775', flexShrink: 0 }}>F</span>
@@ -1873,7 +1851,7 @@ export default function AccommodationPage() {
   const [stayNotesMap,  setStayNotesMap]  = useState({})
   const [stayUnreadMap, setStayUnreadMap] = useState({})
   const [warningsMap,   setWarningsMap]   = useState({})
-  const [openWarningId, setOpenWarningId] = useState(null)
+  const [warningModal,  setWarningModal]  = useState(null)
   const [search,       setSearch]       = useState('')
   const [filterHotel,  setFilterHotel]  = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
@@ -2167,6 +2145,28 @@ export default function AccommodationPage() {
 
   const isFilterActive = search || !selectedHotels.has('ALL') || filterStatus !== 'ALL'
   function resetFilters() { setSearch(''); setSelectedHotels(new Set(['ALL'])); setFilterStatus('ALL') }
+
+  function AccomWarningModal({ warnings, crewName, onClose }) {
+    if (!warnings || warnings.length === 0) return null
+    return (
+      <>
+        <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,35,64,0.2)' }} />
+        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 61, background: 'white', border: '1px solid #fecaca', borderRadius: '12px', width: '340px', padding: '20px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', maxHeight: '80vh', overflowY: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <span style={{ fontWeight: '700', fontSize: '14px', color: '#dc2626' }}>⚠ {crewName}</span>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', lineHeight: 1, padding: '2px' }}>✕</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {warnings.map((w, i) => (
+              <div key={i} style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '12px', color: '#7f1d1d', lineHeight: 1.5 }}>
+                {w.message}
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    )
+  }
 
   if (!user) return <div style={{ minHeight: '100vh', background: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading...</div>
 
@@ -2520,8 +2520,7 @@ export default function AccommodationPage() {
               stickyTop={0}
               roommateMap={roommateMap}
               warningsMap={warningsMap}
-              openWarningId={openWarningId}
-              setOpenWarningId={setOpenWarningId}
+              setWarningModal={setWarningModal}
             />
           </div>
         ) : (
@@ -2637,7 +2636,7 @@ export default function AccommodationPage() {
                                       borderBottom: isShared ? 'none' : '1px solid #e2e8f0',
                                     }}
                                     onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
-                                  >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, openWarningId, setOpenWarningId }))}</tr>
+                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal }))}</tr>
                                 )
                               })
                               return rows
@@ -2673,6 +2672,13 @@ export default function AccommodationPage() {
           onChanged={() => { loadSubgroupsForHotel(subgroupSidebarHotel?.id); loadData(windowStart, windowEnd) }}
         />
         <Toast message={toast?.message} type={toast?.type} />
+        {warningModal && (
+          <AccomWarningModal
+            warnings={warningModal.warnings}
+            crewName={warningModal.crewName}
+            onClose={() => setWarningModal(null)}
+          />
+        )}
       </div>
     </div>
   )
