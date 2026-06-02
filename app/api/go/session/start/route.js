@@ -61,7 +61,7 @@ export async function POST(request) {
       .from('vehicles')
         .select('uuid')
       .eq('production_id', productionId)
-      .eq('driver_crew_id', driver.id)
+      .eq('driver_crew_id', driver.uuid)
       .eq('active', true)
       .single()
     vehicle = v
@@ -78,7 +78,7 @@ export async function POST(request) {
   if (driverType === 'NCC') {
     existingQuery = existingQuery.eq('ncc_driver_id', driver.id)
   } else {
-    existingQuery = existingQuery.eq('vehicle_id', vehicle?.id || '')
+    existingQuery = existingQuery.eq('vehicle_id', vehicle?.uuid || '')
   }
 
   const { data: existing } = await existingQuery.single()
@@ -92,7 +92,7 @@ export async function POST(request) {
     .from('vehicle_tracking_sessions')
     .insert({
       production_id:  productionId,
-      vehicle_id:     vehicle?.id || null,
+      vehicle_id:     vehicle?.uuid || null,
       ncc_driver_id:  driverType === 'NCC' ? driver.id : null,
       driver_name:    driver.name,
       type:           'DAY',
