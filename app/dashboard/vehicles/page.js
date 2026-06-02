@@ -563,7 +563,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                             </div>
                           </div>
                         )
-                      )})}
+                      })}
                     </div>
                   )
                 })()}
