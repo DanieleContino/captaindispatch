@@ -17,6 +17,7 @@ import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
 import { AccommodationColumnsEditorSidebar } from '../../../lib/AccommodationColumnsEditorSidebar'
 import { ACCOMMODATION_DEFAULT_PRESET } from '../../../lib/accommodationColumnsCatalog'
+import { computeCrewWarnings } from '../../../lib/tripWarnings'
 import SubgroupManagerSidebar from '../../../lib/SubgroupManagerSidebar'
 
 // ─── Date helpers ─────────────────────────────────────────────
@@ -229,16 +230,35 @@ function ClickableCell({ value, onClick, style, emptyLabel = '—' }) {
 }
 
 // ─── renderCell — data-driven ──────────────────────────────────
-function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, roommateMap }) {
+function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, openWarningId, setOpenWarningId }) {
   const field = col.source_field
   switch (field) {
     case 'full_name':
       return (
         <td key={field} onClick={() => onEditRow(stay, 'full_name')}
-          style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'relative' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
           onMouseLeave={e => { e.currentTarget.style.background = '' }}>
-          {stay.crew?.full_name || '—'}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            {stay.crew?.full_name || '—'}
+            {warningsMap && stay.crew_id && (warningsMap[stay.crew_id] || []).length > 0 && (
+              <span style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  onClick={e => { e.stopPropagation(); setOpenWarningId(openWarningId === stay.id ? null : stay.id) }}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1 }}>!</button>
+                {openWarningId === stay.id && (
+                  <>
+                    <div onClick={e => { e.stopPropagation(); setOpenWarningId(null) }} style={{ position: 'fixed', inset: 0, zIndex: 98 }} />
+                    <div style={{ position: 'absolute', top: '24px', left: 0, zIndex: 99, background: 'white', border: '1px solid #fecaca', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px', minWidth: '260px', maxWidth: '320px' }}>
+                      {(warningsMap[stay.crew_id] || []).map((w, i) => (
+                        <div key={i} style={{ fontSize: '11px', color: '#7f1d1d', lineHeight: 1.5, marginBottom: i < (warningsMap[stay.crew_id] || []).length - 1 ? '6px' : 0 }}>{w.message}</div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </span>
+            )}
+          </span>
         </td>
       )
     case 'role':
@@ -368,7 +388,7 @@ function stayComputedCosts(stay) {
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
-function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {} }) {
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {}, warningsMap = {}, openWarningId, setOpenWarningId }) {
   const NAME_W        = 180
   const ROLE_W        = 100
   const DEPT_W        = 90
@@ -520,6 +540,21 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     onMouseLeave={e => { e.currentTarget.style.background = labelBg }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       {stay.crew?.full_name || '—'}
+                      {warningsMap && stay.crew_id && (warningsMap[stay.crew_id] || []).length > 0 && (
+                        <button
+                          onClick={e => { e.stopPropagation(); setOpenWarningId(openWarningId === stay.id ? null : stay.id) }}
+                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
+                      )}
+                      {openWarningId === stay.id && (
+                        <>
+                          <div onClick={e => { e.stopPropagation(); setOpenWarningId(null) }} style={{ position: 'fixed', inset: 0, zIndex: 98 }} />
+                          <div style={{ position: 'absolute', top: '24px', left: 0, zIndex: 99, background: 'white', border: '1px solid #fecaca', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px', minWidth: '260px', maxWidth: '320px' }}>
+                            {(warningsMap[stay.crew_id] || []).map((w, i) => (
+                              <div key={i} style={{ fontSize: '11px', color: '#7f1d1d', lineHeight: 1.5, marginBottom: i < (warningsMap[stay.crew_id] || []).length - 1 ? '6px' : 0 }}>{w.message}</div>
+                            ))}
+                          </div>
+                        </>
+                      )}
                       {stay.room_assignment_id && (roommateMap[stay.room_assignment_id] || []).some(r => r.is_family) && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px', borderRadius: '50%', background: '#FAEEDA', color: '#633806', fontSize: '9px', fontWeight: '800', border: '1px solid #FAC775', flexShrink: 0 }}>F</span>
                       )}
@@ -1837,6 +1872,8 @@ export default function AccommodationPage() {
   const [roommateMap, setRoommateMap] = useState({})
   const [stayNotesMap,  setStayNotesMap]  = useState({})
   const [stayUnreadMap, setStayUnreadMap] = useState({})
+  const [warningsMap,   setWarningsMap]   = useState({})
+  const [openWarningId, setOpenWarningId] = useState(null)
   const [search,       setSearch]       = useState('')
   const [filterHotel,  setFilterHotel]  = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
@@ -1967,6 +2004,17 @@ export default function AccommodationPage() {
     }
     setRoommateMap(rMap)
     setStays(staysData)
+    const crewIds = [...new Set(staysData.filter(s => s.crew_id).map(s => s.crew_id))]
+    if (crewIds.length > 0) {
+      const { data: movData } = await supabase
+        .from('travel_movements')
+        .select('crew_id, travel_date, direction')
+        .eq('production_id', PRODUCTION_ID)
+        .in('crew_id', crewIds)
+      setWarningsMap(computeCrewWarnings(movData || [], staysData))
+    } else {
+      setWarningsMap({})
+    }
     setLoading(false)
   }, [PRODUCTION_ID])
 
@@ -2471,6 +2519,9 @@ export default function AccommodationPage() {
               showCosts={showCosts}
               stickyTop={0}
               roommateMap={roommateMap}
+              warningsMap={warningsMap}
+              openWarningId={openWarningId}
+              setOpenWarningId={setOpenWarningId}
             />
           </div>
         ) : (
@@ -2586,7 +2637,7 @@ export default function AccommodationPage() {
                                       borderBottom: isShared ? 'none' : '1px solid #e2e8f0',
                                     }}
                                     onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
-                                  >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap }))}</tr>
+                                  >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, openWarningId, setOpenWarningId }))}</tr>
                                 )
                               })
                               return rows
