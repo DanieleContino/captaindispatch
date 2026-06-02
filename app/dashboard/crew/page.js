@@ -9,6 +9,7 @@ import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
 import { generateDisplayId } from '../../../lib/generateDisplayId'
+import { computeCrewWarnings } from '../../../lib/tripWarnings'
 
 const SIDEBAR_W = 400
 
@@ -1634,6 +1635,7 @@ export default function CrewPage() {
   const [notesMap,  setNotesMap]        = useState({})  // total notes per crew_id (incl. authored by self)
   const [userRole,  setUserRole]        = useState('CAPTAIN')
   const [familyCountMap,  setFamilyCountMap]  = useState({})
+  const [warningsMap,     setWarningsMap]      = useState({})
   const [showFamily, setShowFamily] = useState(false)
   const [familyModalCrew, setFamilyModalCrew] = useState(null)
 
@@ -1781,6 +1783,7 @@ export default function CrewPage() {
       sMap[s.crew_id].push(s)
     }
     setStaysMap(sMap)
+    setWarningsMap(computeCrewWarnings(travelData || [], staysData || []))
     setLoading(false)
   }, [])
 
@@ -2162,7 +2165,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.id} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.id)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.uuid] || []} stays={staysMap[m.uuid] || []} unreadCount={unreadMap[m.uuid] || 0} notesCount={notesMap[m.uuid] || 0} isLocal={m.is_local || false} familyCount={familyCountMap[m.uuid] || 0} onFamilyClick={() => openFamilyModal(m.id, m.full_name)} />
+                    <CrewCard key={m.uuid} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.uuid)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.uuid] || []} stays={staysMap[m.uuid] || []} unreadCount={unreadMap[m.uuid] || 0} notesCount={notesMap[m.uuid] || 0} isLocal={m.is_local || false} familyCount={familyCountMap[m.uuid] || 0} onFamilyClick={() => openFamilyModal(m.uuid, m.full_name)} warnings={warningsMap[m.uuid] || []} />
                   ))}
                 </div>
               </div>
