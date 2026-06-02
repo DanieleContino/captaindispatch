@@ -591,7 +591,8 @@ SA5b    ✅ completato (import/save-location l.display_id fix) [93a0efd]
 SA6     ✅ completato (route-duration L63/L64 + ImportModal ×3) [97586dd]
 SA7a    ✅ completato (productions 5 fix + lists-v2 OK + reports OK) [8813b67]
 SA7b    ✅ completato (settings/production 6 fix + settings OK + cost-report OK)
-SA8a    ← PROSSIMA: lib files piccoli
+SA8a    ✅ completato (lib files piccoli — nessun fix necessario)
+SA8b    ← PROSSIMA: lib files medi
 ```
 
 ---
@@ -732,17 +733,17 @@ SA8a    ← PROSSIMA: lib files piccoli
 
 ---
 
-### 🔧 SESSIONE SA8a — lib files piccoli (mai auditati)
-> Status: ⏳ PENDING
+### ~~🔧 SESSIONE SA8a~~ ✅ lib files piccoli — NESSUN FIX NECESSARIO
+> Status: ✅ COMPLETATO
 
 ```
-[ ] lib/crewCache.js
-[ ] lib/production.js
-[ ] lib/tripWarnings.js
-[ ] lib/tripTimeCalculator.js
-[ ] lib/normalizeDept.js
-[ ] lib/roleAccess.js
-[ ] lib/sendLoginNotification.js
+[x] lib/crewCache.js          — OK: byCrewId[c.uuid], select uuid, order dept/full_name
+[x] lib/production.js         — OK: nessuna query DB (localStorage/env)
+[x] lib/tripWarnings.js       — OK: puro calcolo, usa crew_id come UUID correttamente
+[x] lib/tripTimeCalculator.js — OK: nessuna query DB (calcolo tempi puro)
+[x] lib/normalizeDept.js      — OK: nessuna query DB (string mapping)
+[x] lib/roleAccess.js         — OK: nessuna query DB (config ruoli/path)
+[x] lib/sendLoginNotification.js — OK: nessuna query DB (email SMTP)
 ```
 
 ---
