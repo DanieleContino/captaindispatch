@@ -60,8 +60,8 @@ export async function POST(req) {
         .select('uuid,lat,lng,is_hub')
         .in('uuid', [from_id, to_id])
 
-      const fromLoc = locs?.find(l => l.id === from_id)
-      const toLoc   = locs?.find(l => l.id === to_id)
+      const fromLoc = locs?.find(l => l.uuid === from_id)
+      const toLoc   = locs?.find(l => l.uuid === to_id)
 
       if (fromLoc?.lat) { from_lat = fromLoc.lat; from_lng = fromLoc.lng }
       if (toLoc?.lat)   { to_lat   = toLoc.lat;   to_lng   = toLoc.lng }
