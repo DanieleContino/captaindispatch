@@ -112,6 +112,9 @@ Fix S17c QT-2 — QuickTripModal hotel_id lookup usa l.uuid ........... ✅ [b13
 Fix S17d QT-3/QT-4 — QuickTripModal resolve TEXT→UUID in createTrip . ✅ [b13624e]
 Fix S17c+S17d — AIBuilderTab crew+locations select include uuid ...... ✅ [b13624e]
 Fix SA3 — QuickTripModal LEGS+Standard branch vehicleId uses uuid .... ✅ [b8ae772]
+Fix SA7a P1 — productions/page.js 5 uuid fixes (hub locations) ....... ✅ [8813b67]
+Fix SA7a P2 — lists-v2/page.js — OK nessun fix ...................... ✅ [8813b67]
+Fix SA7a P3 — reports/page.js — OK nessun fix ........................ ✅ [8813b67]
 ```
 
 ---
@@ -544,6 +547,16 @@ Commit: `"Fix GO-6: position/route NCC driver select includes id"`
 | `app/api/bridge/invites/route.js` | ✅ SA5a — OK già corretto (no FK migrate) | SA5a |
 | `app/api/bridge/members/route.js` | ✅ SA5a — OK già corretto (no FK migrate) | SA5a |
 | `app/api/bridge/pending-users/route.js` | ✅ SA5a — OK già corretto (no FK migrate) | SA5a |
+| `app/api/import/confirm/route.js` | ✅ SA5b — OK già corretto | SA5b |
+| `app/api/import/parse/route.js` | ✅ SA5b — OK già corretto | SA5b |
+| `app/api/import/save-location/route.js` | ✅ SA5b — FIX maxLocNum l.display_id [93a0efd] | SA5b |
+| `app/api/import/sheets/route.js` | ✅ SA5b — OK già corretto (no FK) | SA5b |
+| `app/api/ai/trip-builder/route.js` | ✅ SA5b — OK già corretto (no DB queries) | SA5b |
+| `app/api/route-duration/route.js` | ✅ SA6 — FIX L63/L64 locs.find uuid [97586dd] | SA6 |
+| `lib/ImportModal.js` | ✅ SA6 — FIX ×3 hotel_id lookup l.uuid [97586dd] | SA6 |
+| `app/dashboard/productions/page.js` | ✅ SA7a — 5 fix: eq(uuid), key(uuid), display_id [8813b67] | SA7a |
+| `app/dashboard/lists-v2/page.js` | ✅ SA7a — OK: .eq('id') su tabelle non migrate | SA7a |
+| `app/dashboard/reports/page.js` | ✅ SA7a — OK: nessun pattern da fixare | SA7a |
 
 ---
 
@@ -570,7 +583,10 @@ SA2     ✅ completato (crew/page.js 10 uuid fixes) [c2f1a2c]
 SA3     ✅ completato (QuickTripModal LEGS+Standard vehicleId uuid) [b8ae772]
 SA4     ✅ completato (cron API — nessun fix necessario)
 SA5a    ✅ completato (Bridge API — nessun fix necessario)
-SA5b    ← PROSSIMA: Import + AI Trip Builder audit
+SA5b    ✅ completato (import/save-location l.display_id fix) [93a0efd]
+SA6     ✅ completato (route-duration L63/L64 + ImportModal ×3) [97586dd]
+SA7a    ✅ completato (productions 5 fix + lists-v2 OK + reports OK) [8813b67]
+SA7b    ← PROSSIMA: Dashboard pages gruppo B
 ```
 
 ---
@@ -664,40 +680,38 @@ SA5b    ← PROSSIMA: Import + AI Trip Builder audit
 
 ---
 
-### 🔧 SESSIONE SA5b — Import + AI Trip Builder (mai auditati)
+### ~~🔧 SESSIONE SA5b~~ ✅ Import + AI Trip Builder — 1 FIX
 > File: 4 route import + 1 ai
-> Status: ⏳ PENDING
+> Commit `93a0efd` — Status: ✅ COMPLETATO
 
 ```
-[ ] app/api/import/confirm/route.js
-[ ] app/api/import/parse/route.js
-[ ] app/api/import/save-location/route.js
-[ ] app/api/import/sheets/route.js
-[ ] app/api/ai/trip-builder/route.js
-```
-
----
-
-### 🔧 SESSIONE SA6 — route-duration + ImportModal (pattern sospetti ⚠️)
-> Pattern trovato via search:
-> - `app/api/route-duration/route.js`: `locs?.find(l => l.id === from_id)` e `locs?.find(l => l.id === to_id)` — `from_id`/`to_id` passati dall'esterno, dopo migrazione potrebbero essere UUID
-> - `lib/ImportModal.js`: `locations.find(l => l.id === row.hotel_id)` ×3 — `hotel_id` in import context potrebbe essere TEXT (da Sheets) o UUID
-> Status: ⏳ PENDING
-
-```
-[ ] app/api/route-duration/route.js — analizzare from_id/to_id: TEXT o UUID?
-[ ] lib/ImportModal.js — analizzare hotel_id in import: TEXT display id (Sheets) o UUID?
+[x] app/api/import/confirm/route.js    — OK: usa uuid ovunque
+[x] app/api/import/parse/route.js      — OK: existingId=match.uuid, locMatch.uuid ovunque
+[x] app/api/import/save-location/route.js — FIX: maxLocNum usava l.id → l.display_id [93a0efd]
+[x] app/api/import/sheets/route.js     — OK: nessuna FK migrata
+[x] app/api/ai/trip-builder/route.js   — OK: nessuna query DB
 ```
 
 ---
 
-### 🔧 SESSIONE SA7a — Dashboard pages (mai auditati) — gruppo A
-> Status: ⏳ PENDING
+### ~~🔧 SESSIONE SA6~~ ✅ route-duration + ImportModal — 4 FIX
+> Commit `97586dd` — Status: ✅ COMPLETATO
 
 ```
-[ ] app/dashboard/productions/page.js
-[ ] app/dashboard/lists-v2/page.js
-[ ] app/dashboard/reports/page.js
+[x] app/api/route-duration/route.js — FIX L63/L64: locs.find(l => l.uuid === from_id/to_id)
+[x] lib/ImportModal.js — FIX ×3: locations.find(l => l.uuid === row.hotel_id)
+    (CrewTable + AccommodationTable + TravelTable)
+```
+
+---
+
+### ~~🔧 SESSIONE SA7a~~ ✅ Dashboard pages gruppo A — COMPLETATO
+> Commit `8813b67` — Status: ✅ COMPLETATO
+
+```
+[x] app/dashboard/productions/page.js — 5 fix: eq(uuid), key(uuid), display_id ×3
+[x] app/dashboard/lists-v2/page.js   — OK: .eq('id') su tabelle non migrate
+[x] app/dashboard/reports/page.js    — OK: nessun pattern da fixare
 ```
 
 ---
