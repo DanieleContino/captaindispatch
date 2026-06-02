@@ -18,7 +18,7 @@ export async function POST(request) {
 
   const { data: nccDriver } = await supabase
     .from('ncc_drivers')
-    .select('uuid, production_id')
+    .select('id, uuid, production_id')
     .eq('tracking_token', token)
     .single()
 
@@ -63,7 +63,7 @@ export async function POST(request) {
       .eq('driver_crew_id', driver.uuid)
       .eq('active', true)
       .single()
-    if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
+    if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.uuid)
   }
   const { data: session } = await sessionQuery.single()
 

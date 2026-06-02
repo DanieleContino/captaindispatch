@@ -63,7 +63,7 @@ export async function POST(request) {
         .eq('driver_crew_id', driver.uuid)
         .eq('active', true)
         .single()
-      if (driverVehicle) sessionQ = sessionQ.eq('vehicle_id', driverVehicle.id)
+      if (driverVehicle) sessionQ = sessionQ.eq('vehicle_id', driverVehicle.uuid)
     }
     const { data: driverSession } = await sessionQ.single()
     if (driverSession?.last_lat && driverSession?.last_lng) {
@@ -145,7 +145,7 @@ export async function POST(request) {
         .eq('driver_crew_id', driver.uuid)
         .eq('active', true)
         .single()
-    if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
+    if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.uuid)
   }
 
   const { data: session } = await sessionQuery.single()

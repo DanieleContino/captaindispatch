@@ -59,7 +59,7 @@ export async function POST(request) {
       .eq('active', true)
       .single()
     if (vehicle) {
-      sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
+      sessionQuery = sessionQuery.eq('vehicle_id', vehicle.uuid)
     }
   }
 

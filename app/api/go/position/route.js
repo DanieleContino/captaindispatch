@@ -20,7 +20,7 @@ export async function POST(request) {
 
   const { data: nccDriver } = await supabase
     .from('ncc_drivers')
-    .select('uuid, production_id')
+    .select('id, uuid, production_id')
     .eq('tracking_token', token)
     .single()
 
