@@ -15,6 +15,7 @@ import {
   Tooltip, Cell, ResponsiveContainer,
 } from 'recharts'
 import { useOnlinePresence, getPageLabel, getInitials, getAvatarColor, fmtOnlineSince, getRoleStyle } from '../../../lib/useOnlinePresence'
+import { computeCrewWarnings } from '../../../lib/tripWarnings'
 
 // ── helpers ──────────────────────────────────────────────
 function fmt(iso) {
@@ -717,102 +718,47 @@ function DriveSyncWidget({ productionId, onPreview, refreshKey }) {
   )
 }
 
-// ── Accommodation Mismatch Widget ────────────────────────
-function AccommodationMismatchWidget({ productionId }) {
-  const [missing, setMissing] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!productionId) return
-    // Crew con travel_movements (matched) ma senza stay collegata
-    supabase
-      .from('travel_movements')
-      .select('id, crew_id, full_name_raw, travel_date, direction, travel_type, travel_number, from_location, to_location, linked_stay_id, crew:crew_id(full_name, department)')
-      .eq('production_id', productionId)
-      .eq('match_status', 'matched')
-      .is('linked_stay_id', null)
-      .order('travel_date', { ascending: true })
-      .then(({ data }) => {
-        // Deduplica per crew_id — mostra una riga per persona
-        const seen = new Set()
-        const deduped = (data || []).filter(m => {
-          if (!m.crew_id || seen.has(m.crew_id)) return false
-          seen.add(m.crew_id)
-          return true
-        })
-        setMissing(deduped)
-        setLoading(false)
-      })
-  }, [productionId])
-
-  if (loading || missing.length === 0) return null
-
-  const TYPE_ICONS = { FLIGHT: '✈️', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴️' }
-
+// ── BridgeWarningModal ───────────────────────────────────
+function BridgeWarningModal({ warnings, crewName, onClose }) {
+  if (!warnings || warnings.length === 0) return null
   return (
-    <div style={{ background: 'white', border: '1px solid #fecaca', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
-      <div style={{ padding: '12px 20px', background: '#fef2f2', borderBottom: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626' }}>
-          🏨 Accommodation Missing
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,35,64,0.2)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 61, background: 'white', border: '1px solid #fecaca', borderRadius: '12px', width: '340px', padding: '20px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', maxHeight: '80vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <span style={{ fontWeight: '700', fontSize: '14px', color: '#dc2626' }}>⚠ {crewName}</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', lineHeight: 1, padding: '2px' }}>✕</button>
         </div>
-        <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700' }}>
-          {missing.length} crew {missing.length === 1 ? 'member' : 'members'} without stay
-        </div>
-      </div>
-      <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
-        {missing.map((m, i) => {
-          const name = m.crew?.full_name || m.full_name_raw || '—'
-          return (
-            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', borderBottom: i < missing.length - 1 ? '1px solid #f8fafc' : 'none' }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '3px' }}>
-                  {name}
-                  {m.crew?.department && (
-                    <span style={{ marginLeft: '8px', fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>
-                      {m.crew.department}
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: '700', color: m.direction === 'IN' ? '#15803d' : '#c2410c' }}>
-                    {m.direction === 'IN' ? '🛬 IN' : '🛫 OUT'}
-                  </span>
-                  <span>{m.travel_date}</span>
-                  <span>{TYPE_ICONS[m.travel_type] || ''}</span>
-                  {m.travel_number && (
-                    <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#2563eb' }}>{m.travel_number}</span>
-                  )}
-                  {m.from_location && (
-                    <span>{m.from_location} → {m.to_location || '?'}</span>
-                  )}
-                </div>
-              </div>
-              <a
-                href="/dashboard/accommodation"
-                style={{ padding: '5px 12px', borderRadius: '7px', background: '#15803d', color: 'white', textDecoration: 'none', fontSize: '11px', fontWeight: '700', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                + Add Stay
-              </a>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {warnings.map((w, i) => (
+            <div key={i} style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '12px', color: '#7f1d1d', lineHeight: 1.5 }}>
+              {w.message}
             </div>
-          )
-        })}
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
-// ── Travel Discrepancies Widget ──────────────────────────
-function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
-  const [items, setItems] = useState([])
-  const [resolving, setResolving] = useState({})
-  const [notes, setNotes] = useState({})
-  const [locations, setLocations] = useState([])
-  const [highlightId, setHighlightId] = useState(null)
+// ── TravelWidget ─────────────────────────────────────────
+function TravelWidget({ productionId, refreshKey }) {
+  const [items,        setItems]        = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [expanded,     setExpanded]     = useState(false)
+  const [resolving,    setResolving]    = useState({})
+  const [notes,        setNotes]        = useState({})
+  const [locations,    setLocations]    = useState([])
+  const [highlightId,  setHighlightId]  = useState(null)
+  const [warningModal, setWarningModal] = useState(null)
+  const [warningsMap,  setWarningsMap]  = useState({})
 
   useEffect(() => {
     const id = sessionStorage.getItem('bridgeHighlight')
     if (id) {
       sessionStorage.removeItem('bridgeHighlight')
       setHighlightId(id)
+      setExpanded(true)
       setTimeout(() => {
         const el = document.getElementById(`discrepancy-${id}`)
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -826,7 +772,7 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
     Promise.all([
       supabase
         .from('travel_movements')
-        .select('id, crew_id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, travel_type, from_location, from_time, to_location, to_time, travel_number, crew:crew_id(full_name, hotel_id, department, role)')
+        .select('id, crew_id, full_name_raw, travel_date, direction, travel_date_conflict, hotel_conflict, match_status, needs_transport, rooming_date, rooming_hotel_id, hotel_raw, hub_location_id, travel_type, from_location, from_time, to_location, to_time, travel_number, crew:crew_id(uuid, display_id, full_name, hotel_id, department, role)')
         .eq('production_id', productionId)
         .or('discrepancy_resolved.eq.false,discrepancy_resolved.is.null')
         .or('travel_date_conflict.eq.true,hotel_conflict.eq.true,match_status.eq.unmatched')
@@ -836,66 +782,52 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
         .from('locations')
         .select('uuid, display_id, name')
         .eq('production_id', productionId),
-    ]).then(async ([{ data: rawItems }, { data: locs }]) => {
+      supabase
+        .from('crew_stays')
+        .select('crew_id, arrival_date, departure_date')
+        .eq('production_id', productionId),
+    ]).then(async ([{ data: rawItems }, { data: locs }, { data: staysData }]) => {
       setLocations(locs || [])
 
-      const items = rawItems || []
+      const movItems = rawItems || []
 
-      // Collect crew_ids for items with pre-computed conflicts
+      // UUID migration: crew_id è UUID che punta a crew.uuid
       const conflictCrewIds = [...new Set(
-        items
+        movItems
           .filter(i => i.crew_id && (i.travel_date_conflict || i.hotel_conflict))
           .map(i => i.crew_id)
       )]
 
-      // Load crew_stays live for these crew members
       let staysMap = {}
-      if (conflictCrewIds.length > 0) {
-        const { data: stays } = await supabase
-          .from('crew_stays')
-          .select('crew_id, hotel_id, arrival_date, departure_date')
-          .in('crew_id', conflictCrewIds)
-          .eq('production_id', productionId)
-        for (const s of (stays || [])) {
-          if (!staysMap[s.crew_id]) staysMap[s.crew_id] = []
-          staysMap[s.crew_id].push(s)
-        }
+      for (const s of staysData || []) {
+        if (!staysMap[s.crew_id]) staysMap[s.crew_id] = []
+        staysMap[s.crew_id].push(s)
       }
 
-      // Re-evaluate conflicts against real crew_stays — filter out false positives
       const toAutoResolve = []
-      const validItems = items.filter(item => {
-        if (!item.crew_id) return true  // unmatched — keep
+      const validItems = movItems.filter(item => {
+        if (!item.crew_id) return true
         const personStays = staysMap[item.crew_id] || []
-        if (personStays.length === 0) return true  // no stays → keep as-is
+        if (personStays.length === 0) return true
 
         if (item.travel_date_conflict) {
           const coveringStay = personStays.find(s =>
             s.arrival_date && s.departure_date &&
             item.travel_date >= s.arrival_date && item.travel_date <= s.departure_date
           )
-          if (coveringStay) {
-            // False positive: travel_date covered by a real stay → auto-resolve silently
-            toAutoResolve.push(item.id)
-            return false
-          }
-          item._personStays = personStays  // enrich for UI
+          if (coveringStay) { toAutoResolve.push(item.id); return false }
+          item._personStays = personStays
         }
 
         if (item.hotel_conflict) {
           const matchingHotelStay = personStays.find(s => s.hotel_id === item.hotel_id)
-          if (matchingHotelStay) {
-            // Travel hotel matches at least one stay → not a real conflict
-            toAutoResolve.push(item.id)
-            return false
-          }
+          if (matchingHotelStay) { toAutoResolve.push(item.id); return false }
           item._personStays = personStays
         }
 
         return true
       })
 
-      // Silently mark false positives as resolved in DB
       if (toAutoResolve.length > 0) {
         supabase.from('travel_movements')
           .update({ discrepancy_resolved: true, discrepancy_note: 'auto-resolved: covered by crew_stay' })
@@ -903,7 +835,24 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
           .then(() => {})
       }
 
-      setItems(validItems)
+      // Compute date warnings — crew_id è UUID (post UUID migration)
+      const wMap = computeCrewWarnings(movItems, staysData || [])
+      setWarningsMap(wMap)
+
+      // Merge: items da discrepanze + items solo da date warnings
+      // Crew con solo date warnings (non in validItems) vanno aggiunti come entry sintetiche
+      const existingCrewIds = new Set(validItems.filter(i => i.crew_id).map(i => i.crew_id))
+      const warnOnlyItems = []
+      for (const [crewUuid, warnings] of Object.entries(wMap)) {
+        if (!existingCrewIds.has(crewUuid)) {
+          // Cerca il movimento più recente per questo crew per avere i dati display
+          const mov = movItems.find(m => m.crew_id === crewUuid)
+          if (mov) warnOnlyItems.push({ ...mov, _dateWarningsOnly: true })
+        }
+      }
+
+      setItems([...validItems, ...warnOnlyItems])
+      setLoading(false)
     })
   }, [productionId, refreshKey])
 
@@ -916,232 +865,359 @@ function TravelDiscrepanciesWidget({ productionId, refreshKey }) {
     setResolving(p => ({ ...p, [id]: false }))
   }
 
-  if (items.length === 0) return null
+  if (loading || items.length === 0) return null
+
+  const TYPE_ICONS = { FLIGHT: '✈️', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴️' }
 
   return (
-    <div style={{ background: 'white', border: '1px solid #fde68a', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
-      <div style={{ padding: '12px 20px', background: '#fefce8', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: '13px', fontWeight: '800', color: '#a16207' }}>⚠️ Travel Discrepancies</div>
-        <div style={{ fontSize: '11px', color: '#a16207' }}>{items.length} to resolve</div>
-      </div>
-      <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
-        {items.map(item => {
-          const name = item.crew?.full_name || item.full_name_raw
+    <>
+      <div style={{ background: 'white', border: '1px solid #c4b5fd', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
+        <div
+          style={{ padding: '12px 20px', background: '#faf5ff', borderBottom: expanded ? '1px solid #c4b5fd' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+          onClick={() => setExpanded(v => !v)}>
+          <div style={{ fontSize: '13px', fontWeight: '800', color: '#6d28d9' }}>
+            ✈️ Travel issues
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '700' }}>
+              {items.length} {items.length === 1 ? 'issue' : 'issues'}
+            </div>
+            <span style={{ fontSize: '11px', color: '#7c3aed' }}>{expanded ? '▲ Hide' : '▼ Show'}</span>
+          </div>
+        </div>
 
-          // Compute live rooming_date from real stays (overrides stale pre-computed value)
-          const liveRoomingDate = (() => {
-            const stays = item._personStays
-            if (!stays || stays.length === 0) return item.rooming_date
-            const closestStay = stays.reduce((best, s) => {
-              if (!best) return s
-              const d1 = Math.abs(new Date(s.arrival_date) - new Date(item.travel_date))
-              const d2 = Math.abs(new Date(best.arrival_date) - new Date(item.travel_date))
-              return d1 < d2 ? s : best
-            }, null)
-            return item.direction === 'IN'
-              ? (closestStay?.arrival_date || item.rooming_date)
-              : (closestStay?.departure_date || item.rooming_date)
-          })()
+        {expanded && (
+          <div style={{ maxHeight: '480px', overflowY: 'auto' }}>
+            {items.map(item => {
+              const name = item.crew?.full_name || item.full_name_raw
+              const crewUuid = item.crew_id
+              const itemWarnings = crewUuid ? (warningsMap[crewUuid] || []) : []
 
-          return (
-            <div key={item.id} id={`discrepancy-${item.id}`} style={{ padding: '12px 20px', borderBottom: '1px solid #fef9c3', background: item.id === highlightId ? '#fef9c3' : 'transparent', transition: 'background 1s ease' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-                    {name}
-                    <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color: item.direction === 'IN' ? '#15803d' : '#c2410c' }}>
-                      {item.direction === 'IN' ? '↓ IN' : '↑ OUT'} {item.travel_date}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {item.match_status === 'unmatched' && (
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: '700' }}>
-                        ❌ Not matched in crew
-                      </span>
-                    )}
-                    {item.travel_date_conflict && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
-                          📅 Rooming List → <strong>{liveRoomingDate}</strong> · Travel Calendar → <strong>{item.travel_date}</strong>
-                          {item._personStays?.length > 1 && (
-                            <span style={{ marginLeft: '6px', fontWeight: '600', color: '#92400e', fontSize: '10px' }}>
-                              ({item._personStays.length} stays)
-                            </span>
-                          )}
-                        </span>
-                        <div style={{ display: 'flex', gap: '6px' }}>
+              const liveRoomingDate = (() => {
+                const stays = item._personStays
+                if (!stays || stays.length === 0) return item.rooming_date
+                const closestStay = stays.reduce((best, s) => {
+                  if (!best) return s
+                  const d1 = Math.abs(new Date(s.arrival_date) - new Date(item.travel_date))
+                  const d2 = Math.abs(new Date(best.arrival_date) - new Date(item.travel_date))
+                  return d1 < d2 ? s : best
+                }, null)
+                return item.direction === 'IN'
+                  ? (closestStay?.arrival_date || item.rooming_date)
+                  : (closestStay?.departure_date || item.rooming_date)
+              })()
+
+              return (
+                <div key={item.id} id={`discrepancy-${item.id}`}
+                  style={{ padding: '12px 20px', borderBottom: '1px solid #f5f3ff', background: item.id === highlightId ? '#f5f3ff' : 'transparent', transition: 'background 1s ease' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        {name}
+                        {item.crew?.display_id && (
+                          <span style={{ fontFamily: 'monospace', fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>{item.crew.display_id}</span>
+                        )}
+                        {item.crew?.department && (
+                          <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{item.crew.department}</span>
+                        )}
+                        {!item._dateWarningsOnly && (
+                          <span style={{ fontSize: '11px', fontWeight: '600', color: item.direction === 'IN' ? '#15803d' : '#c2410c' }}>
+                            {item.direction === 'IN' ? '↓ IN' : '↑ OUT'} {item.travel_date}
+                          </span>
+                        )}
+                        {itemWarnings.length > 0 && (
                           <button
-                            onClick={async () => {
-                              if (!item.crew_id || !liveRoomingDate) return
-                              await supabase.from('travel_movements')
-                                .update({ travel_date: liveRoomingDate, travel_date_conflict: false })
-                                .eq('id', item.id)
-                              await resolve(item.id)
-                            }}
-                            title={`Usa la data della Rooming List: ${liveRoomingDate}`}
-                            style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
-                            ✓ Use Rooming ({liveRoomingDate})
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (!item.crew_id || !item.travel_date) return
-                              const field = item.direction === 'IN' ? 'arrival_date' : 'departure_date'
-                              const personStays = item._personStays || []
-                              if (personStays.length > 0) {
-                                // Aggiorna la crew_stay più vicina alla travel_date
-                                const closestStay = personStays.reduce((best, s) => {
-                                  if (!best) return s
-                                  const d1 = Math.abs(new Date(s.arrival_date) - new Date(item.travel_date))
-                                  const d2 = Math.abs(new Date(best.arrival_date) - new Date(item.travel_date))
-                                  return d1 < d2 ? s : best
-                                }, null)
-                                if (closestStay) {
-                                  await supabase.from('crew_stays')
-                                    .update({ [field]: item.travel_date })
-                                    .eq('crew_id', item.crew_id)
-                                    .eq('arrival_date', closestStay.arrival_date)
-                                    .eq('production_id', productionId)
-                                }
-                              } else {
-                                // Nessuna stay → aggiorna crew direttamente
-                                await supabase.from('crew')
-                                  .update({ [field]: item.travel_date })
-                                  .eq('uuid', item.crew_id)
-                                  .eq('production_id', productionId)
-                              }
-                              await resolve(item.id)
-                            }}
-                            title={`Usa la data del Travel Calendar: ${item.travel_date}`}
-                            style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
-                            ✓ Use Calendar ({item.travel_date})
-                          </button>
-                        </div>
+                            onClick={() => setWarningModal({ warnings: itemWarnings, crewName: name })}
+                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
+                        )}
                       </div>
-                    )}
-                    {item.hotel_conflict && (() => {
-                      const roomingHotel = locations.find(l => l.uuid === item.rooming_hotel_id)?.name || item.rooming_hotel_id || '?'
-                      // Resolve travel hotel ID: use item.hotel_id if set, otherwise try fuzzy-match hotel_raw against locations
-                      const resolvedTravelHotelId = item.hotel_id || (
-                        item.hotel_raw
-                          ? locations.find(l =>
+
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {item.match_status === 'unmatched' && (
+                          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: '700' }}>
+                            ❌ Not matched in crew
+                          </span>
+                        )}
+                        {item.travel_date_conflict && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
+                              📅 Rooming List → <strong>{liveRoomingDate}</strong> · Travel Calendar → <strong>{item.travel_date}</strong>
+                            </span>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                onClick={async () => {
+                                  if (!item.crew_id || !liveRoomingDate) return
+                                  await supabase.from('travel_movements').update({ travel_date: liveRoomingDate, travel_date_conflict: false }).eq('id', item.id)
+                                  await resolve(item.id)
+                                }}
+                                style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                                ✓ Use Rooming ({liveRoomingDate})
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!item.crew_id || !item.travel_date) return
+                                  const field = item.direction === 'IN' ? 'arrival_date' : 'departure_date'
+                                  const personStays = item._personStays || []
+                                  if (personStays.length > 0) {
+                                    const closestStay = personStays.reduce((best, s) => {
+                                      if (!best) return s
+                                      const d1 = Math.abs(new Date(s.arrival_date) - new Date(item.travel_date))
+                                      const d2 = Math.abs(new Date(best.arrival_date) - new Date(item.travel_date))
+                                      return d1 < d2 ? s : best
+                                    }, null)
+                                    if (closestStay) {
+                                      await supabase.from('crew_stays').update({ [field]: item.travel_date }).eq('crew_id', item.crew_id).eq('arrival_date', closestStay.arrival_date).eq('production_id', productionId)
+                                    }
+                                  } else {
+                                    await supabase.from('crew').update({ [field]: item.travel_date }).eq('uuid', item.crew_id).eq('production_id', productionId)
+                                  }
+                                  await resolve(item.id)
+                                }}
+                                style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#15803d', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                                ✓ Use Calendar ({item.travel_date})
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        {item.hotel_conflict && (() => {
+                          const roomingHotel = locations.find(l => l.uuid === item.rooming_hotel_id)?.name || item.rooming_hotel_id || '?'
+                          const resolvedTravelHotelId = item.hotel_id || (
+                            item.hotel_raw ? locations.find(l =>
                               l.name.toLowerCase().includes(item.hotel_raw.toLowerCase()) ||
                               item.hotel_raw.toLowerCase().includes(l.name.toLowerCase())
-                            )?.uuid
-                          : null
-                      )
-                      const travelHotel = locations.find(l => l.uuid === resolvedTravelHotelId)?.name || item.hotel_raw || '?'
-                      const canUseCalendar = !!(item.crew_id && resolvedTravelHotelId)
-                      return (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
-                            🏨 Rooming List → <strong>{roomingHotel}</strong> · Travel Calendar → <strong>{travelHotel}</strong>
-                          </span>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={async () => {
-                                if (!item.crew_id || !item.rooming_hotel_id) return
-                                const roomingUuid = locations.find(l => l.uuid === item.rooming_hotel_id)?.uuid || null
-                                await supabase.from('crew').update({ hotel_id: roomingUuid }).eq('uuid', item.crew_id).eq('production_id', productionId)
-                                await supabase.from('crew_stays').update({ hotel_id: roomingUuid }).eq('crew_id', item.crew_id).eq('production_id', productionId)
-                                await resolve(item.id)
-                              }}
-                              title={`Usa l'hotel della Rooming List: ${roomingHotel}`}
-                              style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
-                              ✓ Use Rooming ({roomingHotel.split(' ')[0]})
-                            </button>
-                            <button
-                              onClick={async () => {
-                                if (!item.crew_id || !resolvedTravelHotelId) return
-                                await supabase.from('crew').update({ hotel_id: resolvedTravelHotelId }).eq('uuid', item.crew_id).eq('production_id', productionId)
-                                await supabase.from('crew_stays').update({ hotel_id: resolvedTravelHotelId }).eq('crew_id', item.crew_id).eq('production_id', productionId)
-                                await resolve(item.id)
-                              }}
-                              disabled={!canUseCalendar}
-                              title={canUseCalendar ? `Usa l'hotel del Travel Calendar: ${travelHotel}` : `Hotel "${travelHotel}" non trovato nel sistema — impossibile aggiornare`}
-                              style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: canUseCalendar ? '#15803d' : '#94a3b8', color: 'white', fontSize: '11px', fontWeight: '700', cursor: canUseCalendar ? 'pointer' : 'not-allowed', opacity: canUseCalendar ? 1 : 0.6 }}>
-                              ✓ Use Calendar ({travelHotel.split(' ')[0]})
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })()}
-                  </div>
-                  <input
-                    placeholder="Note (optional)…"
-                    value={notes[item.id] || ''}
-                    onChange={e => setNotes(p => ({ ...p, [item.id]: e.target.value }))}
-                    style={{ marginTop: '8px', width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
-                  <button
-                    onClick={async () => {
-                      if (item.match_status === 'unmatched') {
-                        sessionStorage.setItem('crewAddNew', item.full_name_raw)
-                        sessionStorage.setItem('crewAddNewMovementId', item.id)
-
-                        // Cerca hotel_id da locations usando hotel_raw
-                        const rooming_hotel_uuid = item.rooming_hotel_id
-                          ? (locations.find(l => l.uuid === item.rooming_hotel_id)?.uuid || null) : null
-                        let hotel_id = rooming_hotel_uuid || null
-                        if (!hotel_id && item.hotel_raw) {
-                          const matchedLoc = locations.find(l =>
-                            l.name.toLowerCase().includes(item.hotel_raw.toLowerCase()) ||
-                            item.hotel_raw.toLowerCase().includes(l.name.toLowerCase())
+                            )?.uuid : null
                           )
-                          if (matchedLoc) hotel_id = matchedLoc.uuid
-                        }
+                          const travelHotel = locations.find(l => l.uuid === resolvedTravelHotelId)?.name || item.hotel_raw || '?'
+                          const canUseCalendar = !!(item.crew_id && resolvedTravelHotelId)
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fefce8', color: '#a16207', border: '1px solid #fde68a', fontWeight: '700' }}>
+                                🏨 Rooming List → <strong>{roomingHotel}</strong> · Travel Calendar → <strong>{travelHotel}</strong>
+                              </span>
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button
+                                  onClick={async () => {
+                                    if (!item.crew_id || !item.rooming_hotel_id) return
+                                    const roomingUuid = locations.find(l => l.uuid === item.rooming_hotel_id)?.uuid || null
+                                    await supabase.from('crew').update({ hotel_id: roomingUuid }).eq('uuid', item.crew_id).eq('production_id', productionId)
+                                    await supabase.from('crew_stays').update({ hotel_id: roomingUuid }).eq('crew_id', item.crew_id).eq('production_id', productionId)
+                                    await resolve(item.id)
+                                  }}
+                                  style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#0f2340', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                                  ✓ Use Rooming ({roomingHotel.split(' ')[0]})
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (!item.crew_id || !resolvedTravelHotelId) return
+                                    await supabase.from('crew').update({ hotel_id: resolvedTravelHotelId }).eq('uuid', item.crew_id).eq('production_id', productionId)
+                                    await supabase.from('crew_stays').update({ hotel_id: resolvedTravelHotelId }).eq('crew_id', item.crew_id).eq('production_id', productionId)
+                                    await resolve(item.id)
+                                  }}
+                                  disabled={!canUseCalendar}
+                                  style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: canUseCalendar ? '#15803d' : '#94a3b8', color: 'white', fontSize: '11px', fontWeight: '700', cursor: canUseCalendar ? 'pointer' : 'not-allowed', opacity: canUseCalendar ? 1 : 0.6 }}>
+                                  ✓ Use Calendar ({travelHotel.split(' ')[0]})
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </div>
 
-                        sessionStorage.setItem('crewAddNewData', JSON.stringify({
-                          hotel_id:       hotel_id,
-                          arrival_date:   item.rooming_date || item.travel_date || null,
-                          departure_date: null,
-                        }))
-                      }
-                      window.location.href = '/dashboard/crew'
-                    }}
-                    style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', textAlign: 'center' }}>
-                    👤 Crew
-                  </button>
-                  {/* Skip future checks — for coordinators / multi-production crew */}
-                  {item.crew_id && (item.hotel_conflict || item.travel_date_conflict) && (
-                    <button
-                      onClick={async () => {
-                        if (!item.crew_id) return
-                        // Mark crew as no_rooming_check so future imports skip conflict detection
-                        await supabase.from('crew')
-                          .update({ no_rooming_check: true })
-                          .eq('uuid', item.crew_id)
-                          .eq('production_id', productionId)
-                        // Resolve the current discrepancy
-                        await resolve(item.id)
-                      }}
-                      disabled={resolving[item.id]}
-                      title="Questo membro gestisce viaggi e hotel fuori dalla Rooming List (es. Travel Coordinator). I futuri import non genereranno conflitti per questa persona."
-                      style={{
-                        padding: '5px 10px', borderRadius: '6px', border: '1px solid #7c3aed',
-                        background: '#f5f3ff', color: '#7c3aed',
-                        fontSize: '11px', fontWeight: '700',
-                        cursor: resolving[item.id] ? 'default' : 'pointer',
-                        opacity: resolving[item.id] ? 0.6 : 1,
-                        textAlign: 'center',
-                      }}>
-                      ✈ Skip future
-                    </button>
-                  )}
-                  <button
-                    onClick={() => resolve(item.id)}
-                    disabled={resolving[item.id]}
-                    style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', background: '#16a34a', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', opacity: resolving[item.id] ? 0.6 : 1 }}>
-                    {resolving[item.id] ? '…' : '✓ Resolve'}
-                  </button>
+                      {!item._dateWarningsOnly && (
+                        <input
+                          placeholder="Note (optional)…"
+                          value={notes[item.id] || ''}
+                          onChange={e => setNotes(p => ({ ...p, [item.id]: e.target.value }))}
+                          style={{ marginTop: '8px', width: '100%', padding: '5px 8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px', boxSizing: 'border-box' }}
+                        />
+                      )}
+                    </div>
+
+                    {!item._dateWarningsOnly && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
+                        <button
+                          onClick={async () => {
+                            if (item.match_status === 'unmatched') {
+                              sessionStorage.setItem('crewAddNew', item.full_name_raw)
+                              sessionStorage.setItem('crewAddNewMovementId', item.id)
+                              const rooming_hotel_uuid = item.rooming_hotel_id ? (locations.find(l => l.uuid === item.rooming_hotel_id)?.uuid || null) : null
+                              let hotel_id = rooming_hotel_uuid || null
+                              if (!hotel_id && item.hotel_raw) {
+                                const matchedLoc = locations.find(l =>
+                                  l.name.toLowerCase().includes(item.hotel_raw.toLowerCase()) ||
+                                  item.hotel_raw.toLowerCase().includes(l.name.toLowerCase())
+                                )
+                                if (matchedLoc) hotel_id = matchedLoc.uuid
+                              }
+                              sessionStorage.setItem('crewAddNewData', JSON.stringify({ hotel_id, arrival_date: item.rooming_date || item.travel_date || null, departure_date: null }))
+                            }
+                            window.location.href = '/dashboard/crew'
+                          }}
+                          style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', textAlign: 'center' }}>
+                          👤 Crew
+                        </button>
+                        {item.crew_id && (item.hotel_conflict || item.travel_date_conflict) && (
+                          <button
+                            onClick={async () => {
+                              if (!item.crew_id) return
+                              await supabase.from('crew').update({ no_rooming_check: true }).eq('uuid', item.crew_id).eq('production_id', productionId)
+                              await resolve(item.id)
+                            }}
+                            disabled={resolving[item.id]}
+                            style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #7c3aed', background: '#f5f3ff', color: '#7c3aed', fontSize: '11px', fontWeight: '700', cursor: resolving[item.id] ? 'default' : 'pointer', opacity: resolving[item.id] ? 0.6 : 1, textAlign: 'center' }}>
+                            ✈ Skip future
+                          </button>
+                        )}
+                        <button
+                          onClick={() => resolve(item.id)}
+                          disabled={resolving[item.id]}
+                          style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', background: '#16a34a', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', opacity: resolving[item.id] ? 0.6 : 1 }}>
+                          {resolving[item.id] ? '…' : '✓ Resolve'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          )
-        })}
+              )
+            })}
+          </div>
+        )}
       </div>
-    </div>
+      {warningModal && (
+        <BridgeWarningModal warnings={warningModal.warnings} crewName={warningModal.crewName} onClose={() => setWarningModal(null)} />
+      )}
+    </>
+  )
+}
+
+// ── AccommodationWidget ──────────────────────────────────
+function AccommodationWidget({ productionId }) {
+  const [items,        setItems]        = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [expanded,     setExpanded]     = useState(false)
+  const [warningModal, setWarningModal] = useState(null)
+  const [warningsMap,  setWarningsMap]  = useState({})
+
+  useEffect(() => {
+    if (!productionId) return
+    Promise.all([
+      supabase
+        .from('travel_movements')
+        .select('id, crew_id, full_name_raw, travel_date, direction, travel_type, travel_number, from_location, to_location, linked_stay_id, crew:crew_id(uuid, display_id, full_name, department)')
+        .eq('production_id', productionId)
+        .eq('match_status', 'matched')
+        .is('linked_stay_id', null)
+        .order('travel_date', { ascending: true }),
+      supabase
+        .from('crew_stays')
+        .select('crew_id, arrival_date, departure_date')
+        .eq('production_id', productionId),
+    ]).then(([{ data: movData }, { data: staysData }]) => {
+      // Deduplicato per crew_id (UUID post migration)
+      const seen = new Set()
+      const missing = (movData || []).filter(m => {
+        if (!m.crew_id || seen.has(m.crew_id)) return false
+        seen.add(m.crew_id)
+        return true
+      })
+
+      // Compute date warnings — crew_id è UUID
+      const wMap = computeCrewWarnings(movData || [], staysData || [])
+      setWarningsMap(wMap)
+
+      // Merge: crew senza stay + crew con solo date warnings
+      const missingCrewIds = new Set(missing.map(m => m.crew_id).filter(Boolean))
+      const warnOnlyItems = []
+      for (const [crewUuid, warnings] of Object.entries(wMap)) {
+        if (!missingCrewIds.has(crewUuid)) {
+          const mov = (movData || []).find(m => m.crew_id === crewUuid)
+          if (mov) warnOnlyItems.push({ ...mov, _dateWarningsOnly: true })
+        }
+      }
+
+      setItems([...missing, ...warnOnlyItems])
+      setLoading(false)
+    })
+  }, [productionId])
+
+  if (loading || items.length === 0) return null
+
+  const TYPE_ICONS = { FLIGHT: '✈️', TRAIN: '🚂', OA: '🚗', SELF: '🚗', GROUND: '🚐', FERRY: '⛴️' }
+
+  return (
+    <>
+      <div style={{ background: 'white', border: '1px solid #86efac', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
+        <div
+          style={{ padding: '12px 20px', background: '#f0fdf4', borderBottom: expanded ? '1px solid #86efac' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+          onClick={() => setExpanded(v => !v)}>
+          <div style={{ fontSize: '13px', fontWeight: '800', color: '#15803d' }}>
+            🏨 Accommodation issues
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '700' }}>
+              {items.length} {items.length === 1 ? 'issue' : 'issues'}
+            </div>
+            <span style={{ fontSize: '11px', color: '#15803d' }}>{expanded ? '▲ Hide' : '▼ Show'}</span>
+          </div>
+        </div>
+
+        {expanded && (
+          <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+            {items.map((m, i) => {
+              const name = m.crew?.full_name || m.full_name_raw || '—'
+              const crewUuid = m.crew_id
+              const itemWarnings = crewUuid ? (warningsMap[crewUuid] || []) : []
+              return (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '10px 20px', borderBottom: i < items.length - 1 ? '1px solid #f0fdf4' : 'none' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      {name}
+                      {m.crew?.display_id && (
+                        <span style={{ fontFamily: 'monospace', fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>{m.crew.display_id}</span>
+                      )}
+                      {m.crew?.department && (
+                        <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{m.crew.department}</span>
+                      )}
+                      {itemWarnings.length > 0 && (
+                        <button
+                          onClick={() => setWarningModal({ warnings: itemWarnings, crewName: name })}
+                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
+                      )}
+                    </div>
+                    {!m._dateWarningsOnly && (
+                      <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: '700', color: m.direction === 'IN' ? '#15803d' : '#c2410c' }}>
+                          {m.direction === 'IN' ? '🛬 IN' : '🛫 OUT'}
+                        </span>
+                        <span>{m.travel_date}</span>
+                        <span>{TYPE_ICONS[m.travel_type] || ''}</span>
+                        {m.travel_number && (
+                          <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#2563eb' }}>{m.travel_number}</span>
+                        )}
+                        {m.from_location && (
+                          <span>{m.from_location} → {m.to_location || '?'}</span>
+                        )}
+                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', padding: '1px 6px' }}>
+                          No stay linked
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <a
+                    href="/dashboard/accommodation"
+                    style={{ padding: '5px 12px', borderRadius: '7px', background: '#15803d', color: 'white', textDecoration: 'none', fontSize: '11px', fontWeight: '700', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                    + Add Stay
+                  </a>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+      {warningModal && (
+        <BridgeWarningModal warnings={warningModal.warnings} crewName={warningModal.crewName} onClose={() => setWarningModal(null)} />
+      )}
+    </>
   )
 }
 
@@ -2734,8 +2810,8 @@ export default function BridgePage() {
               refreshKey={refreshKey}
               onPreview={ctx => setImportCtx({ ...ctx, locations })}
             />
-            <TravelDiscrepanciesWidget productionId={productionId} refreshKey={refreshKey} />
-            <AccommodationMismatchWidget productionId={productionId} />
+            <TravelWidget productionId={productionId} refreshKey={refreshKey} />
+            <AccommodationWidget productionId={productionId} />
             <CrewDuplicatesWidget
               productionId={productionId}
               locations={locations}
