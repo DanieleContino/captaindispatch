@@ -115,6 +115,10 @@ Fix SA3 — QuickTripModal LEGS+Standard branch vehicleId uses uuid .... ✅ [b8
 Fix SA7a P1 — productions/page.js 5 uuid fixes (hub locations) ....... ✅ [8813b67]
 Fix SA7a P2 — lists-v2/page.js — OK nessun fix ...................... ✅ [8813b67]
 Fix SA7a P3 — reports/page.js — OK nessun fix ........................ ✅ [8813b67]
+Fix SA7b SP1 — settings/production HubLocationsSection update .eq(uuid) ✅
+Fix SA7b SP2-SP6 — settings/production hub key+display_id ×5 ......... ✅
+Fix SA7b settings/page.js — OK nessun fix ............................. ✅
+Fix SA7b cost-report/page.js — OK nessun fix .......................... ✅
 ```
 
 ---
@@ -586,7 +590,8 @@ SA5a    ✅ completato (Bridge API — nessun fix necessario)
 SA5b    ✅ completato (import/save-location l.display_id fix) [93a0efd]
 SA6     ✅ completato (route-duration L63/L64 + ImportModal ×3) [97586dd]
 SA7a    ✅ completato (productions 5 fix + lists-v2 OK + reports OK) [8813b67]
-SA7b    ← PROSSIMA: Dashboard pages gruppo B
+SA7b    ✅ completato (settings/production 6 fix + settings OK + cost-report OK)
+SA8a    ← PROSSIMA: lib files piccoli
 ```
 
 ---
@@ -716,13 +721,13 @@ SA7b    ← PROSSIMA: Dashboard pages gruppo B
 
 ---
 
-### 🔧 SESSIONE SA7b — Dashboard pages (mai auditati) — gruppo B
-> Status: ⏳ PENDING
+### ~~🔧 SESSIONE SA7b~~ ✅ Dashboard pages gruppo B — COMPLETATO
+> Status: ✅ COMPLETATO
 
 ```
-[ ] app/dashboard/settings/page.js
-[ ] app/dashboard/settings/production/page.js
-[ ] app/dashboard/accommodation/cost-report/page.js
+[x] app/dashboard/settings/page.js — OK: locations select uuid+display_id già corretto
+[x] app/dashboard/settings/production/page.js — 6 FIX SP-1..SP-6: update .eq(uuid), key uuid, openEdit display_id, display label display_id, results key uuid, results display_id
+[x] app/dashboard/accommodation/cost-report/page.js — OK: crew_stays join, nessuna FK migrata diretta
 ```
 
 ---

@@ -151,12 +151,13 @@ function HubLocationsSection({ productionId }) {
       })
       if (error) { setFormError(error.message); setFormSaving(false); return }
     } else {
+      // SP-1: usa uuid (PK migrato) invece di id (TEXT display, non in select)
       const { error } = await supabase.from('locations').update({
         name: form.name.trim(),
         lat:  form.lat !== '' ? parseFloat(String(form.lat).replace(',', '.')) : null,
         lng:  form.lng !== '' ? parseFloat(String(form.lng).replace(',', '.')) : null,
         default_pickup_point: form.default_pickup_point.trim() || null,
-      }).eq('id', showForm.id)
+      }).eq('uuid', showForm.uuid)
       if (error) { setFormError(error.message); setFormSaving(false); return }
     }
     setFormSaving(false)
@@ -172,8 +173,9 @@ function HubLocationsSection({ productionId }) {
     setShowForm('new')
   }
 
+  // SP-3: usa display_id (non id che non è nel select)
   function openEdit(hub) {
-    setForm({ id: hub.id, name: hub.name, lat: hub.lat ?? '', lng: hub.lng ?? '', default_pickup_point: hub.default_pickup_point || '' })
+    setForm({ id: hub.display_id, name: hub.name, lat: hub.lat ?? '', lng: hub.lng ?? '', default_pickup_point: hub.default_pickup_point || '' })
     setPlaceQuery('')
     setFormError(null)
     setShowForm(hub)
@@ -191,12 +193,14 @@ function HubLocationsSection({ productionId }) {
         <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '10px', fontStyle: 'italic' }}>No hub locations set</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+          {/* SP-2: key usa uuid */}
           {hubs.map(h => (
-            <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px' }}>
+            <div key={h.uuid} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px' }}>
               <span style={{ fontSize: '16px' }}>🛫</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: '700', fontSize: '13px', color: '#1d4ed8' }}>{h.name}</div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>{h.id}{h.lat && h.lng ? ` · ${parseFloat(h.lat).toFixed(4)}, ${parseFloat(h.lng).toFixed(4)}` : ' · no coordinates'}</div>
+                {/* SP-4: mostra display_id */}
+                <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>{h.display_id || ''}{h.lat && h.lng ? ` · ${parseFloat(h.lat).toFixed(4)}, ${parseFloat(h.lng).toFixed(4)}` : ' · no coordinates'}</div>
               </div>
               <button type="button" onClick={() => openEdit(h)}
                 style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #bfdbfe', background: 'white', color: '#1d4ed8', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
@@ -314,12 +318,14 @@ function HubLocationsSection({ productionId }) {
           {searching && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Searching…</div>}
           {results.length > 0 && (
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              {/* SP-5: key usa uuid */}
               {results.map(r => (
-                <div key={r.id} onClick={() => addExistingHub(r)}
+                <div key={r.uuid} onClick={() => addExistingHub(r)}
                   style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', color: '#0f172a', borderBottom: '1px solid #f1f5f9' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                   onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                  📍 {r.name} <span style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>{r.id}</span>
+                  {/* SP-6: mostra display_id */}
+                  📍 {r.name} <span style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>{r.display_id}</span>
                 </div>
               ))}
             </div>
