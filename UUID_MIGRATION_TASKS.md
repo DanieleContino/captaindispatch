@@ -540,6 +540,10 @@ Commit: `"Fix GO-6: position/route NCC driver select includes id"`
 | `app/api/cron/daily-briefing/route.js` | ✅ SA4 — OK già corretto | SA4 |
 | `app/api/cron/drive-sync/route.js` | ✅ SA4 — OK già corretto | SA4 |
 | `app/api/cron/refresh-routes-traffic/route.js` | ✅ SA4 — OK già corretto | SA4 |
+| `app/api/bridge/approve-user/route.js` | ✅ SA5a — OK già corretto (no FK migrate) | SA5a |
+| `app/api/bridge/invites/route.js` | ✅ SA5a — OK già corretto (no FK migrate) | SA5a |
+| `app/api/bridge/members/route.js` | ✅ SA5a — OK già corretto (no FK migrate) | SA5a |
+| `app/api/bridge/pending-users/route.js` | ✅ SA5a — OK già corretto (no FK migrate) | SA5a |
 
 ---
 
@@ -565,7 +569,8 @@ SA1     ✅ completato (Captain Go nuove route — nessun fix)
 SA2     ✅ completato (crew/page.js 10 uuid fixes) [c2f1a2c]
 SA3     ✅ completato (QuickTripModal LEGS+Standard vehicleId uuid) [b8ae772]
 SA4     ✅ completato (cron API — nessun fix necessario)
-SA5a    ← PROSSIMA: Bridge API audit
+SA5a    ✅ completato (Bridge API — nessun fix necessario)
+SA5b    ← PROSSIMA: Import + AI Trip Builder audit
 ```
 
 ---
@@ -646,15 +651,15 @@ SA5a    ← PROSSIMA: Bridge API audit
 
 ---
 
-### 🔧 SESSIONE SA5a — Bridge API (mai auditati)
+### ~~🔧 SESSIONE SA5a~~ ✅ Bridge API — NESSUN FIX NECESSARIO
 > File: 4 route bridge
-> Status: ⏳ PENDING
+> Status: ✅ COMPLETATO — nessuna FK a tabelle migrate (locations/crew/vehicles)
 
 ```
-[ ] app/api/bridge/approve-user/route.js
-[ ] app/api/bridge/invites/route.js
-[ ] app/api/bridge/members/route.js
-[ ] app/api/bridge/pending-users/route.js
+[x] app/api/bridge/approve-user/route.js — OK: solo user_roles + productions (non migrare)
+[x] app/api/bridge/invites/route.js      — OK: solo production_invites + productions (non migrare)
+[x] app/api/bridge/members/route.js      — OK: solo user_roles + auth.users (non migrare)
+[x] app/api/bridge/pending-users/route.js — OK: solo user_roles + auth.users (non migrare)
 ```
 
 ---
