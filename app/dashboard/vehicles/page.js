@@ -3820,13 +3820,13 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {vehicles.map(v => {
-          const isExpanded = expandedVehicle === v.id
-          const vehicleExpenses = expenses[v.id] || []
+          const isExpanded = expandedVehicle === v.uuid
+          const vehicleExpenses = expenses[v.uuid] || []
           const vehicleTotal = vehicleExpenses.reduce((s, e) => s + (parseFloat(e.fuel_amount) || 0) + (parseFloat(e.other_amount) || 0), 0)
           const vehicleKm = vehicleExpenses.reduce((s, e) => s + (e.km_start !== null && e.km_end !== null ? Math.max(0, e.km_end - e.km_start) : 0), 0)
           return (
-            <div key={v.id} style={{ background: 'white', border: '1px solid #e2e8f0', borderTop: '3px solid #15803d', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
-              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => toggleVehicle(v.id)}>
+            <div key={v.uuid} style={{ background: 'white', border: '1px solid #e2e8f0', borderTop: '3px solid #15803d', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+              <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => toggleVehicle(v.uuid)}>
                 <span style={{ fontSize: '20px' }}>{TYPE_ICON[v.vehicle_type] || '🚗'}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
