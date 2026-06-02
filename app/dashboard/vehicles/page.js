@@ -349,9 +349,9 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                           🔗 Collega crew come driver
                         </div>
                         {matches.map(cm => (
-                          <div key={cm.id}
+                          <div key={cm.uuid}
                             onMouseDown={() => {
-                              setForm(f => ({ ...f, driver_name: cm.full_name, driver_crew_id: cm.id }))
+                              setForm(f => ({ ...f, driver_name: cm.full_name, driver_crew_id: cm.uuid }))
                               setShowDriverSugg(false)
                             }}
                             style={{ padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }}
@@ -556,17 +556,17 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                         </div>
                       )}
                       {sorted.map((cm, idx) => {
-                        const sel = form.preferred_crew_ids.includes(cm.id)
+                        const sel = form.preferred_crew_ids.includes(cm.uuid)
                         const isLastDept = idx === deptSectionEnd
                         const isOtherSection = form.preferred_dept && cm.department !== form.preferred_dept && idx === deptSectionEnd + 1
                         return (
-                          <div key={cm.id}>
+                          <div key={cm.uuid}>
                             {isOtherSection && sorted.some(c => c.department === form.preferred_dept) && (
                               <div style={{ padding: '3px 8px', fontSize: '9px', fontWeight: '700', color: '#94a3b8', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderTop: '1px solid #e2e8f0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 Altri
                               </div>
                             )}
-                            <div onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.id) : [...f.preferred_crew_ids, cm.id] }))}
+                            <div onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.uuid) : [...f.preferred_crew_ids, cm.uuid] }))}
                               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', background: sel ? '#eff6ff' : 'transparent', borderBottom: isLastDept && deptSectionEnd >= 0 ? 'none' : '1px solid #f1f5f9' }}>
                               <span style={{ fontSize: '13px', flexShrink: 0 }}>{sel ? '✅' : '⬜'}</span>
                               <div style={{ flex: 1, minWidth: 0 }}>
@@ -2116,7 +2116,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
               return (
                 <div style={{ position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 200, overflow: 'hidden' }}>
                   {matches.map(cm => (
-                    <div key={cm.id}
+                    <div key={cm.uuid}
                       onMouseDown={() => onSelect(cm)}
                       style={{ padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', borderBottom: '1px solid #f1f5f9' }}
                       onMouseOver={e => e.currentTarget.style.background = '#f0fdf4'}
@@ -2358,7 +2358,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                 setShowSugg={setShowDriverSugg}
                 notFound={driverNotFound}
                 setNotFound={setDriverNotFound}
-                onSelect={cm => { setForm(f => ({ ...f, driver_name: cm.full_name, driver_crew_id: cm.id, driver_dept: cm.department || '' })); setDriverSearch(cm.full_name); setShowDriverSugg(false); setDriverNotFound(false) }}
+                onSelect={cm => { setForm(f => ({ ...f, driver_name: cm.full_name, driver_crew_id: cm.uuid, driver_dept: cm.department || '' })); setDriverSearch(cm.full_name); setShowDriverSugg(false); setDriverNotFound(false) }}
                 onClear={() => { setForm(f => ({ ...f, driver_name: '', driver_crew_id: '', driver_dept: '' })); setDriverSearch(''); setDriverNotFound(false) }}
               />
               <DriverField
@@ -2371,7 +2371,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                 setShowSugg={setShowDriver2Sugg}
                 notFound={driver2NotFound}
                 setNotFound={setDriver2NotFound}
-                onSelect={cm => { setForm(f => ({ ...f, rental_second_driver: cm.full_name, rental_second_driver_crew_id: cm.id })); setDriver2Search(cm.full_name); setShowDriver2Sugg(false); setDriver2NotFound(false) }}
+                onSelect={cm => { setForm(f => ({ ...f, rental_second_driver: cm.full_name, rental_second_driver_crew_id: cm.uuid })); setDriver2Search(cm.full_name); setShowDriver2Sugg(false); setDriver2NotFound(false) }}
                 onClear={() => { setForm(f => ({ ...f, rental_second_driver: '', rental_second_driver_crew_id: '' })); setDriver2Search(''); setDriver2NotFound(false) }}
               />
             </div>
@@ -2463,7 +2463,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                   {form.preferred_crew_ids.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
                       {form.preferred_crew_ids.map(cid => {
-                        const cm = crewList.find(c => c.id === cid)
+                        const cm = crewList.find(c => c.uuid === cid)
                         if (!cm) return null
                         return (
                           <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
@@ -2477,10 +2477,10 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                   )}
                   <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
                     {crewList.map(cm => {
-                      const sel = form.preferred_crew_ids.includes(cm.id)
+                      const sel = form.preferred_crew_ids.includes(cm.uuid)
                       return (
-                        <div key={cm.id}
-                          onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.id) : [...f.preferred_crew_ids, cm.id] }))}
+                        <div key={cm.uuid}
+                          onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.uuid) : [...f.preferred_crew_ids, cm.uuid] }))}
                           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', background: sel ? '#eff6ff' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
                           <span style={{ fontSize: '13px', flexShrink: 0 }}>{sel ? '✅' : '⬜'}</span>
                           <span style={{ fontSize: '11px', fontWeight: sel ? '700' : '500', color: sel ? '#1d4ed8' : '#0f172a', flex: 1 }}>{cm.full_name}</span>
@@ -4199,7 +4199,7 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
                     )
                   })()}
                   {Array.isArray(initial.preferred_crew_ids) && initial.preferred_crew_ids.map(cid => {
-                    const cm = crewList.find(c => c.id === cid)
+                    const cm = crewList.find(c => c.uuid === cid)
                     if (!cm) return null
                     return (
                       <span key={cid} style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
