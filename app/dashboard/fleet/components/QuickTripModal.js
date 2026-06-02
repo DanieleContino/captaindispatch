@@ -715,7 +715,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          productionId, vehicleId: vehicle.id, date, callTime, serviceType,
+          productionId, vehicleId: vehicle.uuid || vehicle.id, date, callTime, serviceType,
           pickupId, dropoffIds,
           passengerIds: selCrew.map(c => c.uuid),
           notifyDriver: notify,
@@ -808,7 +808,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          productionId, vehicleId: vehicle.id, date, callTime, serviceType,
+          productionId, vehicleId: vehicle.uuid || vehicle.id, date, callTime, serviceType,
           legs, notifyDriver: notify,
           ...(timeMode === 'pickup' ? { pickupTime } : {}),
           ...(timeMode === 'now'    ? { pickupTime: `${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}`, pickupTimeIsNow: true } : {}),
