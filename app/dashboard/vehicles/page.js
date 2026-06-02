@@ -1619,6 +1619,14 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
                           onMouseEnter={e => Array.from(e.currentTarget.cells).forEach(c => { if (!c.style.background || c.style.background === 'white' || c.style.background === 'rgb(250, 250, 250)') c.style.background = '#f8fafc' })}
                           onMouseLeave={e => Array.from(e.currentTarget.cells).forEach(c => { c.style.background = idx % 2 === 0 ? 'white' : '#fafafa' })}>
                           {columnsConfig.map(col => renderCell(col, v, supplierName))}
+                          <td style={{ padding: '4px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <button
+                              onClick={() => { setRentalSidebarMode('edit'); setRentalTarget(v); setRentalSidebarOpen(true) }}
+                              style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', fontSize: '12px', color: '#374151' }}
+                              title="Edit rental">
+                              ✏️
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
