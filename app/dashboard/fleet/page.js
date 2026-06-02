@@ -279,10 +279,12 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
 
         const infoWindow = new window.google.maps.InfoWindow({
           content: `
-            <div style="font-family:monospace;font-size:13px;font-weight:800;color:#0f172a">${signCode}</div>
-            <div style="font-size:11px;color:#64748b;margin-top:2px">👤 ${driverName}</div>
-            <div style="font-size:11px;font-weight:700;color:${color};margin-top:2px">${status}</div>
-            ${s.last_seen_at ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px">📍 Last seen ${new Date(s.last_seen_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>` : ''}
+            <div style="padding-right:22px;min-width:150px">
+              <div style="font-family:monospace;font-size:13px;font-weight:800;color:#0f172a">${signCode}</div>
+              <div style="font-size:11px;color:#64748b;margin-top:2px">👤 ${driverName}</div>
+              <div style="font-size:11px;font-weight:700;color:${color};margin-top:2px">${status}</div>
+              ${s.last_seen_at ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px">📍 Last seen ${new Date(s.last_seen_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>` : ''}
+            </div>
           `,
         })
 

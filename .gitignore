@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# Temporary audit/debug scripts and reports (root only)
+/audit_*.txt
+/build_result*.txt
+
 # debug
 npm-debug.log*
 yarn-debug.log*
