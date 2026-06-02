@@ -1610,6 +1610,7 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
                             {col.header_label}
                           </th>
                         ))}
+                        <th style={{ padding: '6px 8px', width: '40px', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }} />
                       </tr>
                     </thead>
                     <tbody>
