@@ -266,7 +266,7 @@ function StayForm({ form, setF, onSave, onCancel, saveLabel, saving, hotelLocati
         <label style={STAY_LBL}>Hotel</label>
         <select value={form.hotel_id || ''} onChange={e => setF(f => ({ ...f, hotel_id: e.target.value }))} style={STAY_INP}>
           <option value="">– No hotel –</option>
-          {hotelLocations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              {hotelLocations.map(l => <option key={l.id} value={l.uuid}>{l.name}</option>)}
         </select>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
@@ -421,7 +421,7 @@ function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
               )}
 
               {stays.map(s => {
-                const hotel = locations.find(l => l.id === s.hotel_id)
+                const hotel = locations.find(l => l.uuid === s.hotel_id)
                 if (editId === s.id) {
                   return (
                     <div key={s.id}>
@@ -1111,9 +1111,9 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
 
       {/* Actions */}
       <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px', display: 'flex', gap: '5px', alignItems: 'center' }}>
-        <NTNToggle crewId={member.id} current={member.no_transport_needed} onChange={onNTNChange} />
-        <RemoteToggle crewId={member.id} current={member.on_location} onChange={onRemoteChange} />
-        <ContactPopover crewId={member.id} email={member.email} phone={member.phone} onSaved={onContactSaved} />
+        <NTNToggle crewId={member.uuid} current={member.no_transport_needed} onChange={onNTNChange} />
+        <RemoteToggle crewId={member.uuid} current={member.on_location} onChange={onRemoteChange} />
+        <ContactPopover crewId={member.uuid} email={member.email} phone={member.phone} onSaved={onContactSaved} />
         <button onClick={() => onEdit(member)}
           style={{ marginLeft: 'auto', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>
           ✎ Edit
@@ -1386,8 +1386,8 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                 {linkedCrewResults.length > 0 && (
                   <div style={{ border: '1px solid #fde68a', borderRadius: '8px', marginTop: '4px', overflow: 'hidden' }}>
                     {linkedCrewResults.map(c => (
-                      <div key={c.id}
-                        onClick={() => { set('linked_crew_id', c.id); setLinkedCrewSearch(c.full_name); setLinkedCrewResults([]) }}
+                      <div key={c.uuid}
+                        onClick={() => { set('linked_crew_id', c.uuid); setLinkedCrewSearch(c.full_name); setLinkedCrewResults([]) }}
                         style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #fef9c3', display: 'flex', gap: '8px', alignItems: 'center', background: 'white' }}
                         onMouseEnter={e => e.currentTarget.style.background = '#fefce8'}
                         onMouseLeave={e => e.currentTarget.style.background = 'white'}>
@@ -1537,7 +1537,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
               <>
                 <AccommodationAccordion
                   key={`acc-${initial.id}-${editKey}`}
-                  crewId={initial.id}
+                  crewId={initial.uuid}
                   locations={locations}
                   onCrewDatesUpdated={(active) => {
                     setForm(f => ({
@@ -1548,9 +1548,9 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                     }))
                   }}
                 />
-                <TravelAccordion key={`travel-${initial.id}-${editKey}`} crewId={initial.id} />
-                <FamilyAccordion key={`family-${initial.id}-${editKey}`} crewId={initial.id} personType={form.person_type} linkedCrewId={form.linked_crew_id} />
-                <NotesPanel accordion key={`notes-${initial.id}-${editKey}`} crewId={initial.id} productionId={PRODUCTION_ID} currentUser={currentUser} onNotesChanged={onNotesChanged} />
+                <TravelAccordion key={`travel-${initial.id}-${editKey}`} crewId={initial.uuid} />
+                <FamilyAccordion key={`family-${initial.id}-${editKey}`} crewId={initial.uuid} personType={form.person_type} linkedCrewId={form.linked_crew_id} />
+                <NotesPanel accordion key={`notes-${initial.id}-${editKey}`} crewId={initial.uuid} productionId={PRODUCTION_ID} currentUser={currentUser} onNotesChanged={onNotesChanged} />
               </>
             )}
 
@@ -1744,7 +1744,7 @@ export default function CrewPage() {
       if (c.arrival_date   && today === c.arrival_date) {
         // Arriva oggi con volo/treno IN → deve essere IN (anche se già switchato a PRESENT per errore)
         // Arriva oggi senza volo (check-in hotel diretto) → PRESENT
-        return hasInMovementToday.has(c.id) ? 'IN' : 'PRESENT'
+        return hasInMovementToday.has(c.uuid) ? 'IN' : 'PRESENT'
       }
       if (c.arrival_date   && today < c.arrival_date)                      return 'IN'
       return null
@@ -1811,10 +1811,10 @@ export default function CrewPage() {
     setFamilyModalCrew({ crewId, crewName, members })
   }
 
-  function handleStatusChange(id, s)            { setCrew(p => p.map(c => c.id === id ? { ...c, travel_status: s } : c)) }
-  function handleNTNChange(id, val)             { setCrew(p => p.map(c => c.id === id ? { ...c, no_transport_needed: val } : c)) }
-  function handleRemoteChange(id, val)          { setCrew(p => p.map(c => c.id === id ? { ...c, on_location: val } : c)) }
-  function handleContactSaved(id, { email, phone }) { setCrew(p => p.map(c => c.id === id ? { ...c, email, phone } : c)) }
+  function handleStatusChange(id, s)            { setCrew(p => p.map(c => c.uuid === id ? { ...c, travel_status: s } : c)) }
+  function handleNTNChange(id, val)             { setCrew(p => p.map(c => c.uuid === id ? { ...c, no_transport_needed: val } : c)) }
+  function handleRemoteChange(id, val)          { setCrew(p => p.map(c => c.uuid === id ? { ...c, on_location: val } : c)) }
+  function handleContactSaved(id, { email, phone }) { setCrew(p => p.map(c => c.uuid === id ? { ...c, email, phone } : c)) }
 
   async function handleSaved(newCrewId, newFullName) {
     setSO(false)
@@ -1857,7 +1857,7 @@ export default function CrewPage() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
   function selectAll() {
-    const allIds = filtered.map(m => m.id)
+    const allIds = filtered.map(m => m.uuid)
     const allSelected = allIds.every(id => selectedIds.includes(id))
     setSelectedIds(allSelected ? [] : allIds)
   }
@@ -2179,7 +2179,7 @@ export default function CrewPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {familyFiltered.map(m => {
-                  const linkedCrew = crew.find(c => c.id === m.linked_crew_id)
+                  const linkedCrew = crew.find(c => c.uuid === m.linked_crew_id)
                   return (
                     <div key={m.id} style={{ background: '#fefce8', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
