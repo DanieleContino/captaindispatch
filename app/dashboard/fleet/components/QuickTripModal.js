@@ -631,8 +631,8 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
   }, [step, pickupLoc, dropoffLoc])
 
   function computeSuggested() {
-    const pickupId  = pickupLoc?.id  || null
-    const dropoffId = dropoffLoc?.id || null
+    const pickupId  = pickupLoc?.uuid  || null
+    const dropoffId = dropoffLoc?.uuid || null
     const tc = deduceClass(pickupId, dropoffId)
     let candidates = []
     if (tc === 'ARRIVAL' && dropoffId) candidates = crew.filter(c => c.travel_status === 'IN' && c.hotel_id === dropoffId)

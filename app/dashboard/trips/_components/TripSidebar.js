@@ -123,7 +123,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       if (cancelled) return
       const crew = (data || [])
         .filter(s => s.crew?.hotel_status === 'CONFIRMED')
-        .map(s => ({ id: s.crew.id, uuid: s.crew.uuid, full_name: s.crew.full_name, department: s.crew.department }))
+        .map(s => ({ uuid: s.crew.uuid, full_name: s.crew.full_name, department: s.crew.department }))
         .sort((a, b) => (a.department || '').localeCompare(b.department || '') || a.full_name.localeCompare(b.full_name))
       setCrewList(crew)
       if (assignCtx?.id) {

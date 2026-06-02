@@ -1556,7 +1556,7 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
     if (filterStatus !== 'ALL' && v.rental_status !== filterStatus) return false
     if (search) {
       const q = search.toLowerCase()
-      if (!(v.id || '').toLowerCase().includes(q) &&
+      if (!(v.display_id || '').toLowerCase().includes(q) &&
           !(v.driver_name || '').toLowerCase().includes(q) &&
           !(v.license_plate || '').toLowerCase().includes(q) &&
           !(v.rental_brand || '').toLowerCase().includes(q) &&
