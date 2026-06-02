@@ -54,7 +54,7 @@ export async function POST(req) {
 
     let maxLocNum = 0
     for (const l of (existingLocs || [])) {
-      const n = parseInt((l.id || '').replace(/^H/i, ''), 10)
+      const n = parseInt((l.display_id || '').replace(/^H/i, ''), 10)
       if (!isNaN(n) && n > maxLocNum) maxLocNum = n
     }
     maxLocNum++
