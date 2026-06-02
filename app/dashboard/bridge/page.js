@@ -880,22 +880,16 @@ function TravelWidget({ productionId, refreshKey }) {
   return (
     <>
       <div style={{ background: 'white', border: '1px solid #c4b5fd', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
-        <div
-          style={{ padding: '12px 20px', background: '#faf5ff', borderBottom: expanded ? '1px solid #c4b5fd' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-          onClick={() => setExpanded(v => !v)}>
+        <div style={{ padding: '12px 20px', background: '#faf5ff', borderBottom: '1px solid #c4b5fd', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: '13px', fontWeight: '800', color: '#6d28d9' }}>
             ✈️ Travel issues
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '700' }}>
-              {items.length} {items.length === 1 ? 'issue' : 'issues'}
-            </div>
-            <span style={{ fontSize: '11px', color: '#7c3aed' }}>{expanded ? '▲ Hide' : '▼ Show'}</span>
+          <div style={{ fontSize: '11px', color: '#7c3aed', fontWeight: '700' }}>
+            {items.length} {items.length === 1 ? 'issue' : 'issues'}
           </div>
         </div>
 
-        {expanded && (
-          <div style={{ maxHeight: '480px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '480px', overflowY: 'auto' }}>
             {items.map(item => {
               const name = item.crew?.full_name || item.full_name_raw
               const crewUuid = item.crew_id
@@ -1089,7 +1083,6 @@ function TravelWidget({ productionId, refreshKey }) {
               )
             })}
           </div>
-        )}
       </div>
       {warningModal && (
         <BridgeWarningModal warnings={warningModal.warnings} crewName={warningModal.crewName} onClose={() => setWarningModal(null)} />
@@ -1120,7 +1113,15 @@ function AccommodationWidget({ productionId }) {
         .from('crew_stays')
         .select('crew_id, arrival_date, departure_date')
         .eq('production_id', productionId),
-    ]).then(([{ data: movData }, { data: staysData }]) => {
+      supabase
+        .from('travel_movements')
+        .select('id, crew_id, full_name_raw, travel_date, direction, travel_type, from_location, to_location, travel_number, crew:crew_id(uuid, display_id, full_name, department)')
+        .eq('production_id', productionId)
+        .eq('match_status', 'matched')
+        .order('travel_date', { ascending: true }),
+    ]).then(([{ data: movData }, { data: staysData }, { data: allMatchedMovs }]) => {
+      const allMatched = allMatchedMovs || []
+
       // Deduplicato per crew_id (UUID post migration)
       const seen = new Set()
       const missing = (movData || []).filter(m => {
@@ -1129,8 +1130,8 @@ function AccommodationWidget({ productionId }) {
         return true
       })
 
-      // Compute date warnings — crew_id è UUID
-      const wMap = computeCrewWarnings(movData || [], staysData || [])
+      // Compute date warnings su TUTTI i movimenti matched — crew_id è UUID
+      const wMap = computeCrewWarnings(allMatched, staysData || [])
       setWarningsMap(wMap)
 
       // Merge: crew senza stay + crew con solo date warnings
@@ -1138,7 +1139,7 @@ function AccommodationWidget({ productionId }) {
       const warnOnlyItems = []
       for (const [crewUuid, warnings] of Object.entries(wMap)) {
         if (!missingCrewIds.has(crewUuid)) {
-          const mov = (movData || []).find(m => m.crew_id === crewUuid)
+          const mov = allMatched.find(m => m.crew_id === crewUuid)
           if (mov) warnOnlyItems.push({ ...mov, _dateWarningsOnly: true })
         }
       }
@@ -1155,22 +1156,16 @@ function AccommodationWidget({ productionId }) {
   return (
     <>
       <div style={{ background: 'white', border: '1px solid #86efac', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px' }}>
-        <div
-          style={{ padding: '12px 20px', background: '#f0fdf4', borderBottom: expanded ? '1px solid #86efac' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-          onClick={() => setExpanded(v => !v)}>
+        <div style={{ padding: '12px 20px', background: '#f0fdf4', borderBottom: '1px solid #86efac', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: '13px', fontWeight: '800', color: '#15803d' }}>
             🏨 Accommodation issues
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '700' }}>
-              {items.length} {items.length === 1 ? 'issue' : 'issues'}
-            </div>
-            <span style={{ fontSize: '11px', color: '#15803d' }}>{expanded ? '▲ Hide' : '▼ Show'}</span>
+          <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '700' }}>
+            {items.length} {items.length === 1 ? 'issue' : 'issues'}
           </div>
         </div>
 
-        {expanded && (
-          <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
             {items.map((m, i) => {
               const name = m.crew?.full_name || m.full_name_raw || '—'
               const crewUuid = m.crew_id
@@ -1220,7 +1215,6 @@ function AccommodationWidget({ productionId }) {
               )
             })}
           </div>
-        )}
       </div>
       {warningModal && (
         <BridgeWarningModal warnings={warningModal.warnings} crewName={warningModal.crewName} onClose={() => setWarningModal(null)} />
