@@ -857,9 +857,9 @@ function WrapTripContent() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {vehicles.map(v => {
-                const isSel = vehicle?.id === v.id
+                const isSel = vehicle?.uuid === v.uuid
                 return (
-                  <div key={v.id} onClick={() => setVehicle(isSel ? null : v)}
+                  <div key={v.uuid} onClick={() => setVehicle(isSel ? null : v)}
                     style={{ padding: '13px 14px', borderRadius: '10px', border: `2px solid ${isSel ? '#2563eb' : '#e2e8f0'}`, background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{v.id}</div>
