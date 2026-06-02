@@ -1243,7 +1243,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       }).select('id').single()
       savedStayId = newStay?.id
     }
-    setRoomates(prev => [...prev, { id: savedStayId, crew_id: crewMember.id, crew: crewMember }])
+    setRoomates(prev => [...prev, { id: savedStayId, crew_id: crewMember.uuid, crew: crewMember }])
     if (onRoommateChanged) onRoommateChanged()
     setRoommateSearch('')
     setRoommateResults([])
