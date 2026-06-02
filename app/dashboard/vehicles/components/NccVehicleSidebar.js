@@ -45,6 +45,7 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
     ncc_driver_id: '',
     sign_code: '', unit_default: '',
     available_from: '', available_to: '',
+    preferred_dept: '',
     active: true, in_transport: true,
   }
   const [form, setForm]     = useState(EMPTY)
@@ -89,6 +90,7 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
         unit_default:     initial.unit_default      || '',
         available_from:   initial.available_from    || '',
         available_to:     initial.available_to      || '',
+        preferred_dept:   initial.preferred_dept    || '',
         active:           initial.active !== false,
         in_transport:     initial.in_transport !== false,
       })
@@ -174,6 +176,7 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
       ncc_driver_id:    form.ncc_driver_id || null,
       sign_code:        form.sign_code.trim()    || null,
       unit_default:     form.unit_default.trim() || null,
+      preferred_dept:   form.preferred_dept      || null,
       available_from:   form.available_from || null,
       available_to:     form.available_to   || null,
       active:           form.active,
@@ -372,32 +375,22 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
               </div>
             </div>
 
-            {/* Assignments — read-only */}
-            {mode === 'edit' && (initial?.preferred_dept || (Array.isArray(initial?.preferred_crew_ids) && initial.preferred_crew_ids.length > 0)) && (
-              <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
-                <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '8px' }}>⭐ Assignments</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
-                  {initial.preferred_dept && (() => {
-                    const dc = DEPT_COLOR[initial.preferred_dept] || { bg: '#f8fafc', color: '#475569', border: '#e2e8f0' }
-                    return (
-                      <span style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: dc.bg, color: dc.color, border: `1px solid ${dc.border}` }}>
-                        {initial.preferred_dept}
-                      </span>
-                    )
-                  })()}
-                  {Array.isArray(initial.preferred_crew_ids) && initial.preferred_crew_ids.map(cid => {
-                    const cm = crewList.find(c => c.uuid === cid)
-                    if (!cm) return null
-                    return (
-                      <span key={cid} style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
-                        {cm.full_name}
-                      </span>
-                    )
-                  })}
-                </div>
-                <div style={{ fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>Edit assignments from Fleet tab</div>
+            {/* ── ASSIGNMENT SECTION ── */}
+            <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>⭐ Assignment</div>
+              <div style={{ marginBottom: '8px' }}>
+                <label style={lbl}>Preferred Dept</label>
+                <select value={form.preferred_dept || ''} onChange={e => set('preferred_dept', e.target.value || '')}
+                  style={{ ...inp, background: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).bg || 'white') : 'white', color: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).color || '#0f172a') : '#94a3b8', fontWeight: form.preferred_dept ? '700' : '400', cursor: 'pointer' }}>
+                  <option value="">— No preferred dept —</option>
+                  {Object.keys(DEPT_COLOR).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
               </div>
-            )}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '7px 10px', background: 'white', border: '1px solid #e9d5ff', borderRadius: '7px' }}>
+                <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
+                <span style={{ fontSize: '10px', color: '#7e22ce' }}>Preferred crew assignments are managed from the <strong>Fleet tab</strong>.</span>
+              </div>
+            </div>
 
             {/* Danger Zone */}
             {mode === 'edit' && (
