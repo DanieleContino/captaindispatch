@@ -592,7 +592,8 @@ SA6     ✅ completato (route-duration L63/L64 + ImportModal ×3) [97586dd]
 SA7a    ✅ completato (productions 5 fix + lists-v2 OK + reports OK) [8813b67]
 SA7b    ✅ completato (settings/production 6 fix + settings OK + cost-report OK)
 SA8a    ✅ completato (lib files piccoli — nessun fix necessario)
-SA8b    ← PROSSIMA: lib files medi
+SA8b    ✅ completato (lib files medi — nessun fix necessario)
+SA9     ← PROSSIMA: Drive API + Push API
 ```
 
 ---
@@ -748,18 +749,18 @@ SA8b    ← PROSSIMA: lib files medi
 
 ---
 
-### 🔧 SESSIONE SA8b — lib files medi (mai auditati)
-> Status: ⏳ PENDING
+### ~~🔧 SESSIONE SA8b~~ ✅ lib files medi — NESSUN FIX NECESSARIO
+> Status: ✅ COMPLETATO
 
 ```
-[ ] lib/TripNotesPanel.js
-[ ] lib/transferClass.js
-[ ] lib/BlockConfigForms.js
-[ ] lib/NotesPanel.js
-[ ] lib/tlBlocksCatalog.js
-[ ] lib/TLHeaderFooterRenderer.js
-[ ] lib/HeaderFooterEditorSidebar.js
-[ ] lib/generateDisplayId.js
+[x] lib/TripNotesPanel.js      — OK: solo fetch() API, nessuna FK migrata
+[x] lib/transferClass.js       — OK: calcolo puro, zero DB
+[x] lib/BlockConfigForms.js    — OK: usa crew.uuid come key (L801)
+[x] lib/NotesPanel.js          — OK: solo fetch() API
+[x] lib/tlBlocksCatalog.js     — OK: render puro, zero DB
+[x] lib/TLHeaderFooterRenderer.js  — OK: usa helper da tlTemplatesDb
+[x] lib/HeaderFooterEditorSidebar.js — OK: usa helper da tlTemplatesDb
+[x] lib/generateDisplayId.js   — OK: solo display_id, nessuna FK migrata
 ```
 
 ---
