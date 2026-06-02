@@ -185,7 +185,7 @@ function LocationPicker({ locations, onSelect, onClose, title }) {
           {filtered.map(l => (
             <div
               key={l.id}
-              onClick={() => onSelect({ id: l.id, name: l.name, lat: l.lat, lng: l.lng, is_temp: false })}
+            onClick={() => onSelect({ id: l.display_id, uuid: l.uuid, name: l.name, lat: l.lat, lng: l.lng, is_temp: false })}
               style={{ padding: '12px 16px', borderBottom: '1px solid #f8fafc', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
               onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
               onMouseLeave={e => e.currentTarget.style.background = 'white'}
@@ -265,10 +265,10 @@ function AIBuilderTab({ vehicle, productionId, date, onDateChange, onCreated, on
 
     const crewList = crew.map(c => {
       const hotelName = locations.find(l => l.uuid === c.hotel_id)?.name || null
-      return `- id:${c.id} name:"${c.full_name}" dept:${c.department || '–'} status:${c.travel_status || '–'}${hotelName ? ` hotel:"${hotelName}" hotel_id:${c.hotel_id}` : ' hotel:unknown'}`
+      return `- id:${c.display_id} name:"${c.full_name}" dept:${c.department || '–'} status:${c.travel_status || '–'}${hotelName ? ` hotel:"${hotelName}" hotel_id:${c.hotel_id}` : ' hotel:unknown'}`
     }).join('\n')
 
-    const locationsList = locations.map(l => `- id:${l.id} name:"${l.name}"`).join('\n')
+    const locationsList = locations.map(l => `- id:${l.display_id} name:"${l.name}"`).join('\n')
 
     const systemPrompt = `You are an expert transportation coordinator assistant for film/TV productions.
 The user will describe a trip request in Italian or English, using natural conversational language.
@@ -655,7 +655,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
     updater(prev => prev.map((row, i) => i !== index ? row : {
       ...row,
       personId,
-      locId:   hotel?.id   || null,
+      locId:   hotel?.uuid || null,
       locName: hotel?.name || '',
       locTemp: null,
     }))
@@ -691,7 +691,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
       .insert({ display_id: tmpId, production_id: productionId, name: loc.name, lat: loc.lat, lng: loc.lng, is_temp: true })
       .select('uuid').single()
     if (error) throw new Error('Failed to save custom location')
-    return data.id
+    return data.uuid
   }
 
   // Canproceed per step 1 standard
@@ -717,7 +717,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
         body: JSON.stringify({
           productionId, vehicleId: vehicle.id, date, callTime, serviceType,
           pickupId, dropoffIds,
-          passengerIds: selCrew.map(c => c.id),
+          passengerIds: selCrew.map(c => c.uuid),
           notifyDriver: notify,
           ...(timeMode === 'pickup' ? { pickupTime } : {}),
           ...(timeMode === 'now'    ? { pickupTime: `${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}`, pickupTimeIsNow: true } : {}),
@@ -849,8 +849,8 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
                 style={{ flex: 1, padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', color: row.personId ? '#0f172a' : '#94a3b8', background: 'white', fontFamily: 'inherit' }}
               >
                 <option value="">Select person...</option>
-                {crew.filter(c => !used.has(c.id) || c.id === row.personId).map(c => (
-                  <option key={c.id} value={c.id}>{c.full_name}</option>
+                {crew.filter(c => !used.has(c.uuid) || c.uuid === row.personId).map(c => (
+                  <option key={c.uuid} value={c.uuid}>{c.full_name}</option>
                 ))}
               </select>
               {rows.length > 1 && (
@@ -978,7 +978,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
                 <button onClick={() => setSelCrew([])} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Remove all</button>
               </div>
               {selCrew.map(c => (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div key={c.uuid} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                   <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#eff6ff', color: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '11px', flexShrink: 0 }}>
                     {c.full_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()}
                   </div>
@@ -995,11 +995,11 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
             <div>
               <div style={{ fontSize: '11px', fontWeight: '800', color: '#15803d', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span>⭐ Suggested</span>
-                <button onClick={() => { setSelCrew(p => { const ids = new Set(p.map(x=>x.id)); return [...p, ...suggested.filter(c => !ids.has(c.id))] }); setSuggested([]) }} style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', fontWeight: '700', color: '#15803d', cursor: 'pointer' }}>Add all</button>
+                <button onClick={() => { setSelCrew(p => { const ids = new Set(p.map(x=>x.uuid)); return [...p, ...suggested.filter(c => !ids.has(c.uuid))] }); setSuggested([]) }} style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '2px 8px', fontSize: '10px', fontWeight: '700', color: '#15803d', cursor: 'pointer' }}>Add all</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {suggested.slice(0, 10).map(c => (
-                  <div key={c.id} onClick={() => { setSelCrew(p => [...p, c]); setSuggested(p => p.filter(x => x.uuid !== c.uuid)) }}
+                  <div key={c.uuid} onClick={() => { setSelCrew(p => [...p, c]); setSuggested(p => p.filter(x => x.uuid !== c.uuid)) }}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', cursor: 'pointer' }}>
                     <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#dcfce7', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '10px', flexShrink: 0 }}>
                       {c.full_name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()}
@@ -1022,7 +1022,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
                 const filtered = crew.filter(c => !selCrew.find(x => x.uuid === c.uuid) && !suggested.find(x => x.uuid === c.uuid) && (c.full_name.toLowerCase().includes(q) || (c.department || '').toLowerCase().includes(q)))
                 if (!filtered.length) return <div style={{ padding: '14px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No results</div>
                 return filtered.map(c => (
-                  <div key={c.id} onClick={() => { setSelCrew(p => [...p, c]); setSearch('') }}
+                  <div key={c.uuid} onClick={() => { setSelCrew(p => [...p, c]); setSearch('') }}
                     style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f8fafc' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{c.full_name}</div>
