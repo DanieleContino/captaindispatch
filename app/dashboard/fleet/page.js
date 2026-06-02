@@ -243,7 +243,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
       const color  = STATUS_COLOR[status] || '#94a3b8'
       const vehicle = vd?.vehicle
       const driverName = vehicle?.driver_name || vehicle?.ncc_driver_name || s.driver_name || '–'
-      const signCode   = vehicle?.sign_code || s.vehicle_id || '–'
+      const signCode   = vehicle?.sign_code || vehicle?.display_id || '–'
 
       const pos = { lat: s.last_lat, lng: s.last_lng }
 
@@ -1041,7 +1041,7 @@ export default function FleetMonitorPage() {
                       }}>
                         <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: dotColor, flexShrink: 0, boxShadow: hasPos ? `0 0 6px ${dotColor}` : 'none' }} />
                         <span style={{ fontWeight: '900', fontSize: '13px', color: '#0f172a', minWidth: '80px' }}>
-                          {vd?.vehicle?.sign_code || s.vehicle_id || '–'}
+                          {vd?.vehicle?.sign_code || vd?.vehicle?.display_id || '–'}
                         </span>
                         <span style={{ fontSize: '12px', color: '#374151', fontWeight: '600', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           👤 {driverName}
