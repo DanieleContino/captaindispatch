@@ -594,7 +594,8 @@ SA7b    ✅ completato (settings/production 6 fix + settings OK + cost-report OK
 SA8a    ✅ completato (lib files piccoli — nessun fix necessario)
 SA8b    ✅ completato (lib files medi — nessun fix necessario)
 SA9     ✅ completato (Drive API + Push API — nessun fix necessario)
-SA10    ← PROSSIMA: Misc API
+SA10    ✅ completato (Misc API — nessun fix necessario)
+SA-FINAL ← PROSSIMA: git push + chiusura audit
 ```
 
 ---
@@ -781,16 +782,16 @@ SA10    ← PROSSIMA: Misc API
 
 ---
 
-### 🔧 SESSIONE SA10 — Misc API (mai auditati)
-> Status: ⏳ PENDING
+### ~~🔧 SESSIONE SA10~~ ✅ Misc API — NESSUN FIX NECESSARIO
+> Status: ✅ COMPLETATO
 
 ```
-[ ] app/api/rocket/suggestions/route.js
-[ ] app/api/routes/refresh-traffic/route.js
-[ ] app/api/invites/redeem/route.js        ← già apparso nei search (non-migrated id) — da confermare
-[ ] app/api/check-approval/route.js
-[ ] app/api/maps-config/route.js
-[ ] app/api/google/status/route.js
+[x] app/api/rocket/suggestions/route.js    — OK: crew select uuid+display_id, crewDeptMap[c.uuid] già corretto
+[x] app/api/routes/refresh-traffic/route.js — OK: delega a refreshRoutesForDate() già fixato S7
+[x] app/api/invites/redeem/route.js        — OK: tabelle production_invites/user_roles/productions (non migrate)
+[x] app/api/check-approval/route.js        — OK: solo user_roles (non migrata)
+[x] app/api/maps-config/route.js           — OK: zero DB, solo env var
+[x] app/api/google/status/route.js         — OK: solo user_google_tokens (non migrata)
 ```
 
 ---
