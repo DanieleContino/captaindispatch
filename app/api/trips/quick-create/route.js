@@ -47,7 +47,7 @@ export async function POST(request) {
     // 3. Carica veicolo
     const { data: vehicle } = await serviceClient
       .from('vehicles')
-      .select('uuid, id, sign_code, capacity, vehicle_type, driver_name, ncc_driver_id, driver_crew_id')
+      .select('uuid, sign_code, capacity, vehicle_type, driver_name, ncc_driver_id, driver_crew_id')
       .eq('uuid', vehicleId)
       .eq('production_id', productionId)
       .single()

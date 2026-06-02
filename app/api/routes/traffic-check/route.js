@@ -132,7 +132,7 @@ export async function POST(req) {
       .eq('date', dateISO)
       .neq('status', 'CANCELLED'),
     sb.from('locations')
-      .select('uuid,id,name,lat,lng')
+      .select('uuid,name,lat,lng')
       .eq('production_id', prodId),
   ])
 
