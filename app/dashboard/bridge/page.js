@@ -786,10 +786,17 @@ function TravelWidget({ productionId, refreshKey }) {
         .from('crew_stays')
         .select('crew_id, arrival_date, departure_date')
         .eq('production_id', productionId),
-    ]).then(async ([{ data: rawItems }, { data: locs }, { data: staysData }]) => {
+      supabase
+        .from('travel_movements')
+        .select('id, crew_id, full_name_raw, travel_date, direction, travel_type, from_location, to_location, travel_number, crew:crew_id(uuid, display_id, full_name, department)')
+        .eq('production_id', productionId)
+        .eq('match_status', 'matched')
+        .order('travel_date', { ascending: true }),
+    ]).then(async ([{ data: rawItems }, { data: locs }, { data: staysData }, { data: allMatchedMovs }]) => {
       setLocations(locs || [])
 
       const movItems = rawItems || []
+      const allMatched = allMatchedMovs || []
 
       // UUID migration: crew_id è UUID che punta a crew.uuid
       const conflictCrewIds = [...new Set(
@@ -835,8 +842,9 @@ function TravelWidget({ productionId, refreshKey }) {
           .then(() => {})
       }
 
-      // Compute date warnings — crew_id è UUID (post UUID migration)
-      const wMap = computeCrewWarnings(movItems, staysData || [])
+      // Compute date warnings su TUTTI i movimenti matched (non solo quelli con conflict flags)
+      // crew_id è UUID (post UUID migration)
+      const wMap = computeCrewWarnings(allMatched, staysData || [])
       setWarningsMap(wMap)
 
       // Merge: items da discrepanze + items solo da date warnings
@@ -845,8 +853,8 @@ function TravelWidget({ productionId, refreshKey }) {
       const warnOnlyItems = []
       for (const [crewUuid, warnings] of Object.entries(wMap)) {
         if (!existingCrewIds.has(crewUuid)) {
-          // Cerca il movimento più recente per questo crew per avere i dati display
-          const mov = movItems.find(m => m.crew_id === crewUuid)
+          // Cerca il movimento per questo crew per avere i dati display
+          const mov = allMatched.find(m => m.crew_id === crewUuid)
           if (mov) warnOnlyItems.push({ ...mov, _dateWarningsOnly: true })
         }
       }
