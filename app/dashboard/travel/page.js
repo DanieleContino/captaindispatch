@@ -19,6 +19,7 @@ import { getProductionId } from '../../../lib/production'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import { TravelColumnsEditorSidebar } from '../../../lib/TravelColumnsEditorSidebar'
 import { TRAVEL_DEFAULT_PRESET } from '../../../lib/travelColumnsCatalog'
+import { computeCrewWarnings } from '../../../lib/tripWarnings'
 import NotesPanel from '../../../lib/NotesPanel'
 
 // ─── Date helpers ─────────────────────────────────────────────
@@ -226,7 +227,7 @@ function ColorPickerPopover({ field, rowId, currentColor, onColorSaved, onClose 
 // ─── renderCell — data-driven cell renderer ────────────────────
 // movementNotesMap  = { [movement_id]: { count, lastNote } }
 // movementUnreadMap = { [movement_id]: unread_count }
-function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, movementNotesMap, movementUnreadMap }) {
+function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, movementNotesMap, movementUnreadMap, warningsMap, openWarningId, setOpenWarningId }) {
   const field = col.source_field
   const base = {
     fontSize: '11px', color: '#374151',
@@ -263,10 +264,29 @@ function renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, 
         <td key={field} onClick={() => onEditRow(m, 'full_name')}
           style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700',
             color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            background: bgColor, cursor: 'pointer' }}
+            background: bgColor, cursor: 'pointer', position: 'relative' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
           onMouseLeave={e => { e.currentTarget.style.background = bgColor || '' }}>
-          {displayName}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            {displayName}
+            {warningsMap && m.crew_id && (warningsMap[m.crew_id] || []).length > 0 && (
+              <span style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  onClick={e => { e.stopPropagation(); setOpenWarningId(openWarningId === m.id ? null : m.id) }}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1 }}>!</button>
+                {openWarningId === m.id && (
+                  <>
+                    <div onClick={e => { e.stopPropagation(); setOpenWarningId(null) }} style={{ position: 'fixed', inset: 0, zIndex: 98 }} />
+                    <div style={{ position: 'absolute', top: '24px', left: 0, zIndex: 99, background: 'white', border: '1px solid #fecaca', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', padding: '10px 12px', minWidth: '260px', maxWidth: '320px' }}>
+                      {(warningsMap[m.crew_id] || []).map((w, i) => (
+                        <div key={i} style={{ fontSize: '11px', color: '#7f1d1d', lineHeight: 1.5, marginBottom: i < (warningsMap[m.crew_id] || []).length - 1 ? '6px' : 0 }}>{w.message}</div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </span>
+            )}
+          </span>
           {m.journeySize > 1 && (
             <span style={{ marginLeft: '5px', fontSize: '9px', fontWeight: '700',
               color: '#7c3aed', background: '#f5f3ff', padding: '1px 4px',
@@ -455,7 +475,7 @@ function buildDisplayRows(rows) {
 }
 
 // ─── SectionTable ─────────────────────────────────────────────
-function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor, movementNotesMap, movementUnreadMap }) {
+function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSaved, columnsConfig, sectionColor, movementNotesMap, movementUnreadMap, warningsMap, openWarningId, setOpenWarningId }) {
   const [colorPicker, setColorPicker] = useState(null)
 
   function handleCellRightClick(e, rowId, field, currentColor) {
@@ -545,7 +565,7 @@ function SectionTable({ section, rows, today, onCellSaved, onEditRow, onColorSav
                   {columnsConfig.map(col =>
                     col.source_field === 'needs_transport'
                       ? <NeedsTransportCell key={col.source_field} value={m.needs_transport} rowId={m.id} onSaved={onCellSaved} />
-                      : renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, movementNotesMap, movementUnreadMap })
+                      : renderCell(col, m, { onEditRow, handleCellRightClick, bgColor, colors, movementNotesMap, movementUnreadMap, warningsMap, openWarningId, setOpenWarningId })
                   )}
                 </tr>
               )
@@ -1246,6 +1266,8 @@ export default function TravelPage() {
   // Data
   const [movements, setMovements] = useState([])
   const [loading,   setLoading]   = useState(true)
+  const [warningsMap,   setWarningsMap]   = useState({})
+  const [openWarningId, setOpenWarningId] = useState(null)
 
   // Column config
   const [columnsConfig,     setColumnsConfig]     = useState([])
@@ -1425,7 +1447,19 @@ export default function TravelPage() {
       .lte('travel_date', end)
       .order('travel_date', { ascending: true })
       .order('from_time',   { ascending: true, nullsLast: true })
-    setMovements(data || [])
+    const movData = data || []
+    setMovements(movData)
+    const crewIds = [...new Set(movData.filter(m => m.crew_id).map(m => m.crew_id))]
+    if (crewIds.length > 0) {
+      const { data: staysData } = await supabase
+        .from('crew_stays')
+        .select('crew_id, arrival_date, departure_date')
+        .eq('production_id', PRODUCTION_ID)
+        .in('crew_id', crewIds)
+      setWarningsMap(computeCrewWarnings(movData, staysData || []))
+    } else {
+      setWarningsMap({})
+    }
     setLoading(false)
   }, [PRODUCTION_ID])
 
@@ -1830,6 +1864,9 @@ export default function TravelPage() {
                     sectionColor={sectionColors[section.key] || null}
                     movementNotesMap={movementNotesMap}
                     movementUnreadMap={movementUnreadMap}
+                    warningsMap={warningsMap}
+                    openWarningId={openWarningId}
+                    setOpenWarningId={setOpenWarningId}
                   />
                 )
               })}
