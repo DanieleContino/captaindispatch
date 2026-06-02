@@ -208,7 +208,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     if (reqId !== loadPaxReqRef.current) return
 
     const assigned    = (paxRes.data || []).map(p => ({ ...p.crew, trip_row_id: p.trip_row_id }))
-    const assignedIds = new Set(assigned.map(c => c.uuid))
+    // assignedIds per availableCrew: solo il leg corrente (non tutto il gruppo)
+    const currentLegPax = (paxRes.data || []).filter(p => p.trip_row_id === tripId)
+    const assignedIds = new Set(currentLegPax.map(p => p.crew?.uuid).filter(Boolean))
     setAssignedPax(isNewLeg ? [] : assigned)
 
     const dayTrips   = dayTripsRes.data || []
