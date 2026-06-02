@@ -346,7 +346,7 @@ function runRocket({ crew, vehicles, routeMap, globalDestId, globalCallMin, glob
         const addable = Math.min(capMax - capSug, remaining.length)
         if (addable > 0) suggestions.push({ type: 'CAN_ADD', tripKey: `t${seq}`, vehicleId:   v.uuid, addable,
           names: remaining.slice(0, addable).map(c => c.full_name),
-          msg: `${v.display_id || v.id} can carry ${addable} more (pax_max=${capMax}): ${remaining.slice(0, addable).map(c => c.full_name).join(', ')}` })
+          msg: `${v.display_id} can carry ${addable} more (pax_max=${capMax}): ${remaining.slice(0, addable).map(c => c.full_name).join(', ')}` })
       }
       // Tag each crew member with their effectiveDest for multi-pickup/dropoff detection
       draftTrips.push({ key: `t${seq++}`, vehicleId:   v.uuid, vehicle: v,
@@ -1994,8 +1994,8 @@ export default function RocketPage() {
                                 setExcludedVehicleIds(prev => {
                                   const next = new Set(prev)
                                   if (excluded) {
-                                    next.delete(v.id)
-                                    setExcludedVehicleReasons(prev2 => { const n = { ...prev2 }; delete n[v.id]; return n })
+                                    next.delete(v.uuid)
+                                    setExcludedVehicleReasons(prev2 => { const n = { ...prev2 }; delete n[v.uuid]; return n })
                                   } else {
                                     next.add(v.uuid)
                                   }
@@ -2051,7 +2051,7 @@ export default function RocketPage() {
                                 )}
                                 {reason && (
                                   <button
-                                    onClick={() => setExcludedVehicleReasons(prev => { const n = { ...prev }; delete n[v.id]; return n })}
+                                    onClick={() => setExcludedVehicleReasons(prev => { const n = { ...prev }; delete n[v.uuid]; return n })}
                                     style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#94a3b8', padding: '0 2px', lineHeight: 1 }}
                                     title="Clear reason">✕</button>
                                 )}
@@ -2144,7 +2144,7 @@ export default function RocketPage() {
                               // ── Ineligible crew: greyed-out, no checkbox, no click ──
                               if (ineligibleReason) {
                                 return (
-                                  <div key={c.id}
+                                  <div key={c.uuid}
                                     style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px 8px 50px', borderTop: '1px solid #f8fafc', background: '#f8fafc', opacity: 0.38, cursor: 'default', userSelect: 'none' }}>
                                     <span style={{ flex: 1, fontSize: '13px', fontWeight: '600', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.full_name}</span>
                                     {ineligibleReason === 'NTN' && (
