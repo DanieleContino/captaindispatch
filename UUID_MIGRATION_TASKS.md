@@ -581,22 +581,21 @@ S19     ✅ completato (Captain Go API GO-1/GO-6) [3de2b7d]
 
 ---
 
-### 🔧 SESSIONE SA1 — Captain Go: route nuove mai auditate
-> **PROSSIMA →**
+### ~~🔧 SESSIONE SA1~~ ✅ Captain Go: route nuove — NESSUN FIX NECESSARIO
 > File: `app/api/go/session/start/route.js`, `go/trip/pickup/route.js`, `go/messages/route.js`, `go/traffic/route.js`
-> Pattern: vehicle_id FK, crew_id FK, session lookup
-> Status: ⏳ PENDING
+> Status: ✅ COMPLETATO — tutti e 4 i file già corretti (uuid usato ovunque necessario)
 
 ```
-[ ] app/api/go/session/start/route.js — audit vehicle/crew uuid FK
-[ ] app/api/go/trip/pickup/route.js   — audit vehicle/crew uuid FK
-[ ] app/api/go/messages/route.js      — audit (probabilmente no FK migrate)
-[ ] app/api/go/traffic/route.js       — audit pickup_id/dropoff_id usage
+[x] app/api/go/session/start/route.js — OK: driver.uuid, vehicle?.uuid corretto
+[x] app/api/go/trip/pickup/route.js   — OK: trips.id è integer PK non migrato
+[x] app/api/go/messages/route.js      — OK: nessuna FK migrata
+[x] app/api/go/traffic/route.js       — OK: locations .in('uuid'), .find(l => l.uuid ===)
 ```
 
 ---
 
 ### 🔧 SESSIONE SA2 — `crew/page.js` — fix hotel_id lookup (BUG CONFERMATO ⚠️)
+> **PROSSIMA →**
 > File: `app/dashboard/crew/page.js`
 > Bug trovato via search: `locations.find(l => l.id === s.hotel_id)` → `hotel_id` in `crew_stays` è UUID FK → serve `l.uuid`
 > Anche: `crew.find(c => c.id === m.linked_crew_id)` → verificare se `linked_crew_id` è UUID
