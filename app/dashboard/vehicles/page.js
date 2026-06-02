@@ -1418,7 +1418,7 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
         rental_insurance_limit, rental_insurance_excess, rental_notes,
         rental_extras, rental_pickup_location_id, rental_dropoff_location_id,
         rental_insurance_exp, active, in_transport, available_from, available_to,
-        sign_code, unit_default, preferred_dept, preferred_crew_ids
+        driver_name, driver_crew_id, sign_code, unit_default, preferred_dept, preferred_crew_ids
       `).eq('production_id', productionId).eq('is_rental', true).order('rental_supplier_id').order('rental_start'),
       supabase.from('rental_suppliers').select('id, name').eq('production_id', productionId).order('name'),
       supabase.from('rental_list_columns').select('*').eq('production_id', productionId).order('display_order').order('created_at'),
@@ -3326,7 +3326,7 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle, reloadT
       supabase
         .from('ncc_agencies')
         .select(`id, name, contact_name, phone, email, address, vat_no, notes,
-          vehicles:vehicles(uuid, display_id, vehicle_type, ncc_driver_name, ncc_driver_phone, ncc_driver_id, license_plate, capacity, active, is_ncc, ncc_agency_id, available_from, available_to, pax_suggested, pax_max, sign_code, unit_default, preferred_dept, preferred_crew_ids)`)
+          vehicles:vehicles(uuid, display_id, vehicle_type, ncc_driver_name, ncc_driver_phone, ncc_driver_id, license_plate, capacity, active, is_ncc, ncc_agency_id, available_from, available_to, pax_suggested, pax_max, driver_name, driver_crew_id, sign_code, unit_default, preferred_dept, preferred_crew_ids)`)
         .eq('production_id', productionId)
         .order('name'),
       supabase.from('vehicles').select('uuid, display_id').eq('production_id', productionId),
