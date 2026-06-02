@@ -536,6 +536,10 @@ Commit: `"Fix GO-6: position/route NCC driver select includes id"`
 | `app/api/go/trip/start/route.js` | ✅ GO-2/GO-3 — vehicle.uuid ×2 [3de2b7d] | S19 |
 | `app/api/go/trip/arrive/route.js` | ✅ GO-4/GO-5 — ncc select include id + vehicle.uuid [3de2b7d] | S19 |
 | `app/api/go/position/route.js` | ✅ GO-6 — ncc select include id [3de2b7d] | S19 |
+| `app/api/cron/arrival-status/route.js` | ✅ SA4 — OK già corretto | SA4 |
+| `app/api/cron/daily-briefing/route.js` | ✅ SA4 — OK già corretto | SA4 |
+| `app/api/cron/drive-sync/route.js` | ✅ SA4 — OK già corretto | SA4 |
+| `app/api/cron/refresh-routes-traffic/route.js` | ✅ SA4 — OK già corretto | SA4 |
 
 ---
 
@@ -560,7 +564,8 @@ S19     ✅ completato (Captain Go API GO-1/GO-6) [3de2b7d]
 SA1     ✅ completato (Captain Go nuove route — nessun fix)
 SA2     ✅ completato (crew/page.js 10 uuid fixes) [c2f1a2c]
 SA3     ✅ completato (QuickTripModal LEGS+Standard vehicleId uuid) [b8ae772]
-SA4     ← PROSSIMA: Cron API audit
+SA4     ✅ completato (cron API — nessun fix necessario)
+SA5a    ← PROSSIMA: Bridge API audit
 ```
 
 ---
@@ -628,16 +633,15 @@ SA4     ← PROSSIMA: Cron API audit
 
 ---
 
-### 🔧 SESSIONE SA4 — Cron API (mai auditati)
-> **PROSSIMA →**
-> File: 4 route cron, probabilmente leggeri
-> Status: ⏳ PENDING
+### ~~🔧 SESSIONE SA4~~ ✅ Cron API — NESSUN FIX NECESSARIO
+> File: 4 route cron
+> Status: ✅ COMPLETATO — tutti e 4 i file già corretti
 
 ```
-[ ] app/api/cron/arrival-status/route.js
-[ ] app/api/cron/daily-briefing/route.js
-[ ] app/api/cron/drive-sync/route.js
-[ ] app/api/cron/refresh-routes-traffic/route.js
+[x] app/api/cron/arrival-status/route.js       — OK: locations.uuid, hubUuids, crew.in('uuid')
+[x] app/api/cron/daily-briefing/route.js        — OK: crew select uuid+display_id, nessuna FK migrata
+[x] app/api/cron/drive-sync/route.js            — OK: solo drive_synced_files (tabella non migrata)
+[x] app/api/cron/refresh-routes-traffic/route.js — OK: pickup_id/dropoff_id/from_id/to_id già UUID keys
 ```
 
 ---
