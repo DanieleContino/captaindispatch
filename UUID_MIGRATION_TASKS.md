@@ -593,7 +593,8 @@ SA7a    ✅ completato (productions 5 fix + lists-v2 OK + reports OK) [8813b67]
 SA7b    ✅ completato (settings/production 6 fix + settings OK + cost-report OK)
 SA8a    ✅ completato (lib files piccoli — nessun fix necessario)
 SA8b    ✅ completato (lib files medi — nessun fix necessario)
-SA9     ← PROSSIMA: Drive API + Push API
+SA9     ✅ completato (Drive API + Push API — nessun fix necessario)
+SA10    ← PROSSIMA: Misc API
 ```
 
 ---
@@ -765,18 +766,17 @@ SA9     ← PROSSIMA: Drive API + Push API
 
 ---
 
-### 🔧 SESSIONE SA9 — Drive API + Push API (mai auditati)
-> Nota: `drive/check-updates` ha `.select('id, vehicle_id')` → verificare se vehicle_id viene usato come UUID downstream
-> Status: ⏳ PENDING
+### ~~🔧 SESSIONE SA9~~ ✅ Drive API + Push API — NESSUN FIX NECESSARIO
+> Status: ✅ COMPLETATO — tutti e 7 i file già corretti (solo tabelle non migrate: `drive_synced_files`, `push_subscriptions`, `user_roles`)
 
 ```
-[ ] app/api/drive/check-updates/route.js  ← ha vehicle_id nel select ⚠️
-[ ] app/api/drive/sync/route.js
-[ ] app/api/drive/download/route.js
-[ ] app/api/drive/preview/route.js
-[ ] app/api/push/send/route.js
-[ ] app/api/push/subscribe/route.js
-[ ] app/api/push/unsubscribe/route.js
+[x] app/api/drive/check-updates/route.js  — OK: usa drive_synced_files (non migrata), nessun vehicle_id usato come FK
+[x] app/api/drive/sync/route.js           — OK: usa drive_synced_files (non migrata)
+[x] app/api/drive/download/route.js       — OK: usa drive_synced_files (non migrata)
+[x] app/api/drive/preview/route.js        — OK: usa drive_synced_files (non migrata)
+[x] app/api/push/send/route.js            — OK: usa user_roles (non migrata), delega a sendPushToProduction()
+[x] app/api/push/subscribe/route.js       — OK: usa push_subscriptions (non migrata)
+[x] app/api/push/unsubscribe/route.js     — OK: usa push_subscriptions (non migrata)
 ```
 
 ---
