@@ -1493,8 +1493,16 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
         return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '12px', color: '#374151', whiteSpace: 'nowrap' }}>{v.driver_name ? <span>{v.driver_crew_id ? '🔗 ' : '👤 '}{v.driver_name}</span> : <span style={{ color: '#cbd5e1' }}>—</span>}</td>
       case 'second_driver':
         return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>{v.rental_second_driver || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
-      case 'dept':
-        return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>{v.driver_dept || '—'}</td>
+      case 'dept': {
+        const dc = DEPT_COLOR[v.preferred_dept] || null
+        return (
+          <td key={col.source_field} style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
+            {v.preferred_dept
+              ? <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: dc?.bg || '#f8fafc', color: dc?.color || '#475569', border: `1px solid ${dc?.border || '#e2e8f0'}` }}>{v.preferred_dept}</span>
+              : <span style={{ color: '#cbd5e1' }}>—</span>}
+          </td>
+        )
+      }
       case 'start':
         return <td key={col.source_field} style={{ padding: '6px 8px', fontSize: '11px', color: '#374151', whiteSpace: 'nowrap' }}>{fmtDate(v.rental_start)}</td>
       case 'end':
