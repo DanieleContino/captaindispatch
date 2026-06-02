@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useT } from '../../../lib/i18n'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { getProductionId } from '../../../lib/production'
+import { generateDisplayId } from '../../../lib/generateDisplayId'
 
 const SIDEBAR_W = 400
 
@@ -13,8 +14,9 @@ const SIDEBAR_W = 400
 function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
-  const EMPTY = { id: '', name: '', is_hub: false, lat: '', lng: '', default_pickup_point: '' }
+  const EMPTY = { locType: 'hotel', hubCode: '', name: '', lat: '', lng: '', default_pickup_point: '' }
   const [form, setForm]     = useState(EMPTY)
+  const [existingLocs, setExistingLocs] = useState([])
   const [saving, setSaving]       = useState(false)
   const [deleting, setDel]        = useState(false)
   const [confirmDel, setCd]       = useState(false)
@@ -54,6 +56,33 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
+  // Load existing locations to compute next sequential ID
+  useEffect(() => {
+    if (!open || !PRODUCTION_ID) return
+    supabase.from('locations').select('display_id').eq('production_id', PRODUCTION_ID)
+      .then(({ data }) => setExistingLocs(data || []))
+  }, [open, PRODUCTION_ID])
+
+  // Compute next auto-ID based on type and existing locations
+  function computeNextId(type, code) {
+    const ids = existingLocs.map(l => l.display_id || '')
+    if (type === 'hotel') {
+      const nums = ids.filter(id => /^H\d{3,}$/.test(id)).map(id => parseInt(id.slice(1), 10))
+      const next = nums.length > 0 ? Math.max(...nums) + 1 : 1
+      return `H${String(next).padStart(3, '0')}`
+    }
+    const PREFIX_MAP = { airport: 'APT', station: 'STN', port: 'PRT' }
+    const prefix = PREFIX_MAP[type] || 'LOC'
+    if (type === 'airport' && code && code.trim()) {
+      return `${prefix}_${code.trim().toUpperCase()}`
+    }
+    // Sequential for station/port (or airport without code)
+    const re = new RegExp(`^${prefix}_(\\d{3,})$`)
+    const nums = ids.filter(id => re.test(id)).map(id => parseInt(id.match(re)[1], 10))
+    const next = nums.length > 0 ? Math.max(...nums) + 1 : 1
+    return `${prefix}_${String(next).padStart(3, '0')}`
+  }
+
   // Reset sidebar state on open/close
   useEffect(() => {
     if (!open) {
@@ -63,7 +92,13 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
     }
     setError(null); setCd(false); setRefMsg(null)
     if (mode === 'edit' && initial) {
-      setForm({ id: initial.display_id || '', name: initial.name || '', is_hub: !!initial.is_hub, lat: initial.lat ?? '', lng: initial.lng ?? '', default_pickup_point: initial.default_pickup_point || '' })
+      // Detect locType from existing display_id
+      const did = (initial.display_id || '').toUpperCase()
+      let locType = 'hotel', hubCode = ''
+      if (did.startsWith('APT_')) { locType = 'airport'; hubCode = did.slice(4) }
+      else if (did.startsWith('STN_')) { locType = 'station'; hubCode = did.slice(4) }
+      else if (did.startsWith('PRT_')) { locType = 'port'; hubCode = did.slice(4) }
+      setForm({ locType, hubCode, name: initial.name || '', lat: initial.lat ?? '', lng: initial.lng ?? '', default_pickup_point: initial.default_pickup_point || '' })
     } else {
       setForm({ ...EMPTY })
     }
@@ -116,13 +151,17 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
 
   async function handleSubmit(e) {
     e.preventDefault(); setError(null)
-    if (!form.id.trim() || !form.name.trim()) { setError('ID e Nome obbligatori'); return }
+    if (!form.name.trim()) { setError('Name required'); return }
     setSaving(true)
+    const isHub = form.locType !== 'hotel'
+    const generatedId = mode === 'new'
+      ? computeNextId(form.locType, form.hubCode)
+      : (initial.display_id || '')
     const row = {
       production_id: PRODUCTION_ID,
-      display_id:   form.id.trim().toUpperCase(),
+      display_id:   generatedId,
       name: form.name.trim(),
-      is_hub: form.is_hub,
+      is_hub: isHub,
       lat:  form.lat !== '' ? parseFloat(String(form.lat).replace(',', '.')) : null,
       lng:  form.lng !== '' ? parseFloat(String(form.lng).replace(',', '.')) : null,
       default_pickup_point: form.default_pickup_point.trim() || null,
@@ -132,7 +171,8 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
       const r = await supabase.from('locations').insert(row).select('uuid').single()
       err = r.error; newLocUuid = r.data?.uuid
     } else {
-      const { id, ...upd } = row
+      const { display_id: _keepId, ...upd } = row
+      // In edit mode, update name, is_hub, coords, pickup — but NOT display_id
       const r = await supabase.from('locations').update(upd).eq('uuid', initial.uuid); err = r.error
     }
     setSaving(false)
@@ -192,37 +232,68 @@ function LocationSidebar({ open, mode, initial, onClose, onSaved }) {
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
           <div style={{ padding: '16px 18px' }}>
 
-            {/* ID */}
+            {/* ── Location Type Selector ── */}
             <div style={fld}>
-              <label style={lbl}>{t.locationIdLabel}</label>
-              <input value={form.id} onChange={e => set('id', e.target.value.toUpperCase())}
-                style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.05em', background: mode === 'edit' ? '#f8fafc' : 'white' }}
-                placeholder="H001 / APT_PMO" required readOnly={mode === 'edit'} />
-              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>
-                {t.locationIdHint}
+              <label style={lbl}>{t.locTypeLabel}</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                {[
+                  { key: 'hotel',   label: t.locTypeHotel,   hint: t.locTypeHotelHint,   icon: '🏨', color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
+                  { key: 'airport', label: t.locTypeAirport, hint: t.locTypeAirportHint, icon: '✈️', color: '#d97706', bg: '#fefce8', border: '#fde68a' },
+                  { key: 'station', label: t.locTypeStation, hint: t.locTypeStationHint, icon: '🚂', color: '#0d9488', bg: '#f0fdfa', border: '#99f6e4' },
+                  { key: 'port',    label: t.locTypePort,    hint: t.locTypePortHint,    icon: '⚓', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+                ].map(typ => {
+                  const active = form.locType === typ.key
+                  return (
+                    <button key={typ.key} type="button"
+                      onClick={() => { set('locType', typ.key); if (typ.key !== 'airport') set('hubCode', '') }}
+                      disabled={mode === 'edit'}
+                      style={{
+                        padding: '10px 8px', borderRadius: '9px', cursor: mode === 'edit' ? 'default' : 'pointer',
+                        border: `2px solid ${active ? typ.color : '#e2e8f0'}`,
+                        background: active ? typ.bg : '#f8fafc',
+                        opacity: mode === 'edit' && !active ? 0.4 : 1,
+                        textAlign: 'center', transition: 'all 0.15s',
+                      }}>
+                      <div style={{ fontSize: '18px', marginBottom: '2px' }}>{typ.icon}</div>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: active ? typ.color : '#64748b' }}>{typ.label.replace(/^[^\s]+\s/, '')}</div>
+                    </button>
+                  )
+                })}
               </div>
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px', textAlign: 'center' }}>
+                {form.locType === 'hotel' ? t.locTypeHotelHint : form.locType === 'airport' ? t.locTypeAirportHint : form.locType === 'station' ? t.locTypeStationHint : t.locTypePortHint}
+              </div>
+            </div>
+
+            {/* ── IATA Code (only for airport) ── */}
+            {form.locType === 'airport' && mode === 'new' && (
+              <div style={fld}>
+                <label style={lbl}>{t.iataCodeLabel}</label>
+                <input
+                  value={form.hubCode}
+                  onChange={e => set('hubCode', e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4))}
+                  style={{ ...inp, fontWeight: '800', fontSize: '15px', letterSpacing: '0.1em', textAlign: 'center' }}
+                  placeholder={t.iataCodePlaceholder}
+                  maxLength={4}
+                />
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>
+                  {t.iataCodeHint}
+                </div>
+              </div>
+            )}
+
+            {/* ── ID Preview badge ── */}
+            <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <span style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{t.locIdPreview}:</span>
+              <span style={{ fontFamily: 'monospace', fontSize: '14px', fontWeight: '800', color: '#0f172a', letterSpacing: '0.05em' }}>
+                {mode === 'edit' ? (initial?.display_id || '—') : computeNextId(form.locType, form.hubCode)}
+              </span>
             </div>
 
             {/* Nome */}
             <div style={fld}>
               <label style={lbl}>{t.locationNameLabel}</label>
               <input value={form.name} onChange={e => set('name', e.target.value)} style={inp} placeholder="Grand Hotel Palermo" required />
-            </div>
-
-            {/* Hub toggle */}
-            <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.is_hub ? '#86efac' : '#e2e8f0'}`, background: form.is_hub ? '#f0fdf4' : '#f8fafc', cursor: 'pointer' }}
-              onClick={() => set('is_hub', !form.is_hub)}>
-              <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.is_hub ? '#16a34a' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-                <div style={{ position: 'absolute', top: '2px', left: form.is_hub ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: form.is_hub ? '#15803d' : '#374151' }}>
-                  {form.is_hub ? t.isHubLabel : t.isHotelLabel}
-                </div>
-                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                  {form.is_hub ? t.isHubHint : t.isHotelHint}
-                </div>
-              </div>
             </div>
 
             {/* ── Google Places Autocomplete ── */}
