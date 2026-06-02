@@ -517,11 +517,14 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
                     {form.preferred_crew_ids.map(cid => {
                       const cm = crewList.find(c => c.uuid === cid)
-                      if (!cm) return null
                       return (
-                        <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
-                          {cm.no_transport_needed && <span style={{ fontSize: '10px' }}>🚐</span>}
-                          {cm.full_name}
+                        <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: cm ? '#eff6ff' : '#fef2f2', color: cm ? '#1d4ed8' : '#dc2626', border: `1px solid ${cm ? '#bfdbfe' : '#fecaca'}` }}>
+                          {cm ? (
+                            <>
+                              {cm.no_transport_needed && <span style={{ fontSize: '10px' }}>🚐</span>}
+                              {cm.full_name}
+                            </>
+                          ) : '⚠ Crew non trovato'}
                           <button type="button" onClick={() => setForm(f => ({ ...f, preferred_crew_ids: f.preferred_crew_ids.filter(x => x !== cid) }))}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '12px', padding: '0', lineHeight: 1, marginLeft: '2px' }}>✕</button>
                         </span>
@@ -2464,10 +2467,9 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
                       {form.preferred_crew_ids.map(cid => {
                         const cm = crewList.find(c => c.uuid === cid)
-                        if (!cm) return null
                         return (
-                          <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
-                            {cm.full_name}
+                          <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: cm ? '#eff6ff' : '#fef2f2', color: cm ? '#1d4ed8' : '#dc2626', border: `1px solid ${cm ? '#bfdbfe' : '#fecaca'}` }}>
+                            {cm ? cm.full_name : '⚠ Crew non trovato'}
                             <button type="button" onClick={() => setForm(f => ({ ...f, preferred_crew_ids: f.preferred_crew_ids.filter(x => x !== cid) }))}
                               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '12px', padding: '0', lineHeight: 1, marginLeft: '2px' }}>✕</button>
                           </span>
