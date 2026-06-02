@@ -277,23 +277,74 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
           },
         })
 
-        const infoWindow = new window.google.maps.InfoWindow({
-          content: `
-            <div style="padding-right:22px;min-width:150px">
-              <div style="font-family:monospace;font-size:13px;font-weight:800;color:#0f172a">${signCode}</div>
-              <div style="font-size:11px;color:#64748b;margin-top:2px">👤 ${driverName}</div>
-              <div style="font-size:11px;font-weight:700;color:${color};margin-top:2px">${status}</div>
-              ${s.last_seen_at ? `<div style="font-size:10px;color:#94a3b8;margin-top:2px">📍 Last seen ${new Date(s.last_seen_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>` : ''}
-            </div>
-          `,
+        // Custom overlay popup
+        class PopupOverlay extends window.google.maps.OverlayView {
+          constructor(position, content) {
+            super()
+            this.position = position
+            this.containerDiv = document.createElement('div')
+            this.containerDiv.style.cssText = 'position:absolute;cursor:auto;'
+            this.containerDiv.innerHTML = content
+          }
+          onAdd() {
+            this.getPanes().floatPane.appendChild(this.containerDiv)
+          }
+          draw() {
+            const proj = this.getProjection()
+            if (!proj) return
+            const pt = proj.fromLatLngToDivPixel(this.position)
+            if (!pt) return
+            this.containerDiv.style.left = pt.x + 'px'
+            this.containerDiv.style.top  = (pt.y - 10) + 'px'
+            this.containerDiv.style.transform = 'translate(-50%, -100%)'
+          }
+          onRemove() {
+            if (this.containerDiv.parentNode) this.containerDiv.parentNode.removeChild(this.containerDiv)
+          }
+          close() { this.setMap(null) }
+          open(map) { this.setMap(map) }
+        }
+
+        const lastSeen = s.last_seen_at
+          ? new Date(s.last_seen_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+          : null
+
+        const popupContent = `
+          <div style="
+            position:relative;
+            background:white;
+            border-radius:10px;
+            box-shadow:0 4px 16px rgba(0,0,0,0.18);
+            padding:12px 14px;
+            min-width:160px;
+            font-family:sans-serif;
+          ">
+            <button data-close="true" style="
+              position:absolute;top:6px;right:8px;
+              background:none;border:none;cursor:pointer;
+              font-size:13px;color:#94a3b8;line-height:1;padding:2px;
+            ">✕</button>
+            <div style="font-family:monospace;font-size:13px;font-weight:800;color:#0f172a;padding-right:16px">${signCode}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:3px">👤 ${driverName}</div>
+            <div style="font-size:11px;font-weight:700;color:${color};margin-top:3px">${status}</div>
+            ${lastSeen ? `<div style="font-size:10px;color:#94a3b8;margin-top:3px">📍 Last seen ${lastSeen}</div>` : ''}
+          </div>
+        `
+
+        const popup = new PopupOverlay(pos, popupContent)
+
+        popup.containerDiv.addEventListener('click', (e) => {
+          if (e.target.dataset.close) {
+            popup.close()
+          }
         })
 
         marker.addListener('click', () => {
-          Object.values(markersRef.current).forEach(({ infoWindow: iw }) => iw.close())
-          infoWindow.open(mapObjRef.current, marker)
+          Object.values(markersRef.current).forEach(({ popup: p }) => p.close())
+          popup.open(mapObjRef.current)
         })
 
-        markersRef.current[s.vehicle_id] = { marker, infoWindow }
+        markersRef.current[s.vehicle_id] = { marker, popup }
       }
     })
 
@@ -301,6 +352,7 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
     Object.keys(markersRef.current).forEach(vid => {
       if (!activeVehicleIds.has(vid)) {
         markersRef.current[vid].marker.setMap(null)
+        markersRef.current[vid].popup?.close()
         delete markersRef.current[vid]
       }
     })
