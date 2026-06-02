@@ -69,6 +69,7 @@ export default function ReportsPage() {
   const [trips,      setTrips]      = useState([])
   const [locsMap,    setLocsMap]    = useState({})
   const [loading,    setLoading]    = useState(true)
+  const [expandedTrip, setExpandedTrip] = useState(null)
 
   // Weekly state
   const weekStart = getWeekStart(date)
@@ -246,16 +247,32 @@ export default function ReportsPage() {
                     </div>
                     {vTrips.map((t, i) => {
                       const cls = CLS[t.transfer_class] || CLS.STANDARD
+                      const hasGoData = t.started_at || t.arrived_at || t.estimated_km || t.actual_km
+                      const isExpanded = expandedTrip === t.id
+                      const fmtTime = (iso) => iso ? iso.slice(11, 16) : '—'
                       return (
-                        <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '42px 68px 80px 1fr 1fr 55px 55px 60px', gap: '8px', padding: '7px 16px', borderBottom: i < vTrips.length - 1 ? '1px solid #f8fafc' : 'none', alignItems: 'center', fontSize: '11px' }}>
-                          <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '700', color: '#0f172a' }}>{minToHHMM(t.call_min ?? t.pickup_min)}</div>
-                          <div style={{ fontWeight: '800', fontFamily: 'monospace', color: '#374151' }}>{t.trip_id}</div>
-                          <div><span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '700', background: cls.bg, color: cls.color }}>{t.transfer_class?.slice(0, 3)}</span></div>
-                          <div style={{ color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locsMap[t.pickup_id] || t.pickup_id}</div>
-                          <div style={{ color: '#0f172a', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locsMap[t.dropoff_id] || t.dropoff_id}</div>
-                          <div style={{ textAlign: 'center', color: '#64748b' }}>{durToH(t.duration_min)}</div>
-                          <div style={{ textAlign: 'center', fontWeight: '700', color: '#374151' }}>{t.pax_count || 0}</div>
-                          <div style={{ fontSize: '9px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', display: 'inline-block' }}>{t.status}</div>
+                        <div key={t.id}>
+                          <div
+                            onClick={() => hasGoData && setExpandedTrip(isExpanded ? null : t.id)}
+                            style={{ display: 'grid', gridTemplateColumns: '42px 68px 80px 1fr 1fr 55px 55px 60px 20px', gap: '8px', padding: '7px 16px', borderBottom: (!isExpanded && i < vTrips.length - 1) ? '1px solid #f8fafc' : 'none', alignItems: 'center', fontSize: '11px', cursor: hasGoData ? 'pointer' : 'default' }}>
+                            <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: '700', color: '#0f172a' }}>{minToHHMM(t.call_min ?? t.pickup_min)}</div>
+                            <div style={{ fontWeight: '800', fontFamily: 'monospace', color: '#374151' }}>{t.trip_id}</div>
+                            <div><span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '700', background: cls.bg, color: cls.color }}>{t.transfer_class?.slice(0, 3)}</span></div>
+                            <div style={{ color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locsMap[t.pickup_id] || t.pickup_id}</div>
+                            <div style={{ color: '#0f172a', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{locsMap[t.dropoff_id] || t.dropoff_id}</div>
+                            <div style={{ textAlign: 'center', color: '#64748b' }}>{durToH(t.duration_min)}</div>
+                            <div style={{ textAlign: 'center', fontWeight: '700', color: '#374151' }}>{t.pax_count || 0}</div>
+                            <div style={{ fontSize: '9px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', display: 'inline-block' }}>{t.status}</div>
+                            <div style={{ color: '#94a3b8', fontSize: '11px', textAlign: 'center' }}>{hasGoData ? (isExpanded ? '▲' : '▼') : ''}</div>
+                          </div>
+                          {isExpanded && hasGoData && (
+                            <div style={{ background: '#f8fafc', borderBottom: i < vTrips.length - 1 ? '1px solid #f1f5f9' : 'none', padding: '8px 16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                              {t.started_at && <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: '#e0f2fe', color: '#0369a1' }}>▶ Started {fmtTime(t.started_at)}</span>}
+                              {t.arrived_at && <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: '#dcfce7', color: '#15803d' }}>⚑ Arrived {fmtTime(t.arrived_at)}</span>}
+                              {t.estimated_km != null && <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#475569' }}>Est. {t.estimated_km} km</span>}
+                              {t.actual_km != null && <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: '#fef9c3', color: '#a16207' }}>Actual {t.actual_km} km</span>}
+                            </div>
+                          )}
                         </div>
                       )
                     })}
