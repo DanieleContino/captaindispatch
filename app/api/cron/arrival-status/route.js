@@ -38,11 +38,21 @@ export async function GET(request) {
   const since    = new Date(now.getTime() - windowMs)
 
   // ── 1. Trova trip ARRIVAL completati nella finestra ──────
+  // Fetch hub location UUIDs for this production
+  const { data: hubLocs } = await supabase
+    .from('locations')
+    .select('uuid')
+    .eq('is_hub', true)
+    .eq('production_id', process.env.NEXT_PUBLIC_PRODUCTION_ID)
+
+  const hubUuids = (hubLocs || []).map(l => l.uuid)
+
   const { data: arrivals, error: tripsErr } = await supabase
     .from('trips')
-    .select('id, trip_id, date, trip_passengers(crew_id)')
-    .eq('transfer_class', 'ARRIVAL')
+    .select('id, trip_id, date, pickup_id, dropoff_id, trip_passengers(crew_id)')
     .not('status', 'eq', 'CANCELLED')
+    .in('pickup_id', hubUuids)
+    .not('dropoff_id', 'in', `(${hubUuids.join(',')})`)
     .gte('end_dt', since.toISOString())
     .lte('end_dt', now.toISOString())
 
