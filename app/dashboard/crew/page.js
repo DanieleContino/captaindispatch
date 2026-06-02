@@ -903,8 +903,31 @@ function FamilyModal({ crew, onClose, onEdit }) {
   )
 }
 
+// ─── WarningModal ────────────────────────────────────────────
+function WarningModal({ warnings, crewName, onClose }) {
+  if (!warnings || warnings.length === 0) return null
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,35,64,0.2)' }} />
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 61, background: 'white', border: '1px solid #fecaca', borderRadius: '12px', width: '340px', padding: '20px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', maxHeight: '80vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <span style={{ fontWeight: '700', fontSize: '14px', color: '#dc2626' }}>⚠ {crewName}</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', lineHeight: 1, padding: '2px' }}>✕</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {warnings.map((w, i) => (
+            <div key={i} style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '12px', color: '#7f1d1d', lineHeight: 1.5 }}>
+              {w.message}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ─── Crew card griglia ───────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0, isLocal = false, familyCount = 0, onFamilyClick }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0, isLocal = false, familyCount = 0, onFamilyClick, warnings = [] }) {
   const t = useT()
   const tc = TC[member.travel_status] || TC.PRESENT
   const hc = HC[member.hotel_status]  || HC.PENDING
@@ -918,6 +941,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
   )
   const [confirmDel, setConfirmDel] = useState(false)
   const [deleting, setDeleting]     = useState(false)
+  const [warnOpen, setWarnOpen]     = useState(false)
 
   async function handleDeleteClick() {
     if (!confirmDel) { setConfirmDel(true); return }
@@ -940,6 +964,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
     : 'Accommodation booking not yet confirmed'
 
   return (
+    <>
     <div style={{
       background: selected ? '#eff6ff' : 'white',
       border: `1px solid ${selected ? '#bfdbfe' : '#e2e8f0'}`,
@@ -959,6 +984,10 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.full_name}</span>
+            {warnings.length > 0 && (
+              <button onClick={e => { e.stopPropagation(); setWarnOpen(true) }}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
+            )}
             {unreadCount > 0 && (
               <span title={`${unreadCount} unread note${unreadCount > 1 ? 's' : ''}`}
                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '800', color: 'white', background: '#f97316', borderRadius: '999px', minWidth: '16px', height: '16px', padding: '0 3px', flexShrink: 0 }}>❗</span>
@@ -1105,6 +1134,10 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
         )}
       </div>
     </div>
+    {warnOpen && (
+      <WarningModal warnings={warnings} crewName={member.full_name} onClose={() => setWarnOpen(false)} />
+    )}
+    </>
   )
 }
 
