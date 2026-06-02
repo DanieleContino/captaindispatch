@@ -202,8 +202,8 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
     }
 
     function initMap() {
-      // Centro default: Puglia (produzione attiva)
-      const center = { lat: 40.9, lng: 17.4 }
+      // Centro default: Italia centrale
+      const center = { lat: 41.9, lng: 12.5 }
       const withPos = sessions.filter(s => s.last_lat && s.last_lng)
       if (withPos.length > 0) {
         center.lat = withPos[0].last_lat
@@ -227,6 +227,11 @@ function FleetMap({ vehicles, sessions, vehicleData, locsMap }) {
   useEffect(() => {
     if (!mapObjRef.current || !window.google?.maps) return
     updateMarkers()
+    // Centra sulla prima sessione attiva con posizione
+    const withPos = sessions.filter(s => s.last_lat && s.last_lng)
+    if (withPos.length > 0) {
+      mapObjRef.current.panTo({ lat: withPos[0].last_lat, lng: withPos[0].last_lng })
+    }
   }, [sessions, vehicleData])
 
   function updateMarkers() {
