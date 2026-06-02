@@ -111,6 +111,7 @@ Fix S17c QT-1 — QuickTripModal vehicleId usa vehicle.uuid ........... ✅ [b13
 Fix S17c QT-2 — QuickTripModal hotel_id lookup usa l.uuid ........... ✅ [b13624e]
 Fix S17d QT-3/QT-4 — QuickTripModal resolve TEXT→UUID in createTrip . ✅ [b13624e]
 Fix S17c+S17d — AIBuilderTab crew+locations select include uuid ...... ✅ [b13624e]
+Fix SA3 — QuickTripModal LEGS+Standard branch vehicleId uses uuid .... ✅ [b8ae772]
 ```
 
 ---
@@ -529,7 +530,7 @@ Commit: `"Fix GO-6: position/route NCC driver select includes id"`
 | `app/dashboard/fleet/page.js` | ✅ F1 | S14 |
 | `app/dashboard/qr-codes/page.js` | ✅ Q1 | S14 |
 | `app/dashboard/rocket/page.js` | ✅ R1-R5 | S15 |
-| `app/dashboard/fleet/components/QuickTripModal.js` | ✅ QT-1/QT-2/QT-3/QT-4 [b13624e] | S17c+S17d |
+| `app/dashboard/fleet/components/QuickTripModal.js` | ✅ QT-1/QT-2/QT-3/QT-4 [b13624e] + SA3 [b8ae772] | S17c+S17d+SA3 |
 | `app/dashboard/hotel-settings/page.js` | ✅ H1-H4 — uuid insert+lookup+map | S18a |
 | `app/api/go/session/end/route.js` | ✅ GO-1 — vehicle.uuid [3de2b7d] | S19 |
 | `app/api/go/trip/start/route.js` | ✅ GO-2/GO-3 — vehicle.uuid ×2 [3de2b7d] | S19 |
@@ -556,6 +557,10 @@ S17d    ✅ completato (QuickTripModal QT-3/QT-4) [b13624e]
 S18a    ✅ completato (hotel-settings H1-H4) — fix uuid in Hotel Settings
 S18     ← PROSSIMA: test produzione + verifica migrazione UUID completa
 S19     ✅ completato (Captain Go API GO-1/GO-6) [3de2b7d]
+SA1     ✅ completato (Captain Go nuove route — nessun fix)
+SA2     ✅ completato (crew/page.js 10 uuid fixes) [c2f1a2c]
+SA3     ✅ completato (QuickTripModal LEGS+Standard vehicleId uuid) [b8ae772]
+SA4     ← PROSSIMA: Cron API audit
 ```
 
 ---
@@ -594,36 +599,37 @@ S19     ✅ completato (Captain Go API GO-1/GO-6) [3de2b7d]
 
 ---
 
-### 🔧 SESSIONE SA2 — `crew/page.js` — fix hotel_id lookup (BUG CONFERMATO ⚠️)
-> **PROSSIMA →**
-> File: `app/dashboard/crew/page.js`
-> Bug trovato via search: `locations.find(l => l.id === s.hotel_id)` → `hotel_id` in `crew_stays` è UUID FK → serve `l.uuid`
-> Anche: `crew.find(c => c.id === m.linked_crew_id)` → verificare se `linked_crew_id` è UUID
-> Status: ⏳ PENDING
+### ~~🔧 SESSIONE SA2~~ ✅ `crew/page.js` — 10 uuid fixes COMPLETATO
+> Commit `c2f1a2c` — File: `app/dashboard/crew/page.js`
+> Status: ✅ COMPLETATO
 
 ```
-[ ] Fix: locations.find(l => l.uuid === s.hotel_id)
-[ ] Verifica: linked_crew_id in travel_movements è UUID o TEXT?
-[ ] Verifica: altri .eq('id', ...) su tabelle migrate
+[x] Fix L269: StayForm hotel option value={l.uuid} (inseriva TEXT in UUID column)
+[x] Fix L424: locations.find(l => l.uuid === s.hotel_id) in AccommodationAccordion
+[x] Fix L1114-1116: NTNToggle/RemoteToggle/ContactPopover crewId={member.uuid}
+[x] Fix L1389-1390: linked_crew_id search dropdown usa c.uuid
+[x] Fix L1540/1551/1552/1553: AccommodationAccordion/TravelAccordion/FamilyAccordion/NotesPanel crewId={initial.uuid}
+[x] Fix L1747: hasInMovementToday.has(c.uuid)
+[x] Fix L1814-1817: state handlers c.uuid === id
+[x] Fix L1860: selectAll usa m.uuid
+[x] Fix L2182: crew.find(c => c.uuid === m.linked_crew_id) in Family section
 ```
 
 ---
 
-### 🔧 SESSIONE SA3 — `QuickTripModal.js` — LEGS mode vehicleId (BUG CONFERMATO ⚠️)
-> File: `app/dashboard/fleet/components/QuickTripModal.js`
-> Bug trovato via search: nel branch LEGS, `vehicleId: vehicle.id` NON fixato dal QT-1 (che fixava solo il branch non-LEGS)
-> Leggere SOLO le righe del branch LEGS (~L370-435) per trovare le 2 occorrenze `vehicle.id`
-> Status: ⏳ PENDING
+### ~~🔧 SESSIONE SA3~~ ✅ `QuickTripModal.js` — LEGS+Standard vehicleId COMPLETATO
+> Commit `b8ae772` — File: `app/dashboard/fleet/components/QuickTripModal.js`
+> Status: ✅ COMPLETATO
 
 ```
-[ ] Leggere righe ~370-435 per trovare il testo esatto
-[ ] Fix: vehicleId: vehicle.uuid || vehicle.id  (branch LEGS, prima occorrenza)
-[ ] Fix: vehicleId: vehicle.uuid || vehicle.id  (branch LEGS, seconda occorrenza se presente)
+[x] Fix handleConfirmStandard: vehicleId: vehicle.uuid || vehicle.id
+[x] Fix handleConfirmMulti: vehicleId: vehicle.uuid || vehicle.id
 ```
 
 ---
 
 ### 🔧 SESSIONE SA4 — Cron API (mai auditati)
+> **PROSSIMA →**
 > File: 4 route cron, probabilmente leggeri
 > Status: ⏳ PENDING
 
