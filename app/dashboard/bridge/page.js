@@ -927,11 +927,11 @@ function TravelWidget({ productionId, refreshKey }) {
                             {item.direction === 'IN' ? '↓ IN' : '↑ OUT'} {item.travel_date}
                           </span>
                         )}
-                        {itemWarnings.length > 0 && (
-                          <button
-                            onClick={() => setWarningModal({ warnings: itemWarnings, crewName: name })}
-                            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
-                        )}
+                        {itemWarnings.length > 0 && itemWarnings.map((w, wi) => (
+                          <span key={wi} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: '600', lineHeight: 1.4 }}>
+                            ⚠ {w.message}
+                          </span>
+                        ))}
                       </div>
 
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -1181,11 +1181,11 @@ function AccommodationWidget({ productionId }) {
                       {m.crew?.department && (
                         <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{m.crew.department}</span>
                       )}
-                      {itemWarnings.length > 0 && (
-                        <button
-                          onClick={() => setWarningModal({ warnings: itemWarnings, crewName: name })}
-                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
-                      )}
+                      {itemWarnings.length > 0 && itemWarnings.map((w, wi) => (
+                        <span key={wi} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: '600', lineHeight: 1.4 }}>
+                          ⚠ {w.message}
+                        </span>
+                      ))}
                     </div>
                     {!m._dateWarningsOnly && (
                       <div style={{ fontSize: '11px', color: '#64748b', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
