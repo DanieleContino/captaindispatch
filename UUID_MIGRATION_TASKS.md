@@ -347,6 +347,143 @@ Commit: `"Fix QuickTripModal S17d QT-3/QT-4: resolve TEXT ids to UUID before API
 
 ---
 
+### 🔧 SESSIONE S19 — Captain Go API: vehicle.id → vehicle.uuid (6 fix)
+> Scoperto 2026-06-02 — Bug: pulsante "End" in Captain Go dà "No active session" ma rimane connesso.
+> Root cause: dopo la UUID migration, `vehicle.id` (undefined) usato al posto di `vehicle.uuid` nelle query session lookup del branch CREW. Stesso problema in branch NCC di `arrive` e `position` dove il select ncc_drivers non include `id`.
+
+**File coinvolti:** `session/end`, `trip/start`, `trip/arrive`, `position`
+
+#### Task GO-1 — `session/end/route.js` riga 62 — CRITICO ⚠️
+
+```
+SEARCH:
+      sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
+    }
+  }
+
+  const { data: session } = await sessionQuery.single()
+
+  if (!session) return Response.json({ error: 'No active session' }
+
+REPLACE:
+      sessionQuery = sessionQuery.eq('vehicle_id', vehicle.uuid)
+    }
+  }
+
+  const { data: session } = await sessionQuery.single()
+
+  if (!session) return Response.json({ error: 'No active session' }
+```
+Commit: `"Fix GO-1: session/end CREW branch vehicle.uuid (No active session bug)"`
+
+#### Task GO-2 — `trip/start/route.js` riga 66
+
+Branch CREW per GPS session lookup (ricerca posizione driver):
+```
+SEARCH:
+      if (driverVehicle) sessionQ = sessionQ.eq('vehicle_id', driverVehicle.id)
+
+REPLACE:
+      if (driverVehicle) sessionQ = sessionQ.eq('vehicle_id', driverVehicle.uuid)
+```
+Commit: `"Fix GO-2: trip/start CREW GPS sessionQ uses vehicle.uuid"`
+
+#### Task GO-3 — `trip/start/route.js` riga 148
+
+Branch CREW per aggiornare la sessione a ACTIVE:
+```
+SEARCH:
+    if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
+  }
+
+  const { data: session } = await sessionQuery.single()
+
+  if (session) {
+    await supabase
+      .from('vehicle_tracking_sessions')
+      .update({ status: 'ACTIVE'
+
+REPLACE:
+    if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.uuid)
+  }
+
+  const { data: session } = await sessionQuery.single()
+
+  if (session) {
+    await supabase
+      .from('vehicle_tracking_sessions')
+      .update({ status: 'ACTIVE'
+```
+Commit: `"Fix GO-3: trip/start CREW sessionQuery uses vehicle.uuid"`
+
+#### Task GO-4 — `trip/arrive/route.js` riga 21: aggiungi `id` al select NCC
+
+Il select NCC usa `.select('uuid, production_id')` ma riga 57 fa `driver.id` (integer PK ncc_drivers).
+```
+SEARCH:
+    .select('uuid, production_id')
+    .eq('tracking_token', token)
+    .single()
+
+  if (nccDriver) {
+    driver = nccDriver; driverType = 'NCC'
+
+REPLACE:
+    .select('id, uuid, production_id')
+    .eq('tracking_token', token)
+    .single()
+
+  if (nccDriver) {
+    driver = nccDriver; driverType = 'NCC'
+```
+Commit: `"Fix GO-4: trip/arrive NCC driver select includes id"`
+
+#### Task GO-5 — `trip/arrive/route.js` riga 66
+
+Branch CREW per session lookup:
+```
+SEARCH:
+    if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.id)
+  }
+  const { data: session } = await sessionQuery.single()
+
+  // 4. Calcola actual_km
+
+REPLACE:
+    if (vehicle) sessionQuery = sessionQuery.eq('vehicle_id', vehicle.uuid)
+  }
+  const { data: session } = await sessionQuery.single()
+
+  // 4. Calcola actual_km
+```
+Commit: `"Fix GO-5: trip/arrive CREW sessionQuery uses vehicle.uuid"`
+
+#### Task GO-6 — `position/route.js` riga 22: aggiungi `id` al select NCC
+
+Branch CREW usa già `session_id` dal frontend, ma branch NCC usa `driver.id` (undefined).
+```
+SEARCH:
+    .select('uuid, production_id')
+    .eq('tracking_token', token)
+    .single()
+
+  if (nccDriver) {
+    driver = nccDriver
+    driverType = 'NCC'
+
+REPLACE:
+    .select('id, uuid, production_id')
+    .eq('tracking_token', token)
+    .single()
+
+  if (nccDriver) {
+    driver = nccDriver
+    driverType = 'NCC'
+```
+Commit: `"Fix GO-6: position/route NCC driver select includes id"`
+
+---
+
 ## 🗂️ File con status UUID
 
 | File | Status | Sessione |
@@ -394,6 +531,10 @@ Commit: `"Fix QuickTripModal S17d QT-3/QT-4: resolve TEXT ids to UUID before API
 | `app/dashboard/rocket/page.js` | ✅ R1-R5 | S15 |
 | `app/dashboard/fleet/components/QuickTripModal.js` | ✅ QT-1/QT-2/QT-3/QT-4 [b13624e] | S17c+S17d |
 | `app/dashboard/hotel-settings/page.js` | ✅ H1-H4 — uuid insert+lookup+map | S18a |
+| `app/api/go/session/end/route.js` | ✅ GO-1 — vehicle.uuid [3de2b7d] | S19 |
+| `app/api/go/trip/start/route.js` | ✅ GO-2/GO-3 — vehicle.uuid ×2 [3de2b7d] | S19 |
+| `app/api/go/trip/arrive/route.js` | ✅ GO-4/GO-5 — ncc select include id + vehicle.uuid [3de2b7d] | S19 |
+| `app/api/go/position/route.js` | ✅ GO-6 — ncc select include id [3de2b7d] | S19 |
 
 ---
 
@@ -414,6 +555,219 @@ S17c    ✅ completato (QuickTripModal QT-1/QT-2) [b13624e]
 S17d    ✅ completato (QuickTripModal QT-3/QT-4) [b13624e]
 S18a    ✅ completato (hotel-settings H1-H4) — fix uuid in Hotel Settings
 S18     ← PROSSIMA: test produzione + verifica migrazione UUID completa
+S19     ✅ completato (Captain Go API GO-1/GO-6) [3de2b7d]
+```
+
+---
+
+---
+
+## 🔍 AUDIT COMPLETO SA — Piano sessioni (avviato 2026-06-02)
+
+> **Workflow per ogni sessione:**
+> 1. Nuova chat → "leggi UUID_MIGRATION_TASKS.md"
+> 2. Cline legge il file → vede `PROSSIMA →` e la esegue
+> 3. Cline: read file → analizza → fix se necessario
+> 4. Cline: aggiorna questo file (marca ✅) → sposta `PROSSIMA →`
+> 5. Cline: `git commit` (NO push)
+> 6. Fine chat → nuova chat per la sessione successiva
+>
+> **Push unico** solo alla fine di tutte le sessioni SA (SA-FINAL).
+>
+> **Regole audit:**
+> - Pattern sospetti da cercare: `.eq('id', x)` su FK migrate, `.order('id')` su vehicles/crew/locations, `.find(x => x.id === uuid_var)`, `vehicle.id` come FK value
+> - Tabelle migrate (usare uuid): `locations`, `crew`, `vehicles`
+> - Tabelle NON migrate (id è OK): `trips`, `productions`, `crew_stays` PK, `notifications`, `travel_movements` PK, `ncc_drivers` (integer PK), `hotel_room_types`, `hotel_extra_costs`, `tl_templates`, `transport_list_sections`, `hotel_subgroups`, `rental_*`, `drive_*`, `trip_notes`, `crew_notes`, `production_invites`
+
+---
+
+### 🔧 SESSIONE SA1 — Captain Go: route nuove mai auditate
+> **PROSSIMA →**
+> File: `app/api/go/session/start/route.js`, `go/trip/pickup/route.js`, `go/messages/route.js`, `go/traffic/route.js`
+> Pattern: vehicle_id FK, crew_id FK, session lookup
+> Status: ⏳ PENDING
+
+```
+[ ] app/api/go/session/start/route.js — audit vehicle/crew uuid FK
+[ ] app/api/go/trip/pickup/route.js   — audit vehicle/crew uuid FK
+[ ] app/api/go/messages/route.js      — audit (probabilmente no FK migrate)
+[ ] app/api/go/traffic/route.js       — audit pickup_id/dropoff_id usage
+```
+
+---
+
+### 🔧 SESSIONE SA2 — `crew/page.js` — fix hotel_id lookup (BUG CONFERMATO ⚠️)
+> File: `app/dashboard/crew/page.js`
+> Bug trovato via search: `locations.find(l => l.id === s.hotel_id)` → `hotel_id` in `crew_stays` è UUID FK → serve `l.uuid`
+> Anche: `crew.find(c => c.id === m.linked_crew_id)` → verificare se `linked_crew_id` è UUID
+> Status: ⏳ PENDING
+
+```
+[ ] Fix: locations.find(l => l.uuid === s.hotel_id)
+[ ] Verifica: linked_crew_id in travel_movements è UUID o TEXT?
+[ ] Verifica: altri .eq('id', ...) su tabelle migrate
+```
+
+---
+
+### 🔧 SESSIONE SA3 — `QuickTripModal.js` — LEGS mode vehicleId (BUG CONFERMATO ⚠️)
+> File: `app/dashboard/fleet/components/QuickTripModal.js`
+> Bug trovato via search: nel branch LEGS, `vehicleId: vehicle.id` NON fixato dal QT-1 (che fixava solo il branch non-LEGS)
+> Leggere SOLO le righe del branch LEGS (~L370-435) per trovare le 2 occorrenze `vehicle.id`
+> Status: ⏳ PENDING
+
+```
+[ ] Leggere righe ~370-435 per trovare il testo esatto
+[ ] Fix: vehicleId: vehicle.uuid || vehicle.id  (branch LEGS, prima occorrenza)
+[ ] Fix: vehicleId: vehicle.uuid || vehicle.id  (branch LEGS, seconda occorrenza se presente)
+```
+
+---
+
+### 🔧 SESSIONE SA4 — Cron API (mai auditati)
+> File: 4 route cron, probabilmente leggeri
+> Status: ⏳ PENDING
+
+```
+[ ] app/api/cron/arrival-status/route.js
+[ ] app/api/cron/daily-briefing/route.js
+[ ] app/api/cron/drive-sync/route.js
+[ ] app/api/cron/refresh-routes-traffic/route.js
+```
+
+---
+
+### 🔧 SESSIONE SA5a — Bridge API (mai auditati)
+> File: 4 route bridge
+> Status: ⏳ PENDING
+
+```
+[ ] app/api/bridge/approve-user/route.js
+[ ] app/api/bridge/invites/route.js
+[ ] app/api/bridge/members/route.js
+[ ] app/api/bridge/pending-users/route.js
+```
+
+---
+
+### 🔧 SESSIONE SA5b — Import + AI Trip Builder (mai auditati)
+> File: 4 route import + 1 ai
+> Status: ⏳ PENDING
+
+```
+[ ] app/api/import/confirm/route.js
+[ ] app/api/import/parse/route.js
+[ ] app/api/import/save-location/route.js
+[ ] app/api/import/sheets/route.js
+[ ] app/api/ai/trip-builder/route.js
+```
+
+---
+
+### 🔧 SESSIONE SA6 — route-duration + ImportModal (pattern sospetti ⚠️)
+> Pattern trovato via search:
+> - `app/api/route-duration/route.js`: `locs?.find(l => l.id === from_id)` e `locs?.find(l => l.id === to_id)` — `from_id`/`to_id` passati dall'esterno, dopo migrazione potrebbero essere UUID
+> - `lib/ImportModal.js`: `locations.find(l => l.id === row.hotel_id)` ×3 — `hotel_id` in import context potrebbe essere TEXT (da Sheets) o UUID
+> Status: ⏳ PENDING
+
+```
+[ ] app/api/route-duration/route.js — analizzare from_id/to_id: TEXT o UUID?
+[ ] lib/ImportModal.js — analizzare hotel_id in import: TEXT display id (Sheets) o UUID?
+```
+
+---
+
+### 🔧 SESSIONE SA7a — Dashboard pages (mai auditati) — gruppo A
+> Status: ⏳ PENDING
+
+```
+[ ] app/dashboard/productions/page.js
+[ ] app/dashboard/lists-v2/page.js
+[ ] app/dashboard/reports/page.js
+```
+
+---
+
+### 🔧 SESSIONE SA7b — Dashboard pages (mai auditati) — gruppo B
+> Status: ⏳ PENDING
+
+```
+[ ] app/dashboard/settings/page.js
+[ ] app/dashboard/settings/production/page.js
+[ ] app/dashboard/accommodation/cost-report/page.js
+```
+
+---
+
+### 🔧 SESSIONE SA8a — lib files piccoli (mai auditati)
+> Status: ⏳ PENDING
+
+```
+[ ] lib/crewCache.js
+[ ] lib/production.js
+[ ] lib/tripWarnings.js
+[ ] lib/tripTimeCalculator.js
+[ ] lib/normalizeDept.js
+[ ] lib/roleAccess.js
+[ ] lib/sendLoginNotification.js
+```
+
+---
+
+### 🔧 SESSIONE SA8b — lib files medi (mai auditati)
+> Status: ⏳ PENDING
+
+```
+[ ] lib/TripNotesPanel.js
+[ ] lib/transferClass.js
+[ ] lib/BlockConfigForms.js
+[ ] lib/NotesPanel.js
+[ ] lib/tlBlocksCatalog.js
+[ ] lib/TLHeaderFooterRenderer.js
+[ ] lib/HeaderFooterEditorSidebar.js
+[ ] lib/generateDisplayId.js
+```
+
+---
+
+### 🔧 SESSIONE SA9 — Drive API + Push API (mai auditati)
+> Nota: `drive/check-updates` ha `.select('id, vehicle_id')` → verificare se vehicle_id viene usato come UUID downstream
+> Status: ⏳ PENDING
+
+```
+[ ] app/api/drive/check-updates/route.js  ← ha vehicle_id nel select ⚠️
+[ ] app/api/drive/sync/route.js
+[ ] app/api/drive/download/route.js
+[ ] app/api/drive/preview/route.js
+[ ] app/api/push/send/route.js
+[ ] app/api/push/subscribe/route.js
+[ ] app/api/push/unsubscribe/route.js
+```
+
+---
+
+### 🔧 SESSIONE SA10 — Misc API (mai auditati)
+> Status: ⏳ PENDING
+
+```
+[ ] app/api/rocket/suggestions/route.js
+[ ] app/api/routes/refresh-traffic/route.js
+[ ] app/api/invites/redeem/route.js        ← già apparso nei search (non-migrated id) — da confermare
+[ ] app/api/check-approval/route.js
+[ ] app/api/maps-config/route.js
+[ ] app/api/google/status/route.js
+```
+
+---
+
+### 🏁 SESSIONE SA-FINAL — Push unico finale
+> Solo dopo che SA1-SA10 sono tutte ✅
+> Status: ⏳ PENDING
+
+```
+[ ] git push origin master
+[ ] Aggiornare sezione "GIÀ COMPLETATO" con tutti i fix SA
+[ ] Chiudere audit UUID migration
 ```
 
 ---
