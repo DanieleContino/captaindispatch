@@ -33,7 +33,7 @@ export function SendLinksModal({ open, onClose, productionId }) {
       ])
 
       const nccMap  = {}; (nccRes.data  || []).forEach(d => { nccMap[d.id]  = d })
-      const crewMap = {}; (crewRes.data || []).forEach(d => { crewMap[d.id] = d })
+      const crewMap = {}; (crewRes.data || []).forEach(d => { crewMap[d.uuid] = d })
 
       const list = []
       for (const v of (vehicles || [])) {
