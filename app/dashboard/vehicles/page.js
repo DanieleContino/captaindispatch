@@ -103,11 +103,12 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
   const [crewSearch, setCrewSearch]     = useState('')
   const [driverSearch, setDriverSearch] = useState('')
   const [showDriverSugg, setShowDriverSugg] = useState(false)
+  const [showCrewPicker, setShowCrewPicker] = useState(false)
   const [idManuallyEdited, setIdManuallyEdited] = useState(false)
 
   useEffect(() => {
     if (!open) return
-    setError(null); setCd(false); setCrewSearch(''); setDriverSearch(''); setShowDriverSugg(false)
+    setError(null); setCd(false); setCrewSearch(''); setDriverSearch(''); setShowDriverSugg(false); setShowCrewPicker(false)
     if (mode === 'edit' && initial) {
       setForm({ id: initial.display_id || '', vehicle_type: initial.vehicle_type || 'VAN', vehicle_class: Array.isArray(initial.vehicle_class) ? initial.vehicle_class : (initial.vehicle_class ? [initial.vehicle_class] : []), license_plate: initial.license_plate || '', capacity: initial.capacity ?? '', pax_suggested: initial.pax_suggested ?? '', pax_max: initial.pax_max ?? '', driver_name: initial.driver_name || '', driver_crew_id: initial.driver_crew_id || '', sign_code: initial.sign_code || '', unit_default: initial.unit_default || '', active: initial.active !== false, in_transport: initial.in_transport !== false, available_from: initial.available_from || '', available_to: initial.available_to || '', preferred_dept: initial.preferred_dept || '', preferred_crew_ids: Array.isArray(initial.preferred_crew_ids) ? initial.preferred_crew_ids : [], is_ncc: initial.is_ncc || false, is_comodato: initial.is_comodato || false, ncc_agency_id: initial.ncc_agency_id || '', ncc_driver_name: initial.ncc_driver_name || '', ncc_driver_phone: initial.ncc_driver_phone || '', comodato_owner_crew_id: initial.comodato_owner_crew_id || '', comodato_rate_per_km: initial.comodato_rate_per_km ?? '', comodato_fuel_reimbursement: initial.comodato_fuel_reimbursement || false, comodato_notes: initial.comodato_notes || '' })
       setIdManuallyEdited(false)
@@ -533,10 +534,10 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                   </div>
                 )}
                 {/* Ricerca */}
-                <input placeholder="🔍 Cerca crew…" value={crewSearch} onChange={e => setCrewSearch(e.target.value)}
+                <input placeholder="🔍 Cerca crew…" value={crewSearch} onChange={e => setCrewSearch(e.target.value)} onFocus={() => setShowCrewPicker(true)} onBlur={() => setTimeout(() => setShowCrewPicker(false), 200)}
                   style={{ ...inp, marginBottom: '4px' }} />
                 {/* Lista crew */}
-                {(() => {
+                {showCrewPicker && (() => {
                   const filteredCrew = crewList.filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase()))
                   const sorted = [...filteredCrew].sort((a, b) => {
                     const aDept = form.preferred_dept && a.department === form.preferred_dept ? 1 : 0
@@ -1912,6 +1913,8 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
   const [showDriver2Sugg,   setShowDriver2Sugg]   = useState(false)
   const [driverNotFound,    setDriverNotFound]    = useState(false)
   const [driver2NotFound,   setDriver2NotFound]   = useState(false)
+  const [crewSearch,        setCrewSearch]        = useState('')
+  const [showCrewPicker,    setShowCrewPicker]    = useState(false)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -1937,6 +1940,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
     setDriverSearch(''); setDriver2Search('')
     setShowDriverSugg(false); setShowDriver2Sugg(false)
     setDriverNotFound(false); setDriver2NotFound(false)
+    setShowCrewPicker(false); setCrewSearch('')
     if (mode === 'edit' && initial) {
       setForm({
         id:                         initial.display_id                        || '',
@@ -2477,20 +2481,27 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                       })}
                     </div>
                   )}
-                  <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
-                    {crewList.map(cm => {
-                      const sel = form.preferred_crew_ids.includes(cm.uuid)
-                      return (
-                        <div key={cm.uuid}
-                          onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.uuid) : [...f.preferred_crew_ids, cm.uuid] }))}
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', background: sel ? '#eff6ff' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
-                          <span style={{ fontSize: '13px', flexShrink: 0 }}>{sel ? '✅' : '⬜'}</span>
-                          <span style={{ fontSize: '11px', fontWeight: sel ? '700' : '500', color: sel ? '#1d4ed8' : '#0f172a', flex: 1 }}>{cm.full_name}</span>
-                          {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{cm.department}</span>}
-                        </div>
-                      )
-                    })}
-                  </div>
+                  <input placeholder="🔍 Cerca crew…" value={crewSearch} onChange={e => setCrewSearch(e.target.value)} onFocus={() => setShowCrewPicker(true)} onBlur={() => setTimeout(() => setShowCrewPicker(false), 200)}
+                    style={{ ...inp, marginBottom: '4px' }} />
+                  {showCrewPicker && (() => {
+                    const filteredCrew = crewList.filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase()))
+                    return (
+                      <div style={{ maxHeight: '140px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
+                        {filteredCrew.map(cm => {
+                          const sel = form.preferred_crew_ids.includes(cm.uuid)
+                          return (
+                            <div key={cm.uuid}
+                              onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.uuid) : [...f.preferred_crew_ids, cm.uuid] }))}
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', background: sel ? '#eff6ff' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
+                              <span style={{ fontSize: '13px', flexShrink: 0 }}>{sel ? '✅' : '⬜'}</span>
+                              <span style={{ fontSize: '11px', fontWeight: sel ? '700' : '500', color: sel ? '#1d4ed8' : '#0f172a', flex: 1 }}>{cm.full_name}</span>
+                              {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{cm.department}</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
             )}
