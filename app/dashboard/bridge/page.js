@@ -223,7 +223,7 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
   }
 
   function dismissGroup(group) {
-    const key = group.map(c => c.id).sort().join(',')
+    const key = group.map(c => c.uuid).sort().join(',')
     const newSet = new Set([...dismissedGroups, key])
     setDismissedGroups(newSet)
     try { localStorage.setItem(`dismissed_dupes_${productionId}`, JSON.stringify([...newSet])) } catch {}
@@ -231,7 +231,7 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
 
   function openMerge(gi, group) {
     const sel = checked[gi] || new Set()
-    const selCrew = group.filter(c => sel.has(c.id))
+    const selCrew = group.filter(c => sel.has(c.uuid))
     if (selCrew.length < 2) return
     setPrimaryId(selCrew[0].id)
     setFieldChoices(defaultFieldChoices(selCrew))
@@ -339,7 +339,7 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
 
       {/* Groups list */}
       <div style={{ paddingBottom: '8px' }}>
-        {dupeGroups.filter(group => !dismissedGroups.has(group.map(c => c.id).sort().join(','))).map((group, gi) => {
+        {dupeGroups.filter(group => !dismissedGroups.has(group.map(c => c.uuid).sort().join(','))).map((group, gi) => {
           const sel = checked[gi] || new Set()
           const sim = Math.round(crewSimilarity(group[0].full_name, group[1].full_name) * 100)
           return (
@@ -350,11 +350,11 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
               </div>
 
               {group.map(c => (
-                <label key={c.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '7px 8px', borderRadius: '6px', marginBottom: '4px', cursor: 'pointer', background: sel.has(c.id) ? '#fffbeb' : 'transparent', border: `1px solid ${sel.has(c.id) ? '#fde68a' : 'transparent'}` }}>
-                  <input type="checkbox" checked={sel.has(c.id)} onChange={() => toggleCheck(gi, c.id)} style={{ marginTop: '2px', flexShrink: 0 }} />
+                <label key={c.uuid} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '7px 8px', borderRadius: '6px', marginBottom: '4px', cursor: 'pointer', background: sel.has(c.uuid) ? '#fffbeb' : 'transparent', border: `1px solid ${sel.has(c.uuid) ? '#fde68a' : 'transparent'}` }}>
+                  <input type="checkbox" checked={sel.has(c.uuid)} onChange={() => toggleCheck(gi, c.uuid)} style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>{c.id}</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px' }}>{c.display_id}</span>
                       {c.full_name}
                     </div>
                     <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -408,23 +408,23 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ ...lbl, marginBottom: '8px' }}>1 — Choose the primary record (this one will be KEPT)</div>
                 {mergeCtx.selCrew.map((c, idx) => (
-                  <div key={c.id} style={{ marginBottom: '8px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', border: `2px solid ${primaryId === c.id ? '#16a34a' : '#e2e8f0'}`, background: primaryId === c.id ? '#f0fdf4' : 'white' }}>
-                      <input type="radio" name="mergeP" value={c.id} checked={primaryId === c.id} onChange={() => setPrimaryId(c.id)} />
+                  <div key={c.uuid} style={{ marginBottom: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', border: `2px solid ${primaryId === c.uuid ? '#16a34a' : '#e2e8f0'}`, background: primaryId === c.uuid ? '#f0fdf4' : 'white' }}>
+                      <input type="radio" name="mergeP" value={c.uuid} checked={primaryId === c.uuid} onChange={() => setPrimaryId(c.uuid)} />
                       <div style={{ flex: 1 }}>
-                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', marginRight: '6px' }}>{c.id}</span>
+                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', marginRight: '6px' }}>{c.display_id}</span>
                         <strong>{c.full_name}</strong>
                         <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>{idx === 0 ? '(older · recommended)' : '(newer)'}</span>
-                        {primaryId === c.id && <span style={{ marginLeft: '8px', fontSize: '11px', color: '#16a34a', fontWeight: '700' }}>✓ KEPT</span>}
+                        {primaryId === c.uuid && <span style={{ marginLeft: '8px', fontSize: '11px', color: '#16a34a', fontWeight: '700' }}>✓ KEPT</span>}
                       </div>
                     </label>
                     {/* "Use all values" shortcut */}
                     <button
                       type="button"
                       onClick={() => {
-                        setPrimaryId(c.id)
+                        setPrimaryId(c.uuid)
                         const choices = {}
-                        CREW_MERGE_FIELDS.forEach(({ key }) => { choices[key] = c.id })
+                        CREW_MERGE_FIELDS.forEach(({ key }) => { choices[key] = c.uuid })
                         setFieldChoices(choices)
                       }}
                       style={{ marginTop: '3px', marginLeft: '14px', fontSize: '11px', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', textDecoration: 'underline' }}>
@@ -442,16 +442,16 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
                 <div style={{ display: 'grid', gridTemplateColumns: `100px ${mergeCtx.selCrew.map(() => '1fr').join(' ')}`, background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                   <div style={{ padding: '7px 10px', fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Field</div>
                   {mergeCtx.selCrew.map((c, idx) => (
-                    <div key={c.id} style={{ padding: '7px 10px', fontSize: '10px', fontWeight: '800', color: primaryId === c.id ? '#16a34a' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderLeft: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <span style={{ fontFamily: 'monospace' }}>{c.id}</span>
-                      {primaryId === c.id && <span style={{ marginLeft: '4px' }}>✓</span>}
+                    <div key={c.uuid} style={{ padding: '7px 10px', fontSize: '10px', fontWeight: '800', color: primaryId === c.uuid ? '#16a34a' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderLeft: '1px solid #e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontFamily: 'monospace' }}>{c.display_id}</span>
+                      {primaryId === c.uuid && <span style={{ marginLeft: '4px' }}>✓</span>}
                     </div>
                   ))}
                 </div>
 
                 {/* Table rows */}
                 {CREW_MERGE_FIELDS.map(({ key, label: fLabel }) => {
-                  const vals = mergeCtx.selCrew.map(c => ({ id: c.id, val: c[key] }))
+                  const vals = mergeCtx.selCrew.map(c => ({ uuid: c.uuid, val: c[key] }))
                   const uq = new Set(vals.map(v => String(v.val ?? '')))
                   const isIdentical = uq.size === 1
                   const isDateField = key === 'arrival_date' || key === 'departure_date'
@@ -470,11 +470,11 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
                             </strong>
                           </div>
                         ) : (
-                          vals.map(({ id, val }) => {
-                            const isSelected = !multiStay[key] && fieldChoices[key] === id
+                          vals.map(({ uuid, val }) => {
+                            const isSelected = !multiStay[key] && fieldChoices[key] === uuid
                             return (
-                              <div key={id}
-                                onClick={() => { setMultiStay(p => ({ ...p, [key]: false })); setFieldChoices(p => ({ ...p, [key]: id })) }}
+                              <div key={uuid}
+                                onClick={() => { setMultiStay(p => ({ ...p, [key]: false })); setFieldChoices(p => ({ ...p, [key]: uuid })) }}
                                 style={{ padding: '8px 10px', fontSize: '12px', cursor: 'pointer', borderLeft: '1px solid #f1f5f9', background: multiStay[key] ? '#faf5ff' : isSelected ? '#f0fdf4' : 'white', boxShadow: isSelected ? 'inset 3px 0 0 #16a34a' : 'none', opacity: multiStay[key] ? 0.5 : 1, color: val ? '#0f172a' : '#94a3b8', fontStyle: val ? 'normal' : 'italic', wordBreak: 'break-word', display: 'flex', alignItems: 'center', gap: '6px', transition: 'background 0.1s', userSelect: 'none' }}>
                                 {isSelected && <span style={{ color: '#16a34a', fontSize: '13px', flexShrink: 0 }}>✓</span>}
                                 {key === 'hotel_id' ? hotelLabel(val) : (val || '—')}
@@ -518,8 +518,8 @@ function CrewDuplicatesWidget({ productionId, locations, onMerged }) {
                 ⚠️ <strong>Irreversible.</strong>{' '}
                 {mergeCtx.selCrew.filter(c => c.uuid !== primaryId).length === 1 ? 'This record' : 'These records'} will be <strong>permanently deleted</strong>:{' '}
                 {mergeCtx.selCrew.filter(c => c.uuid !== primaryId).map((c, i) => (
-                  <span key={c.id}>{i > 0 && ', '}<strong>{c.full_name}</strong>{' '}
-                    <code style={{ background: '#fee2e2', padding: '1px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '10px' }}>({c.id})</code>
+                  <span key={c.uuid}>{i > 0 && ', '}<strong>{c.full_name}</strong>{' '}
+                    <code style={{ background: '#fee2e2', padding: '1px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '10px' }}>({c.display_id})</code>
                   </span>
                 ))}
               </div>
@@ -1628,11 +1628,11 @@ function VehicleRentalWidget({ productionId }) {
         {expiring.map(v => {
           const badge = expiringBadge(v.diff)
           return (
-            <div key={v.id + '-exp'} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', borderBottom: '1px solid #f8fafc' }}>
+            <div key={v.uuid + '-exp'} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', borderBottom: '1px solid #f8fafc' }}>
               <span style={{ fontSize: '22px' }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
+                  <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', fontFamily: 'monospace' }}>{v.display_id}</span>
                   {v.driver_name && <span style={{ fontSize: '12px', color: '#374151' }}>👤 {v.driver_name}</span>}
                   {v.sign_code   && <span style={{ fontSize: '11px', color: '#94a3b8' }}>🏷 {v.sign_code}</span>}
                 </div>
@@ -1656,11 +1656,11 @@ function VehicleRentalWidget({ productionId }) {
           </div>
         )}
         {arriving.map(v => (
-          <div key={v.id + '-arr'} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', borderBottom: '1px solid #f8fafc' }}>
+          <div key={v.uuid + '-arr'} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 20px', borderBottom: '1px solid #f8fafc' }}>
             <span style={{ fontSize: '22px' }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', fontFamily: 'monospace' }}>{v.id}</span>
+                <span style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', fontFamily: 'monospace' }}>{v.display_id}</span>
                 {v.driver_name && <span style={{ fontSize: '12px', color: '#374151' }}>👤 {v.driver_name}</span>}
                 {v.sign_code   && <span style={{ fontSize: '11px', color: '#94a3b8' }}>🏷 {v.sign_code}</span>}
               </div>
