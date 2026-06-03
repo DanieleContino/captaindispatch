@@ -4695,7 +4695,7 @@ export default function VehiclesPage() {
         crewList={crewList}
         vehicles={vhcs}
       />
-      <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} />
+      <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} fromFleet={activeTab === 'fleet'} />
       <RentalVehicleSidebar
         open={rentalVehicleSidebarOpen}
         mode={rentalVehicleSidebarMode}
