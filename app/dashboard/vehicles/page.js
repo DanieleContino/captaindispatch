@@ -724,7 +724,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                 <select value={form.preferred_dept || ''} onChange={e => set('preferred_dept', e.target.value || '')}
                   style={{ ...inp, background: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).bg || 'white') : 'white', color: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).color || '#0f172a') : '#94a3b8', fontWeight: form.preferred_dept ? '700' : '400' }}>
                   <option value="">— Nessun dept preferito —</option>
-                  {Object.keys(DEPT_COLOR).map(d => <option key={d} value={d}>{d}</option>)}
+                  {[...new Set([...crewList.map(c => c.department).filter(Boolean), ...Object.keys(DEPT_COLOR)])].map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
             </div>
@@ -2610,7 +2610,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                   <select value={form.preferred_dept || ''} onChange={e => set('preferred_dept', e.target.value || '')}
                     style={{ ...inp, background: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).bg || 'white') : 'white', color: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).color || '#0f172a') : '#94a3b8', fontWeight: form.preferred_dept ? '700' : '400' }}>
                     <option value="">— Nessun dept preferito —</option>
-                    {Object.keys(DEPT_COLOR).map(d => <option key={d} value={d}>{d}</option>)}
+                    {[...new Set([...crewList.map(c => c.department).filter(Boolean), ...Object.keys(DEPT_COLOR)])].map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
             </div>
@@ -4314,7 +4314,7 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
                 <select value={form.preferred_dept || ''} onChange={e => set('preferred_dept', e.target.value || '')}
                   style={{ ...inp, background: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).bg || 'white') : 'white', color: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).color || '#0f172a') : '#94a3b8', fontWeight: form.preferred_dept ? '700' : '400' }}>
                   <option value="">— Nessun dept preferito —</option>
-                  {Object.keys(DEPT_COLOR).map(d => <option key={d} value={d}>{d}</option>)}
+                  {[...new Set([...crewList.map(c => c.department).filter(Boolean), ...Object.keys(DEPT_COLOR)])].map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '7px 10px', background: 'white', border: '1px solid #e9d5ff', borderRadius: '7px' }}>
@@ -4946,3 +4946,4 @@ export default function VehiclesPage() {
     </div>
   )
 }
+
