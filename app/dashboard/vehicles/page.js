@@ -4498,6 +4498,10 @@ export default function VehiclesPage() {
       setRentalVehicleSidebarMode('edit')
       setRentalVehicleSidebarTarget(v)
       setRentalVehicleSidebarOpen(true)
+    } else if (v.is_ncc === true) {
+      setNccVehicleSidebarMode('edit')
+      setNccVehicleTarget(v)
+      setNccVehicleSidebarOpen(true)
     } else {
       setMode('edit'); setEdit(v); setSO(true)
     }
