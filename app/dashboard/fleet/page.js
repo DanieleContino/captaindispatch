@@ -916,7 +916,7 @@ export default function FleetMonitorPage() {
   // ── Elabora dati ──────────────────────────────────────────
   // Per ogni veicolo: raggruppa i suoi trip per trip_id
   const vehicleData = vehicles.map(v => {
-    const vTrips = trips.filter(t => t.vehicle_id === v.id)
+    const vTrips = trips.filter(t => t.vehicle_id === v.uuid)
     const groups  = groupByTripId(vTrips)
     const { status, current, next, last } = vehicleStatus(groups, now)
     return { vehicle: v, groups, status, current, next, last }

@@ -809,7 +809,7 @@ export default function CaptainGoPage() {
           {vehicle ? (
             <div>
               <div style={{ fontSize: '24px' }}>{TYPE_ICON[vehicle.vehicle_type] || '🚐'}</div>
-              <div style={{ fontFamily: 'monospace', fontWeight: '800', fontSize: '14px', color: 'white' }}>{vehicle.id}</div>
+              <div style={{ fontFamily: 'monospace', fontWeight: '800', fontSize: '14px', color: 'white' }}>{vehicle.sign_code || vehicle.display_id}</div>
             </div>
           ) : (
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>No vehicle assigned</div>
@@ -868,7 +868,7 @@ export default function CaptainGoPage() {
         <div style={{ margin: '16px 20px 0', padding: '12px 16px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '28px' }}>{TYPE_ICON[vehicle.vehicle_type] || '🚐'}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>{vehicle.id}</div>
+            <div style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>{vehicle.sign_code || vehicle.display_id}</div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
               {[vehicle.license_plate, vehicle.sign_code, vehicle.capacity ? `${vehicle.capacity} pax` : null].filter(Boolean).join(' · ')}
             </div>
