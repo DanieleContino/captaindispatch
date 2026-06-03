@@ -928,7 +928,7 @@ function WarningModal({ warnings, crewName, onClose }) {
 }
 
 // ─── Crew card griglia ───────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0, isLocal = false, familyCount = 0, onFamilyClick, warnings = [] }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0, isLocal = false, familyCount = 0, onFamilyClick, onNotesClick, warnings = [] }) {
   const t = useT()
   const tc = TC[member.travel_status] || TC.PRESENT
   const hc = HC[member.hotel_status]  || HC.PENDING
@@ -990,12 +990,14 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
             )}
             {unreadCount > 0 && (
-              <span title={`${unreadCount} unread note${unreadCount > 1 ? 's' : ''}`}
-                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '800', color: 'white', background: '#f97316', borderRadius: '999px', minWidth: '16px', height: '16px', padding: '0 3px', flexShrink: 0 }}>❗</span>
+              <button onClick={e => { e.stopPropagation(); onNotesClick && onNotesClick(member) }}
+                title={`${unreadCount} unread note${unreadCount > 1 ? 's' : ''} — click to view`}
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '800', color: 'white', background: '#f97316', borderRadius: '999px', minWidth: '16px', height: '16px', padding: '0 3px', flexShrink: 0, border: 'none', cursor: 'pointer' }}>❗</button>
             )}
             {notesCount > 0 && unreadCount === 0 && (
-              <span title={`${notesCount} note${notesCount > 1 ? 's' : ''}`}
-                style={{ fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fcd34d', flexShrink: 0 }}>💬</span>
+              <button onClick={e => { e.stopPropagation(); onNotesClick && onNotesClick(member) }}
+                title={`${notesCount} note${notesCount > 1 ? 's' : ''} — click to view`}
+                style={{ fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '16px', height: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #fcd34d', flexShrink: 0, cursor: 'pointer', padding: 0 }}>💬</button>
             )}
             {familyCount > 0 && (
               <button onClick={e => { e.stopPropagation(); onFamilyClick && onFamilyClick() }}
@@ -1635,6 +1637,7 @@ export default function CrewPage() {
   const [warningsMap,     setWarningsMap]      = useState({})
   const [showFamily, setShowFamily] = useState(false)
   const [familyModalCrew, setFamilyModalCrew] = useState(null)
+  const [notesModalTarget, setNotesModalTarget] = useState(null)
 
   async function loadUnreadMap(userId) {
     if (!PRODUCTION_ID || !userId) return
@@ -2169,7 +2172,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.uuid} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.uuid)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.uuid] || []} stays={staysMap[m.uuid] || []} unreadCount={unreadMap[m.uuid] || 0} notesCount={notesMap[m.uuid] || 0} isLocal={m.is_local || false} familyCount={familyCountMap[m.uuid] || 0} onFamilyClick={() => openFamilyModal(m.uuid, m.full_name)} warnings={warningsMap[m.uuid] || []} />
+                    <CrewCard key={m.uuid} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.uuid)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.uuid] || []} stays={staysMap[m.uuid] || []} unreadCount={unreadMap[m.uuid] || 0} notesCount={notesMap[m.uuid] || 0} isLocal={m.is_local || false} familyCount={familyCountMap[m.uuid] || 0} onFamilyClick={() => openFamilyModal(m.uuid, m.full_name)} onNotesClick={m => setNotesModalTarget(m)} warnings={warningsMap[m.uuid] || []} />
                   ))}
                 </div>
               </div>
@@ -2230,6 +2233,66 @@ export default function CrewPage() {
         onClose={() => setFamilyModalCrew(null)}
         onEdit={(member) => { setFamilyModalCrew(null); openEdit(member) }}
       />
+      {notesModalTarget && (() => {
+        const CTX_C = { general: { bg: '#f8fafc', color: '#374151', border: '#e2e8f0' }, captain: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' }, travel: { bg: '#faf5ff', color: '#6d28d9', border: '#c4b5fd' }, accommodation: { bg: '#f0fdf4', color: '#15803d', border: '#86efac' } }
+        function fmtTs(ts) { if (!ts) return ''; return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }
+        function NotesModalInner() {
+          const [notes, setNotes] = useState([])
+          const [loading, setLoading] = useState(true)
+          const currentUser = user ? { id: user.id } : null
+          useEffect(() => {
+            fetch(`/api/crew-notes?crew_id=${notesModalTarget.uuid}&production_id=${PRODUCTION_ID}`)
+              .then(r => r.json()).then(j => { setNotes(j.notes || []); setLoading(false) }).catch(() => setLoading(false))
+          }, [])
+          function isUnread(n) { if (!currentUser) return false; if (n.author_id === currentUser.id) return false; return !(n.read_by || []).includes(currentUser.id) }
+          return (
+            <>
+              <div onClick={() => setNotesModalTarget(null)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,35,64,0.25)' }} />
+              <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 61, background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', width: '520px', maxWidth: 'calc(100vw - 32px)', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.15)' }}>
+                <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>💬 Notes — {notesModalTarget.full_name}</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{notesModalTarget.role || ''}{notesModalTarget.department ? ' · ' + notesModalTarget.department : ''}</div>
+                  </div>
+                  <button onClick={() => setNotesModalTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', padding: '4px' }}>✕</button>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '14px 18px' }}>
+                  {loading ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', fontSize: '13px' }}>Loading…</div>
+                  ) : notes.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                      <div style={{ fontSize: '28px', marginBottom: '8px' }}>💬</div>
+                      <div style={{ fontSize: '13px', fontWeight: '600' }}>No notes yet</div>
+                      <div style={{ fontSize: '11px', marginTop: '4px' }}>Open the Edit sidebar to add the first note</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {notes.map(n => { const cc = CTX_C[n.context] || CTX_C.general; const unread = isUnread(n); return (
+                        <div key={n.id} style={{ padding: '10px 12px', background: unread ? '#fffbeb' : cc.bg, border: `1px solid ${unread ? '#fcd34d' : cc.border}`, borderRadius: '8px', borderLeft: unread ? '3px solid #f97316' : undefined }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: cc.color, background: cc.bg, border: `1px solid ${cc.border}`, padding: '1px 6px', borderRadius: '999px' }}>{n.context || 'general'}</span>
+                            {unread && <span style={{ fontSize: '10px', fontWeight: '700', color: '#f97316', background: '#fff7ed', border: '1px solid #fdba74', padding: '1px 5px', borderRadius: '999px' }}>NEW</span>}
+                            <span style={{ fontSize: '11px', color: '#374151', fontWeight: '600' }}>{n.author_name}</span>
+                            <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: 'auto' }}>{fmtTs(n.created_at)}</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#0f172a', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{n.content}</div>
+                        </div>
+                      )})}
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', flexShrink: 0 }}>
+                  <button onClick={() => { const t = notesModalTarget; setNotesModalTarget(null); openEdit(t) }}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: 'none', background: '#0f2340', color: 'white', fontSize: '13px', fontWeight: '800', cursor: 'pointer' }}>
+                    ✏️ Open Notes in Edit Sidebar
+                  </button>
+                </div>
+              </div>
+            </>
+          )
+        }
+        return <NotesModalInner key={notesModalTarget.uuid} />
+      })()}
 
       {/* Sidebar */}
       <CrewSidebar
