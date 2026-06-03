@@ -666,7 +666,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
     const updater = list === 'pickup' ? setPickupRows : setDropoffRows
     updater(prev => prev.map((row, i) => i !== index ? row : {
       ...row,
-      locId:   loc.is_temp ? null : loc.id,
+      locId:   loc.is_temp ? null : (loc.uuid || loc.id),
       locName: loc.name,
       locTemp: loc.is_temp ? loc : null,
     }))
@@ -684,7 +684,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
   }
 
   async function ensureTempLocation(loc) {
-    if (!loc || !loc.is_temp) return loc?.id || null
+    if (!loc || !loc.is_temp) return loc?.uuid || loc?.id || null
     const tmpId = 'TMP_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)
     const { data, error } = await supabase
       .from('locations')
