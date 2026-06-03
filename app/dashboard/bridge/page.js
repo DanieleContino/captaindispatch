@@ -1119,7 +1119,11 @@ function AccommodationWidget({ productionId }) {
         .eq('production_id', productionId)
         .eq('match_status', 'matched')
         .order('travel_date', { ascending: true }),
-    ]).then(([{ data: movData }, { data: staysData }, { data: allMatchedMovs }]) => {
+      supabase
+        .from('crew')
+        .select('uuid, is_local, no_transport_needed')
+        .eq('production_id', productionId),
+    ]).then(([{ data: movData }, { data: staysData }, { data: allMatchedMovs }, { data: crewFlagsData }]) => {
       const allMatched = allMatchedMovs || []
 
       // Deduplicato per crew_id (UUID post migration)
@@ -1130,8 +1134,14 @@ function AccommodationWidget({ productionId }) {
         return true
       })
 
+      // Filtra stays escludendo crew is_local o no_transport_needed
+      const excludedIds = new Set(
+        (crewFlagsData || []).filter(c => c.is_local || c.no_transport_needed).map(c => c.uuid)
+      )
+      const filteredStays = (staysData || []).filter(s => !excludedIds.has(s.crew_id))
+
       // Compute date warnings su TUTTI i movimenti matched — crew_id è UUID
-      const wMap = computeCrewWarnings(allMatched, staysData || [])
+      const wMap = computeCrewWarnings(allMatched, filteredStays)
       setWarningsMap(wMap)
 
       // Merge: crew senza stay + crew con solo date warnings
