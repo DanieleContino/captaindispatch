@@ -1783,7 +1783,14 @@ export default function CrewPage() {
       sMap[s.crew_id].push(s)
     }
     setStaysMap(sMap)
-    setWarningsMap(computeCrewWarnings(travelData || [], staysData || []))
+    // Escludi stays di crew is_local o no_transport_needed dai nuovi warning
+    const excludedCrewIds = new Set(
+      (vData || [])
+        .filter(c => c.is_local || c.no_transport_needed)
+        .map(c => c.uuid)
+    )
+    const filteredStaysForWarnings = (staysData || []).filter(s => !excludedCrewIds.has(s.crew_id))
+    setWarningsMap(computeCrewWarnings(travelData || [], filteredStaysForWarnings))
     setLoading(false)
   }, [])
 
