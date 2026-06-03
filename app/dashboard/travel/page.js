@@ -1452,7 +1452,7 @@ export default function TravelPage() {
           .in('uuid', crewIds),
       ])
       const excludedIds = new Set(
-        (crewFlagsData || []).filter(c => c.is_local || c.no_transport_needed).map(c => c.uuid)
+        (crewFlagsData || []).filter(c => c.is_local).map(c => c.uuid)
       )
       const filteredStays = (staysData || []).filter(s => !excludedIds.has(s.crew_id))
       setWarningsMap(computeCrewWarnings(movData, filteredStays))

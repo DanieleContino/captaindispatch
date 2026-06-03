@@ -843,8 +843,26 @@ function TravelWidget({ productionId, refreshKey }) {
       }
 
       // Compute date warnings su TUTTI i movimenti matched (non solo quelli con conflict flags)
-      // crew_id è UUID (post UUID migration)
-      const wMap = computeCrewWarnings(allMatched, staysData || [])
+      // crew_id è UUID (post UUID migration) — escludi solo is_local (non NTN)
+      const excludedIdsTravel = new Set(
+        (staysData || []).length > 0
+          ? [] // filtro applicato sotto
+          : []
+      )
+      const allCrewIdsTravel = [...new Set(allMatched.filter(m => m.crew_id).map(m => m.crew_id))]
+      let filteredStaysTravel = staysData || []
+      if (allCrewIdsTravel.length > 0) {
+        const { data: crewFlagsTravelData } = await supabase
+          .from('crew')
+          .select('uuid, is_local')
+          .eq('production_id', productionId)
+          .in('uuid', allCrewIdsTravel)
+        const excludedLocal = new Set(
+          (crewFlagsTravelData || []).filter(c => c.is_local).map(c => c.uuid)
+        )
+        filteredStaysTravel = (staysData || []).filter(s => !excludedLocal.has(s.crew_id))
+      }
+      const wMap = computeCrewWarnings(allMatched, filteredStaysTravel)
       setWarningsMap(wMap)
 
       // Merge: items da discrepanze + items solo da date warnings
@@ -1134,9 +1152,9 @@ function AccommodationWidget({ productionId }) {
         return true
       })
 
-      // Filtra stays escludendo crew is_local o no_transport_needed
+      // Filtra stays escludendo solo crew is_local (NTN non esclude dai warning)
       const excludedIds = new Set(
-        (crewFlagsData || []).filter(c => c.is_local || c.no_transport_needed).map(c => c.uuid)
+        (crewFlagsData || []).filter(c => c.is_local).map(c => c.uuid)
       )
       const filteredStays = (staysData || []).filter(s => !excludedIds.has(s.crew_id))
 

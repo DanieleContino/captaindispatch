@@ -1786,7 +1786,7 @@ export default function CrewPage() {
     // Escludi stays di crew is_local o no_transport_needed dai nuovi warning
     const excludedCrewIds = new Set(
       (vData || [])
-        .filter(c => c.is_local || c.no_transport_needed)
+        .filter(c => c.is_local)
         .map(c => c.uuid)
     )
     const filteredStaysForWarnings = (staysData || []).filter(s => !excludedCrewIds.has(s.crew_id))
