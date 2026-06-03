@@ -91,7 +91,7 @@ function NccAgencyNameInline({ productionId, agencyId }) {
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────
-function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [], vehicles = [], nccAgencyId = null }) {
+function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], deptOptions = [], vehicles = [], nccAgencyId = null, fromFleet = false, onEditInTab = null }) {
   const t = useT()
   const PRODUCTION_ID = getProductionId()
   const EMPTY = { id: '', vehicle_type: 'VAN', vehicle_class: [], license_plate: '', capacity: '', pax_suggested: '', pax_max: '', driver_name: '', driver_crew_id: '', sign_code: '', unit_default: '', active: true, in_transport: true, available_from: '', available_to: '', preferred_dept: '', preferred_crew_ids: [], is_ncc: false, is_comodato: false, ncc_agency_id: '', ncc_driver_name: '', ncc_driver_phone: '', comodato_owner_crew_id: '', comodato_rate_per_km: '', comodato_fuel_reimbursement: false, comodato_notes: '' }
@@ -193,6 +193,220 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
   const fld = { marginBottom: '12px' }
 
   const tc = TYPE_COLOR[form.vehicle_type] || TYPE_COLOR.VAN
+
+  // ── Fleet Edit View ──────────────────────────────────────
+  if (fromFleet && mode === 'edit') {
+    const deptKeys = [...new Set([...Object.keys(DEPT_COLOR), ...(crewList.map(c => c.department).filter(Boolean))])]
+    const crewDepts = [...new Set(crewList.map(c => c.department).filter(Boolean))]
+    return (
+      <>
+        {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
+        <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: typeof window !== 'undefined' && window.innerWidth < 768 ? '100%' : `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
+
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
+              {TYPE_ICON[form.vehicle_type] || '🚐'} {t.editVehicle}
+            </div>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+          </div>
+
+          <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
+            <div style={{ padding: '16px 18px' }}>
+
+              {/* Vehicle ID — read only */}
+              <div style={{ ...fld, padding: '10px 14px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>Vehicle</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '22px' }}>{TYPE_ICON[form.vehicle_type] || '🚐'}</span>
+                  <span style={{ fontWeight: '900', fontSize: '16px', color: '#0f172a', fontFamily: 'monospace' }}>{form.id}</span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>{form.vehicle_type}</span>
+                  {Array.isArray(form.vehicle_class) && form.vehicle_class.map(c => { const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC; return <span key={c} style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: cc.bg, color: cc.color, border: `1px solid ${cc.border}` }}>{c}</span> })}
+                  {form.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 8px', borderRadius: '5px', border: '1px solid #d4d4d4' }}>🚘 {form.license_plate}</span>}
+                </div>
+                {(form.available_from || form.available_to) && (
+                  <div style={{ marginTop: '6px', fontSize: '11px', color: '#64748b' }}>
+                    📅 {form.available_from || '∞'} → {form.available_to || '∞'}
+                  </div>
+                )}
+              </div>
+
+              {/* Vehicle Category banner */}
+              {(() => {
+                const isNcc = form.is_ncc
+                const isComodato = form.is_comodato
+                const isRental = initial?.is_rental
+                const cat = isRental ? { label: '🔑 Rental', tab: 'rental', color: '#a16207', bg: '#fefce8', border: '#fde68a' }
+                  : isNcc ? { label: '🏢 NCC', tab: 'ncc', color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' }
+                  : isComodato ? { label: '🤝 Loan', tab: 'comodato', color: '#15803d', bg: '#f0fdf4', border: '#86efac' }
+                  : { label: '🎥 Production', tab: 'production', color: '#0f2340', bg: '#eff6ff', border: '#bfdbfe' }
+                return (
+                  <div style={{ ...fld, padding: '10px 14px', borderRadius: '9px', border: `1px solid ${cat.border}`, background: cat.bg, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: cat.color }}>{cat.label}</span>
+                    <div style={{ flex: 1 }} />
+                    <button type="button"
+                      onClick={() => { onClose(); if (onEditInTab) onEditInTab(cat.tab, initial) }}
+                      style={{ padding: '4px 10px', borderRadius: '6px', border: `1px solid ${cat.border}`, background: 'white', color: cat.color, fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>
+                      ✎ Edit in {cat.label.split(' ')[1]} tab
+                    </button>
+                  </div>
+                )
+              })()}
+
+              {/* Capacity / Rocket */}
+              <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #bfdbfe', background: '#eff6ff' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#1d4ed8', marginBottom: '10px' }}>{t.rocketCapacity}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ ...lbl, color: '#1d4ed8' }}>pax_suggested</label>
+                    <input type="number" value={form.pax_suggested} onChange={e => set('pax_suggested', e.target.value)} style={{ ...inp, borderColor: '#bfdbfe', background: 'white' }} placeholder={form.capacity || '6'} min="1" max="60" />
+                  </div>
+                  <div>
+                    <label style={{ ...lbl, color: '#1d4ed8' }}>pax_max</label>
+                    <input type="number" value={form.pax_max} onChange={e => set('pax_max', e.target.value)} style={{ ...inp, borderColor: '#bfdbfe', background: 'white' }} placeholder={form.capacity || '8'} min="1" max="60" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Driver — solo se non NCC */}
+              {!form.is_ncc && <div style={fld}>
+                <label style={lbl}>{t.driverLabel}</label>
+                {form.driver_crew_id ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: '1px solid #86efac', borderRadius: '8px', background: '#f0fdf4' }}>
+                    <span style={{ fontSize: '14px' }}>🔗</span>
+                    <span style={{ flex: 1, fontSize: '13px', fontWeight: '700', color: '#15803d' }}>{form.driver_name}</span>
+                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#dcfce7', border: '1px solid #86efac', borderRadius: '999px', padding: '1px 7px' }}>🚐 NTN</span>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, driver_crew_id: '', driver_name: '' }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '14px', lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative' }}>
+                    <input value={form.driver_name} onChange={e => { set('driver_name', e.target.value); setDriverSearch(e.target.value); setShowDriverSugg(e.target.value.length > 0) }} onFocus={() => { if (form.driver_name && !form.driver_crew_id) setShowDriverSugg(true) }} onBlur={() => setTimeout(() => setShowDriverSugg(false), 160)} style={inp} placeholder="Mario Rossi — o cerca crew…" autoComplete="off" />
+                    {showDriverSugg && (() => {
+                      const q = (driverSearch || form.driver_name || '').toLowerCase()
+                      const matches = crewList.filter(c => q && (c.full_name || '').toLowerCase().includes(q)).slice(0, 6)
+                      if (matches.length === 0) return null
+                      return (
+                        <div style={{ position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 200, overflow: 'hidden' }}>
+                          {matches.map(cm => (
+                            <div key={cm.uuid} onMouseDown={() => { setForm(f => ({ ...f, driver_name: cm.full_name, driver_crew_id: cm.uuid })); setShowDriverSugg(false) }} style={{ padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', borderBottom: '1px solid #f1f5f9' }} onMouseOver={e => e.currentTarget.style.background = '#f0fdf4'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                              <span style={{ flex: 1, fontWeight: '600', color: '#0f172a' }}>{cm.full_name}</span>
+                              {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{cm.department}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
+              </div>}
+
+              {/* Sign code + Unit default */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                <div>
+                  <label style={lbl}>{t.signCodeLabel}</label>
+                  <input value={form.sign_code} onChange={e => set('sign_code', e.target.value)} style={inp} placeholder="GRIP1, PROD2…" />
+                </div>
+                <div>
+                  <label style={lbl}>{t.unitDefaultLabel}</label>
+                  <input value={form.unit_default} onChange={e => set('unit_default', e.target.value)} style={inp} placeholder="MAIN, SECOND…" />
+                </div>
+              </div>
+
+              {/* Active + In Transport */}
+              <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.active ? '#86efac' : '#e2e8f0'}`, background: form.active ? '#f0fdf4' : '#f8fafc', cursor: 'pointer' }} onClick={() => set('active', !form.active)}>
+                <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.active ? '#16a34a' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: '2px', left: form.active ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: form.active ? '#15803d' : '#64748b' }}>{form.active ? t.vehicleActive : t.vehicleInactive}</div>
+              </div>
+              <div style={{ ...fld, display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '9px', border: `1px solid ${form.in_transport ? '#bfdbfe' : '#e2e8f0'}`, background: form.in_transport ? '#eff6ff' : '#f8fafc', cursor: 'pointer' }} onClick={() => set('in_transport', !form.in_transport)}>
+                <div style={{ width: '36px', height: '20px', borderRadius: '999px', background: form.in_transport ? '#2563eb' : '#cbd5e1', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: '2px', left: form.in_transport ? '18px' : '2px', width: '16px', height: '16px', borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: form.in_transport ? '#1d4ed8' : '#64748b' }}>{form.in_transport ? '✅ In Transport' : '🚐 SD — excluded from trips/lists/fleet'}</div>
+              </div>
+
+              {/* Preferred Dept + Crew */}
+              <div style={{ ...fld, padding: '12px 14px', borderRadius: '9px', border: '1px solid #e9d5ff', background: '#fdf4ff' }}>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: '#7e22ce', marginBottom: '10px' }}>⭐ Preferenze Assegnazione</div>
+                <div style={{ marginBottom: '10px' }}>
+                  <label style={lbl}>Dept Preferito</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <select value={form.preferred_dept || ''} onChange={e => set('preferred_dept', e.target.value || '')}
+                      style={{ flex: 1, padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).color || '#0f172a') : '#94a3b8', background: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).bg || 'white') : 'white', fontWeight: form.preferred_dept ? '700' : '400', boxSizing: 'border-box' }}>
+                      <option value="">— Nessun dept preferito —</option>
+                      {deptKeys.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  {/* Input per dept custom non in lista */}
+                  {form.preferred_dept && !deptKeys.includes(form.preferred_dept) && (
+                    <div style={{ marginTop: '4px', fontSize: '10px', color: '#7e22ce' }}>Custom: {form.preferred_dept}</div>
+                  )}
+                  <input placeholder="Oppure scrivi dept custom…" style={{ ...inp, marginTop: '6px', fontSize: '12px' }}
+                    onBlur={e => { if (e.target.value.trim()) set('preferred_dept', e.target.value.trim().toUpperCase()) }}
+                    defaultValue=""
+                  />
+                </div>
+                {/* Preferred Crew */}
+                {form.preferred_crew_ids.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                    {form.preferred_crew_ids.map(cid => {
+                      const cm = crewList.find(c => c.uuid === cid)
+                      return (
+                        <span key={cid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: cm ? '#eff6ff' : '#fef2f2', color: cm ? '#1d4ed8' : '#dc2626', border: `1px solid ${cm ? '#bfdbfe' : '#fecaca'}` }}>
+                          {cm ? cm.full_name : '⚠ Crew non trovato'}
+                          <button type="button" onClick={() => setForm(f => ({ ...f, preferred_crew_ids: f.preferred_crew_ids.filter(x => x !== cid) }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '12px', padding: '0', lineHeight: 1, marginLeft: '2px' }}>✕</button>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                <input placeholder="🔍 Cerca crew…" value={crewSearch} onChange={e => setCrewSearch(e.target.value)} onFocus={() => setShowCrewPicker(true)} onBlur={() => setTimeout(() => setShowCrewPicker(false), 200)} style={{ ...inp, marginBottom: '4px' }} />
+                {showCrewPicker && (() => {
+                  const filteredCrew = form.preferred_dept
+                    ? crewList.filter(c => c.department === form.preferred_dept)
+                    : crewList.filter(c => !crewSearch || (c.full_name || '').toLowerCase().includes(crewSearch.toLowerCase()))
+                  return (
+                    <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '7px', background: 'white' }}>
+                      {filteredCrew.length === 0 && <div style={{ fontSize: '11px', color: '#94a3b8', padding: '8px' }}>Nessun risultato</div>}
+                      {filteredCrew.map(cm => {
+                        const sel = form.preferred_crew_ids.includes(cm.uuid)
+                        return (
+                          <div key={cm.uuid} onClick={() => setForm(f => ({ ...f, preferred_crew_ids: sel ? f.preferred_crew_ids.filter(x => x !== cm.uuid) : [...f.preferred_crew_ids, cm.uuid] }))} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', cursor: 'pointer', background: sel ? '#eff6ff' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '13px', flexShrink: 0 }}>{sel ? '✅' : '⬜'}</span>
+                            <span style={{ fontSize: '11px', fontWeight: sel ? '700' : '500', color: sel ? '#1d4ed8' : '#0f172a', flex: 1 }}>{cm.full_name}</span>
+                            {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{cm.department}</span>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Danger Zone — redirect */}
+              <div style={{ marginTop: '8px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px', fontWeight: '600' }}>Delete Vehicle</div>
+                <div style={{ fontSize: '11px', color: '#dc2626' }}>
+                  To delete this vehicle, use the{' '}
+                  <button type="button" onClick={() => { onClose(); if (onEditInTab) onEditInTab(form.is_rental ? 'rental' : form.is_ncc ? 'ncc' : form.is_comodato ? 'comodato' : 'production', initial) }} style={{ background: 'none', border: 'none', color: '#dc2626', fontWeight: '800', cursor: 'pointer', textDecoration: 'underline', fontSize: '11px', padding: 0 }}>
+                    {form.is_rental ? 'Rental' : form.is_ncc ? 'NCC' : form.is_comodato ? 'Loan' : 'Production'} tab
+                  </button>.
+                </div>
+              </div>
+
+            </div>
+
+            {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
+            <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', position: 'sticky', bottom: 0, background: 'white' }}>
+              <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>{t.cancel}</button>
+              <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: '800' }}>{saving ? t.saving : t.saveChanges}</button>
+            </div>
+          </form>
+        </div>
+      </>
+    )
+  }
+  // ── Fine Fleet Edit View ─────────────────────────────────
 
   return (
     <>
