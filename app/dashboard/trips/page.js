@@ -33,6 +33,7 @@ function TripsPageInner() {
   const [locsMap,       setLocsMap]       = useState({})
   const [locsList,      setLocsList]      = useState([])
   const [vhcList,       setVhcList]       = useState([])
+  const [vhcMap,        setVhcMap]        = useState({})
   const [stList,        setStList]        = useState([])
   const [loading,       setLoading]       = useState(true)
   const [newTripOpen,   setNewTripOpen]   = useState(false)
@@ -76,7 +77,7 @@ function TripsPageInner() {
           supabase.from('service_types').select('id,name').eq('production_id', PRODUCTION_ID).order('sort_order'),
         ])
         if (locsR.data) { const m = {}; locsR.data.forEach(l => { m[l.uuid] = l.name }); setLocsMap(m); setLocsList(locsR.data) }
-        if (vhcR.data) setVhcList(vhcR.data)
+        if (vhcR.data) { const vm = {}; vhcR.data.forEach(v => { vm[v.uuid] = v.display_id || v.id }); setVhcMap(vm); setVhcList(vhcR.data) }
         if (stR.data)  setStList(stR.data)
       }
       setUser(user)
@@ -316,6 +317,7 @@ function TripsPageInner() {
               const props = {
                 group,
                 locations: locsMap,
+                vehicles: vhcMap,
                 selected: !!editTripRow && (
                   editTripRow.trip_group_id
                     ? group[0].trip_group_id === editTripRow.trip_group_id

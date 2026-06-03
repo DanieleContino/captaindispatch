@@ -4,7 +4,7 @@ import { useT } from '../../../../lib/i18n'
 import { CLS, STS, TRIP_COLS, minToHHMM, baseTripId, fmtPax } from '../../../../lib/tripUtils'
 
 // ─── TripRow (desktop) ────────────────────────────────────────
-export function TripRow({ group, locations, selected, onClick, isSuggested, onOptimize }) {
+export function TripRow({ group, locations, vehicles, selected, onClick, isSuggested, onOptimize }) {
   const i18n = useT()
   const t   = group[0]
   const cls = CLS[t.transfer_class] || CLS.STANDARD
@@ -114,7 +114,7 @@ export function TripRow({ group, locations, selected, onClick, isSuggested, onOp
       <div style={{ minWidth: 0 }}>
         {t.vehicle_id ? (
           <>
-            <div style={{ fontSize: '12px', fontWeight: '800', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🚐 {t.vehicle_id}</div>
+            <div style={{ fontSize: '12px', fontWeight: '800', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🚐 {(vehicles && vehicles[t.vehicle_id]) || t.vehicle_id}</div>
             <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', lineHeight: 1.4 }}>
               {t.driver_name && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>👤 {t.driver_name}</div>}
               {(t.sign_code || t.capacity) && <div>{[t.sign_code, t.capacity ? `×${t.capacity} seats` : null].filter(Boolean).join(' · ')}</div>}
@@ -210,7 +210,7 @@ export function TripRow({ group, locations, selected, onClick, isSuggested, onOp
 }
 
 // ─── TripCardMobile ───────────────────────────────────────────
-export function TripCardMobile({ group, locations, selected, onClick, isSuggested }) {
+export function TripCardMobile({ group, locations, vehicles, selected, onClick, isSuggested }) {
   const t   = group[0]
   const cls = CLS[t.transfer_class] || CLS.STANDARD
   const sts = STS[t.status] || STS.PLANNED
@@ -244,7 +244,7 @@ export function TripCardMobile({ group, locations, selected, onClick, isSuggeste
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
         <div style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px', lineHeight: 1 }}>{mainTime}</div>
         <div style={{ fontSize: '12px', fontWeight: '700', color: '#374151', flexShrink: 0 }}>
-          {t.vehicle_id ? `🚐 ${t.vehicle_id}` : <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontWeight: '400', fontSize: '11px' }}>no vehicle</span>}
+          {t.vehicle_id ? `🚐 ${(vehicles && vehicles[t.vehicle_id]) || t.vehicle_id}` : <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontWeight: '400', fontSize: '11px' }}>no vehicle</span>}
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px', flexWrap: 'wrap' }}>
