@@ -14,7 +14,7 @@ function fmtDateLabel(iso) {
   return new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-const SERVICE_TYPES = ['Wrap', 'Arrival', 'Departure', 'Multi-Drop', 'Multi-Pick', 'Mix']
+const SERVICE_TYPES = ['Wrap', 'Arrival', 'Departure', 'Other', 'Multi-Drop', 'Multi-Pick', 'Mix']
 
 const lbl = { fontSize: '11px', fontWeight: '700', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }
 const inp = { width: '100%', padding: '11px 14px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', color: '#0f172a', background: 'white', boxSizing: 'border-box', fontFamily: 'inherit' }
