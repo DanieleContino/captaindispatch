@@ -4480,6 +4480,15 @@ export default function VehiclesPage() {
 
   useEffect(() => { if (user) load() }, [user, load])
 
+  function handleEditInTab(tab, v) {
+    setSO(false)
+    setActiveTab(tab)
+    if (tab === 'rental') { setRentalVehicleSidebarMode('edit'); setRentalVehicleSidebarTarget(v); setRentalVehicleSidebarOpen(true) }
+    else if (tab === 'ncc') { setMode('edit'); setEdit(v); setSO(true) }
+    else if (tab === 'comodato') { setLoanVehicleSidebarMode('edit'); setLoanVehicleTarget(v); setLoanVehicleSidebarOpen(true) }
+    else { setMode('edit'); setEdit(v); setSO(true) }
+  }
+
   function openNew()   { setMode('new');  setEdit(null); setSO(true) }
   function openEdit(v) {
     if (v.is_rental === true) {
@@ -4909,7 +4918,7 @@ export default function VehiclesPage() {
         crewList={crewList}
         vehicles={vhcs}
       />
-      <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} fromFleet={activeTab === 'fleet'} />
+      <VehicleSidebar open={sidebarOpen} mode={mode} initial={editItem} onClose={() => setSO(false)} onSaved={onSaved} crewList={crewList} deptOptions={deptOptions} vehicles={vhcs} fromFleet={activeTab === 'fleet'} onEditInTab={handleEditInTab} />
       <RentalVehicleSidebar
         open={rentalVehicleSidebarOpen}
         mode={rentalVehicleSidebarMode}
