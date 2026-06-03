@@ -1448,16 +1448,13 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                 </div>
                 <div>
                   <label style={lbl}>{t.travelStatusLabel}</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {['IN', 'PRESENT', 'OUT'].map(s => {
-                      const c = TC[s]; const active = form.travel_status === s
-                      return (
-                        <button key={s} type="button" onClick={() => set('travel_status', s)}
-                          style={{ padding: '5px 8px', borderRadius: '7px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${active ? c.border : '#e2e8f0'}`, background: active ? c.bg : 'white', color: active ? c.color : '#94a3b8', textAlign: 'left' }}>
-                          {s}
-                        </button>
-                      )
-                    })}
+                  <div style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                    {(() => { const c = TC[form.travel_status] || TC.PRESENT; return (
+                      <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: c.bg, color: c.color, border: `1px solid ${c.border}` }}>
+                        {form.travel_status === 'IN' ? '↓' : form.travel_status === 'OUT' ? '↑' : '●'} {form.travel_status}
+                      </span>
+                    )})()}
+                    <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '5px' }}>Managed from travel dates</div>
                   </div>
                 </div>
               </div>
@@ -1533,10 +1530,10 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
             )}
 
             {/* Accommodation + Travel accordions (solo edit) */}
-            {mode === 'edit' && initial?.id && (
+            {mode === 'edit' && initial?.display_id && (
               <>
                 <AccommodationAccordion
-                  key={`acc-${initial.id}-${editKey}`}
+                  key={`acc-${initial.display_id}-${editKey}`}
                   crewId={initial.uuid}
                   locations={locations}
                   onCrewDatesUpdated={(active) => {
@@ -1548,9 +1545,9 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                     }))
                   }}
                 />
-                <TravelAccordion key={`travel-${initial.id}-${editKey}`} crewId={initial.uuid} />
-                <FamilyAccordion key={`family-${initial.id}-${editKey}`} crewId={initial.uuid} personType={form.person_type} linkedCrewId={form.linked_crew_id} />
-                <NotesPanel accordion key={`notes-${initial.id}-${editKey}`} crewId={initial.uuid} productionId={PRODUCTION_ID} currentUser={currentUser} onNotesChanged={onNotesChanged} />
+                <TravelAccordion key={`travel-${initial.display_id}-${editKey}`} crewId={initial.uuid} />
+                <FamilyAccordion key={`family-${initial.display_id}-${editKey}`} crewId={initial.uuid} personType={form.person_type} linkedCrewId={form.linked_crew_id} />
+                <NotesPanel accordion key={`notes-${initial.display_id}-${editKey}`} crewId={initial.uuid} productionId={PRODUCTION_ID} currentUser={currentUser} onNotesChanged={onNotesChanged} />
               </>
             )}
 
