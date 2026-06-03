@@ -1984,12 +1984,23 @@ export default function AccommodationPage() {
     setStays(staysData)
     const crewIds = [...new Set(staysData.filter(s => s.crew_id).map(s => s.crew_id))]
     if (crewIds.length > 0) {
-      const { data: movData } = await supabase
-        .from('travel_movements')
-        .select('crew_id, travel_date, direction')
-        .eq('production_id', PRODUCTION_ID)
-        .in('crew_id', crewIds)
-      setWarningsMap(computeCrewWarnings(movData || [], staysData))
+      const [{ data: movData }, { data: crewFlagsData }] = await Promise.all([
+        supabase
+          .from('travel_movements')
+          .select('crew_id, travel_date, direction')
+          .eq('production_id', PRODUCTION_ID)
+          .in('crew_id', crewIds),
+        supabase
+          .from('crew')
+          .select('uuid, is_local, no_transport_needed')
+          .eq('production_id', PRODUCTION_ID)
+          .in('uuid', crewIds),
+      ])
+      const excludedIds = new Set(
+        (crewFlagsData || []).filter(c => c.is_local || c.no_transport_needed).map(c => c.uuid)
+      )
+      const filteredStays = staysData.filter(s => !excludedIds.has(s.crew_id))
+      setWarningsMap(computeCrewWarnings(movData || [], filteredStays))
     } else {
       setWarningsMap({})
     }

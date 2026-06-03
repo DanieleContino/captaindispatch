@@ -1439,12 +1439,23 @@ export default function TravelPage() {
     setMovements(movData)
     const crewIds = [...new Set(movData.filter(m => m.crew_id).map(m => m.crew_id))]
     if (crewIds.length > 0) {
-      const { data: staysData } = await supabase
-        .from('crew_stays')
-        .select('crew_id, arrival_date, departure_date')
-        .eq('production_id', PRODUCTION_ID)
-        .in('crew_id', crewIds)
-      setWarningsMap(computeCrewWarnings(movData, staysData || []))
+      const [{ data: staysData }, { data: crewFlagsData }] = await Promise.all([
+        supabase
+          .from('crew_stays')
+          .select('crew_id, arrival_date, departure_date')
+          .eq('production_id', PRODUCTION_ID)
+          .in('crew_id', crewIds),
+        supabase
+          .from('crew')
+          .select('uuid, is_local, no_transport_needed')
+          .eq('production_id', PRODUCTION_ID)
+          .in('uuid', crewIds),
+      ])
+      const excludedIds = new Set(
+        (crewFlagsData || []).filter(c => c.is_local || c.no_transport_needed).map(c => c.uuid)
+      )
+      const filteredStays = (staysData || []).filter(s => !excludedIds.has(s.crew_id))
+      setWarningsMap(computeCrewWarnings(movData, filteredStays))
     } else {
       setWarningsMap({})
     }
