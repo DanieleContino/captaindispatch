@@ -4491,7 +4491,9 @@ export default function VehiclesPage() {
 
   function openNew()   { setMode('new');  setEdit(null); setSO(true) }
   function openEdit(v) {
-    if (v.is_rental === true) {
+    if (activeTab === 'fleet') {
+      setMode('edit'); setEdit(v); setSO(true)
+    } else if (v.is_rental === true) {
       setRentalVehicleSidebarMode('edit')
       setRentalVehicleSidebarTarget(v)
       setRentalVehicleSidebarOpen(true)
