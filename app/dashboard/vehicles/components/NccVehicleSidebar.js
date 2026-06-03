@@ -386,10 +386,6 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
                   {Object.keys(DEPT_COLOR).map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '7px 10px', background: 'white', border: '1px solid #e9d5ff', borderRadius: '7px' }}>
-                <span style={{ fontSize: '12px', flexShrink: 0 }}>ℹ️</span>
-                <span style={{ fontSize: '10px', color: '#7e22ce' }}>Preferred crew assignments are managed from the <strong>Fleet tab</strong>.</span>
-              </div>
             </div>
 
             {/* Danger Zone */}
