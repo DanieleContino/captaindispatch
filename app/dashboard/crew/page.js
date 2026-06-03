@@ -1163,7 +1163,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
   // Incrementa editKey ogni volta che la sidebar si apre in modalità edit
   // così AccommodationAccordion e TravelAccordion vengono rimontati freschi
   useEffect(() => {
-    if (open && mode === 'edit' && initial?.id) {
+    if (open && mode === 'edit' && initial?.display_id) {
       setEditKey(k => k + 1)
     }
   }, [open])
@@ -1313,7 +1313,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
             ) : (
               <div style={{ ...row, display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <span style={{ fontSize: '12px', color: '#94a3b8' }}>ID:</span>
-                <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{initial?.id}</span>
+                <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{initial?.display_id}</span>
               </div>
             )}
 
@@ -2310,3 +2310,4 @@ export default function CrewPage() {
     </div>
   )
 }
+
