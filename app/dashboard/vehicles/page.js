@@ -196,7 +196,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
 
   // ── Fleet Edit View ──────────────────────────────────────
   if (fromFleet && mode === 'edit') {
-    const deptKeys = [...new Set([...Object.keys(DEPT_COLOR), ...(crewList.map(c => c.department).filter(Boolean))])]
+    const deptKeys = [...new Set([...crewList.map(c => c.department).filter(Boolean), ...Object.keys(DEPT_COLOR)])]
     const crewDepts = [...new Set(crewList.map(c => c.department).filter(Boolean))]
     return (
       <>
@@ -222,6 +222,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                   <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>{form.vehicle_type}</span>
                   {Array.isArray(form.vehicle_class) && form.vehicle_class.map(c => { const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC; return <span key={c} style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: cc.bg, color: cc.color, border: `1px solid ${cc.border}` }}>{c}</span> })}
                   {form.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 8px', borderRadius: '5px', border: '1px solid #d4d4d4' }}>🚘 {form.license_plate}</span>}
+                  {form.capacity && <span style={{ fontSize: '12px', color: '#64748b' }}>× {form.capacity} pax</span>}
                 </div>
                 {(form.available_from || form.available_to) && (
                   <div style={{ marginTop: '6px', fontSize: '11px', color: '#64748b' }}>
@@ -267,7 +268,15 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                 </div>
               </div>
 
-              {/* Driver — solo se non NCC */}
+              {/* Driver — read-only per NCC, editabile per gli altri */}
+              {form.is_ncc && (form.ncc_driver_name || initial?.ncc_driver_name) && (
+                <div style={{ ...fld, padding: '10px 14px', borderRadius: '9px', border: '1px solid #bae6fd', background: '#f0f9ff' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#0369a1', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '4px' }}>Driver NCC</div>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#0369a1' }}>👤 {form.ncc_driver_name || initial?.ncc_driver_name}</div>
+                  {(form.ncc_driver_phone || initial?.ncc_driver_phone) && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>📞 {form.ncc_driver_phone || initial?.ncc_driver_phone}</div>}
+                  <div style={{ fontSize: '10px', color: '#0369a1', marginTop: '4px' }}>ℹ️ Manage driver from NCC tab</div>
+                </div>
+              )}
               {!form.is_ncc && <div style={fld}>
                 <label style={lbl}>{t.driverLabel}</label>
                 {form.driver_crew_id ? (
