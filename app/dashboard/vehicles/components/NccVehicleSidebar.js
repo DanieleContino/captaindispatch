@@ -383,7 +383,7 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
                 <select value={form.preferred_dept || ''} onChange={e => set('preferred_dept', e.target.value || '')}
                   style={{ ...inp, background: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).bg || 'white') : 'white', color: form.preferred_dept ? ((DEPT_COLOR[form.preferred_dept] || {}).color || '#0f172a') : '#94a3b8', fontWeight: form.preferred_dept ? '700' : '400', cursor: 'pointer' }}>
                   <option value="">— No preferred dept —</option>
-                  {Object.keys(DEPT_COLOR).map(d => <option key={d} value={d}>{d}</option>)}
+                  {[...new Set([...crewList.map(c => c.department).filter(Boolean), ...Object.keys(DEPT_COLOR)])].map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
             </div>
@@ -424,3 +424,4 @@ export function NccVehicleSidebar({ open, mode, initial, onClose, onSaved, produ
     </>
   )
 }
+
