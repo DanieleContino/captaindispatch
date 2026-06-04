@@ -557,6 +557,12 @@ export default function PaxCoveragePage() {
   const ntnCount    = ntnCrew.length
   const remoteCount = remoteCrew.length
 
+  // Crew che parte o arriva oggi — sezione PARTIAL
+  const partialCrew = regularCrew.filter(c =>
+    !assignMap[c.uuid] &&
+    (c.departure_date === date || c.arrival_date === date)
+  )
+
   // NTN filtered (dept/hotel/search — NOT showOnly, shown always in own section)
   const ntnFiltered = ntnCrew.filter(c => {
     if (filterDept  !== 'ALL' && (c.department || 'N/A') !== filterDept) return false
@@ -594,10 +600,12 @@ export default function PaxCoveragePage() {
   })
 
   const assigned   = filtered.filter(c =>  assignMap[c.uuid])
-  const unassigned = filtered.filter(c => !assignMap[c.uuid])
+  const unassigned = filtered.filter(c => !assignMap[c.uuid] && c.departure_date !== date && c.arrival_date !== date)
+  const partial    = filtered.filter(c => !assignMap[c.uuid] && (c.departure_date === date || c.arrival_date === date))
 
   const totalAssigned   = regularCrew.filter(c =>  assignMap[c.uuid]).length
-  const totalUnassigned = regularCrew.filter(c => !assignMap[c.uuid]).length
+  const totalUnassigned = regularCrew.filter(c => !assignMap[c.uuid] && c.departure_date !== date && c.arrival_date !== date).length
+  const totalPartial    = regularCrew.filter(c => !assignMap[c.uuid] && (c.departure_date === date || c.arrival_date === date)).length
   const pct = regularCrew.length > 0 ? Math.round(totalAssigned / regularCrew.length * 100) : 0
 
   if (!user) return (
@@ -769,6 +777,52 @@ export default function PaxCoveragePage() {
                       router.push('/dashboard/trips?' + params.toString())
                     }} />
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* ══ PARTIAL ══ */}
+            {(showOnly === 'ALL' || showOnly === 'UNASSIGNED') && partial.length > 0 && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #f97316' }}>
+                  <span style={{ fontSize: '16px' }}>⚠️</span>
+                  <span style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>Partial — check needed</span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', background: '#f97316', color: 'white', padding: '1px 8px', borderRadius: '999px' }}>
+                    {partial.length} crew
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '4px' }}>— arriving or departing today</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {partial.map(c => {
+                    const isDepToday = c.departure_date === date
+                    const isArrToday = c.arrival_date === date
+                    return (
+                      <div key={c.uuid} style={{ background: '#fff7ed', border: '1px solid #fdba74', borderLeft: '4px solid #f97316', borderRadius: '9px', padding: '10px 14px', display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>{c.full_name}</span>
+                            <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{c.department || 'N/A'}</span>
+                            {isDepToday && <span style={{ fontSize: '10px', fontWeight: '700', color: '#9a3412', background: '#fff7ed', padding: '1px 6px', borderRadius: '5px', border: '1px solid #fdba74' }}>🧳 Dep today</span>}
+                            {isArrToday && <span style={{ fontSize: '10px', fontWeight: '700', color: '#166534', background: '#f0fdf4', padding: '1px 6px', borderRadius: '5px', border: '1px solid #86efac' }}>✈ Arr today</span>}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>🏨 {locsMap[c.hotel_id] || c.hotel_id || '–'}</div>
+                        </div>
+                        <button onClick={() => {
+                          const params = new URLSearchParams({
+                            assignCrewId:   c.uuid,
+                            assignCrewUuid: c.uuid,
+                            assignCrewName: c.full_name,
+                            assignHotelId:  c.hotel_id || '',
+                            assignTS:       c.travel_status || 'PRESENT',
+                            assignDate:     date,
+                          })
+                          router.push('/dashboard/trips?' + params.toString())
+                        }} style={{ fontSize: '11px', fontWeight: '700', color: '#c2410c', background: '#fff7ed', border: '1px solid #fdba74', padding: '4px 10px', borderRadius: '7px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          + Assign
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
