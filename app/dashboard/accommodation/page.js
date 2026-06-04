@@ -1106,7 +1106,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         ...EMPTY_STAY,
         crew_id: initial?.__fromMovement ? (initial.crew_id || null) : null,
       })
-      setCrewSearch(initial?.__fromMovement ? (initial.crew_full_name || '') : '')
+      setCrewSearch(initial?.crew_full_name || '')
       setCrewResults([])
     }
   }, [open, mode, initial])
