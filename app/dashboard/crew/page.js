@@ -1027,6 +1027,25 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
           <span title="Lives locally — no accommodation needed. Excluded from accommodation tracking."
             style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '500', background: '#fef9c3', color: '#92400e', border: '1px solid #fde68a', cursor: 'help' }}>📍 Local</span>
         )}
+        {(() => {
+          const isPending = !stays?.length && !travelInfo?.length && !isLocal && member.on_location !== false
+          if (!isPending) return null
+          return (
+            <span style={{ position: 'relative', display: 'inline-block' }}
+              onMouseEnter={e => e.currentTarget.querySelector('.pending-tip').style.display = 'block'}
+              onMouseLeave={e => e.currentTarget.querySelector('.pending-tip').style.display = 'none'}
+              onClick={e => { e.stopPropagation(); const t = e.currentTarget.querySelector('.pending-tip'); t.style.display = t.style.display === 'block' ? 'none' : 'block' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#fef9c3', color: '#854d0e', border: '1px solid #fde047', cursor: 'pointer' }}>⏳ Pending</span>
+              <div className="pending-tip" style={{ display: 'none', position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, width: '220px', background: 'white', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', zIndex: 50, fontSize: '11px', color: '#92400e', lineHeight: 1.6 }}>
+                <div style={{ fontWeight: '700', marginBottom: '5px', color: '#854d0e' }}>To activate, assign one of:</div>
+                <div>🏨 Accommodation</div>
+                <div>✈️ Travel movement</div>
+                <div>📍 Local with work dates</div>
+                <div>🏠 Remote — non in set</div>
+              </div>
+            </span>
+          )
+        })()}
         {member.no_transport_needed && (
           <span title="No Transport Needed — excluded from hub pickup/dropoff assignments."
             style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', cursor: 'help' }}>🚐 NTN</span>
@@ -1188,7 +1207,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
 function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose, onSaved, currentUser, onNotesChanged }) {
   const t = useT()
-  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'IN', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '', is_local: false, person_type: 'CREW', linked_crew_id: null }
+  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'IN', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '', is_local: false, person_type: 'CREW', linked_crew_id: null, work_start: '', work_end: '' }
   const PRODUCTION_ID = getProductionId()
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -1231,6 +1250,8 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
         is_local:             initial.is_local || false,
         person_type:          initial.person_type    || 'CREW',
         linked_crew_id:       initial.linked_crew_id || null,
+        work_start:           initial.work_start || '',
+        work_end:             initial.work_end || '',
       })
     } else {
       // Auto-genera Crew ID: prende il più alto CR#### esistente e incrementa
@@ -1519,10 +1540,34 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
               </div>
             )}
 
+            {/* Work dates — solo se is_local */}
+            {form.is_local && form.person_type !== 'FAMILY' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: '8px' }}>
+                <label style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '8px' }}>📅 Work dates</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ fontSize: '10px', color: '#a16207', display: 'block', marginBottom: '3px' }}>Start date</label>
+                    <input type="date" value={form.work_start || ''} onChange={e => set('work_start', e.target.value || null)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '10px', color: '#a16207', display: 'block', marginBottom: '3px' }}>End date</label>
+                    <input type="date" value={form.work_end || ''} onChange={e => set('work_end', e.target.value || null)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Info box — new mode: accommodation e travel gestiti separatamente */}
             {mode === 'new' && form.person_type !== 'FAMILY' && (
-              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', fontSize: '11px', color: '#15803d' }}>
-                🏨 <strong>Accommodation</strong> e <strong>Travel</strong> si configurano dopo il salvataggio — direttamente dalle pagine dedicate.
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '11px', color: '#92400e' }}>
+                <div style={{ fontWeight: '700', marginBottom: '4px' }}>⏳ Status: Pending</div>
+                <div style={{ marginBottom: '6px' }}>To activate this crew member, assign one of the following after saving:</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <span>🏨 Accommodation — assign a hotel stay</span>
+                  <span>✈️ Travel — add a travel movement</span>
+                  <span>📍 Local — set as local with work dates</span>
+                  <span>🏠 Remote — mark as non in set</span>
+                </div>
               </div>
             )}
 
