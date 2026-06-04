@@ -91,7 +91,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
         .eq('uuid', member.uuid).single(),
       supabase.from('travel_movements')
         .select('travel_date,direction,travel_type,from_location,from_time,to_location,to_time,travel_number,needs_transport,pickup_dep,pickup_arr')
-        .eq('crew_id', member.id).eq('production_id', PRODUCTION_ID)
+        .eq('crew_id', member.uuid).eq('production_id', PRODUCTION_ID)
         .order('travel_date', { ascending: true }),
     ]).then(([crewRes, movRes]) => {
       setDetails(crewRes.data)
@@ -757,9 +757,9 @@ export default function PaxCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {unassigned.map(c => (
-                    <UnassignedRow key={c.id} member={c} locsMap={locsMap} onAssign={() => {
+                    <UnassignedRow key={c.uuid} member={c} locsMap={locsMap} onAssign={() => {
                       const params = new URLSearchParams({
-                        assignCrewId:   c.id,
+                        assignCrewId:   c.uuid,
                         assignCrewUuid: c.uuid || '',
                         assignCrewName: c.full_name,
                         assignHotelId:  c.hotel_id || '',
@@ -785,7 +785,7 @@ export default function PaxCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {assigned.map(c => (
-                    <AssignedRow key={c.id} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} />
+                    <AssignedRow key={c.uuid} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} />
                   ))}
                 </div>
               </div>
@@ -804,7 +804,7 @@ export default function PaxCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {ntnFiltered.map(c => (
-                    <NTNRow key={c.id} member={c} locsMap={locsMap} />
+                    <NTNRow key={c.uuid} member={c} locsMap={locsMap} />
                   ))}
                 </div>
               </div>
@@ -823,7 +823,7 @@ export default function PaxCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {remoteFiltered.map(c => (
-                    <RemoteRow key={c.id} member={c} locsMap={locsMap} />
+                    <RemoteRow key={c.uuid} member={c} locsMap={locsMap} />
                   ))}
                 </div>
               </div>
@@ -834,3 +834,6 @@ export default function PaxCoveragePage() {
     </div>
   )
 }
+
+
+

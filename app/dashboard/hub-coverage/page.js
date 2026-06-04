@@ -73,7 +73,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose, currentUser }) {
         .eq('uuid', member.uuid).single(),
       supabase.from('travel_movements')
         .select('travel_date,direction,travel_type,from_location,from_time,to_location,to_time,travel_number,needs_transport,pickup_dep,pickup_arr')
-        .eq('crew_id', member.id).eq('production_id', PRODUCTION_ID)
+        .eq('crew_id', member.uuid).eq('production_id', PRODUCTION_ID)
         .order('travel_date', { ascending: true }),
     ]).then(([crewRes, movRes]) => {
       setDetails(crewRes.data)
@@ -152,7 +152,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose, currentUser }) {
           </div>
           {currentUser && (
             <NotesPanel
-              crewId={member.id}
+              crewId={member.uuid}
               productionId={PRODUCTION_ID}
               currentUser={currentUser}
               accordion={true}
@@ -650,7 +650,7 @@ export default function HubCoveragePage() {
       .or(`arrival_date.eq.${d},departure_date.eq.${d}`)
       .order('department', { nullsLast: true })
       .order('full_name')
-    const crewWithDatesIds = (crewWithDates || []).map(c => c.id)
+    const crewWithDatesIds = (crewWithDates || []).map(c => c.uuid)
     const allCrewIds = [...new Set([...crewIdsFromMovements, ...crewWithDatesIds])]
     let allCrewData     = (crewWithDates || []).filter(c => !c.no_transport_needed)
     let allNtnCrewData  = (crewWithDates || []).filter(c =>  c.no_transport_needed)
@@ -673,7 +673,7 @@ export default function HubCoveragePage() {
     allCrewData.sort(sortFn)
     // Only show NTN crew who have an actual travel movement on this date
     // (i.e. a flight/train imported). Crew with only hotel checkout are excluded.
-    allNtnCrewData = allNtnCrewData.filter(c => allMovementCrewIds.has(c.id))
+    allNtnCrewData = allNtnCrewData.filter(c => allMovementCrewIds.has(c.uuid))
     allNtnCrewData.sort(sortFn)
     setCrew(allCrewData)
     setNtnCrew(allNtnCrewData)
@@ -990,7 +990,7 @@ export default function HubCoveragePage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               {ntnCrew.map(c => (
-                <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
+                <NtnRow key={c.uuid} member={c} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
               ))}
             </div>
           </div>
@@ -1017,9 +1017,9 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {missing.map(c => (
-                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} onAssign={() => {
+                    <MissingRow key={c.uuid} member={c} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} onAssign={() => {
                       const params = new URLSearchParams({
-                        assignCrewId:   c.id,
+                        assignCrewId:   c.uuid,
                         assignCrewName: c.full_name,
                         assignHotelId:  c.hotel_id || '',
                         assignTS:       c.arrival_date === date ? 'IN' : 'OUT',
@@ -1044,7 +1044,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {covered.map(c => (
-                    <CoveredRow key={c.id} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
+                    <CoveredRow key={c.uuid} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
                   ))}
                 </div>
               </div>
@@ -1061,9 +1061,9 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {noInfo.map(c => (
-                    <MissingRow key={c.id} member={c} locsMap={locsMap} travelInfo={[]} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} onAssign={() => {
+                    <MissingRow key={c.uuid} member={c} locsMap={locsMap} travelInfo={[]} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} onAssign={() => {
                       const params = new URLSearchParams({
-                        assignCrewId:   c.id,
+                        assignCrewId:   c.uuid,
                         assignCrewName: c.full_name,
                         assignHotelId:  c.hotel_id || '',
                         assignTS:       c.arrival_date === date ? 'IN' : 'OUT',
@@ -1089,7 +1089,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {ntnCrew.map(c => (
-                    <NtnRow key={c.id} member={c} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
+                    <NtnRow key={c.uuid} member={c} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
                   ))}
                 </div>
               </div>
@@ -1100,3 +1100,10 @@ export default function HubCoveragePage() {
     </div>
   )
 }
+
+
+
+
+
+
+
