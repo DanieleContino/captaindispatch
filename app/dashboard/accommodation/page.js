@@ -2014,6 +2014,21 @@ export default function AccommodationPage() {
     setHotels(data || [])
   }, [PRODUCTION_ID])
 
+  const [pendingCrew, setPendingCrew] = useState([])
+
+  const loadPendingCrew = useCallback(async () => {
+    if (!PRODUCTION_ID) return
+    const [{ data: crewData }, { data: staysData }, { data: movData }] = await Promise.all([
+      supabase.from('crew').select('uuid, full_name, role, department').eq('production_id', PRODUCTION_ID).eq('person_type', 'CREW').eq('is_local', false).neq('on_location', false),
+      supabase.from('crew_stays').select('crew_id').eq('production_id', PRODUCTION_ID),
+      supabase.from('travel_movements').select('crew_id').eq('production_id', PRODUCTION_ID),
+    ])
+    const withStays = new Set((staysData || []).map(s => s.crew_id))
+    const withMovs  = new Set((movData   || []).map(m => m.crew_id))
+    const pending = (crewData || []).filter(c => !withStays.has(c.uuid) && !withMovs.has(c.uuid))
+    setPendingCrew(pending)
+  }, [PRODUCTION_ID])
+
   const loadMismatches = useCallback(async () => {
     if (!PRODUCTION_ID) return
     const { data } = await supabase
@@ -2070,7 +2085,7 @@ export default function AccommodationPage() {
 
   useEffect(() => {
     if (!user) return
-    loadData(windowStart, windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id); loadMismatches()
+    loadData(windowStart, windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id); loadMismatches(); loadPendingCrew()
     const raw = sessionStorage.getItem('crewSidebarOpenStay')
     if (!raw) return
     sessionStorage.removeItem('crewSidebarOpenStay')
