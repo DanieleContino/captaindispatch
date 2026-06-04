@@ -456,17 +456,7 @@ function AccommodationAccordion({ crewId, crewFullName, locations, onCrewDatesUp
                 )
               })}
 
-              {addOpen ? (
-                <StayForm
-                  form={addForm}
-                  setF={setAddForm}
-                  onSave={handleAdd}
-                  onCancel={() => { setAddOpen(false); setAddForm({ hotel_id: '', arrival_date: '', departure_date: '' }) }}
-                  saveLabel="+ Add Stay"
-                  saving={saving}
-                  hotelLocations={hotelLocations}
-                />
-              ) : (
+              {false ? null : (
                 <button type="button" onClick={() => {
                     sessionStorage.setItem('crewSidebarOpenStay', JSON.stringify({ crew_id: crewId, crew_full_name: crewFullName, mode: 'new' }))
                     router.push('/dashboard/accommodation')
@@ -1625,6 +1615,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                 <AccommodationAccordion
                   key={`acc-${initial.display_id}-${editKey}`}
                   crewId={initial.uuid}
+                  crewFullName={initial.full_name}
                   locations={locations}
                   onCrewDatesUpdated={(active) => {
                     setForm(f => ({
