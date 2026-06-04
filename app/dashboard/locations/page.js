@@ -442,7 +442,7 @@ function LocationRow({ loc, onEdit }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '16px' }}>{loc.is_hub ? '✈' : '🏨'}</span>
           <span style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{loc.name}</span>
-          <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '1px 7px', borderRadius: '5px', letterSpacing: '0.05em' }}>{loc.id}</span>
+          <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '1px 7px', borderRadius: '5px', letterSpacing: '0.05em' }}>{loc.display_id}</span>
           {loc.is_hub && <span style={{ fontSize: '10px', fontWeight: '800', color: '#d97706', background: '#fefce8', padding: '1px 8px', borderRadius: '999px', border: '1px solid #fde68a' }}>HUB</span>}
         </div>
         <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#64748b', flexWrap: 'wrap' }}>
@@ -646,7 +646,7 @@ export default function LocationsPage() {
     if (filterHub === 'HOTEL' &&  l.is_hub) return false
     if (search) {
       const q = search.toLowerCase()
-      if (!l.name.toLowerCase().includes(q) && !(l.id || '').toLowerCase().includes(q)) return false
+      if (!l.name.toLowerCase().includes(q) && !(l.display_id || '').toLowerCase().includes(q)) return false
     }
     return true
   })
@@ -725,7 +725,7 @@ export default function LocationsPage() {
                   ✈ HUBS <div style={{ flex: 1, height: '1px', background: '#fde68a' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {filtered.filter(l => l.is_hub).map(l => <LocationRow key={l.id} loc={l} onEdit={openEdit} />)}
+                  {filtered.filter(l => l.is_hub).map(l => <LocationRow key={l.uuid} loc={l} onEdit={openEdit} />)}
                 </div>
               </div>
             )}
@@ -736,7 +736,7 @@ export default function LocationsPage() {
                   🏨 HOTELS &amp; LOCATIONS <div style={{ flex: 1, height: '1px', background: '#c7d2fe' }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {filtered.filter(l => !l.is_hub).map(l => <LocationRow key={l.id} loc={l} onEdit={openEdit} />)}
+                  {filtered.filter(l => !l.is_hub).map(l => <LocationRow key={l.uuid} loc={l} onEdit={openEdit} />)}
                 </div>
               </div>
             )}
