@@ -672,20 +672,7 @@ function TravelAccordion({ crewId, crewFullName }) {
                 const icon = m.travel_type === 'FLIGHT' ? '✈️' : m.travel_type === 'TRAIN' ? '🚂' : '🚐'
                 const isIN = m.direction === 'IN'
                 const isPast = m.travel_date < today
-                if (editId === m.id) {
-                  return (
-                    <div key={m.id}>
-                      <MovForm
-                        form={editForm}
-                        setF={setEditForm}
-                        onSave={() => handleEditSave(m.id)}
-                        onCancel={() => setEditId(null)}
-                        saveLabel="✓ Save"
-                        saving={saving}
-                      />
-                    </div>
-                  )
-                }
+                if (editId === m.id) return null
                 return (
                   <div key={m.id} style={{ background: isIN ? '#f0fdf4' : '#fff7ed', border: `1px solid ${isIN ? '#86efac' : '#fdba74'}`, borderRadius: '7px', padding: '6px 10px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', opacity: isPast ? 0.65 : 1 }}>
                     <div style={{ flex: 1, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -723,16 +710,7 @@ function TravelAccordion({ crewId, crewFullName }) {
                 )
               })}
 
-              {addOpen ? (
-                <MovForm
-                  form={addForm}
-                  setF={setAddForm}
-                  onSave={handleAdd}
-                  onCancel={() => { setAddOpen(false); setAddForm(EMPTY_MOV) }}
-                  saveLabel="+ Add Movement"
-                  saving={saving}
-                />
-              ) : (
+              {false ? null : (
                 <button type="button" onClick={() => {
                     sessionStorage.setItem('crewSidebarOpenMovement', JSON.stringify({ crew_id: crewId, crew_full_name: crewFullName, mode: 'new' }))
                     router.push('/dashboard/travel')
