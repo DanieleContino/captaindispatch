@@ -1,8 +1,8 @@
-﻿'use client'
+'use client'
 
 /**
  * /wrap-trip — Wrap Trip mobile wizard
- * 4 steps: Trip Details → Vehicle → Passengers → Confirm
+ * 4 steps: Trip Details ? Vehicle ? Passengers ? Confirm
  * QR scanner: html5-qrcode (iOS Safari, Chrome Android, Samsung Browser)
  * No native <select> elements — all pickers are touch-friendly tappable lists
  */
@@ -17,7 +17,7 @@ const SESSION_KEY   = 'captain_wrap_trip_v4'
 
 const SERVICE_TYPES = ['Wrap', 'Hotel Run', 'Airport', 'Unit Move', 'Charter', 'Shuttle', 'Other']
 
-// ─── Utility ───────────────────────────────────────────────────
+// --- Utility ---------------------------------------------------
 const pad2 = n => String(n).padStart(2, '0')
 function isoToday() { return new Date().toISOString().split('T')[0] }
 function nowHHMM()  { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) }
@@ -31,7 +31,7 @@ function fmtTime(isoStr) {
   return new Date(isoStr).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
-// ─── LocalStorage ──────────────────────────────────────────────
+// --- LocalStorage ----------------------------------------------
 function loadSaved() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null') } catch { return null }
 }
@@ -42,7 +42,7 @@ function clearSaved() {
   try { localStorage.removeItem(SESSION_KEY) } catch {}
 }
 
-// ─── Picker Modal (replaces <select>) ──────────────────────────
+// --- Picker Modal (replaces <select>) --------------------------
 function PickerModal({ title, items, selected, onSelect, onClose, showSearch = true }) {
   const [q, setQ] = useState('')
   const filtered = q
@@ -59,7 +59,7 @@ function PickerModal({ title, items, selected, onSelect, onClose, showSearch = t
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 12px' }}>
           <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>{title}</span>
-          <button onClick={onClose} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>✕</button>
+          <button onClick={onClose} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>?</button>
         </div>
         {/* Search */}
         {showSearch && (
@@ -85,7 +85,7 @@ function PickerModal({ title, items, selected, onSelect, onClose, showSearch = t
                 <div style={{ fontSize: '15px', fontWeight: selected === item.value ? '700' : '500', color: '#0f172a' }}>{item.label}</div>
                 {item.sub && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px' }}>{item.sub}</div>}
               </div>
-              {selected === item.value && <span style={{ color: '#2563eb', fontSize: '20px' }}>✓</span>}
+              {selected === item.value && <span style={{ color: '#2563eb', fontSize: '20px' }}>?</span>}
             </div>
           ))}
         </div>
@@ -96,7 +96,7 @@ function PickerModal({ title, items, selected, onSelect, onClose, showSearch = t
   )
 }
 
-// ─── Field Button (tappable, replaces <select>) ─────────────────
+// --- Field Button (tappable, replaces <select>) -----------------
 function FieldButton({ label, value, placeholder, onClick }) {
   return (
     <div>
@@ -108,13 +108,13 @@ function FieldButton({ label, value, placeholder, onClick }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <span>{value || placeholder}</span>
-        <span style={{ color: '#94a3b8', fontSize: '12px' }}>▾</span>
+        <span style={{ color: '#94a3b8', fontSize: '12px' }}>?</span>
       </button>
     </div>
   )
 }
 
-// ─── QR Scanner Modal ──────────────────────────────────────────
+// --- QR Scanner Modal ------------------------------------------
 function QrScannerModal({ title, onScan, onClose }) {
   const READER_ID = 'captain-qr-reader'
   const qrRef     = useRef(null)
@@ -150,19 +150,19 @@ function QrScannerModal({ title, onScan, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.93)', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
       <div style={{ background: '#0f2340', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <span style={{ color: 'white', fontWeight: '800', fontSize: '15px' }}>📷 {title}</span>
-        <button onClick={onClose} style={{ color: 'white', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        <span style={{ color: 'white', fontWeight: '800', fontSize: '15px' }}>?? {title}</span>
+        <button onClick={onClose} style={{ color: 'white', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>?</button>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
         <div id={READER_ID} style={{ width: '100%', maxWidth: '320px', borderRadius: '16px', overflow: 'hidden', background: '#111' }} />
-        {scanErr && <div style={{ marginTop: '16px', color: '#f87171', fontSize: '13px', textAlign: 'center', maxWidth: '280px', lineHeight: '1.5' }}>❌ {scanErr}</div>}
+        {scanErr && <div style={{ marginTop: '16px', color: '#f87171', fontSize: '13px', textAlign: 'center', maxWidth: '280px', lineHeight: '1.5' }}>? {scanErr}</div>}
         <p style={{ color: '#94a3b8', fontSize: '12px', marginTop: '16px', textAlign: 'center' }}>Point the camera at a QR code</p>
       </div>
     </div>
   )
 }
 
-// ─── Step Bar ──────────────────────────────────────────────────
+// --- Step Bar --------------------------------------------------
 function StepBar({ current }) {
   return (
     <div style={{ display: 'flex', gap: '5px', padding: '10px 16px 0' }}>
@@ -173,7 +173,7 @@ function StepBar({ current }) {
   )
 }
 
-// ─── Crew Avatar ───────────────────────────────────────────────
+// --- Crew Avatar -----------------------------------------------
 function Avatar({ name, size = 36 }) {
   const initials = (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
   return (
@@ -183,7 +183,7 @@ function Avatar({ name, size = 36 }) {
   )
 }
 
-// ─── Fleet Monitor ─────────────────────────────────────────────
+// --- Fleet Monitor ---------------------------------------------
 function FleetMonitor({ onBack }) {
   const PRODUCTION_ID = getProductionId()
   const [date,           setDate]           = useState(isoToday())
@@ -259,25 +259,25 @@ function FleetMonitor({ onBack }) {
   }
 
   const sc = {
-    BUSY: { c: '#b91c1c', bg: '#fee2e2', lbl: '🔴 BUSY', bd: '#ef4444' },
-    FREE: { c: '#15803d', bg: '#dcfce7', lbl: '🟢 FREE', bd: '#22c55e' },
-    IDLE: { c: '#64748b', bg: '#f1f5f9', lbl: '⚪ IDLE', bd: '#94a3b8' },
-    DONE: { c: '#92400e', bg: '#fef9c3', lbl: '🟡 DONE', bd: '#f59e0b' },
+    BUSY: { c: '#b91c1c', bg: '#fee2e2', lbl: '?? BUSY', bd: '#ef4444' },
+    FREE: { c: '#15803d', bg: '#dcfce7', lbl: '?? FREE', bd: '#22c55e' },
+    IDLE: { c: '#64748b', bg: '#f1f5f9', lbl: '? IDLE', bd: '#94a3b8' },
+    DONE: { c: '#92400e', bg: '#fef9c3', lbl: '?? DONE', bd: '#f59e0b' },
   }
   const counts = vehicles.reduce((a, v) => { const s = vstatus(v.uuid); a[s] = (a[s] || 0) + 1; return a }, {})
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8fafc' }}>
       <div style={{ background: '#0f2340', padding: '0 16px', height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <span style={{ fontSize: '15px', fontWeight: '900', color: 'white' }}>🚗 Fleet Monitor</span>
-        <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>← Trip</button>
+        <span style={{ fontSize: '15px', fontWeight: '900', color: 'white' }}>?? Fleet Monitor</span>
+        <button onClick={onBack} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>? Trip</button>
       </div>
       <div style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a' }}>{date === isoToday() ? 'Today' : date}</div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <input type="date" value={date} onChange={e => { setDate(e.target.value); loadFleet(e.target.value) }}
               style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '5px 8px', fontSize: '12px', background: 'white' }} />
-            <button onClick={() => loadFleet(date)} style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>↻</button>
+            <button onClick={() => loadFleet(date)} style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>?</button>
             <button
               onClick={() => setAutoRefresh(p => !p)}
               style={{
@@ -291,12 +291,12 @@ function FleetMonitor({ onBack }) {
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
               }}>
-              {autoRefresh ? '⏸' : '▶'}
+              {autoRefresh ? '?' : '?'}
             </button>
             <button
               onClick={() => setSendLinksOpen(true)}
               style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
-              📱
+              ??
             </button>
             <button
               onClick={async () => {
@@ -313,20 +313,20 @@ function FleetMonitor({ onBack }) {
                   if (data.error) throw new Error(data.error)
                   setTrafficAlerts(data.alerts || [])
                   const w = data.warningsCount || 0
-                  setTrafficMsg(w > 0 ? `${w} warning${w > 1 ? 's' : ''}` : '✅ Clear')
+                  setTrafficMsg(w > 0 ? `${w} warning${w > 1 ? 's' : ''}` : '? Clear')
                   setTimeout(() => setTrafficMsg(null), 8000)
                 } catch (e) {
-                  setTrafficMsg('⚠ ' + e.message.slice(0, 30))
+                  setTrafficMsg('? ' + e.message.slice(0, 30))
                 } finally {
                   setLoadingTraffic(false)
                 }
               }}
               disabled={loadingTraffic}
               style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: '800', cursor: loadingTraffic ? 'wait' : 'pointer' }}>
-              {loadingTraffic ? '⏳' : '🚦'}
+              {loadingTraffic ? '?' : '??'}
             </button>
             {trafficMsg && (
-              <span style={{ fontSize: '10px', fontWeight: '700', color: trafficMsg.startsWith('✅') ? '#15803d' : '#b91c1c', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: '10px', fontWeight: '700', color: trafficMsg.startsWith('?') ? '#15803d' : '#b91c1c', whiteSpace: 'nowrap' }}>
                 {trafficMsg}
               </span>
             )}
@@ -361,13 +361,13 @@ function FleetMonitor({ onBack }) {
               <div key={v.uuid} style={{ background: 'white', border: '1.5px solid #e2e8f0', borderLeft: `4px solid ${cfg.bd}`, borderRadius: '12px', marginBottom: '10px', overflow: 'hidden' }}>
                 <div onClick={() => setExpanded(ex => ({ ...ex, [v.uuid]: !ex[v.uuid] }))} style={{ padding: '10px 14px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{v.id} — {v.sign_code}</div>
+                    <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{v.display_id} — {v.sign_code}</div>
                     <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>{v.driver_name} · {v.vehicle_type} · {v.capacity} pax</div>
                     {/* Return time — prominent */}
                     {/* Dropoff completed — returning (Wrap round-trip, past 50%) */}
                     {progress !== null && progress >= 50 && cur && ['Wrap', 'Charter', 'Other'].includes(cur.service_type) && (
                       <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '800', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        ✅ Dropoff done — returning to {locsMap[cur.pickup_id] || 'base'}
+                        ? Dropoff done — returning to {locsMap[cur.pickup_id] || 'base'}
                       </div>
                     )}
                     {/* Traffic Alert (BUSY) */}
@@ -379,39 +379,39 @@ function FleetMonitor({ onBack }) {
                         color:      curAlert.severity === 'CRITICAL' ? '#b91c1c' : '#92400e',
                         border:    `1px solid ${curAlert.severity === 'CRITICAL' ? '#fca5a5' : '#fde68a'}`,
                       }}>
-                        {curAlert.severity === 'CRITICAL' ? '🚨' : '⚠️'} {curAlert.message}
+                        {curAlert.severity === 'CRITICAL' ? '??' : '??'} {curAlert.message}
                       </div>
                     )}
                     {backAt && !curAlert && (
                       <div style={{ fontSize: '12px', fontWeight: '800', color: '#b91c1c', marginTop: '2px' }}>
-                        ⏱ Back at {cur && ['Wrap', 'Charter', 'Other'].includes(cur.service_type) && cur.pickup_id ? (locsMap[cur.pickup_id] || 'base') + ' ' : ''}{backAt}{minsLeft !== null && minsLeft > 0 ? ` (${minsLeft} min)` : ''}
+                        ? Back at {cur && ['Wrap', 'Charter', 'Other'].includes(cur.service_type) && cur.pickup_id ? (locsMap[cur.pickup_id] || 'base') + ' ' : ''}{backAt}{minsLeft !== null && minsLeft > 0 ? ` (${minsLeft} min)` : ''}
                       </div>
                     )}
                     {backAt && curAlert && (
                       <div style={{ fontSize: '12px', fontWeight: '800', color: curAlert.severity === 'CRITICAL' ? '#b91c1c' : '#92400e', marginTop: '2px' }}>
-                        ⏱ ETA {curAlert.dropoffEtaStr || backAt}{curAlert.delayMin > 0 ? ` (+${curAlert.delayMin}min)` : ''}
-                        {curAlert.backEtaStr ? ` · ↩ ${curAlert.backEtaStr}` : ''}
+                        ? ETA {curAlert.dropoffEtaStr || backAt}{curAlert.delayMin > 0 ? ` (+${curAlert.delayMin}min)` : ''}
+                        {curAlert.backEtaStr ? ` · ? ${curAlert.backEtaStr}` : ''}
                       </div>
                     )}
-                    {nextAt && !nextAlert && <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', marginTop: '2px' }}>🟢 Next at {nextAt}</div>}
+                    {nextAt && !nextAlert && <div style={{ fontSize: '11px', color: '#15803d', fontWeight: '700', marginTop: '2px' }}>?? Next at {nextAt}</div>}
                     {nextAt && nextAlert && (
                       <div style={{ fontSize: '11px', color: nextAlert.severity === 'CRITICAL' ? '#b91c1c' : '#92400e', fontWeight: '700', marginTop: '2px' }}>
-                        {nextAlert.severity === 'CRITICAL' ? '🚨' : '⚠️'} Next {nextAt} — {nextAlert.message.slice(0, 60)}…
+                        {nextAlert.severity === 'CRITICAL' ? '??' : '??'} Next {nextAt} — {nextAlert.message.slice(0, 60)}…
                       </div>
                     )}
                     {cur?.passenger_list && (
                       <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        👥 {cur.passenger_list}
+                        ?? {cur.passenger_list}
                       </div>
                     )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
                     <span style={{ background: cfg.bg, color: cfg.c, padding: '3px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{cfg.lbl}</span>
-                    <span style={{ color: '#94a3b8', fontSize: '11px', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+                    <span style={{ color: '#94a3b8', fontSize: '11px', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>?</span>
                   </div>
                 </div>
 
-                {/* ── Progress bar for current trip ── */}
+                {/* -- Progress bar for current trip -- */}
                 {progress !== null && (
                   <div style={{ padding: '0 14px 10px' }}>
                     <div style={{ height: '6px', background: '#fee2e2', borderRadius: '3px', overflow: 'hidden' }}>
@@ -442,15 +442,15 @@ function FleetMonitor({ onBack }) {
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', fontFamily: 'monospace' }}>
-                                  {t.trip_id} {isCur ? '▶' : isDone ? '✓' : '⏳'}
+                                  {t.trip_id} {isCur ? '?' : isDone ? '?' : '?'}
                                 </div>
                                 <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b' }}>{t.service_type || 'Trip'} · {t.pax_count || 0} pax</div>
                                 {t.passenger_list && (
-                                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', lineHeight: '1.4' }}>👥 {t.passenger_list}</div>
+                                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '3px', lineHeight: '1.4' }}>?? {t.passenger_list}</div>
                                 )}
                                 {isCur && computeTripWindow(t)?.e && (
                                   <div style={{ fontSize: '12px', fontWeight: '800', color: '#b91c1c', marginTop: '3px' }}>
-                                    ⏱ Back at {fmtTime(computeTripWindow(t)?.e?.toISOString())}{minsLeft !== null && minsLeft > 0 ? ` — ${minsLeft} min left` : ''}
+                                    ? Back at {fmtTime(computeTripWindow(t)?.e?.toISOString())}{minsLeft !== null && minsLeft > 0 ? ` — ${minsLeft} min left` : ''}
                                   </div>
                                 )}
                               </div>
@@ -479,24 +479,24 @@ function FleetMonitor({ onBack }) {
   )
 }
 
-// ─── Main Content ──────────────────────────────────────────────
+// --- Main Content ----------------------------------------------
 function WrapTripContent() {
   const PRODUCTION_ID = getProductionId()
   const searchParams = useSearchParams()
   const router       = useRouter()
   const preVehicle   = searchParams.get('vehicle') || ''
 
-  // ── Picker modals ──
+  // -- Picker modals --
   const [picker, setPicker] = useState(null)  // null | 'service' | 'pickup' | 'dropoff'
 
-  // ── QR scanner ──
+  // -- QR scanner --
   const [showScanner, setShowScanner] = useState(false)
   const [scanMode,    setScanMode]    = useState('vehicle')
 
-  // ── Toast ──
+  // -- Toast --
   const [toast, setToast] = useState({ msg: '', type: '' })
 
-  // ── Form ──
+  // -- Form --
   const [step,        setStep]        = useState(1)
   const [date,        setDate]        = useState(isoToday())
   const [callTime,    setCallTime]    = useState(nowHHMM())
@@ -505,32 +505,32 @@ function WrapTripContent() {
   const [pickupId,    setPickupId]    = useState('')
   const [dropoffId,   setDropoffId]   = useState('')
 
-  // ── Trip data ──
+  // -- Trip data --
   const [vehicle, setVehicle] = useState(null)
   const [selCrew, setSelCrew] = useState([])
   const [search,  setSearch]  = useState('')
 
-  // ── UI ──
+  // -- UI --
   const [saving, setSaving] = useState(false)
   const [done,   setDone]   = useState(null)
   const [err,    setErr]    = useState('')
   const [loadErr, setLoadErr] = useState('')
 
-  // ── Remote data ──
+  // -- Remote data --
   const [locations, setLocations] = useState([])
   const [vehicles,  setVehicles]  = useState([])
   const [crew,      setCrew]      = useState([])
 
   const locsMap = Object.fromEntries(locations.map(l => [l.uuid, l.name]))
 
-  // ── Auth check ──
+  // -- Auth check --
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) router.replace('/login')
     })
   }, [router])
 
-  // ── Load data ──
+  // -- Load data --
   useEffect(() => {
     if (!PRODUCTION_ID) { setLoadErr('PRODUCTION_ID not set'); return }
     Promise.all([
@@ -545,7 +545,7 @@ function WrapTripContent() {
     })
   }, [])
 
-  // ── Restore localStorage ──
+  // -- Restore localStorage --
   useEffect(() => {
     const saved = loadSaved()
     if (!saved) return
@@ -564,32 +564,32 @@ function WrapTripContent() {
     if (saved.step && !preVehicle) setStep(saved.step)
   }, [])
 
-  // ── Handle ?vehicle= from /scan ──
+  // -- Handle ?vehicle= from /scan --
   useEffect(() => {
     if (!preVehicle || !vehicles.length) return
     const v = vehicles.find(x => x.uuid === preVehicle)
     if (v) { setVehicle(v); setStep(3) }
   }, [vehicles, preVehicle])
 
-  // ── Persist ──
+  // -- Persist --
   useEffect(() => {
     saveTo({ date, callTime, callTimeAuto, serviceType, pickupId, dropoffId, vehicle, selCrew, step })
   }, [date, callTime, callTimeAuto, serviceType, pickupId, dropoffId, vehicle, selCrew, step])
 
-  // ── Auto-update call time every 15s when in auto mode ──────
+  // -- Auto-update call time every 15s when in auto mode ------
   useEffect(() => {
     if (!callTimeAuto) return
     const id = setInterval(() => setCallTime(nowHHMM()), 15_000)
     return () => clearInterval(id)
   }, [callTimeAuto])
 
-  // ── Toast ──
+  // -- Toast --
   const showToast = useCallback((msg, type = '') => {
     setToast({ msg, type })
     setTimeout(() => setToast({ msg: '', type: '' }), 3500)
   }, [])
 
-  // ── QR scan ──
+  // -- QR scan --
   const handleScan = useCallback(async (rawText) => {
     setShowScanner(false)
     // If the QR contains a full URL (e.g. https://captaindispatch.com/scan?qr=VH:xxx),
@@ -616,7 +616,7 @@ function WrapTripContent() {
           )
           if (found) {
             setVehicle(found)
-            showToast('✅ Vehicle ' + found.display_id + ' assigned', 'success')
+            showToast('? Vehicle ' + found.display_id + ' assigned', 'success')
             setStep(3)
             return
           }
@@ -629,34 +629,34 @@ function WrapTripContent() {
             c.display_id.toLowerCase().replace(/[^a-z0-9]/g, '') === qrId.replace(/[^a-z0-9]/g, '')
           )
           if (found) {
-            if (selCrew.find(x => x.uuid === found.uuid)) { showToast('⚠️ ' + found.full_name + ' already added', 'error'); return }
+            if (selCrew.find(x => x.uuid === found.uuid)) { showToast('?? ' + found.full_name + ' already added', 'error'); return }
             setSelCrew(p => [...p, { uuid: found.uuid, display_id: found.display_id, full_name: found.full_name, department: found.department, hotel_id: found.hotel_id || null }])
-            showToast('✅ ' + found.full_name + ' added', 'success')
+            showToast('? ' + found.full_name + ' added', 'success')
             return
           }
-          // 2) QR ID format doesn't match Supabase UUIDs → guide user to search
+          // 2) QR ID format doesn't match Supabase UUIDs ? guide user to search
           showToast('QR code not linked — use search below', 'error')
           setStep(3)   // make sure we're on Passengers step
           setSearch('') // clear so user can type
           return
         }
-        showToast('❌ ' + data.error + ' [' + text + ']', 'error')
+        showToast('? ' + data.error + ' [' + text + ']', 'error')
         return
       }
       if (data.type === 'vehicle') {
-        setVehicle({ uuid: data.uuid, id: data.id, driver_name: data.driver_name, sign_code: data.sign_code, capacity: data.capacity, vehicle_type: data.vehicle_type })
-        showToast('✅ Vehicle ' + data.id + ' assigned', 'success')
+        setVehicle({ uuid: data.uuid, display_id: data.display_id, driver_name: data.driver_name, sign_code: data.sign_code, capacity: data.capacity, vehicle_type: data.vehicle_type })
+        showToast('? Vehicle ' + data.display_id + ' assigned', 'success')
         setStep(3)
       } else if (data.type === 'crew') {
-        if (selCrew.find(c => c.uuid === data.uuid)) { showToast('⚠️ ' + data.full_name + ' already added', 'error'); return }
-        setSelCrew(p => [...p, { uuid: data.uuid, id: data.id, full_name: data.full_name, department: data.department, hotel_id: data.hotel?.id || null }])
-        showToast('✅ ' + data.full_name + ' added', 'success')
+        if (selCrew.find(c => c.uuid === data.uuid)) { showToast('?? ' + data.full_name + ' already added', 'error'); return }
+        setSelCrew(p => [...p, { uuid: data.uuid, display_id: data.display_id, full_name: data.full_name, department: data.department, hotel_id: data.hotel?.id || null }])
+        showToast('? ' + data.full_name + ' added', 'success')
         setStep(3)
       }
-    } catch (e) { showToast('❌ ' + e.message, 'error') }
+    } catch (e) { showToast('? ' + e.message, 'error') }
   }, [selCrew, showToast, vehicles, crew])
 
-  // ── Cancel ──
+  // -- Cancel --
   function cancelTrip() {
     if (!confirm('Cancel this trip? All data will be cleared.')) return
     clearSaved()
@@ -665,7 +665,7 @@ function WrapTripContent() {
     setStep(1); setErr('')
   }
 
-  // ── Computed ──
+  // -- Computed --
   const grouped = selCrew.reduce((acc, c) => {
     const key = dropoffId || c.hotel_id || '__unknown__'
     if (!acc[key]) acc[key] = []
@@ -674,7 +674,7 @@ function WrapTripContent() {
   }, {})
   const hotels = Object.keys(grouped)
 
-  // ── Confirm ──
+  // -- Confirm --
   async function handleConfirm() {
     if (!PRODUCTION_ID || hotels.length === 0) return
     setSaving(true); setErr('')
@@ -716,16 +716,16 @@ function WrapTripContent() {
     setSaving(false)
   }
 
-  // ── Picker item lists ──
+  // -- Picker item lists --
   const locationItems = [
     { value: '', label: '— Auto (passenger hotel) —', sub: '' },
     ...locations.filter(l => !l.is_hub).map(l => ({ value: l.uuid, label: l.name, sub: 'Location / Set' })),
-    ...locations.filter(l => l.is_hub).map(l => ({ value: l.uuid, label: l.name + ' ✈', sub: 'Hub' })),
+    ...locations.filter(l => l.is_hub).map(l => ({ value: l.uuid, label: l.name + ' ?', sub: 'Hub' })),
   ]
-  const pickupItems = locations.map(l => ({ value: l.uuid, label: l.name + (l.is_hub ? ' ✈' : ''), sub: l.is_hub ? 'Hub' : 'Location / Set' }))
+  const pickupItems = locations.map(l => ({ value: l.uuid, label: l.name + (l.is_hub ? ' ?' : ''), sub: l.is_hub ? 'Hub' : 'Location / Set' }))
   const serviceItems = SERVICE_TYPES.map(s => ({ value: s, label: s }))
 
-  // ── Styles ──
+  // -- Styles --
   const inp     = { width: '100%', padding: '13px 14px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px', color: '#0f172a', background: 'white', boxSizing: 'border-box', fontFamily: 'inherit' }
   const lbl     = { fontSize: '11px', fontWeight: '800', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }
   const btnBlue = (d) => ({ width: '100%', padding: '15px', borderRadius: '10px', border: 'none', fontSize: '16px', fontWeight: '800', cursor: d ? 'default' : 'pointer', background: d ? '#e2e8f0' : '#2563eb', color: d ? '#94a3b8' : 'white' })
@@ -734,19 +734,19 @@ function WrapTripContent() {
   const btnOut  = { width: '100%', padding: '14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '14px', fontWeight: '700', cursor: 'pointer', background: 'white', color: '#374151' }
   const btnRed  = { width: '100%', padding: '12px', borderRadius: '10px', border: '1.5px solid #fca5a5', fontSize: '13px', fontWeight: '700', cursor: 'pointer', background: 'transparent', color: '#b91c1c' }
 
-  // ─────────────────────────────────────────────────────────────
+  // -------------------------------------------------------------
 
   if (done) return (
     <div style={{ maxWidth: '400px', margin: '0 auto', padding: '48px 24px', textAlign: 'center' }}>
-      <div style={{ width: '80px', height: '80px', background: '#dcfce7', borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>✓</div>
+      <div style={{ width: '80px', height: '80px', background: '#dcfce7', borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>?</div>
       <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginBottom: '8px' }}>Trip Created!</div>
       <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '28px' }}>
         <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>{done.tripId}</span>
         <br /><br />{done.count} stop{done.count > 1 ? 's' : ''} · {selCrew.length} passengers
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <a href="/dashboard/trips" style={{ display: 'block', background: '#0f2340', color: 'white', padding: '15px', borderRadius: '10px', fontSize: '15px', fontWeight: '800', textDecoration: 'none', textAlign: 'center' }}>📋 View Trips</a>
-        <button onClick={() => { setStep(1); setSelCrew([]); setVehicle(null); setDone(null); setCallTime(nowHHMM()); setCallTimeAuto(true); setPickupId(''); setDropoffId(''); setServiceType('Wrap'); clearSaved() }} style={btnOut}>🔄 New Trip</button>
+        <a href="/dashboard/trips" style={{ display: 'block', background: '#0f2340', color: 'white', padding: '15px', borderRadius: '10px', fontSize: '15px', fontWeight: '800', textDecoration: 'none', textAlign: 'center' }}>?? View Trips</a>
+        <button onClick={() => { setStep(1); setSelCrew([]); setVehicle(null); setDone(null); setCallTime(nowHHMM()); setCallTimeAuto(true); setPickupId(''); setDropoffId(''); setServiceType('Wrap'); clearSaved() }} style={btnOut}>?? New Trip</button>
       </div>
     </div>
   )
@@ -772,7 +772,7 @@ function WrapTripContent() {
       {/* DB error banner */}
       {loadErr && (
         <div style={{ margin: '16px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>
-          ⚠️ {loadErr}
+          ?? {loadErr}
         </div>
       )}
 
@@ -780,11 +780,11 @@ function WrapTripContent() {
 
       <div style={{ padding: '20px 16px' }}>
 
-        {/* ── STEP 1 ── */}
+        {/* -- STEP 1 -- */}
         {step === 1 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '8px' }}>📦</div>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>??</div>
               <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Wrap Trip</div>
               <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>Where are you? When do you leave?</div>
             </div>
@@ -799,7 +799,7 @@ function WrapTripContent() {
                   {['Wrap', 'Charter', 'Other'].includes(serviceType) ? 'Departure / Pickup' : 'Call Time'}{' '}
                   {callTimeAuto
                     ? <span style={{ fontSize: '9px', background: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '999px', fontWeight: '700', letterSpacing: '0.04em' }}>AUTO</span>
-                    : <button type="button" onClick={() => { setCallTime(nowHHMM()); setCallTimeAuto(true) }} style={{ fontSize: '9px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: '999px', cursor: 'pointer', fontWeight: '700', marginLeft: '3px' }}>↩ Now</button>
+                    : <button type="button" onClick={() => { setCallTime(nowHHMM()); setCallTimeAuto(true) }} style={{ fontSize: '9px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: '999px', cursor: 'pointer', fontWeight: '700', marginLeft: '3px' }}>? Now</button>
                   }
                 </label>
                 <input
@@ -823,26 +823,26 @@ function WrapTripContent() {
             <FieldButton label="Dropoff override (optional)" value={dropoffId ? (locsMap[dropoffId] || dropoffId) : ''} placeholder="— Auto (passenger hotel) —" onClick={() => setPicker('dropoff')} />
 
             <button onClick={() => setStep(2)} disabled={!date || !callTime || !pickupId} style={btnBlue(!date || !callTime || !pickupId)}>
-              Next — Vehicle →
+              Next — Vehicle ?
             </button>
           </div>
         )}
 
-        {/* ── STEP 2 ── */}
+        {/* -- STEP 2 -- */}
         {step === 2 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '8px' }}>🚐</div>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>??</div>
               <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Vehicle</div>
               <div style={{ fontSize: '12px', color: '#94a3b8' }}>Scan QR or select from list</div>
             </div>
 
-            <button onClick={() => { setScanMode('vehicle'); setShowScanner(true) }} style={btnDark}>📷 Scan Vehicle QR</button>
+            <button onClick={() => { setScanMode('vehicle'); setShowScanner(true) }} style={btnDark}>?? Scan Vehicle QR</button>
 
             {vehicle && (
               <div style={{ padding: '14px 16px', background: '#eff6ff', border: '2px solid #2563eb', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontWeight: '900', fontSize: '16px', color: '#1d4ed8' }}>{vehicle.id} — {vehicle.sign_code}</div>
+                  <div style={{ fontWeight: '900', fontSize: '16px', color: '#1d4ed8' }}>{vehicle.display_id} — {vehicle.sign_code}</div>
                   <div style={{ fontSize: '12px', color: '#334155', marginTop: '3px' }}>{[vehicle.driver_name, vehicle.vehicle_type, vehicle.capacity ? `×${vehicle.capacity}` : null].filter(Boolean).join(' · ')}</div>
                 </div>
                 <button onClick={() => setVehicle(null)} style={{ background: '#fee2e2', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: '#b91c1c', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
@@ -865,38 +865,38 @@ function WrapTripContent() {
                       <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{v.display_id}</div>
                       <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{[v.driver_name, v.sign_code, v.capacity ? `×${v.capacity}` : null].filter(Boolean).join(' · ')}</div>
                     </div>
-                    {isSel && <span style={{ color: '#2563eb', fontSize: '20px' }}>✓</span>}
+                    {isSel && <span style={{ color: '#2563eb', fontSize: '20px' }}>?</span>}
                   </div>
                 )
               })}
               <div onClick={() => setVehicle(null)} style={{ padding: '13px 14px', borderRadius: '10px', border: `2px solid ${!vehicle ? '#2563eb' : '#e2e8f0'}`, background: !vehicle ? '#eff6ff' : 'white', cursor: 'pointer', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
-                {!vehicle ? '✓ ' : ''}No vehicle
+                {!vehicle ? '? ' : ''}No vehicle
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setStep(1)} style={{ ...btnOut, flex: 1 }}>← Back</button>
-              <button onClick={() => setStep(3)} style={{ ...btnBlue(false), flex: 2 }}>Next →</button>
+              <button onClick={() => setStep(1)} style={{ ...btnOut, flex: 1 }}>? Back</button>
+              <button onClick={() => setStep(3)} style={{ ...btnBlue(false), flex: 2 }}>Next ?</button>
             </div>
-            <button onClick={cancelTrip} style={btnRed}>✕ Cancel Trip</button>
+            <button onClick={cancelTrip} style={btnRed}>? Cancel Trip</button>
           </div>
         )}
 
-        {/* ── STEP 3 ── */}
+        {/* -- STEP 3 -- */}
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '13px' }}>
             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '8px' }}>👥</div>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>??</div>
               <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Passengers</div>
               <div style={{ fontSize: '12px', color: '#94a3b8' }}>Scan badges or search manually</div>
             </div>
 
-            <button onClick={() => { setScanMode('passenger'); setShowScanner(true) }} style={btnDark}>📷 Scan Crew Badge</button>
+            <button onClick={() => { setScanMode('passenger'); setShowScanner(true) }} style={btnDark}>?? Scan Crew Badge</button>
 
             {selCrew.length > 0 && (
               <>
                 <div style={{ padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#1d4ed8' }}>👥 {selCrew.length} selected</span>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#1d4ed8' }}>?? {selCrew.length} selected</span>
                   <button onClick={() => setSelCrew([])} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '12px', fontWeight: '700' }}>Remove all</button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -920,7 +920,7 @@ function WrapTripContent() {
               <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
             </div>
 
-            <input type="text" placeholder="🔍  Search crew by name or department…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...inp, fontSize: '14px' }} />
+            <input type="text" placeholder="??  Search crew by name or department…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...inp, fontSize: '14px' }} />
 
             {search && (
               <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', background: 'white' }}>
@@ -943,18 +943,18 @@ function WrapTripContent() {
             )}
 
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setStep(2)} style={{ ...btnOut, flex: 1 }}>← Back</button>
-              <button onClick={() => { setSearch(''); setStep(4) }} disabled={selCrew.length === 0} style={{ ...btnBlue(selCrew.length === 0), flex: 2 }}>Review ({selCrew.length}) →</button>
+              <button onClick={() => setStep(2)} style={{ ...btnOut, flex: 1 }}>? Back</button>
+              <button onClick={() => { setSearch(''); setStep(4) }} disabled={selCrew.length === 0} style={{ ...btnBlue(selCrew.length === 0), flex: 2 }}>Review ({selCrew.length}) ?</button>
             </div>
-            <button onClick={cancelTrip} style={btnRed}>✕ Cancel Trip</button>
+            <button onClick={cancelTrip} style={btnRed}>? Cancel Trip</button>
           </div>
         )}
 
-        {/* ── STEP 4 ── */}
+        {/* -- STEP 4 -- */}
         {step === 4 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '8px' }}>📋</div>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>??</div>
               <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Confirm Trip</div>
             </div>
 
@@ -963,7 +963,7 @@ function WrapTripContent() {
                 ['Date', date], [(['Wrap','Charter','Other'].includes(serviceType) ? 'Departure/Pickup' : 'Call Time'), callTime], ['Service', serviceType],
                 ['Pickup', locsMap[pickupId] || pickupId],
                 dropoffId ? ['Dropoff', locsMap[dropoffId] || dropoffId] : null,
-                vehicle ? ['Vehicle', `${vehicle.id} — ${vehicle.sign_code}`] : ['Vehicle', 'None'],
+                vehicle ? ['Vehicle', `${vehicle.display_id} — ${vehicle.sign_code}`] : ['Vehicle', 'None'],
                 vehicle?.driver_name ? ['Driver', vehicle.driver_name] : null,
                 ['Passengers', `${selCrew.length} pax`],
               ].filter(Boolean).map(([label, value]) => (
@@ -979,7 +979,7 @@ function WrapTripContent() {
               {hotels.map(hotelId => (
                 <div key={hotelId} style={{ padding: '10px 12px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '6px' }}>
                   <div style={{ fontWeight: '800', fontSize: '13px', color: '#0f172a', marginBottom: '4px' }}>
-                    → {hotelId === '__unknown__' ? '(unknown hotel)' : (locsMap[hotelId] || hotelId)}
+                    ? {hotelId === '__unknown__' ? '(unknown hotel)' : (locsMap[hotelId] || hotelId)}
                     <span style={{ fontWeight: '500', color: '#94a3b8', marginLeft: '6px' }}>{grouped[hotelId].length} pax</span>
                   </div>
                   <div style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.6' }}>{grouped[hotelId].map(c => c.full_name).join(', ')}</div>
@@ -987,13 +987,13 @@ function WrapTripContent() {
               ))}
             </div>
 
-            {err && <div style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {err}</div>}
+            {err && <div style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>? {err}</div>}
 
             <button onClick={handleConfirm} disabled={saving || hotels.length === 0} style={btnGreen(saving || hotels.length === 0)}>
-              {saving ? '⏳ Creating…' : '✅ Create Trip Now'}
+              {saving ? '? Creating…' : '? Create Trip Now'}
             </button>
-            <button onClick={() => setStep(3)} disabled={saving} style={btnOut}>← Edit Passengers</button>
-            <button onClick={cancelTrip} disabled={saving} style={btnRed}>✕ Cancel Trip</button>
+            <button onClick={() => setStep(3)} disabled={saving} style={btnOut}>? Edit Passengers</button>
+            <button onClick={cancelTrip} disabled={saving} style={btnRed}>? Cancel Trip</button>
           </div>
         )}
       </div>
@@ -1001,7 +1001,7 @@ function WrapTripContent() {
   )
 }
 
-// ─── Page ──────────────────────────────────────────────────────
+// --- Page ------------------------------------------------------
 function WrapTripPageInner() {
   const [showFleet, setShowFleet] = useState(false)
 
@@ -1013,8 +1013,8 @@ function WrapTripPageInner() {
             CAPTAIN <span style={{ color: '#2563eb' }}>Dispatch</span>
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => window.open('/dashboard/fleet', 'captaindispatch_fleet')} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>🚗 Fleet</button>
-            <a href="/dashboard" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#94a3b8', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>←</a>
+            <button onClick={() => window.open('/dashboard/fleet', 'captaindispatch_fleet')} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>?? Fleet</button>
+            <a href="/dashboard" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#94a3b8', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>?</a>
           </div>
         </div>
       )}
