@@ -1559,9 +1559,16 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
 
             {/* Info box — new mode: accommodation e travel gestiti separatamente */}
             {mode === 'new' && form.person_type !== 'FAMILY' && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', fontSize: '11px', color: '#15803d' }}>
+                🏨 <strong>Accommodation</strong> and <strong>Travel</strong> are configured after saving — directly from the dedicated pages.
+              </div>
+            )}
+
+            {/* Pending banner — edit mode */}
+            {mode === 'edit' && form.person_type !== 'FAMILY' && !form.arrival_date && !form.is_local && form.on_location !== false && (
               <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '11px', color: '#92400e' }}>
                 <div style={{ fontWeight: '700', marginBottom: '4px' }}>⏳ Status: Pending</div>
-                <div style={{ marginBottom: '6px' }}>To activate this crew member, assign one of the following after saving:</div>
+                <div style={{ marginBottom: '6px' }}>To activate this crew member, assign one of the following:</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   <span>🏨 Accommodation — assign a hotel stay</span>
                   <span>✈️ Travel — add a travel movement</span>
