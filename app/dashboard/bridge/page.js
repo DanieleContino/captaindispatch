@@ -1163,7 +1163,8 @@ function AccommodationWidget({ productionId }) {
       setWarningsMap(wMap)
 
       // Merge: crew senza stay + crew con solo date warnings
-      const missingCrewIds = new Set(missing.map(m => m.crew_id).filter(Boolean))
+      const filteredMissing = missing.filter(m => !excludedIds.has(m.crew_id))
+      const missingCrewIds = new Set(filteredMissing.map(m => m.crew_id).filter(Boolean))
       const warnOnlyItems = []
       for (const [crewUuid, warnings] of Object.entries(wMap)) {
         if (!missingCrewIds.has(crewUuid)) {
@@ -1172,7 +1173,7 @@ function AccommodationWidget({ productionId }) {
         }
       }
 
-      setItems([...missing, ...warnOnlyItems])
+      setItems([...filteredMissing, ...warnOnlyItems])
       setLoading(false)
     })
   }, [productionId])
