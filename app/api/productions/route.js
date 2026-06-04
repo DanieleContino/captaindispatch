@@ -56,6 +56,17 @@ export async function POST(req) {
     if (!name?.trim() || !slug?.trim())
       return NextResponse.json({ error: 'name and slug are required' }, { status: 400 })
 
+    // Gate: only allowed users can create productions
+    const serviceGate = await createSupabaseServiceClient()
+    const { data: allowed } = await serviceGate
+      .from('allowed_creators')
+      .select('email')
+      .eq('email', user.email)
+      .maybeSingle()
+    if (!allowed) {
+      return NextResponse.json({ error: 'Your account is not authorized to create productions. Please contact the administrator.' }, { status: 403 })
+    }
+
     const insert = {
       name: name.trim(),
       slug: slug.trim().toLowerCase().replace(/\s+/g, '-'),
