@@ -2068,24 +2068,22 @@ export default function AccommodationPage() {
   }, [])
 
   useEffect(() => {
-    if (user) { loadData(windowStart, windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id); loadMismatches() }
-  }, [user])
-
-  useEffect(() => {
+    if (!user) return
+    loadData(windowStart, windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id); loadMismatches()
     const raw = sessionStorage.getItem('crewSidebarOpenStay')
     if (!raw) return
     sessionStorage.removeItem('crewSidebarOpenStay')
     try {
       const payload = JSON.parse(raw)
       if (payload.mode === 'new') {
-        openNew({ __fromMovement: true, crew_id: payload.crew_id || null, crew_full_name: payload.crew_full_name || '' })
+        setTimeout(() => openNew({ __fromMovement: true, crew_id: payload.crew_id || null, crew_full_name: payload.crew_full_name || '' }), 100)
       } else if (payload.mode === 'edit' && payload.stay_id) {
         supabase.from('crew_stays').select(`${SELECT_FIELDS}`).eq('id', payload.stay_id).single().then(({ data }) => {
-          if (data) openEdit(data, null)
+          if (data) setTimeout(() => openEdit(data, null), 100)
         })
       }
     } catch (e) { /* ignore */ }
-  }, [])
+  }, [user])
 
   useEffect(() => { if (user) loadData(windowStart, windowEnd) }, [windowStart, windowEnd])
 
