@@ -1188,7 +1188,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
 // ─── Sidebar form (Nuova + Modifica) ────────────────────────
 function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose, onSaved, currentUser, onNotesChanged }) {
   const t = useT()
-  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'PRESENT', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '', is_local: false, person_type: 'CREW', linked_crew_id: null }
+  const EMPTY = { id: '', full_name: '', role: '', department: '', hotel_id: '', hotel_status: 'PENDING', travel_status: 'IN', arrival_date: '', departure_date: '', notes: '', no_transport_needed: false, on_location: true, email: '', phone: '', is_local: false, person_type: 'CREW', linked_crew_id: null }
   const PRODUCTION_ID = getProductionId()
   const [form, setForm]     = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -1286,6 +1286,8 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
       email:                 form.email.trim() || null,
       phone:                 form.phone.trim() || null,
       is_local:              form.is_local || false,
+      work_start:            form.work_start || null,
+      work_end:              form.work_end || null,
       person_type:           form.person_type    || 'CREW',
       linked_crew_id:        form.linked_crew_id || null,
     }
