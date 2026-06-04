@@ -1895,12 +1895,13 @@ export default function AccommodationPage() {
 
   function openNew(movement) {
     setSidebarMode('new')
-    setSidebarTarget(movement ? {
+    const target = movement ? {
       __fromMovement: true,
       crew_id:        movement.crew_id        || null,
-      crew_full_name: movement.crew?.full_name || movement.full_name_raw || '',
-    } : null)
-    setSidebarOpen(true)
+      crew_full_name: movement.crew?.full_name || movement.crew_full_name || movement.full_name_raw || '',
+    } : null
+    setSidebarTarget(target)
+    setTimeout(() => setSidebarOpen(true), 50)
   }
   function openEdit(stay, focusField) { setSidebarMode('edit'); setSidebarTarget({ ...stay, __focusField: focusField || null }); setSidebarOpen(true) }
 
