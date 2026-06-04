@@ -83,7 +83,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
   }
 
   useEffect(() => {
-    if (!member?.id || !PRODUCTION_ID) return
+    if (!member?.uuid || !PRODUCTION_ID) return
     setLoading(true)
     Promise.all([
       supabase.from('crew')
@@ -98,7 +98,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
       setMovements(movRes.data || [])
       setLoading(false)
     })
-  }, [member?.id])
+  }, [member?.uuid])
 
   const hotelName = details?.hotel?.name || (locsMap[details?.hotel_id] || details?.hotel_id || '–')
 
@@ -834,6 +834,8 @@ export default function PaxCoveragePage() {
     </div>
   )
 }
+
+
 
 
 
