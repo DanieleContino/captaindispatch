@@ -2287,6 +2287,19 @@ function InviteCodesTabControlled({ productions, showFormProp, onFormClose }) {
                 </div>
               </div>
 
+              {/* ── Uses list ── */}
+              {inv.uses && inv.uses.length > 0 && (
+                <div style={{ padding: '10px 20px 12px', background: '#f8fafc', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', letterSpacing: '0.08em', marginBottom: '6px' }}>USED BY</div>
+                  {inv.uses.map((u, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11px', color: '#374151', padding: '3px 0', borderBottom: i < inv.uses.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                      <span style={{ fontWeight: '700' }}>👤 {u.email}</span>
+                      <span style={{ padding: '1px 6px', borderRadius: '4px', background: '#e0f2fe', color: '#0369a1', fontWeight: '700', fontSize: '10px' }}>{u.role}</span>
+                      <span style={{ color: '#94a3b8', marginLeft: 'auto' }}>{u.used_at ? new Date(u.used_at).toLocaleDateString('en-CA') : '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* ── Inline edit form ── */}
               {isEditing && (
                 <div style={{ padding: '14px 20px 16px', background: '#f8fafc', borderTop: '1px solid #e0f2fe' }}>
