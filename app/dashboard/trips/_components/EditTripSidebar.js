@@ -336,7 +336,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     })
     const result = await res.json()
     if (!res.ok || result.error) { setError(`Failed to delete leg: ${result.error}`); return }
-    onPaxChanged?.()
+    onSaved()
   }
 
   async function handleSubmit(e) {
@@ -660,7 +660,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                   <button type="button"
                     onClick={() => {
                       const baseId = baseTripId(initial.trip_id)
-                      const usedLetters = group.map(g => {
+                      const usedLetters = (group || []).map(g => {
                         const suf = g.trip_id.slice(baseId.length)
                         return suf.length === 1 && /^[A-Z]$/.test(suf) ? suf : null
                       }).filter(Boolean)

@@ -303,12 +303,17 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
         const legTransferClass = leg.transferClass
         const legArrMin  = timeStrToMin(legForm.arr_time)
         const legCallMin = timeStrToMin(legForm.call_time)
+        const legPickupTimeMin = timeStrToMin(legForm.pickup_time)
+        // For STANDARD multitrip: if user provided a pickup_time override, use it as callMin
+        // (for STANDARD, call_min = pickup_min, so pickup_time IS the call time)
+        const effectiveLegCallMin = legCallMin !== null ? legCallMin
+          : (legTransferClass === 'STANDARD' && legPickupTimeMin !== null ? legPickupTimeMin : null)
         const legComp = leg.computed ?? calcTimes({
           date:          legForm.date,
           arrTimeMin:    legArrMin,
           durationMin:   legDurMin,
           transferClass: legTransferClass,
-          callMin:       legCallMin,
+          callMin:       effectiveLegCallMin,
         })
         const legVeh  = vehicles.find(v => v.uuid === legForm.vehicle_id)
         const row = {
