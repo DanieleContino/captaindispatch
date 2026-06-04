@@ -1244,6 +1244,79 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
   )
 }
 
+// ─── NoMovementsBanner ───────────────────────────────────────
+function NoMovementsBanner({ crew, onAddMovement, onDismiss }) {
+  const [expanded, setExpanded] = React.useState(false)
+  return (
+    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '16px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer' }}
+        onClick={() => setExpanded(v => !v)}>
+        <span style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626', flex: 1 }}>
+          ⚠ {crew.length} crew member{crew.length !== 1 ? 's' : ''} have accommodation but no travel movements
+        </span>
+        <span style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', whiteSpace: 'nowrap' }}>
+          {expanded ? '▲ Hide' : '▼ Show'}
+        </span>
+        <button onClick={e => { e.stopPropagation(); onDismiss() }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}>✕</button>
+      </div>
+      {expanded && (
+        <div style={{ borderTop: '1px solid #fecaca', maxHeight: '320px', overflowY: 'auto' }}>
+          {crew.map((c, i) => (
+            <div key={c.uuid} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px', borderBottom: i < crew.length - 1 ? '1px solid #fef2f2' : 'none', background: 'white' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {c.full_name}
+                {c.department && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#64748b', fontWeight: '400' }}>{c.department}</span>}
+              </span>
+              {c.role && <span style={{ fontSize: '11px', color: '#dc2626', flexShrink: 0 }}>{c.role}</span>}
+              <button onClick={() => onAddMovement({ crew_id: c.uuid, crew_full_name: c.full_name })}
+                style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#dc2626', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                + Add Movement
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TravelPendingCrewBanner({ crew, onAddMovement, onDismiss }) {
+  const [expanded, setExpanded] = React.useState(false)
+  return (
+    <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: '10px', marginBottom: '16px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', cursor: 'pointer' }}
+        onClick={() => setExpanded(v => !v)}>
+        <span style={{ fontSize: '13px', fontWeight: '800', color: '#92400e', flex: 1 }}>
+          ⏳ {crew.length} crew member{crew.length !== 1 ? 's' : ''} pending — no accommodation or travel info yet
+        </span>
+        <span style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', whiteSpace: 'nowrap' }}>
+          {expanded ? '▲ Hide' : '▼ Show'}
+        </span>
+        <button onClick={e => { e.stopPropagation(); onDismiss() }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', lineHeight: 1, padding: '2px 4px', flexShrink: 0 }}>✕</button>
+      </div>
+      {expanded && (
+        <div style={{ borderTop: '1px solid #fde68a', maxHeight: '320px', overflowY: 'auto' }}>
+          {crew.map((c, i) => (
+            <div key={c.uuid} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px', borderBottom: i < crew.length - 1 ? '1px solid #fefce8' : 'none', background: 'white' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {c.full_name}
+                {c.department && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#64748b', fontWeight: '400' }}>{c.department}</span>}
+              </span>
+              {c.role && <span style={{ fontSize: '11px', color: '#92400e', flexShrink: 0 }}>{c.role}</span>}
+              <button onClick={() => onAddMovement({ crew_id: c.uuid, crew_full_name: c.full_name })}
+                style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#f59e0b', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                + Add Movement
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main page ─────────────────────────────────────────────────
 export default function TravelPage() {
   const PRODUCTION_ID = getProductionId()
@@ -1860,6 +1933,12 @@ export default function TravelPage() {
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
             NEXT_PUBLIC_PRODUCTION_ID not set in .env.local
           </div>
+        )}
+        {noMovementsCrew.length > 0 && (
+          <NoMovementsBanner crew={noMovementsCrew} onAddMovement={m => openNew({ crew_id: m.crew_id, crew_full_name: m.crew_full_name })} onDismiss={() => setNoMovementsCrew([])} />
+        )}
+        {pendingCrew.length > 0 && (
+          <TravelPendingCrewBanner crew={pendingCrew} onAddMovement={m => openNew({ crew_id: m.crew_id, crew_full_name: m.crew_full_name })} onDismiss={() => setPendingCrew([])} />
         )}
 
         {columnsConfig.length === 0 && !loading && (
