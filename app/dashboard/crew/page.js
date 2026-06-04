@@ -548,8 +548,9 @@ function MovForm({ form, setF, onSave, onCancel, saveLabel, saving }) {
 }
 
 // ─── Travel Accordion ────────────────────────────────────────
-function TravelAccordion({ crewId }) {
+function TravelAccordion({ crewId, crewFullName }) {
   const PRODUCTION_ID = getProductionId()
+  const router = useRouter()
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
   const EMPTY_MOV = { travel_date: '', direction: 'IN', travel_type: 'FLIGHT', travel_number: '', from_location: '', from_time: '', to_location: '', to_time: '', needs_transport: false }
   const [open, setOpen] = useState(false)
@@ -700,7 +701,10 @@ function TravelAccordion({ crewId }) {
                       )}
                     </div>
                     <button type="button"
-                      onClick={() => { setEditId(m.id); setEditForm({ travel_date: m.travel_date, direction: m.direction, travel_type: m.travel_type, travel_number: m.travel_number || '', from_location: m.from_location || '', from_time: m.from_time || '', to_location: m.to_location || '', to_time: m.to_time || '', needs_transport: !!m.needs_transport }) }}
+                      onClick={() => {
+                        sessionStorage.setItem('crewSidebarOpenMovement', JSON.stringify({ movement_id: m.id, mode: 'edit' }))
+                        router.push('/dashboard/travel')
+                      }}
                       style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#15803d', flexShrink: 0 }}>
                       ✎
                     </button>
