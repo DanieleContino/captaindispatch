@@ -690,7 +690,7 @@ function VehicleSidebar({ open, mode, initial, onClose, onSaved, crewList = [], 
                         <select value={form.comodato_owner_crew_id} onChange={e => set('comodato_owner_crew_id', e.target.value)}
                           style={{ width: '100%', padding: '6px 8px', border: '1px solid #86efac', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: 'white', cursor: 'pointer', boxSizing: 'border-box' }}>
                           <option value="">— Select owner —</option>
-                          {crewList.map(c => <option key={c.id} value={c.id}>{c.full_name}{c.department ? ` (${c.department})` : ''}</option>)}
+                          {crewList.map(c => <option key={c.uuid} value={c.uuid}>{c.full_name}{c.department ? ` (${c.department})` : ''}</option>)}
                         </select>
                       </div>
                       <div>
@@ -807,7 +807,7 @@ function VehicleRow({ v, onEdit, onDelete, selected, onToggleSelect, crewList = 
       <div style={{ fontSize: '28px', textAlign: 'center' }}>{icon}</div>
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a', fontFamily: 'monospace' }}>{v.display_id || v.id}</span>
+          <span style={{ fontWeight: '800', fontSize: '15px', color: '#0f172a', fontFamily: 'monospace' }}>{v.display_id}</span>
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>{v.vehicle_type}</span>
           {Array.isArray(v.vehicle_class) && v.vehicle_class.length > 0
             ? v.vehicle_class.map(c => { const cc = CLASS_COLOR[c] || CLASS_COLOR.CLASSIC; return <span key={c} style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: cc.bg, color: cc.color, border: `1px solid ${cc.border}` }}>{c === 'LUX' ? '💎 LUX' : c === 'PREMIUM' ? '⭐ PREMIUM' : c === 'MINIBUS' ? '🚌 MINIBUS' : c}</span> })
@@ -2810,7 +2810,7 @@ function RentalSuppliersTab({ productionId, isMobile, openTriggerRef }) {
                   return (
                     <div key={v.id} style={{ padding: '6px 8px', background: '#f8fafc', borderLeft: `2px solid ${statusColor}`, borderRadius: '0 6px 6px 0' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px', flexWrap: 'wrap' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '12px', color: '#0f172a' }}>{v.id}</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '12px', color: '#0f172a' }}>{v.display_id}</span>
                         {v.rental_brand && <span style={{ fontSize: '11px', color: '#374151' }}>{v.rental_brand} {v.rental_model}</span>}
                         {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{v.license_plate}</span>}
                         {isExpiringSoon && <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>⚠ Expiring soon</span>}
@@ -3227,7 +3227,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
               <label style={lbl}>NCC Vehicle (Fleet)</label>
               <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={{ ...inp, cursor: 'pointer' }}>
                 <option value="">— No vehicle linked —</option>
-                {vehicles.map(v => <option key={v.id} value={v.id}>{v.id} ({v.vehicle_type})</option>)}
+                {vehicles.map(v => <option key={v.uuid} value={v.uuid}>{v.display_id} ({v.vehicle_type})</option>)}
               </select>
               <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Link to an NCC vehicle already in fleet (optional)</div>
             </div>
@@ -3612,14 +3612,14 @@ function NccTab({ productionId, isMobile, openTriggerRef, onEditVehicle, reloadT
                     {nccVehicles.length > 0 && (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px', marginBottom: '8px' }}>
                         {nccVehicles.map(v => (
-                          <div key={v.id}
+                          <div key={v.uuid}
                             onClick={() => onEditVehicle && onEditVehicle(v)}
                             style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px', background: 'white', border: '1px solid #bae6fd', borderRadius: '8px', cursor: onEditVehicle ? 'pointer' : 'default' }}
                             onMouseEnter={e => { if (onEditVehicle) e.currentTarget.style.background = '#f0f9ff' }}
                             onMouseLeave={e => e.currentTarget.style.background = 'white'}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ fontSize: '20px' }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
-                              <span style={{ fontFamily: 'monospace', fontWeight: '800', fontSize: '13px', color: '#0f2340' }}>{v.id}</span>
+                              <span style={{ fontFamily: 'monospace', fontWeight: '800', fontSize: '13px', color: '#0f2340' }}>{v.display_id}</span>
                               {v.capacity && <span style={{ fontSize: '11px', color: '#64748b', marginLeft: 'auto' }}>× {v.capacity} pax</span>}
                             </div>
                             {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 7px', borderRadius: '5px', border: '1px solid #d4d4d4', letterSpacing: '0.08em', alignSelf: 'flex-start' }}>{v.license_plate}</span>}
@@ -3957,7 +3957,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
                 <span style={{ fontSize: '20px' }}>{TYPE_ICON[v.vehicle_type] || '🚗'}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>{v.display_id || v.id}</span>
+                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>{v.display_id}</span>
                     {v.license_plate && <span style={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: '#374151', background: '#fafaf9', padding: '1px 8px', borderRadius: '5px', border: '1px solid #d4d4d4' }}>{v.license_plate}</span>}
                     <span style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', padding: '1px 8px', borderRadius: '999px', border: '1px solid #86efac' }}>🤝 LOAN</span>
                   </div>
@@ -3982,7 +3982,7 @@ function ComodatoTab({ productionId, isMobile, openTriggerRef, crewList = [], ad
                 <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 16px', background: '#f8fafc' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ fontSize: '11px', fontWeight: '800', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>💳 Expenses</div>
-                    <button onClick={() => openNewExpense(v.id)} style={{ padding: '4px 12px', borderRadius: '7px', border: '1px solid #15803d', background: '#f0fdf4', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>+ Add Expense</button>
+                    <button onClick={() => openNewExpense(v.uuid)} style={{ padding: '4px 12px', borderRadius: '7px', border: '1px solid #15803d', background: '#f0fdf4', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>+ Add Expense</button>
                   </div>
                   {vehicleExpenses.length === 0 ? (
                     <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', padding: '8px 0' }}>No expenses recorded</div>
@@ -4278,7 +4278,7 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
                 <select value={form.comodato_owner_crew_id} onChange={e => set('comodato_owner_crew_id', e.target.value)}
                   style={{ ...inp, cursor: 'pointer', borderColor: '#86efac', background: 'white' }}>
                   <option value="">— Select owner —</option>
-                  {crewList.map(c => <option key={c.id} value={c.id}>{c.full_name}{c.department ? ` (${c.department})` : ''}</option>)}
+                  {crewList.map(c => <option key={c.uuid} value={c.uuid}>{c.full_name}{c.department ? ` (${c.department})` : ''}</option>)}
                 </select>
               </div>
 
@@ -4582,7 +4582,7 @@ export default function VehiclesPage() {
     if (filterType !== 'ALL' && v.vehicle_type !== filterType) return false
     if (search) {
       const q = search.toLowerCase()
-      if (!((v.display_id || v.id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
+      if (!((v.display_id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
     }
     return true
   })
@@ -4598,7 +4598,7 @@ export default function VehiclesPage() {
     if (filterRental === 'COMODATO'   && !v.is_comodato) return false
     if (search) {
       const q = search.toLowerCase()
-      if (!((v.display_id || v.id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
+      if (!((v.display_id) || '').toLowerCase().includes(q) && !(v.driver_name || '').toLowerCase().includes(q) && !(v.sign_code || '').toLowerCase().includes(q) && !(v.license_plate || '').toLowerCase().includes(q)) return false
     }
     return true
   })
@@ -4817,7 +4817,7 @@ export default function VehiclesPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {productionFiltered.map(v => (
               <VehicleRow
-                key={v.id}
+                key={v.uuid}
                 v={v}
                 onEdit={openEdit}
                 onDelete={handleDeleteSingle}
@@ -4879,8 +4879,8 @@ export default function VehiclesPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '20px 40px 1fr auto', alignItems: 'center', gap: '12px', padding: '4px 16px' }}>
               <input
                 type="checkbox"
-                checked={filtered.length > 0 && filtered.every(v => selectedIds.includes(v.id))}
-                ref={el => { if (el) el.indeterminate = selectedIds.length > 0 && !filtered.every(v => selectedIds.includes(v.id)) }}
+                checked={filtered.length > 0 && filtered.every(v => selectedIds.includes(v.uuid))}
+                ref={el => { if (el) el.indeterminate = selectedIds.length > 0 && !filtered.every(v => selectedIds.includes(v.uuid)) }}
                 onChange={selectAll}
                 style={{ width: '16px', height: '16px', accentColor: '#2563eb', cursor: 'pointer' }}
                 title={t.selectAll}
@@ -4892,7 +4892,7 @@ export default function VehiclesPage() {
 
             {filtered.map(v => (
               <VehicleRow
-                key={v.id}
+                key={v.uuid}
                 v={v}
                 onEdit={openEdit}
                 onDelete={handleDeleteSingle}
