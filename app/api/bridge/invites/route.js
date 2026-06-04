@@ -60,7 +60,8 @@ export async function GET() {
     const inviteIds = (invites || []).map(i => i.id)
     let usesMap = {}
     if (inviteIds.length > 0) {
-      const { data: usesData } = await supabase
+      const serviceForUses = await createSupabaseServiceClient()
+      const { data: usesData } = await serviceForUses
         .from('user_roles')
         .select('invite_code_id, user_id, role, created_at')
         .in('invite_code_id', inviteIds)
