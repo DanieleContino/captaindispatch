@@ -113,7 +113,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     if (!PRODUCTION_ID || !form.pickup_id || !form.dropoff_id) return () => { cancelled = true }
     const hotelId = transferClass === 'ARRIVAL' ? form.dropoff_id : form.pickup_id
     let q = supabase.from('crew_stays')
-      .select('crew_id, departure_date, crew!inner(uuid, id, full_name, department, hotel_status)')
+      .select('crew_id, departure_date, crew!inner(uuid, full_name, department, hotel_status)')
       .eq('production_id', PRODUCTION_ID)
       .eq('hotel_id', hotelId)
     if (transferClass === 'ARRIVAL')        q = q.eq('arrival_date', form.date)
