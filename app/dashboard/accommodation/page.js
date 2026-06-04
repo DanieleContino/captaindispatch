@@ -1075,7 +1075,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       setCrewResults([])
       if (initial?.id && initial?.room_assignment_id) {
         supabase.from('crew_stays')
-          .select('id, crew_id, crew:crew_id(id, full_name, role, department, person_type)')
+          .select('id, crew_id, crew:crew_id(uuid, display_id, full_name, role, department, person_type)')
           .eq('room_assignment_id', initial.room_assignment_id)
           .neq('crew_id', initial.crew_id)
           .then(({ data }) => setRoomates((data || []).filter(r => r.crew?.person_type !== 'FAMILY')))
@@ -1165,7 +1165,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       hotel_status:        'PENDING',
       travel_status:       'IN',
       on_location:         true,
-    }).select('id, uuid, full_name, role, phone, no_transport_needed').single()
+    }).select('uuid, display_id, full_name, role, phone, no_transport_needed').single()
     setFamilySaving(false)
     if (error) { setFamilyError(error.message); return }
     if (newCrew) {
@@ -1959,7 +1959,7 @@ export default function AccommodationPage() {
     if (assignmentIds.length > 0) {
       const { data: familyStays } = await supabase
         .from('crew_stays')
-        .select('room_assignment_id, crew_id, crew:crew_id(id, full_name, role, person_type)')
+        .select('room_assignment_id, crew_id, crew:crew_id(uuid, display_id, full_name, role, person_type)')
         .eq('production_id', PRODUCTION_ID)
         .in('room_assignment_id', assignmentIds)
       for (const fs of familyStays || []) {
