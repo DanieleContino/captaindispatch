@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * /wrap-trip — Wrap Trip mobile wizard
@@ -358,7 +358,7 @@ function FleetMonitor({ onBack }) {
             const nextAlert = trafficAlerts.find(a => a.vehicleId === v.uuid && a.status === 'PLANNED') ?? null
 
             return (
-              <div key={v.id} style={{ background: 'white', border: '1.5px solid #e2e8f0', borderLeft: `4px solid ${cfg.bd}`, borderRadius: '12px', marginBottom: '10px', overflow: 'hidden' }}>
+              <div key={v.uuid} style={{ background: 'white', border: '1.5px solid #e2e8f0', borderLeft: `4px solid ${cfg.bd}`, borderRadius: '12px', marginBottom: '10px', overflow: 'hidden' }}>
                 <div onClick={() => setExpanded(ex => ({ ...ex, [v.uuid]: !ex[v.uuid] }))} style={{ padding: '10px 14px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{v.id} — {v.sign_code}</div>
@@ -862,7 +862,7 @@ function WrapTripContent() {
                   <div key={v.uuid} onClick={() => setVehicle(isSel ? null : v)}
                     style={{ padding: '13px 14px', borderRadius: '10px', border: `2px solid ${isSel ? '#2563eb' : '#e2e8f0'}`, background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{v.id}</div>
+                      <div style={{ fontWeight: '800', fontSize: '14px', color: '#0f172a' }}>{v.display_id}</div>
                       <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{[v.driver_name, v.sign_code, v.capacity ? `×${v.capacity}` : null].filter(Boolean).join(' · ')}</div>
                     </div>
                     {isSel && <span style={{ color: '#2563eb', fontSize: '20px' }}>✓</span>}
@@ -901,7 +901,7 @@ function WrapTripContent() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {selCrew.map(c => (
-                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <div key={c.uuid} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                       <Avatar name={c.full_name} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: '700', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
@@ -929,7 +929,7 @@ function WrapTripContent() {
                   const filtered = crew.filter(c => !selCrew.find(x => x.uuid === c.uuid) && (c.full_name.toLowerCase().includes(q) || (c.department || '').toLowerCase().includes(q)))
                   if (!filtered.length) return <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>No results</div>
                   return filtered.map(c => (
-                    <div key={c.id} onClick={() => { setSelCrew(p => [...p, c]); setSearch('') }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f8fafc' }}>
+                    <div key={c.uuid} onClick={() => { setSelCrew(p => [...p, c]); setSearch('') }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f8fafc' }}>
                       <Avatar name={c.full_name} size={32} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{c.full_name}</div>
