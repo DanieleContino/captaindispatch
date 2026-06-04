@@ -39,14 +39,14 @@ export function SendLinksModal({ open, onClose, productionId }) {
       for (const v of (vehicles || [])) {
         if (v.ncc_driver_id && nccMap[v.ncc_driver_id]) {
           const d = nccMap[v.ncc_driver_id]
-          list.push({ id: d.id, name: d.name, phone: d.phone, token: d.tracking_token, vehicle: v.id, type: 'NCC' })
+          list.push({ id: d.id, name: d.name, phone: d.phone, token: d.tracking_token, vehicle: v.display_id, type: 'NCC' })
         } else if (v.driver_crew_id && crewMap[v.driver_crew_id]) {
           const d = crewMap[v.driver_crew_id]
-          list.push({ id: d.id, name: d.full_name, phone: d.phone, token: d.tracking_token, vehicle: v.id, type: 'CREW' })
+          list.push({ id: d.id, name: d.full_name, phone: d.phone, token: d.tracking_token, vehicle: v.display_id, type: 'CREW' })
         } else if (v.ncc_driver_name) {
-          list.push({ id: v.id, name: v.ncc_driver_name, phone: v.ncc_driver_phone || null, token: null, vehicle: v.id, type: 'MANUAL' })
+          list.push({ id: v.uuid, name: v.ncc_driver_name, phone: v.ncc_driver_phone || null, token: null, vehicle: v.display_id, type: 'MANUAL' })
         } else if (v.driver_name) {
-          list.push({ id: v.id, name: v.driver_name, phone: null, token: null, vehicle: v.id, type: 'MANUAL' })
+          list.push({ id: v.uuid, name: v.driver_name, phone: null, token: null, vehicle: v.display_id, type: 'MANUAL' })
         }
       }
       setDrivers(list)
