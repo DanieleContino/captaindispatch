@@ -165,12 +165,11 @@ function CrewInfoMiniModal({ member, locsMap, onClose, currentUser }) {
 }
 
 // ─── Riga crew COVERED ──────────────────────────────────────
-function CoveredRow({ member, trips, locsMap, travelInfo, currentUser, productionId, unreadCount = 0, notesCount = 0 }) {
-  const tc = TC[member.travel_status] || TC.IN
+function CoveredRow({ member, trips, locsMap, travelInfo, currentUser, productionId, unreadCount = 0, notesCount = 0, selectedDate = '' }) {
+  const direction = member.arrival_date === selectedDate ? 'IN' : 'OUT'
+  const tc = TC[direction]
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
-  const dateLabel = member.travel_status === 'IN'
-    ? member.arrival_date
-    : member.departure_date
+  const dateLabel = direction === 'IN' ? member.arrival_date : member.departure_date
 
   return (
     <>
@@ -256,13 +255,12 @@ function CoveredRow({ member, trips, locsMap, travelInfo, currentUser, productio
 }
 
 // ─── Riga crew MISSING ──────────────────────────────────────
-function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, productionId, unreadCount = 0, notesCount = 0 }) {
+function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, productionId, unreadCount = 0, notesCount = 0, selectedDate = '' }) {
   const t = useT()
-  const tc = TC[member.travel_status] || TC.IN
+  const direction = member.arrival_date === selectedDate ? 'IN' : 'OUT'
+  const tc = TC[direction]
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
-  const dateLabel = member.travel_status === 'IN'
-    ? member.arrival_date
-    : member.departure_date
+  const dateLabel = direction === 'IN' ? member.arrival_date : member.departure_date
   const [showInfo, setShowInfo] = useState(false)
 
   return (
@@ -343,12 +341,11 @@ function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, produc
 }
 
 // ─── Riga crew NTN (No Transport Needed) ───────────────────
-function NtnRow({ member, locsMap, travelInfo, currentUser, productionId, unreadCount = 0, notesCount = 0 }) {
+function NtnRow({ member, locsMap, travelInfo, currentUser, productionId, unreadCount = 0, notesCount = 0, selectedDate = '' }) {
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
-  const tc = TC[member.travel_status] || TC.OUT
-  const dateLabel = member.travel_status === 'IN'
-    ? member.arrival_date
-    : member.departure_date
+  const direction = member.arrival_date === selectedDate ? 'IN' : 'OUT'
+  const tc = TC[direction]
+  const dateLabel = direction === 'IN' ? member.arrival_date : member.departure_date
 
   return (
     <>
