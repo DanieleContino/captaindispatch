@@ -6,8 +6,9 @@
 -- Esegui nel Supabase SQL Editor.
 -- ============================================================
 
--- Disabilita trigger temporaneamente (evita errori durante la migration)
-ALTER TABLE trip_passengers DISABLE TRIGGER ALL;
+-- Disabilita solo i nostri trigger (non i system trigger di FK)
+ALTER TABLE trip_passengers DISABLE TRIGGER trg_update_passenger_list;
+ALTER TABLE trip_passengers DISABLE TRIGGER trg_pax_conflict;
 
 -- 1. Aggiungi colonna temporanea uuid
 ALTER TABLE trip_passengers
@@ -124,8 +125,8 @@ CREATE TRIGGER trg_pax_conflict
 AFTER INSERT OR DELETE ON trip_passengers
 FOR EACH ROW EXECUTE FUNCTION update_pax_conflict_flags();
 
--- 10. Riabilita trigger
-ALTER TABLE trip_passengers ENABLE TRIGGER ALL;
+-- I trigger vengono ricreati dal DROP+CREATE sopra, già abilitati
+-- (non serve ENABLE TRIGGER perché DROP+CREATE li ricrea attivi)
 
 -- ============================================================
 -- Verifica finale:
