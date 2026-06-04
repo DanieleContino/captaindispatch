@@ -4485,7 +4485,7 @@ export default function VehiclesPage() {
     setSO(false)
     setActiveTab(tab)
     if (tab === 'rental') { setRentalVehicleSidebarMode('edit'); setRentalVehicleSidebarTarget(v); setRentalVehicleSidebarOpen(true) }
-    else if (tab === 'ncc') { setMode('edit'); setEdit(v); setSO(true) }
+    else if (tab === 'ncc') { setNccVehicleSidebarMode('edit'); setNccVehicleTarget(v); setNccVehicleSidebarOpen(true) }
     else if (tab === 'comodato') { setLoanVehicleSidebarMode('edit'); setLoanVehicleTarget(v); setLoanVehicleSidebarOpen(true) }
     else { setMode('edit'); setEdit(v); setSO(true) }
   }
