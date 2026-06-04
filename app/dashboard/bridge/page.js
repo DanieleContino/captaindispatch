@@ -2751,7 +2751,7 @@ export default function BridgePage() {
       // so that admin tabs (Pending Users, Invite Codes) are visible on first render.
       // productionId is already available via getProductionId(), so Overview always works.
       supabase
-        .from('production_members')
+        .from('user_roles')
         .select('production_id, role, productions(id, name)')
         .eq('user_id', session.user.id)
         .then(({ data }) => {
