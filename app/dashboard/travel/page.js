@@ -1389,6 +1389,35 @@ export default function TravelPage() {
     setMovementUnreadMap(movUnread)
   }, [PRODUCTION_ID])
 
+  const [noMovementsCrew, setNoMovementsCrew] = useState([])
+  const [pendingCrew,     setPendingCrew]     = useState([])
+
+  const loadNoMovementsCrew = useCallback(async () => {
+    if (!PRODUCTION_ID) return
+    const [{ data: staysData }, { data: movData }, { data: crewData }] = await Promise.all([
+      supabase.from('crew_stays').select('crew_id').eq('production_id', PRODUCTION_ID),
+      supabase.from('travel_movements').select('crew_id').eq('production_id', PRODUCTION_ID).not('travel_type', 'in', '("OA","SELF")'),
+      supabase.from('crew').select('uuid, full_name, role, department').eq('production_id', PRODUCTION_ID).eq('person_type', 'CREW').eq('is_local', false).neq('on_location', false),
+    ])
+    const withStays = new Set((staysData || []).map(s => s.crew_id))
+    const withMovs  = new Set((movData   || []).map(m => m.crew_id))
+    const result = (crewData || []).filter(c => withStays.has(c.uuid) && !withMovs.has(c.uuid))
+    setNoMovementsCrew(result)
+  }, [PRODUCTION_ID])
+
+  const loadPendingCrew = useCallback(async () => {
+    if (!PRODUCTION_ID) return
+    const [{ data: crewData }, { data: staysData }, { data: movData }] = await Promise.all([
+      supabase.from('crew').select('uuid, full_name, role, department').eq('production_id', PRODUCTION_ID).eq('person_type', 'CREW').eq('is_local', false).neq('on_location', false),
+      supabase.from('crew_stays').select('crew_id').eq('production_id', PRODUCTION_ID),
+      supabase.from('travel_movements').select('crew_id').eq('production_id', PRODUCTION_ID),
+    ])
+    const withStays = new Set((staysData || []).map(s => s.crew_id))
+    const withMovs  = new Set((movData   || []).map(m => m.crew_id))
+    const pending = (crewData || []).filter(c => !withStays.has(c.uuid) && !withMovs.has(c.uuid))
+    setPendingCrew(pending)
+  }, [PRODUCTION_ID])
+
   // ── Section colors loader ──────────────────────────────────
   const loadSectionColors = useCallback(async () => {
     if (!PRODUCTION_ID) return
@@ -1491,6 +1520,8 @@ export default function TravelPage() {
       loadSectionColors()
       loadData(windowStart, windowEnd)
       loadUnreadMap(user.id)
+      loadNoMovementsCrew()
+      loadPendingCrew()
     }
   }, [user, loadColumnsConfig, loadData])
 
