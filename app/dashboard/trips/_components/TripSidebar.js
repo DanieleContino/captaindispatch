@@ -299,8 +299,17 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       for (let i = 0; i < allLegs.length; i++) {
         const leg     = allLegs[i]
         const legForm = leg.form
-        const legComp = leg.computed
         const legDurMin = parseInt(legForm.duration_min) || null
+        const legTransferClass = leg.transferClass
+        const legArrMin  = timeStrToMin(legForm.arr_time)
+        const legCallMin = timeStrToMin(legForm.call_time)
+        const legComp = leg.computed ?? calcTimes({
+          date:          legForm.date,
+          arrTimeMin:    legArrMin,
+          durationMin:   legDurMin,
+          transferClass: legTransferClass,
+          callMin:       legCallMin,
+        })
         const legVeh  = vehicles.find(v => v.uuid === legForm.vehicle_id)
         const row = {
           production_id:   PRODUCTION_ID,
