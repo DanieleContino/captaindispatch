@@ -663,6 +663,10 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
         }, 300)
       }
 
+    } else if (mode === 'new' && initial?.__fromCrew) {
+      setForm({ ...EMPTY_MOV, crew_id: initial.crew_id || null, full_name_raw: initial.full_name_raw || '' })
+      setCrewSearch(initial.full_name_raw || '')
+      setCrewResults([])
     } else if (mode === 'new' && initial?.__isLeg) {
       setForm({
         travel_date:     initial.travel_date    || '',
