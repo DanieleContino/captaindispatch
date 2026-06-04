@@ -56,9 +56,41 @@ export async function GET() {
       .in('id', prodIds)
     const prodMap = Object.fromEntries((prods || []).map(p => [p.id, p]))
 
+    // Fetch uses per invite (user_roles with invite_code_id)
+    const inviteIds = (invites || []).map(i => i.id)
+    let usesMap = {}
+    if (inviteIds.length > 0) {
+      const { data: usesData } = await supabase
+        .from('user_roles')
+        .select('invite_code_id, user_id, role, created_at')
+        .in('invite_code_id', inviteIds)
+      // Fetch emails from auth.users via service client
+      const service = await createSupabaseServiceClient()
+      const userIds = [...new Set((usesData || []).map(u => u.user_id))]
+      let emailMap = {}
+      if (userIds.length > 0) {
+        const { data: authUsers } = await service.auth.admin.listUsers()
+        emailMap = Object.fromEntries(
+          (authUsers?.users || [])
+            .filter(u => userIds.includes(u.id))
+            .map(u => [u.id, u.email])
+        )
+      }
+      for (const use of (usesData || [])) {
+        if (!usesMap[use.invite_code_id]) usesMap[use.invite_code_id] = []
+        usesMap[use.invite_code_id].push({
+          user_id:    use.user_id,
+          email:      emailMap[use.user_id] || use.user_id,
+          role:       use.role,
+          used_at:    use.created_at,
+        })
+      }
+    }
+
     const enriched = (invites || []).map(inv => ({
       ...inv,
       productions: prodMap[inv.production_id] || null,
+      uses: usesMap[inv.id] || [],
     }))
 
     return NextResponse.json({ invites: enriched })
