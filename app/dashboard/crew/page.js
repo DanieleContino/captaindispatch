@@ -423,21 +423,7 @@ function AccommodationAccordion({ crewId, crewFullName, locations, onCrewDatesUp
 
               {stays.map(s => {
                 const hotel = locations.find(l => l.uuid === s.hotel_id)
-                if (editId === s.id) {
-                  return (
-                    <div key={s.id}>
-                     <StayForm
-                        form={editForm}
-                        setF={setEditForm}
-                        onSave={() => handleEditSave(s.id)}
-                        onCancel={() => setEditId(null)}
-                        saveLabel="✓ Save Stay"
-                        saving={saving}
-                        hotelLocations={hotelLocations}
-                      />
-                    </div>
-                  )
-                }
+                if (editId === s.id) return null
                 const depToday    = isToday(s.departure_date)
                 const depTomorrow = isTomorrow(s.departure_date)
                 return (
@@ -481,7 +467,10 @@ function AccommodationAccordion({ crewId, crewFullName, locations, onCrewDatesUp
                   hotelLocations={hotelLocations}
                 />
               ) : (
-                <button type="button" onClick={() => setAddOpen(true)}
+                <button type="button" onClick={() => {
+                    sessionStorage.setItem('crewSidebarOpenStay', JSON.stringify({ crew_id: crewId, crew_full_name: crewFullName, mode: 'new' }))
+                    router.push('/dashboard/accommodation')
+                  }}
                   style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #86efac', background: 'transparent', color: '#16a34a', fontSize: '11px', fontWeight: '700', cursor: 'pointer', marginTop: stays.length > 0 ? '4px' : '0' }}>
                   + Add Stay
                 </button>
