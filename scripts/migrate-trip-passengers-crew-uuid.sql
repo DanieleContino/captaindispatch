@@ -6,15 +6,16 @@
 -- Esegui nel Supabase SQL Editor.
 -- ============================================================
 
+-- Disabilita trigger temporaneamente (evita errori durante la migration)
+ALTER TABLE trip_passengers DISABLE TRIGGER ALL;
+
 -- 1. Aggiungi colonna temporanea uuid
 ALTER TABLE trip_passengers
   ADD COLUMN IF NOT EXISTS crew_uuid uuid;
 
--- 2. Popola crew_uuid dal mapping crew.id → crew.uuid
-UPDATE trip_passengers tp
-SET crew_uuid = c.uuid
-FROM crew c
-WHERE c.id = tp.crew_id;
+-- 2. Copia direttamente (crew_id contiene già valori uuid come stringa)
+UPDATE trip_passengers
+SET crew_uuid = crew_id::uuid;
 
 -- 3. Rimuovi FK e colonna vecchia, rinomina la nuova
 ALTER TABLE trip_passengers
@@ -47,7 +48,7 @@ ALTER TABLE trip_passengers
   UNIQUE (trip_row_id, crew_id);
 
 -- 7. Aggiorna funzione trigger update_trip_passenger_list
---    (JOIN crew c ON tp.crew_id = c.id  →  c.uuid)
+--    (JOIN crew c ON tp.crew_id = c.uuid invece di c.id)
 CREATE OR REPLACE FUNCTION update_trip_passenger_list()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -75,20 +76,18 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 8. Aggiorna funzione trigger update_pax_conflict_flags
---    (affected_crew_id text → uuid, JOIN crew c ON c.uuid)
+--    (affected_crew_id uuid, JOIN crew c ON c.uuid)
 CREATE OR REPLACE FUNCTION update_pax_conflict_flags()
 RETURNS TRIGGER AS $$
 DECLARE
   affected_crew_id uuid := COALESCE(NEW.crew_id, OLD.crew_id);
 BEGIN
-  -- Azzera flag per i trip coinvolti da questo crew
   UPDATE trips SET pax_conflict_flag = NULL
   WHERE id IN (
     SELECT tp.trip_row_id FROM trip_passengers tp
     WHERE tp.crew_id = affected_crew_id
   );
 
-  -- Ricalcola conflitti reali
   UPDATE trips t1 SET pax_conflict_flag = conflict_names
   FROM (
     SELECT tp1.trip_row_id AS t1_id,
@@ -99,7 +98,7 @@ BEGIN
      AND tp1.trip_row_id != tp2.trip_row_id
     JOIN trips tt1 ON tp1.trip_row_id = tt1.id
     JOIN trips tt2 ON tp2.trip_row_id = tt2.id
-    JOIN crew c    ON tp1.crew_id = c.uuid
+    JOIN crew c ON tp1.crew_id = c.uuid
     WHERE tp1.crew_id = affected_crew_id
       AND tt1.date = tt2.date
       AND tt1.start_dt IS NOT NULL AND tt2.start_dt IS NOT NULL
@@ -114,7 +113,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 9. Ricrea i trigger (DROP + CREATE per sicurezza)
+-- 9. Ricrea i trigger
 DROP TRIGGER IF EXISTS trg_update_passenger_list ON trip_passengers;
 CREATE TRIGGER trg_update_passenger_list
 AFTER INSERT OR DELETE ON trip_passengers
@@ -125,10 +124,13 @@ CREATE TRIGGER trg_pax_conflict
 AFTER INSERT OR DELETE ON trip_passengers
 FOR EACH ROW EXECUTE FUNCTION update_pax_conflict_flags();
 
+-- 10. Riabilita trigger
+ALTER TABLE trip_passengers ENABLE TRIGGER ALL;
+
 -- ============================================================
--- Verifica finale
+-- Verifica finale:
 -- SELECT column_name, data_type
 -- FROM information_schema.columns
 -- WHERE table_name = 'trip_passengers' AND column_name = 'crew_id';
--- → dovrebbe mostrare: crew_id | uuid
+-- Risultato atteso: crew_id | uuid
 -- ============================================================
