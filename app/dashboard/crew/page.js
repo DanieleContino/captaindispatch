@@ -294,8 +294,9 @@ function StayForm({ form, setF, onSave, onCancel, saveLabel, saving, hotelLocati
 }
 
 // ─── Accommodation Accordion ────────────────────────────────
-function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
+function AccommodationAccordion({ crewId, crewFullName, locations, onCrewDatesUpdated }) {
   const PRODUCTION_ID = getProductionId()
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [stays, setStays] = useState([])
@@ -447,7 +448,10 @@ function AccommodationAccordion({ crewId, locations, onCrewDatesUpdated }) {
                       <span style={{ marginLeft: '6px', color: depToday || depTomorrow ? '#dc2626' : '#64748b', fontWeight: depToday || depTomorrow ? '700' : '400' }}>dep {fmtDate(s.departure_date)}</span>
                     </div>
                     <button type="button"
-                      onClick={() => { setEditId(s.id); setEditForm({ hotel_id: s.hotel_id || '', arrival_date: s.arrival_date, departure_date: s.departure_date }) }}
+                      onClick={() => {
+                        sessionStorage.setItem('crewSidebarOpenStay', JSON.stringify({ stay_id: s.id, mode: 'edit' }))
+                        router.push('/dashboard/accommodation')
+                      }}
                       style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#15803d', flexShrink: 0 }}>
                       ✎
                     </button>
