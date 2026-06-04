@@ -1116,7 +1116,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   async function searchCrew(q) {
     if (!q || q.length < 2 || !PRODUCTION_ID) { setCrewResults([]); return }
     setCrewSearching(true)
-    const { data } = await supabase.from('crew').select('uuid, display_id, full_name, role, department').eq('production_id', PRODUCTION_ID).ilike('full_name', `%${q}%`).limit(8)
+    const { data } = await supabase.from('crew').select('uuid, display_id, full_name, role, department, is_local').eq('production_id', PRODUCTION_ID).ilike('full_name', `%${q}%`).limit(8)
     setCrewResults(data || []); setCrewSearching(false)
   }
 
@@ -1429,7 +1429,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
                       onMouseLeave={e => e.currentTarget.style.background = 'white'}>
                       <span style={{ fontWeight: '700', color: '#0f172a' }}>{c.full_name}</span>
                       {c.role && <span style={{ fontSize: '11px', color: '#64748b' }}>{c.role}</span>}
-                      {c.department && <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{c.department}</span>}
+                      {c.department && <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{c.department}</span>}{c.is_local && <span style={{ fontSize: '10px', color: '#b45309', background: '#fef3c7', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>LOCAL</span>}
                     </div>
                   ))}
                 </div>
