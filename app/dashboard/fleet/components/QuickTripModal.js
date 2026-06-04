@@ -184,13 +184,13 @@ function LocationPicker({ locations, onSelect, onClose, title }) {
           {/* Saved locations */}
           {filtered.map(l => (
             <div
-              key={l.id}
+              key={l.uuid}
             onClick={() => onSelect({ id: l.display_id, uuid: l.uuid, name: l.name, lat: l.lat, lng: l.lng, is_temp: false })}
               style={{ padding: '12px 16px', borderBottom: '1px solid #f8fafc', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
               onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
               onMouseLeave={e => e.currentTarget.style.background = 'white'}
             >
-              <span style={{ fontSize: '16px', flexShrink: 0 }}>{locIcon(l.id)}</span>
+              <span style={{ fontSize: '16px', flexShrink: 0 }}>{locIcon(l.display_id)}</span>
               <span style={{ fontSize: '13px', fontWeight: '500', color: '#0f172a' }}>{l.name}</span>
             </div>
           ))}
@@ -218,9 +218,9 @@ function AIBuilderTab({ vehicle, productionId, date, onDateChange, onCreated, on
       const legs = prev.legs.map((leg, i) => {
         if (i !== legIndex) return leg
         if (field === 'pickup') {
-          return { ...leg, pickup_id: loc.id || ('TEMP_' + Date.now()), pickup_name: loc.name, pickup_custom: false, _pickup_temp: loc.is_temp ? loc : null }
+          return { ...leg, pickup_id: loc.uuid || ('TEMP_' + Date.now()), pickup_name: loc.name, pickup_custom: false, _pickup_temp: loc.is_temp ? loc : null }
         } else {
-          return { ...leg, dropoff_id: loc.id || ('TEMP_' + Date.now()), dropoff_name: loc.name, dropoff_custom: false, _dropoff_temp: loc.is_temp ? loc : null }
+          return { ...leg, dropoff_id: loc.uuid || ('TEMP_' + Date.now()), dropoff_name: loc.name, dropoff_custom: false, _dropoff_temp: loc.is_temp ? loc : null }
         }
       })
       return { ...prev, legs }
@@ -666,7 +666,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
     const updater = list === 'pickup' ? setPickupRows : setDropoffRows
     updater(prev => prev.map((row, i) => i !== index ? row : {
       ...row,
-      locId:   loc.is_temp ? null : (loc.uuid || loc.id),
+      locId:   loc.is_temp ? null : loc.uuid,
       locName: loc.name,
       locTemp: loc.is_temp ? loc : null,
     }))
@@ -947,14 +947,14 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
           <div>
             <label style={lbl}>Pickup</label>
             <button onClick={() => setPicker('pickup')} style={{ width: '100%', padding: '11px 14px', border: `1px solid ${pickupLoc ? '#2563eb' : '#e2e8f0'}`, borderRadius: '10px', fontSize: '14px', color: pickupLoc ? '#0f172a' : '#94a3b8', background: pickupLoc ? '#eff6ff' : 'white', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontWeight: pickupLoc ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>{pickupLoc ? `${locIcon(pickupLoc.id)} ${pickupLoc.name}` : 'Select pickup...'}</span>
+              <span>{pickupLoc ? `${locIcon(pickupLoc.display_id)} ${pickupLoc.name}` : 'Select pickup...'}</span>
               <span style={{ color: '#94a3b8', fontSize: '12px' }}>▾</span>
             </button>
           </div>
           <div>
             <label style={lbl}>Dropoff</label>
             <button onClick={() => setPicker('dropoff')} style={{ width: '100%', padding: '11px 14px', border: `1px solid ${dropoffLoc ? '#2563eb' : '#e2e8f0'}`, borderRadius: '10px', fontSize: '14px', color: dropoffLoc ? '#0f172a' : '#94a3b8', background: dropoffLoc ? '#eff6ff' : 'white', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontWeight: dropoffLoc ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>{dropoffLoc ? `${locIcon(dropoffLoc.id)} ${dropoffLoc.name}` : 'Select dropoff...'}</span>
+              <span>{dropoffLoc ? `${locIcon(dropoffLoc.display_id)} ${dropoffLoc.name}` : 'Select dropoff...'}</span>
               <span style={{ color: '#94a3b8', fontSize: '12px' }}>▾</span>
             </button>
           </div>
@@ -1062,7 +1062,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
               <div>
                 <label style={lbl}>Dropoff comune</label>
                 <button onClick={() => setPicker('dropoff')} style={{ width: '100%', padding: '11px 14px', border: `1px solid ${dropoffLoc ? '#2563eb' : '#e2e8f0'}`, borderRadius: '10px', fontSize: '14px', color: dropoffLoc ? '#0f172a' : '#94a3b8', background: dropoffLoc ? '#eff6ff' : 'white', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontWeight: dropoffLoc ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{dropoffLoc ? `${locIcon(dropoffLoc.id)} ${dropoffLoc.name}` : 'Select dropoff...'}</span>
+                  <span>{dropoffLoc ? `${locIcon(dropoffLoc.display_id)} ${dropoffLoc.name}` : 'Select dropoff...'}</span>
                   <span style={{ color: '#94a3b8', fontSize: '12px' }}>▾</span>
                 </button>
               </div>
@@ -1076,7 +1076,7 @@ function ManualTab({ vehicle, productionId, date, onDateChange, onCreated, onClo
               <div>
                 <label style={lbl}>Pickup comune</label>
                 <button onClick={() => setPicker('pickup')} style={{ width: '100%', padding: '11px 14px', border: `1px solid ${pickupLoc ? '#2563eb' : '#e2e8f0'}`, borderRadius: '10px', fontSize: '14px', color: pickupLoc ? '#0f172a' : '#94a3b8', background: pickupLoc ? '#eff6ff' : 'white', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontWeight: pickupLoc ? '700' : '400', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{pickupLoc ? `${locIcon(pickupLoc.id)} ${pickupLoc.name}` : 'Select pickup...'}</span>
+                  <span>{pickupLoc ? `${locIcon(pickupLoc.display_id)} ${pickupLoc.name}` : 'Select pickup...'}</span>
                   <span style={{ color: '#94a3b8', fontSize: '12px' }}>▾</span>
                 </button>
               </div>
