@@ -733,7 +733,10 @@ function TravelAccordion({ crewId, crewFullName }) {
                   saving={saving}
                 />
               ) : (
-                <button type="button" onClick={() => setAddOpen(true)}
+                <button type="button" onClick={() => {
+                    sessionStorage.setItem('crewSidebarOpenMovement', JSON.stringify({ crew_id: crewId, crew_full_name: crewFullName, mode: 'new' }))
+                    router.push('/dashboard/travel')
+                  }}
                   style={{ width: '100%', padding: '6px', borderRadius: '7px', border: '1px dashed #c4b5fd', background: 'transparent', color: '#6d28d9', fontSize: '11px', fontWeight: '700', cursor: 'pointer', marginTop: movements.length > 0 ? '4px' : '0' }}>
                   + Add Movement
                 </button>
@@ -1630,7 +1633,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                     }))
                   }}
                 />
-                <TravelAccordion key={`travel-${initial.display_id}-${editKey}`} crewId={initial.uuid} />
+                <TravelAccordion key={`travel-${initial.display_id}-${editKey}`} crewId={initial.uuid} crewFullName={initial.full_name} />
                 <FamilyAccordion key={`family-${initial.display_id}-${editKey}`} crewId={initial.uuid} personType={form.person_type} linkedCrewId={form.linked_crew_id} />
                 <NotesPanel accordion key={`notes-${initial.display_id}-${editKey}`} crewId={initial.uuid} productionId={PRODUCTION_ID} currentUser={currentUser} onNotesChanged={onNotesChanged} />
               </>
