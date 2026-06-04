@@ -1003,7 +1003,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
                 onChange={e => { setCrewSearch(e.target.value); if (!e.target.value) set('crew_id', null) }}
                 style={inp} placeholder="Type name to search crew..." autoComplete="off" />
               {crewSearching && <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Searching...</div>}
-              {crewResults.length > 0 && (
+              {crewResults.length > 0 && !form.crew_id && (
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '4px', overflow: 'hidden' }}>
                   {crewResults.map(c => (
                     <div key={c.uuid} onClick={() => { set('crew_id', c.uuid); set('full_name_raw', c.full_name); setCrewSearch(c.full_name); setCrewResults([]) }}
