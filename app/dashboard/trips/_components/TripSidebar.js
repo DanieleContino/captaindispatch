@@ -136,7 +136,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 
   useEffect(() => {
     if (crewLookupQ.length < 2 || !PRODUCTION_ID) { setCrewLookupResults([]); return }
-    supabase.from('crew').select('uuid,id,full_name,department,role')
+    supabase.from('crew').select('uuid,display_id,full_name,department,role')
       .eq('production_id', PRODUCTION_ID)
       .or(`full_name.ilike.%${crewLookupQ}%,department.ilike.%${crewLookupQ}%`)
       .limit(8)

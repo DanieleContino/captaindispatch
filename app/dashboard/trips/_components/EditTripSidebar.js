@@ -188,7 +188,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         const localToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
         const tripDate = isNewLeg ? (form.date || localToday()) : (trip?.date || localToday())
         let q = supabase.from('crew_stays')
-          .select('crew_id, departure_date, crew!inner(uuid, id, full_name, department, no_transport_needed, hotel_id, hotel_status)')
+          .select('crew_id, departure_date, crew!inner(uuid, full_name, department, no_transport_needed, hotel_id, hotel_status)')
           .eq('production_id', PRODUCTION_ID)
         if (tc === 'ARRIVAL')        q = q.eq('hotel_id', legHotelDropoff).eq('arrival_date', tripDate)
         else if (tc === 'DEPARTURE') q = q.eq('hotel_id', legHotelPickup).eq('departure_date', tripDate)
