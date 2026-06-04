@@ -2078,7 +2078,7 @@ export default function AccommodationPage() {
     try {
       const payload = JSON.parse(raw)
       if (payload.mode === 'new') {
-        openNew({ __fromMovement: false, crew_id: null, crew_full_name: payload.crew_full_name || '' })
+        openNew({ __fromMovement: true, crew_id: payload.crew_id || null, crew_full_name: payload.crew_full_name || '' })
       } else if (payload.mode === 'edit' && payload.stay_id) {
         supabase.from('crew_stays').select(`${SELECT_FIELDS}`).eq('id', payload.stay_id).single().then(({ data }) => {
           if (data) openEdit(data, null)
