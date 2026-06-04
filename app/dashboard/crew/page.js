@@ -928,7 +928,7 @@ function WarningModal({ warnings, crewName, onClose }) {
 }
 
 // ─── Crew card griglia ───────────────────────────────────────
-function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0, isLocal = false, familyCount = 0, onFamilyClick, onNotesClick, warnings = [] }) {
+function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChange, onEdit, onContactSaved, selected, onToggleSelect, onDelete, travelInfo = [], stays = [], unreadCount = 0, notesCount = 0, isLocal = false, familyCount = 0, onFamilyClick, onNotesClick, warnings = [], driverVehicles = [], paxVehicles = [] }) {
   const t = useT()
   const tc = TC[member.travel_status] || TC.PRESENT
   const hc = HC[member.hotel_status]  || HC.PENDING
@@ -1110,6 +1110,47 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
           </div>
         )}
       </div>
+
+      {/* Transport — shown only when NTN, driver, or preferred passenger */}
+      {(member.no_transport_needed || driverVehicles.length > 0 || paxVehicles.length > 0) && (
+        <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>🚗 Transport</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+            {member.no_transport_needed && (
+              <span title="Self Drive / No Transport Needed — excluded from hub pickup/dropoff assignments."
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '5px', fontSize: '10px', whiteSpace: 'nowrap', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontWeight: '700', cursor: 'help' }}>
+                🚐 NTN
+              </span>
+            )}
+            {driverVehicles.map((v, idx) => {
+              const typeIcon = v.is_rental ? '🔑' : v.is_ncc ? '🏢' : '🚐'
+              const label = v.is_rental
+                ? [v.rental_brand, v.rental_model].filter(Boolean).join(' ') || v.sign_code || v.vehicle_type
+                : v.sign_code || v.vehicle_type
+              const dates = v.is_rental && v.rental_start
+                ? ` · ${new Date(v.rental_start + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}→${v.rental_end ? new Date(v.rental_end + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '?'}`
+                : ''
+              const tooltip = `Driver of ${v.vehicle_type}${v.sign_code ? ' · Sign: ' + v.sign_code : ''}${v.license_plate ? ' · ' + v.license_plate : ''}${dates}`
+              return (
+                <span key={idx} title={tooltip}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '5px', fontSize: '10px', whiteSpace: 'nowrap', background: v.is_rental ? '#fefce8' : v.is_ncc ? '#f0f9ff' : '#eff6ff', border: `1px solid ${v.is_rental ? '#fde68a' : v.is_ncc ? '#bae6fd' : '#bfdbfe'}`, color: v.is_rental ? '#a16207' : v.is_ncc ? '#0369a1' : '#1d4ed8', cursor: 'help' }}>
+                  {typeIcon} DRIVER · {label}{dates}
+                </span>
+              )
+            })}
+            {paxVehicles.map((v, idx) => {
+              const label = v.sign_code || v.vehicle_type
+              const tooltip = `Preferred passenger on ${v.vehicle_type}${v.sign_code ? ' · Sign: ' + v.sign_code : ''}${v.preferred_dept ? ' · Dept: ' + v.preferred_dept : ''}`
+              return (
+                <span key={idx} title={tooltip}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '5px', fontSize: '10px', whiteSpace: 'nowrap', background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d', cursor: 'help' }}>
+                  🚌 PAX · {label}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px', display: 'flex', gap: '5px', alignItems: 'center' }}>
@@ -1630,6 +1671,8 @@ export default function CrewPage() {
 
   const [travelMap, setTravelMap]       = useState({})
   const [staysMap,  setStaysMap]        = useState({})
+  const [driverVehicleMap, setDriverVehicleMap] = useState({})
+  const [paxVehicleMap,    setPaxVehicleMap]    = useState({})
   const [unreadMap, setUnreadMap]       = useState({})
   const [notesMap,  setNotesMap]        = useState({})  // total notes per crew_id (incl. authored by self)
   const [userRole,  setUserRole]        = useState('CAPTAIN')
@@ -1713,7 +1756,7 @@ export default function CrewPage() {
   const loadCrew = useCallback(async () => {
     if (!PRODUCTION_ID) return
     setLoading(true)
-    const [{ data: vData }, { data: travelData }, { data: staysData }] = await Promise.all([
+    const [{ data: vData }, { data: travelData }, { data: staysData }, { data: vehiclesData }] = await Promise.all([
       supabase.from('crew').select('*').eq('production_id', PRODUCTION_ID).order('department', { nullsLast: true }).order('full_name'),
       supabase
         .from('travel_movements')
@@ -1725,6 +1768,11 @@ export default function CrewPage() {
         .select('crew_id, hotel_id, arrival_date, departure_date')
         .eq('production_id', PRODUCTION_ID)
         .order('arrival_date', { ascending: true }),
+      supabase
+        .from('vehicles')
+        .select('uuid, display_id, vehicle_type, sign_code, license_plate, driver_crew_id, preferred_crew_ids, is_rental, is_ncc, rental_brand, rental_model, rental_start, rental_end, preferred_dept, ncc_driver_name')
+        .eq('production_id', PRODUCTION_ID)
+        .eq('active', true),
     ])
     // Auto-aggiorna travel_status basato su arrival_date / departure_date
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
@@ -1783,6 +1831,23 @@ export default function CrewPage() {
       sMap[s.crew_id].push(s)
     }
     setStaysMap(sMap)
+    // Build vehicle maps: driverVehicleMap + paxVehicleMap
+    const dvMap = {}
+    const pvMap = {}
+    for (const v of vehiclesData || []) {
+      if (v.driver_crew_id) {
+        if (!dvMap[v.driver_crew_id]) dvMap[v.driver_crew_id] = []
+        dvMap[v.driver_crew_id].push(v)
+      }
+      if (Array.isArray(v.preferred_crew_ids)) {
+        for (const cid of v.preferred_crew_ids) {
+          if (!pvMap[cid]) pvMap[cid] = []
+          pvMap[cid].push(v)
+        }
+      }
+    }
+    setDriverVehicleMap(dvMap)
+    setPaxVehicleMap(pvMap)
     // Escludi stays di crew is_local o no_transport_needed dai nuovi warning
     const excludedCrewIds = new Set(
       (vData || [])
@@ -2172,7 +2237,7 @@ export default function CrewPage() {
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px' }}>
                   {members.map(m => (
-                    <CrewCard key={m.uuid} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.uuid)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.uuid] || []} stays={staysMap[m.uuid] || []} unreadCount={unreadMap[m.uuid] || 0} notesCount={notesMap[m.uuid] || 0} isLocal={m.is_local || false} familyCount={familyCountMap[m.uuid] || 0} onFamilyClick={() => openFamilyModal(m.uuid, m.full_name)} onNotesClick={m => setNotesModalTarget(m)} warnings={warningsMap[m.uuid] || []} />
+                  <CrewCard key={m.uuid} member={m} locations={locsMap} onStatusChange={handleStatusChange} onNTNChange={handleNTNChange} onRemoteChange={handleRemoteChange} onEdit={openEdit} onContactSaved={handleContactSaved} selected={selectedIds.includes(m.uuid)} onToggleSelect={toggleSelect} onDelete={handleDeleteSingle} travelInfo={travelMap[m.uuid] || []} stays={staysMap[m.uuid] || []} unreadCount={unreadMap[m.uuid] || 0} notesCount={notesMap[m.uuid] || 0} isLocal={m.is_local || false} familyCount={familyCountMap[m.uuid] || 0} onFamilyClick={() => openFamilyModal(m.uuid, m.full_name)} onNotesClick={m => setNotesModalTarget(m)} warnings={warningsMap[m.uuid] || []} driverVehicles={driverVehicleMap[m.uuid] || []} paxVehicles={paxVehicleMap[m.uuid] || []} />
                   ))}
                 </div>
               </div>
