@@ -144,20 +144,20 @@ export default function QrCodesPage() {
             {tab === 'vehicles' && (
               <div className="qr-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'14px' }}>
                 {vehicles.filter(v => v.active !== false).map(v => {
-                  const scanUrl = `${base}/scan?qr=VH:${v.id}`
-                  const wrapUrl = `${base}/wrap-trip?vehicle=${v.id}`
+                  const scanUrl = `${base}/scan?qr=VH:${v.display_id}`
+                  const wrapUrl = `${base}/wrap-trip?vehicle=${v.display_id}`
                   return (
-                    <div key={v.id} className="qr-card" style={{ background:'white', borderRadius:'12px', padding:'20px', border:'1px solid #e2e8f0', display:'flex', gap:'16px', alignItems:'flex-start', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' }}>
+                    <div key={v.uuid} className="qr-card" style={{ background:'white', borderRadius:'12px', padding:'20px', border:'1px solid #e2e8f0', display:'flex', gap:'16px', alignItems:'flex-start', boxShadow:'0 1px 4px rgba(0,0,0,0.06)' }}>
                       {/* QR Image */}
                       <div style={{ flexShrink:0 }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={qrImgUrl(scanUrl)} alt={`QR ${v.id}`}
+                        <img src={qrImgUrl(scanUrl)} alt={`QR ${v.display_id}`}
                           width={80} height={80}
                           style={{ display:'block', borderRadius:'6px', border:'1px solid #f1f5f9' }} />
                       </div>
                       {/* Info */}
                       <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:'17px', fontWeight:'900', color:'#0f172a', fontFamily:'monospace', marginBottom:'3px' }}>{v.id}</div>
+                        <div style={{ fontSize:'17px', fontWeight:'900', color:'#0f172a', fontFamily:'monospace', marginBottom:'3px' }}>{v.display_id}</div>
                         {v.sign_code && <div style={{ fontSize:'12px', fontWeight:'700', color:'#2563eb', marginBottom:'2px' }}>{v.sign_code}</div>}
                         {v.driver_name && <div style={{ fontSize:'11px', color:'#64748b', marginBottom:'2px' }}>👤 {v.driver_name}</div>}
                         <div style={{ fontSize:'10px', color:'#94a3b8', marginBottom:'8px' }}>
@@ -192,11 +192,11 @@ export default function QrCodesPage() {
             {tab === 'crew' && (
               <div className="qr-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:'12px' }}>
                 {crew.map(c => {
-                  const scanUrl = `${base}/scan?qr=CR:${c.id}`
+                  const scanUrl = `${base}/scan?qr=CR:${c.display_id}`
                   return (
-                    <div key={c.id} className="qr-card" style={{ background:'white', borderRadius:'10px', padding:'14px 16px', border:'1px solid #e2e8f0', display:'flex', gap:'12px', alignItems:'flex-start', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
+                    <div key={c.uuid} className="qr-card" style={{ background:'white', borderRadius:'10px', padding:'14px 16px', border:'1px solid #e2e8f0', display:'flex', gap:'12px', alignItems:'flex-start', boxShadow:'0 1px 3px rgba(0,0,0,0.05)' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={qrImgUrl(scanUrl, 200)} alt={`QR ${c.id}`}
+                      <img src={qrImgUrl(scanUrl, 200)} alt={`QR ${c.display_id}`}
                         width={90} height={90}
                         style={{ display:'block', borderRadius:'6px', flexShrink:0 }} />
                       <div style={{ flex:1, minWidth:0 }}>
