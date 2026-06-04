@@ -196,11 +196,11 @@ function CoveredRow({ member, trips, locsMap, travelInfo, currentUser, productio
             <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 3px', border: '1px solid #fcd34d', lineHeight: 1 }}>💬</span>
           )}
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
-            {member.travel_status === 'IN' ? '✈ IN' : '✈ OUT'}
+            {direction === 'IN' ? '✈ IN' : '✈ OUT'}
           </span>
           {dateLabel && (
             <span style={{ fontSize: '10px', color: '#64748b' }}>
-              {member.travel_status === 'IN' ? '🏨' : '🧳'} {dateLabel}
+              {direction === 'IN' ? '🏨' : '🧳'} {dateLabel}
             </span>
           )}
         </div>
@@ -294,11 +294,11 @@ function MissingRow({ member, locsMap, onAssign, travelInfo, currentUser, produc
           )}
           <span style={{ fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{member.department || 'N/A'}</span>
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
-            {member.travel_status === 'IN' ? '✈ IN' : '✈ OUT'}
+            {direction === 'IN' ? '✈ IN' : '✈ OUT'}
           </span>
           {dateLabel && (
             <span style={{ fontSize: '10px', color: '#64748b' }}>
-              {member.travel_status === 'IN' ? '🏨' : '🧳'} {dateLabel}
+              {direction === 'IN' ? '🏨' : '🧳'} {dateLabel}
             </span>
           )}
           <span style={{ fontSize: '10px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: '5px', border: '1px solid #fecaca' }}>MISSING</span>
@@ -371,11 +371,11 @@ function NtnRow({ member, locsMap, travelInfo, currentUser, productionId, unread
             <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#92400e', background: '#fef3c7', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 3px', border: '1px solid #fcd34d', lineHeight: 1 }}>💬</span>
           )}
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '1px 8px', borderRadius: '999px', background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
-            {member.travel_status === 'IN' ? '✈ IN' : '✈ OUT'}
+            {direction === 'IN' ? '✈ IN' : '✈ OUT'}
           </span>
           {dateLabel && (
             <span style={{ fontSize: '10px', color: '#64748b' }}>
-              {member.travel_status === 'IN' ? '🏨' : '🧳'} {dateLabel}
+              {direction === 'IN' ? '🏨' : '🧳'} {dateLabel}
             </span>
           )}
           <span style={{ fontSize: '10px', fontWeight: '800', color: '#7c3aed', background: '#ede9fe', padding: '1px 7px', borderRadius: '5px', border: '1px solid #ddd6fe' }}>
@@ -1041,7 +1041,7 @@ export default function HubCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {covered.map(c => (
-                    <CoveredRow key={c.uuid} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} />
+                    <CoveredRow key={c.uuid} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} travelInfo={travelMap[c.uuid] || []} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: 'CAPTAIN' } : null} productionId={PRODUCTION_ID} unreadCount={unreadMap[c.uuid] || 0} notesCount={notesMap[c.uuid] || 0} selectedDate={date} />
                   ))}
                 </div>
               </div>
