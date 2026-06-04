@@ -1902,7 +1902,7 @@ export default function CrewPage() {
     if (filterDept   !== 'ALL' && ((c.department || '').trim().toUpperCase() || 'NO DEPT') !== filterDept) return false
     if (search) {
       const q = search.toLowerCase()
-      if (!c.full_name.toLowerCase().includes(q) && !(c.department || '').toLowerCase().includes(q) && !(c.id || '').toLowerCase().includes(q)) return false
+      if (!c.full_name.toLowerCase().includes(q) && !(c.department || '').toLowerCase().includes(q) && !(c.display_id || '').toLowerCase().includes(q)) return false
     }
     return true
   })
