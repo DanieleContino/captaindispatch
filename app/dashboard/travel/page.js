@@ -1294,7 +1294,7 @@ export default function TravelPage() {
   const [movementNotesMap,  setMovementNotesMap]   = useState({})
   const [movementUnreadMap, setMovementUnreadMap]  = useState({})
 
-  function openNew()   { setSidebarMode('new');  setSidebarTarget(null); setSidebarOpen(true) }
+  function openNew(crewPayload)   { setSidebarMode('new');  setSidebarTarget(crewPayload ? { __fromCrew: true, crew_id: crewPayload.crew_id || null, full_name_raw: crewPayload.crew_full_name || '' } : null); setSidebarOpen(true) }
   function openEdit(m, focusField) { setSidebarMode('edit'); setSidebarTarget({ ...m, __focusField: focusField || null }); setSidebarOpen(true) }
 
   function openAddLeg(prevMovement) {
@@ -1489,6 +1489,22 @@ export default function TravelPage() {
       loadUnreadMap(user.id)
     }
   }, [user, loadColumnsConfig, loadData])
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem('crewSidebarOpenMovement')
+    if (!raw) return
+    sessionStorage.removeItem('crewSidebarOpenMovement')
+    try {
+      const payload = JSON.parse(raw)
+      if (payload.mode === 'new') {
+        openNew({ crew_id: payload.crew_id || null, crew_full_name: payload.crew_full_name || '' })
+      } else if (payload.mode === 'edit' && payload.movement_id) {
+        supabase.from('travel_movements').select(`${SELECT_FIELDS}`).eq('id', payload.movement_id).single().then(({ data }) => {
+          if (data) openEdit(data, null)
+        })
+      }
+    } catch (e) { /* ignore */ }
+  }, [])
 
   // ── Reload when window changes ─────────────────────────────
   useEffect(() => {
