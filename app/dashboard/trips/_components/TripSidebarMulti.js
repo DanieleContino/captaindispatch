@@ -203,16 +203,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
             durMin = routeData?.duration_min || null
           }
 
-          const pickupMin = (() => {
-            const base = timeStrToMin(pickupTime) || timeStrToMin(callTime)
-            if (base === null) return null
-            if (i === 0) return base
-            let total = base
-            for (let j = 0; j < i; j++) {
-              total += legDurations[points[j].locId + '_' + points[j + 1].locId] || 10
-            }
-            return total
-          })()
+          const pickupMin = i === 0 ? (timeStrToMin(pickupTime) || timeStrToMin(callTime) || null) : null
 
           const [y, mo, dd] = date.split('-').map(Number)
           const startDt = pickupMin !== null
