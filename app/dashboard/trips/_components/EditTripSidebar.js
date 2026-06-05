@@ -628,8 +628,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {(form.pickup_id && form.dropoff_id) && (
-              <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{transferClass}</span>
+            {(form.pickup_id && form.dropoff_id) && !(group && group.length > 1) && (
+              <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{transferClass === 'STANDARD' ? 'TRF' : transferClass}</span>
             )}
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
           </div>
@@ -640,14 +640,14 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
             {/* Leg Selector */}
             {open && (
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '8px 18px', background: '#0f2340', borderBottom: '1px solid rgba(255,255,255,0.08)', marginLeft: '-18px', marginRight: '-18px', marginTop: '-16px', marginBottom: '4px' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '8px 18px', background: '#0f2340', borderBottom: '1px solid rgba(255,255,255,0.08)', marginLeft: '-18px', marginRight: '-18px', marginTop: '-16px', marginBottom: '12px' }}>
                 {[...(group || [initial].filter(Boolean)), ...extraLegs].map((leg, i) => {
                   const isNew = extraLegs.some(e => e.id === leg.id)
                   const label = i === 0 ? 'Stop A' : `Stop ${String.fromCharCode(65 + i)}${isNew ? ' ✦' : ''}`
                   const isActive = activeLeg?.id === leg.id
                   return (
                     <button key={leg.id} type="button" onClick={() => setActiveLeg(leg)}
-                      style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '11px', fontWeight: isActive ? 600 : 400, background: isActive ? '#534AB7' : 'transparent', color: isActive ? '#fff' : '#888', border: isActive ? '0.5px solid #534AB7' : '0.5px solid #d0d0d0', cursor: 'pointer' }}>
+                      style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '11px', fontWeight: isActive ? 700 : 400, background: isActive ? 'white' : 'transparent', color: isActive ? '#0f2340' : 'rgba(255,255,255,0.7)', border: isActive ? 'none' : '0.5px solid rgba(255,255,255,0.3)', cursor: 'pointer' }}>
                       {label}
                       {isActive && isNew && (
                         <span onClick={e => { e.stopPropagation(); setExtraLegs(prev => prev.filter(l => l.id !== leg.id)); setActiveLeg(group[0]) }}
