@@ -84,7 +84,7 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
             }
             return max
           }, null)
-          const arrMin = (t.call_min != null ? t.call_min : chainArr)
+          const lastEnd = group.reduce((max, leg) => { if (!leg.end_dt) return max; const v = new Date(leg.end_dt).getHours()*60+new Date(leg.end_dt).getMinutes(); return max===null||v>max?v:max }, null); const arrMin = (lastEnd !== null ? lastEnd : t.call_min != null ? t.call_min : chainArr)
           if (arrMin == null || arrMin === earliestPickupMin) return null
           return (
             <div style={{ fontSize: '10px', fontWeight: '700', color: cls.color, marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
