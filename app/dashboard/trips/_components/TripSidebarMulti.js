@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { timeStrToMin, isVehicleAvailableForDate } from '../../../../lib/tripUtils'
 
-export default function TripSidebarMulti({ open, onClose, onSaved, locations, vehicles, serviceTypes, defaultDate, PRODUCTION_ID }) {
+export default function TripSidebarMulti({ open, onClose, onSaved, locations, vehicles, serviceTypes, defaultDate, PRODUCTION_ID, initialTripType }) {
 
   const [tripType,    setTripType]    = useState('MULTI-PICK') // 'MULTI-PICK' | 'MULTI-DROP' | 'MISTO'
   const [date,        setDate]        = useState(defaultDate || '')
@@ -25,7 +25,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
   // Reset on open
   useEffect(() => {
     if (!open) return
-    setTripType('MULTI-PICK')
+    setTripType(initialTripType && initialTripType !== 'SINGLE' ? initialTripType : 'MULTI-PICK')
     setDate(defaultDate || '')
     setTripId('')
     setVehicleId('')
