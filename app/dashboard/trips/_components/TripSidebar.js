@@ -726,21 +726,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
       {open && <div onClick={() => onClose()} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
       <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: isMobile ? '100vw' : `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${isMobile ? '100vw' : SIDEBAR_W + 'px'})`, transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
-        {/* Type selector bar */}
-        <div style={{ padding: '10px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '6px', background: '#0f2340', flexShrink: 0 }}>
-          {[
-            { key: 'SINGLE',     label: '→ Single'     },
-            { key: 'MULTI-PICK', label: '📍 Multi-Pick' },
-            { key: 'MULTI-DROP', label: '📍 Multi-Drop' },
-            { key: 'MISTO',      label: '🔀 Mixed'      },
-          ].map(({ key, label }) => (
-            <button key={key} type="button" onClick={() => setTripMode(key)}
-              style={{ flex: 1, padding: '7px 4px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '800', background: tripMode === key ? 'white' : 'rgba(255,255,255,0.15)', color: tripMode === key ? '#0f2340' : 'rgba(255,255,255,0.8)' }}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>
               {multiMode ? `🔀 Multi-trip` : t.newTrip}
@@ -763,6 +749,21 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             )}
             <button onClick={() => onClose()} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', lineHeight: 1, borderRadius: '6px', padding: '4px 8px' }}>✕</button>
           </div>
+        </div>
+
+        {/* Type selector bar */}
+        <div style={{ padding: '10px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '6px', background: '#0f2340', flexShrink: 0 }}>
+          {[
+            { key: 'SINGLE',     label: '→ Single'     },
+            { key: 'MULTI-PICK', label: '📍 Multi-Pick' },
+            { key: 'MULTI-DROP', label: '📍 Multi-Drop' },
+            { key: 'MISTO',      label: '🔀 Mixed'      },
+          ].map(({ key, label }) => (
+            <button key={key} type="button" onClick={() => setTripMode(key)}
+              style={{ flex: 1, padding: '7px 4px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '800', background: tripMode === key ? 'white' : 'rgba(255,255,255,0.15)', color: tripMode === key ? '#0f2340' : 'rgba(255,255,255,0.8)' }}>
+              {label}
+            </button>
+          ))}
         </div>
 
         <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto' }}>
