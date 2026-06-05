@@ -172,8 +172,8 @@ function TripsPageInner() {
             <button onClick={() => setDate(isoToday())} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', color: '#1d4ed8', touchAction: 'manipulation', whiteSpace: 'nowrap' }}>{t.today}</button>
           </div>
           <div style={{ position: 'sticky', top: '52px', zIndex: 21, background: 'white', borderBottom: '1px solid #e2e8f0', padding: '6px 12px', display: 'flex', gap: '4px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {['ALL', 'ARR', 'DEP', 'STD'].map(s => {
-              const fullMap = { ARR: 'ARRIVAL', DEP: 'DEPARTURE', STD: 'STANDARD' }
+            {['ALL', 'ARR', 'DEP', 'TRF'].map(s => {
+              const fullMap = { ARR: 'ARRIVAL', DEP: 'DEPARTURE', TRF: 'STANDARD' }
               const full = fullMap[s] || s
               const active = filterClass === full || (s === 'ALL' && filterClass === 'ALL')
               const c = CLS[full]
@@ -211,7 +211,7 @@ function TripsPageInner() {
                 { n: trips.length, l: 'total', c: '#374151', bg: '#f8fafc', b: '#e2e8f0' },
                 { n: cnts.A, l: 'ARR', c: '#15803d', bg: '#dcfce7', b: '#86efac' },
                 { n: cnts.D, l: 'DEP', c: '#c2410c', bg: '#fff7ed', b: '#fdba74' },
-                { n: cnts.S, l: 'STD', c: '#1d4ed8', bg: '#eff6ff', b: '#93c5fd' },
+                { n: cnts.S, l: 'TRF', c: '#1d4ed8', bg: '#eff6ff', b: '#93c5fd' },
               ].map(s => (
                 <span key={s.l} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', color: s.c, background: s.bg, border: `1px solid ${s.b}` }}>{s.n} {s.l}</span>
               ))}
@@ -221,8 +221,8 @@ function TripsPageInner() {
         right={
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ display: 'flex', gap: '3px' }}>
-              {['ALL', 'ARR', 'DEP', 'STD'].map(s => {
-                const fullMap = { ARR: 'ARRIVAL', DEP: 'DEPARTURE', STD: 'STANDARD' }
+              {['ALL', 'ARR', 'DEP', 'TRF'].map(s => {
+                const fullMap = { ARR: 'ARRIVAL', DEP: 'DEPARTURE', TRF: 'STANDARD' }
                 const full   = fullMap[s] || s
                 const active = filterClass === full || (s === 'ALL' && filterClass === 'ALL')
                 const c      = CLS[full]
