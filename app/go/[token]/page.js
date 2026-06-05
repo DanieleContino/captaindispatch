@@ -5,12 +5,12 @@ import { useParams } from 'next/navigation'
 
 const pad2 = n => String(n).padStart(2, '0')
 function minToHHMM(min) {
-  if (min === null || min === undefined) return '–'
+  if (min === null || min === undefined) return 'â€“'
   const m = ((min % 1440) + 1440) % 1440
   return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60)
 }
 
-const TYPE_ICON = { VAN: '🚐', CAR: '🚗', BUS: '🚌', TRUCK: '🚛', PICKUP: '🛻', CARGO: '🚚' }
+const TYPE_ICON = { VAN: 'ðŸš', CAR: 'ðŸš—', BUS: 'ðŸšŒ', TRUCK: 'ðŸš›', PICKUP: 'ðŸ›»', CARGO: 'ðŸšš' }
 
 const SERVICE_TYPES = ['Wrap', 'Hotel Run', 'Airport', 'Unit Move', 'Charter', 'Shuttle', 'Other']
 
@@ -22,7 +22,7 @@ function isoToday() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' })
 }
 
-// ─── QR Scanner per Captain Go ────────────────────────────────
+// â”€â”€â”€ QR Scanner per Captain Go â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function GoQrScanner({ onScan, onClose }) {
   const READER_ID = 'go-qr-reader'
   const qrRef = useRef(null)
@@ -57,19 +57,19 @@ function GoQrScanner({ onScan, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 200, display: 'flex', flexDirection: 'column' }}>
       <div style={{ background: '#0f2340', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ color: 'white', fontWeight: '800', fontSize: '15px' }}>📷 Scan QR</span>
-        <button onClick={onClose} style={{ color: 'white', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        <span style={{ color: 'white', fontWeight: '800', fontSize: '15px' }}>ðŸ“· Scan QR</span>
+        <button onClick={onClose} style={{ color: 'white', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>âœ•</button>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
         <div id={READER_ID} style={{ width: '100%', maxWidth: '320px', borderRadius: '16px', overflow: 'hidden', background: '#111' }} />
-        {scanErr && <div style={{ marginTop: '16px', color: '#f87171', fontSize: '13px', textAlign: 'center' }}>❌ {scanErr}</div>}
+        {scanErr && <div style={{ marginTop: '16px', color: '#f87171', fontSize: '13px', textAlign: 'center' }}>âŒ {scanErr}</div>}
         <p style={{ color: '#94a3b8', fontSize: '12px', marginTop: '16px', textAlign: 'center' }}>Point camera at a QR code</p>
       </div>
     </div>
   )
 }
 
-// ─── Wizard New Trip ──────────────────────────────────────────
+// â”€â”€â”€ Wizard New Trip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
   const [step,        setStep]        = useState(1)
   const [date,        setDate]        = useState(isoToday())
@@ -120,13 +120,13 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
     try {
       const res  = await fetch(`/api/qr/resolve?qr=${encodeURIComponent(text)}`)
       const data = await res.json()
-      if (data.error) { showToast('❌ QR not found'); return }
+      if (data.error) { showToast('âŒ QR not found'); return }
       if (data.type === 'crew') {
-        if (selCrew.find(c => c.uuid === data.uuid)) { showToast('⚠️ Already added'); return }
+        if (selCrew.find(c => c.uuid === data.uuid)) { showToast('âš ï¸ Already added'); return }
         setSelCrew(p => [...p, { uuid: data.uuid, id: data.id, full_name: data.full_name, department: data.department, hotel_id: data.hotel?.id || null }])
-        showToast('✅ ' + data.full_name + ' added')
+        showToast('âœ… ' + data.full_name + ' added')
       }
-    } catch { showToast('❌ Scan error') }
+    } catch { showToast('âŒ Scan error') }
   }
 
   async function handleConfirm() {
@@ -155,8 +155,8 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
 
       {/* Header */}
       <div style={{ background: '#0f2340', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <span style={{ color: 'white', fontWeight: '900', fontSize: '16px' }}>➕ New Trip</span>
-        <button onClick={onClose} style={{ color: 'white', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        <span style={{ color: 'white', fontWeight: '900', fontSize: '16px' }}>âž• New Trip</span>
+        <button onClick={onClose} style={{ color: 'white', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', width: '36px', height: '36px', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>âœ•</button>
       </div>
 
       {/* Step bar */}
@@ -178,11 +178,11 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
 
       <div style={{ flex: 1, padding: '20px 16px 100px' }}>
 
-        {/* ── STEP 1: Dettagli ── */}
+        {/* â”€â”€ STEP 1: Dettagli â”€â”€ */}
         {step === 1 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-              <div style={{ fontSize: '32px', marginBottom: '6px' }}>📦</div>
+              <div style={{ fontSize: '32px', marginBottom: '6px' }}>ðŸ“¦</div>
               <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Trip Details</div>
             </div>
 
@@ -220,7 +220,7 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
                 <span>{locsMap[pickupId] || 'Select pickup...'}</span>
-                <span style={{ color: '#94a3b8', fontSize: '12px' }}>▾</span>
+                <span style={{ color: '#94a3b8', fontSize: '12px' }}>â–¾</span>
               </button>
             </div>
 
@@ -233,8 +233,8 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
                 fontFamily: 'inherit', fontWeight: dropoffId ? '700' : '400',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
-                <span>{locsMap[dropoffId] || '— Auto —'}</span>
-                <span style={{ color: '#94a3b8', fontSize: '12px' }}>▾</span>
+                <span>{locsMap[dropoffId] || 'â€” Auto â€”'}</span>
+                <span style={{ color: '#94a3b8', fontSize: '12px' }}>â–¾</span>
               </button>
             </div>
 
@@ -249,14 +249,14 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
                     <span style={{ fontWeight: '800', fontSize: '16px', color: '#0f172a' }}>
                       {showPicker === 'pickup' ? 'Pickup Location' : 'Dropoff Location'}
                     </span>
-                    <button onClick={() => setShowPicker(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>✕</button>
+                    <button onClick={() => setShowPicker(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>âœ•</button>
                   </div>
                   <div style={{ overflowY: 'auto', flex: 1 }}>
                     {showPicker === 'dropoff' && (
                       <div onClick={() => { setDropoffId(''); setShowPicker(null) }}
                         style={{ padding: '14px 16px', borderBottom: '1px solid #f8fafc', background: !dropoffId ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '15px', color: '#94a3b8' }}>— Auto —</span>
-                        {!dropoffId && <span style={{ color: '#2563eb' }}>✓</span>}
+                        <span style={{ fontSize: '15px', color: '#94a3b8' }}>â€” Auto â€”</span>
+                        {!dropoffId && <span style={{ color: '#2563eb' }}>âœ“</span>}
                       </div>
                     )}
                     {locations.map(l => {
@@ -268,7 +268,7 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
                           setShowPicker(null)
                         }} style={{ padding: '14px 16px', borderBottom: '1px solid #f8fafc', background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '15px', fontWeight: isSel ? '700' : '500', color: '#0f172a' }}>{l.name}</span>
-                          {isSel && <span style={{ color: '#2563eb', fontSize: '18px' }}>✓</span>}
+                          {isSel && <span style={{ color: '#2563eb', fontSize: '18px' }}>âœ“</span>}
                         </div>
                       )
                     })}
@@ -280,28 +280,28 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
 
             <button onClick={() => setStep(2)} disabled={!date || !callTime || !pickupId}
               style={{ width: '100%', padding: '15px', borderRadius: '10px', border: 'none', fontSize: '16px', fontWeight: '800', cursor: !date || !callTime || !pickupId ? 'default' : 'pointer', background: !date || !callTime || !pickupId ? '#e2e8f0' : '#2563eb', color: !date || !callTime || !pickupId ? '#94a3b8' : 'white' }}>
-              Next — Passengers →
+              Next â€” Passengers â†’
             </button>
           </div>
         )}
 
-        {/* ── STEP 2: Passeggeri ── */}
+        {/* â”€â”€ STEP 2: Passeggeri â”€â”€ */}
         {step === 2 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-              <div style={{ fontSize: '32px', marginBottom: '6px' }}>👥</div>
+              <div style={{ fontSize: '32px', marginBottom: '6px' }}>ðŸ‘¥</div>
               <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Passengers</div>
             </div>
 
             <button onClick={() => { setScanMode('crew'); setShowScanner(true) }}
               style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              📷 Scan Crew Badge
+              ðŸ“· Scan Crew Badge
             </button>
 
             {selCrew.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#1d4ed8' }}>👥 {selCrew.length} selected</span>
+                  <span style={{ fontSize: '13px', fontWeight: '800', color: '#1d4ed8' }}>ðŸ‘¥ {selCrew.length} selected</span>
                   <button onClick={() => setSelCrew([])} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Remove all</button>
                 </div>
                 {selCrew.map(c => (
@@ -313,13 +313,13 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
                       <div style={{ fontWeight: '700', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
                       <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
                     </div>
-                    <button onClick={() => setSelCrew(p => p.filter(x => x.id !== c.id))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
+                    <button onClick={() => setSelCrew(p => p.filter(x => x.id !== c.id))} style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fee2e2', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>Ã—</button>
                   </div>
                 ))}
               </div>
             )}
 
-            <input type="text" placeholder="🔍 Search crew..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="text" placeholder="ðŸ” Search crew..." value={search} onChange={e => setSearch(e.target.value)}
               style={{ ...inp, fontSize: '14px' }} />
 
             {search && (
@@ -343,19 +343,19 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
             )}
 
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setStep(1)} style={{ flex: 1, padding: '14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>← Back</button>
+              <button onClick={() => setStep(1)} style={{ flex: 1, padding: '14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>â† Back</button>
               <button onClick={() => { setSearch(''); setStep(3) }} style={{ flex: 2, padding: '14px', borderRadius: '10px', border: 'none', background: '#2563eb', color: 'white', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}>
-                Review ({selCrew.length}) →
+                Review ({selCrew.length}) â†’
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 3: Conferma ── */}
+        {/* â”€â”€ STEP 3: Conferma â”€â”€ */}
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-              <div style={{ fontSize: '32px', marginBottom: '6px' }}>📋</div>
+              <div style={{ fontSize: '32px', marginBottom: '6px' }}>ðŸ“‹</div>
               <div style={{ fontWeight: '900', fontSize: '20px', color: '#0f172a' }}>Confirm Trip</div>
             </div>
 
@@ -378,21 +378,21 @@ function NewTripWizard({ token, vehicle, productionId, onClose, onCreated }) {
 
             {selCrew.length > 0 && (
               <div style={{ background: 'white', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#374151', lineHeight: 1.6 }}>
-                👥 {selCrew.map(c => c.full_name).join(', ')}
+                ðŸ‘¥ {selCrew.map(c => c.full_name).join(', ')}
               </div>
             )}
 
             {err && (
-              <div style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {err}</div>
+              <div style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>âŒ {err}</div>
             )}
 
             <button onClick={handleConfirm} disabled={saving}
               style={{ width: '100%', padding: '15px', borderRadius: '10px', border: 'none', background: saving ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '16px', fontWeight: '900', cursor: saving ? 'default' : 'pointer' }}>
-              {saving ? '⏳ Creating...' : '✅ Create Trip'}
+              {saving ? 'â³ Creating...' : 'âœ… Create Trip'}
             </button>
             <button onClick={() => setStep(2)} disabled={saving}
               style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
-              ← Edit Passengers
+              â† Edit Passengers
             </button>
           </div>
         )}
@@ -437,7 +437,7 @@ export default function CaptainGoPage() {
         .then(r => r.json())
         .then(d => {
           if (d.error) {
-            // Errori reali (token invalido, driver non attivo) → pagina errore
+            // Errori reali (token invalido, driver non attivo) â†’ pagina errore
             setError(d.error)
           } else {
             setData(d)
@@ -446,7 +446,7 @@ export default function CaptainGoPage() {
           }
         })
         .catch(() => {
-          // Errore di rete (standby, offline) → banner reconnecting, non pagina errore
+          // Errore di rete (standby, offline) â†’ banner reconnecting, non pagina errore
           setReconnecting(true)
         })
         .finally(() => setLoading(false))
@@ -497,14 +497,14 @@ export default function CaptainGoPage() {
     return () => { clearInterval(interval); clearInterval(msgInterval) }
   }, [token])
 
-  // ── Wake Lock: schermo acceso quando c'è un trip BUSY ────
+  // â”€â”€ Wake Lock: schermo acceso quando c'Ã¨ un trip BUSY â”€â”€â”€â”€
   useEffect(() => {
     const hasBusyTrip = data?.trips?.some(t => t.status === 'BUSY' || t.status === 'IN_PROGRESS' || t.status === 'ACTIVE')
 
     async function requestWakeLock() {
       if (!('wakeLock' in navigator)) return
       try {
-        if (wakeLockRef.current) return // già attivo
+        if (wakeLockRef.current) return // giÃ  attivo
         wakeLockRef.current = await navigator.wakeLock.request('screen')
         wakeLockRef.current.addEventListener('release', () => {
           wakeLockRef.current = null
@@ -537,7 +537,7 @@ export default function CaptainGoPage() {
     }
   }, [data?.trips])
 
-  // ── watchPosition: parte quando ON DUTY ──────────────────
+  // â”€â”€ watchPosition: parte quando ON DUTY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!data?.session) {
       // Sessione non attiva: ferma watch se era partito
@@ -566,7 +566,7 @@ export default function CaptainGoPage() {
     }
   }, [data?.session, gpsTracking])
 
-  // ── GPS: invia posizione silenziosa (ping response — non tocca gpsStatus) ──
+  // â”€â”€ GPS: invia posizione silenziosa (ping response â€” non tocca gpsStatus) â”€â”€
   async function sendPositionSilent(lat, lng, accuracy) {
     if (!token) return
     try {
@@ -579,7 +579,7 @@ export default function CaptainGoPage() {
     } catch {}
   }
 
-  // ── GPS: invia posizione all'API ──────────────────────────
+  // â”€â”€ GPS: invia posizione all'API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function sendPosition(lat, lng, accuracy, speed) {
     if (!token) return
     try {
@@ -599,7 +599,7 @@ export default function CaptainGoPage() {
     setTimeout(() => setGpsStatus('idle'), 3000)
   }
 
-  // ── GPS: pulsante manuale "Sono Qui" ──────────────────────
+  // â”€â”€ GPS: pulsante manuale "Sono Qui" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function handleSonoQui() {
     if (!navigator.geolocation) {
       alert('GPS non disponibile su questo dispositivo')
@@ -614,7 +614,7 @@ export default function CaptainGoPage() {
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-      <div style={{ fontSize: '48px' }}>🚐</div>
+      <div style={{ fontSize: '48px' }}>ðŸš</div>
       <div style={{ color: 'white', fontSize: '16px', fontWeight: '700' }}>Captain Go</div>
       <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>Loading...</div>
     </div>
@@ -622,7 +622,7 @@ export default function CaptainGoPage() {
 
   if (error) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '24px' }}>
-      <div style={{ fontSize: '48px' }}>⚠️</div>
+      <div style={{ fontSize: '48px' }}>âš ï¸</div>
       <div style={{ color: 'white', fontSize: '16px', fontWeight: '700', textAlign: 'center' }}>
         {error === 'Invalid token' ? 'Link non valido' : error === 'Driver not active' ? 'Driver non attivo' : 'Errore di connessione'}
       </div>
@@ -637,7 +637,7 @@ export default function CaptainGoPage() {
   // Ritorna ETA label se disponibile
   function etaLabel(trip) {
     if (!trip.eta_to_pickup_min) return null
-    return `🚗 ${trip.eta_to_pickup_min} min to pickup${trip.eta_to_pickup_km ? ` · ${trip.eta_to_pickup_km} km` : ''}`
+    return `ðŸš— ${trip.eta_to_pickup_min} min to pickup${trip.eta_to_pickup_km ? ` Â· ${trip.eta_to_pickup_km} km` : ''}`
   }
 
   async function handleStartSession() {
@@ -786,7 +786,7 @@ export default function CaptainGoPage() {
         <div>
           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Captain Go</div>
           <div style={{ fontSize: '18px', fontWeight: '900', color: 'white', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            👤 {driver.name}
+            ðŸ‘¤ {driver.name}
             {unreadCount > 0 && (
               <button
                 onClick={() => {
@@ -808,7 +808,7 @@ export default function CaptainGoPage() {
         <div style={{ textAlign: 'right' }}>
           {vehicle ? (
             <div>
-              <div style={{ fontSize: '24px' }}>{TYPE_ICON[vehicle.vehicle_type] || '🚐'}</div>
+              <div style={{ fontSize: '24px' }}>{TYPE_ICON[vehicle.vehicle_type] || 'ðŸš'}</div>
               <div style={{ fontFamily: 'monospace', fontWeight: '800', fontSize: '14px', color: 'white' }}>{vehicle.sign_code || vehicle.display_id}</div>
             </div>
           ) : (
@@ -820,22 +820,22 @@ export default function CaptainGoPage() {
       {/* Data */}
       <div style={{ padding: '12px 20px', background: '#1e3a5f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ fontSize: '13px', fontWeight: '700', color: 'rgba(255,255,255,0.8)' }}>
-          📅 {fmtDate(today)}
+          ðŸ“… {fmtDate(today)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {session && !showWizard && !wizardDone && (
             <button onClick={() => setShowWizard(true)}
               style={{ background: '#2563eb', border: 'none', borderRadius: '999px', padding: '6px 12px', color: 'white', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              ➕ New Trip
+              âž• New Trip
             </button>
           )}
           {session ? (
             <span style={{ fontSize: '11px', fontWeight: '800', padding: '3px 10px', borderRadius: '999px', background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac' }}>
-              🟢 ON DUTY
+              ðŸŸ¢ ON DUTY
             </span>
           ) : (
             <span style={{ fontSize: '11px', fontWeight: '800', padding: '3px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
-              ⚫ STANDBY
+              âš« STANDBY
             </span>
           )}
         </div>
@@ -855,10 +855,10 @@ export default function CaptainGoPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
               boxShadow: starting ? 'none' : '0 4px 16px rgba(22,163,74,0.4)',
             }}>
-            {starting ? '⏳ Starting...' : '🟢 Inizia Giornata'}
+            {starting ? 'â³ Starting...' : 'ðŸŸ¢ Inizia Giornata'}
           </button>
           <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', marginTop: '6px' }}>
-            Tap to go on duty — your coordinator will see you online
+            Tap to go on duty â€” your coordinator will see you online
           </div>
         </div>
       )}
@@ -866,11 +866,11 @@ export default function CaptainGoPage() {
       {/* Vehicle info */}
       {vehicle && (
         <div style={{ margin: '16px 20px 0', padding: '12px 16px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '28px' }}>{TYPE_ICON[vehicle.vehicle_type] || '🚐'}</span>
+          <span style={{ fontSize: '28px' }}>{TYPE_ICON[vehicle.vehicle_type] || 'ðŸš'}</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>{vehicle.sign_code || vehicle.display_id}</div>
             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-              {[vehicle.license_plate, vehicle.sign_code, vehicle.capacity ? `${vehicle.capacity} pax` : null].filter(Boolean).join(' · ')}
+              {[vehicle.license_plate, vehicle.sign_code, vehicle.capacity ? `${vehicle.capacity} pax` : null].filter(Boolean).join(' Â· ')}
             </div>
           </div>
           {vehicle.license_plate && (
@@ -888,7 +888,7 @@ export default function CaptainGoPage() {
 
         {trips.length === 0 && (
           <div style={{ padding: '40px 20px', textAlign: 'center', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '32px', marginBottom: '8px' }}>☀️</div>
+            <div style={{ fontSize: '32px', marginBottom: '8px' }}>â˜€ï¸</div>
             <div style={{ fontSize: '14px', fontWeight: '600', color: '#64748b' }}>No trips scheduled for today</div>
             <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>Check back later or contact your coordinator</div>
           </div>
@@ -897,7 +897,7 @@ export default function CaptainGoPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {tripGroups.map((group, gIdx) => {
 
-            // ── SINGLE TRIP CARD (invariata) ──────────────────────────
+            // â”€â”€ SINGLE TRIP CARD (invariata) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (group.type === 'single') {
               const trip    = group.trip
               const pickup  = locsMap[trip.pickup_id]
@@ -917,10 +917,10 @@ export default function CaptainGoPage() {
                     <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>#{trip.trip_id}</span>
                   </div>
                   <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '6px', lineHeight: 1.4 }}>
-                    {pickup?.name || trip.pickup_id || '–'} → {dropoff?.name || trip.dropoff_id || '–'}
+                    {pickup?.name || trip.pickup_id || 'â€“'} â†’ {dropoff?.name || trip.dropoff_id || 'â€“'}
                   </div>
                   {(trip.passenger_list || trip.pax_count > 0) && (
-                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>👥 {trip.passenger_list || `${trip.pax_count} pax`}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>ðŸ‘¥ {trip.passenger_list || `${trip.pax_count} pax`}</div>
                   )}
                   {!isDone && !isBusy && etaLabel(trip) && (
                     <div style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: '700', marginBottom: '10px', padding: '5px 8px', background: '#eff6ff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
@@ -929,22 +929,22 @@ export default function CaptainGoPage() {
                   )}
                   {!isDone && !isBusy && session && (
                     <button onClick={() => handleStartTrip(trip)} disabled={tripAction === trip.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === trip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: dropoff ? '8px' : '0' }}>
-                      {tripAction === trip.id ? '⏳...' : '▶ Start Trip'}
+                      {tripAction === trip.id ? 'â³...' : 'â–¶ Start Trip'}
                     </button>
                   )}
                   {isBusy && !trip.picked_up_at && (
                     <button onClick={() => handlePickedUp(trip)} disabled={tripAction === trip.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === trip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: dropoff ? '8px' : '0' }}>
-                      {tripAction === trip.id ? '⏳...' : '👥 Picked Up'}
+                      {tripAction === trip.id ? 'â³...' : 'ðŸ‘¥ Picked Up'}
                     </button>
                   )}
                   {isBusy && trip.picked_up_at && (
                     <button onClick={() => handleArrived(trip)} disabled={tripAction === trip.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === trip.id ? '#94a3b8' : '#ea580c', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === trip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: dropoff ? '8px' : '0' }}>
-                      {tripAction === trip.id ? '⏳...' : '✅ Arrived'}
+                      {tripAction === trip.id ? 'â³...' : 'âœ… Arrived'}
                     </button>
                   )}
                   {!isDone && dropoff && (
                     <button onClick={() => isBusy ? navigateAndTrack(trip) : openMaps(trip)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: isBusy ? '#0f2340' : '#475569', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      {isBusy ? '🗺 Naviga' : '🗺 Navigate to ' + dropoff?.name}
+                      {isBusy ? 'ðŸ—º Naviga' : 'ðŸ—º Navigate to ' + dropoff?.name}
                     </button>
                   )}
                   {!isDone && dropoff && (() => {
@@ -954,18 +954,18 @@ export default function CaptainGoPage() {
                     return (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
                         <button onClick={async () => { setTrafficData(p => ({ ...p, [trip.id]: { ...p[trip.id], loading: true } })); try { const res = await fetch('/api/go/traffic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, trip_id: trip.id }) }); const d = await res.json(); setTrafficData(p => ({ ...p, [trip.id]: { ...d, loading: false } })) } catch { setTrafficData(p => ({ ...p, [trip.id]: { loading: false, error: true } })) } }} disabled={td?.loading} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: td?.loading ? '#f1f5f9' : badgeBg, color: td?.loading ? '#94a3b8' : badgeColor, fontSize: '12px', fontWeight: '800', cursor: td?.loading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', border: `1px solid ${td?.loading ? '#e2e8f0' : badgeColor}22` }}>
-                          {td?.loading ? '⏳ Checking...' : td?.severity === 'OK' ? '🟢 No delays' : td?.severity === 'INFO' ? `🔵 +${td.delayMin}min` : td?.severity === 'WARNING' ? `🟡 +${td.delayMin}min` : td?.severity === 'CRITICAL' ? `🔴 +${td.delayMin}min` : '🚦 Check Traffic'}
+                          {td?.loading ? 'â³ Checking...' : td?.severity === 'OK' ? 'ðŸŸ¢ No delays' : td?.severity === 'INFO' ? `ðŸ”µ +${td.delayMin}min` : td?.severity === 'WARNING' ? `ðŸŸ¡ +${td.delayMin}min` : td?.severity === 'CRITICAL' ? `ðŸ”´ +${td.delayMin}min` : 'ðŸš¦ Check Traffic'}
                         </button>
                         {td?.incidents?.length > 0 && <span style={{ fontSize: '10px', color: badgeColor, fontWeight: '700' }}>{td.incidents[0]}</span>}
                       </div>
                     )
                   })()}
-                  {isDone && <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', textAlign: 'center' }}>✅ Completed</div>}
+                  {isDone && <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', textAlign: 'center' }}>âœ… Completed</div>}
                 </div>
               )
             }
 
-            // ── GROUP CARD (Multi-Pick / Multi-Drop / Mix) ────────────
+            // â”€â”€ GROUP CARD (Multi-Pick / Multi-Drop / Mix) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             const { legs } = group
             const doneLegCount = legs.filter(l => l.status === 'DONE' || l.status === 'COMPLETED').length
             const activeLeg    = legs.find(l => l.status === 'BUSY' || l.status === 'IN_PROGRESS' || l.status === 'ACTIVE')
@@ -991,12 +991,12 @@ export default function CaptainGoPage() {
               const pickup  = locsMap[leg.pickup_id]
               const dropoff = locsMap[leg.dropoff_id]
 
-              // Label rotta: Multi-Pick → solo pickup, Multi-Drop → solo dropoff, altri → pickup → dropoff
-              const routeLabel = serviceLabel === 'Multi-Pick'
-                ? `📍 ${pickup?.name || leg.pickup_id || '–'}`
-                : serviceLabel === 'Multi-Drop'
-                ? `📍 ${dropoff?.name || leg.dropoff_id || '–'}`
-                : `${pickup?.name || leg.pickup_id || '–'} → ${dropoff?.name || leg.dropoff_id || '–'}`
+              // Label rotta: Multi-Pick â†’ solo pickup, Multi-Drop â†’ solo dropoff, altri â†’ pickup â†’ dropoff
+              const routeLabel = serviceLabel === 'Multi-Pick' || serviceLabel === 'MULTI-PICK'
+                ? `ðŸ“ ${pickup?.name || leg.pickup_id || 'â€“'}`
+                : serviceLabel === 'Multi-Drop' || serviceLabel === 'MULTI-DROP'
+                ? `ðŸ“ ${dropoff?.name || leg.dropoff_id || 'â€“'}`
+                : `${pickup?.name || leg.pickup_id || 'â€“'} â†’ ${dropoff?.name || leg.dropoff_id || 'â€“'}`
 
               // Badge progressivo: Done / In corso / First / Next / Dopo
               const pendingLegs   = legs.filter(l => l.status !== 'DONE' && l.status !== 'COMPLETED')
@@ -1019,7 +1019,7 @@ export default function CaptainGoPage() {
                 <div key={leg.id} style={{ display: 'flex', gap: '10px', padding: '7px 0', borderBottom: '1px solid #f8fafc' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '2px', width: '22px', flexShrink: 0 }}>
                     <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: isDoneLeg ? '#dcfce7' : isActiveLeg ? '#f59e0b' : '#eff6ff', color: isDoneLeg ? '#15803d' : isActiveLeg ? 'white' : '#1d4ed8', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {isDoneLeg ? '✓' : absoluteIndex + 1}
+                      {isDoneLeg ? 'âœ“' : absoluteIndex + 1}
                     </div>
                     {absoluteIndex < legs.length - 1 && <div style={{ width: '1px', flex: 1, background: '#e2e8f0', margin: '3px 0', minHeight: '10px' }} />}
                   </div>
@@ -1042,7 +1042,7 @@ export default function CaptainGoPage() {
                 {/* Header gruppo */}
                 <div style={{ background: '#0f2340', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ color: 'white', fontSize: '13px', fontWeight: '700' }}>
-                    {serviceLabel} · {minToHHMM(firstLeg.pickup_min ?? firstLeg.call_min)}
+                    {serviceLabel} Â· {minToHHMM(firstLeg.pickup_min ?? firstLeg.call_min)}
                   </div>
                   <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontFamily: 'monospace' }}>#{firstLeg.trip_id}</div>
                 </div>
@@ -1054,20 +1054,20 @@ export default function CaptainGoPage() {
                     <div style={{ height: '100%', background: '#22c55e', borderRadius: '2px', width: `${legs.length > 0 ? (doneLegCount / legs.length) * 100 : 0}%`, transition: 'width 0.3s' }} />
                   </div>
                   {nextDest && !allDone && (
-                    <span style={{ fontSize: '10px', fontWeight: '600', color: activeLeg && (activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS') ? '#b45309' : '#64748b', flexShrink: 0 }}>→ {nextDest}</span>
+                    <span style={{ fontSize: '10px', fontWeight: '600', color: activeLeg && (activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS') ? '#b45309' : '#64748b', flexShrink: 0 }}>â†’ {nextDest}</span>
                   )}
                 </div>
 
                 {/* Legs */}
                 <div style={{ padding: '8px 14px' }}>
                   {isMix && pickupLegs.length > 0 && (
-                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 0 2px' }}>📥 Pickup</div>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 0 2px' }}>ðŸ“¥ Pickup</div>
                   )}
                   {(isMix ? pickupLegs : legs).map((leg, i) => renderLeg(leg, i))}
                   {isMix && dropoffLegs.length > 0 && (
                     <>
                       <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 0 2px' }}>📤 Dropoff</div>
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 0 2px' }}>ðŸ“¤ Dropoff</div>
                       {dropoffLegs.map((leg, i) => renderLeg(leg, pickupLegs.length + i))}
                     </>
                   )}
@@ -1076,10 +1076,10 @@ export default function CaptainGoPage() {
                 {/* Azioni */}
                 {!allDone && activeLeg && session && (() => {
                   const isLegBusy    = activeLeg.status === 'BUSY' || activeLeg.status === 'IN_PROGRESS' || activeLeg.status === 'ACTIVE'
-                  const isPickupLeg  = serviceLabel === 'Multi-Pick' || (serviceLabel === 'Mix' && (activeLeg.leg_order <= Math.ceil(legs.length / 2)))
+                  const isPickupLeg  = serviceLabel === 'Multi-Pick' || serviceLabel === 'MULTI-PICK' || (serviceLabel === 'Mix' && (activeLeg.leg_order <= Math.ceil(legs.length / 2)))
                   const confirmLabel = isPickupLeg
-                    ? `🙋 Picked Up — ${locsMap[activeLeg.pickup_id]?.name || ''}`
-                    : `✅ Arrived — ${locsMap[activeLeg.dropoff_id]?.name || ''}`
+                    ? `ðŸ™‹ Picked Up â€” ${locsMap[activeLeg.pickup_id]?.name || ''}`
+                    : `âœ… Arrived â€” ${locsMap[activeLeg.dropoff_id]?.name || ''}`
                   const navigateLoc  = isPickupLeg ? locsMap[activeLeg.pickup_id] : locsMap[activeLeg.dropoff_id]
                   const navigateName = navigateLoc?.name || ''
 
@@ -1087,23 +1087,23 @@ export default function CaptainGoPage() {
                     <div style={{ padding: '0 14px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {isLegBusy ? (
                         <button onClick={() => handleArrived(activeLeg)} disabled={tripAction === activeLeg.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === activeLeg.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === activeLeg.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                          {tripAction === activeLeg.id ? '⏳...' : confirmLabel}
+                          {tripAction === activeLeg.id ? 'â³...' : confirmLabel}
                         </button>
                       ) : (
                         <button onClick={() => handleStartTrip(activeLeg)} disabled={tripAction === activeLeg.id} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: tripAction === activeLeg.id ? '#94a3b8' : '#16a34a', color: 'white', fontSize: '14px', fontWeight: '800', cursor: tripAction === activeLeg.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                          {tripAction === activeLeg.id ? '⏳...' : '▶ Start Trip'}
+                          {tripAction === activeLeg.id ? 'â³...' : 'â–¶ Start Trip'}
                         </button>
                       )}
                       {navigateLoc && (
                         <button onClick={() => isLegBusy ? navigateAndTrack(activeLeg) : openMaps(activeLeg)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                          🗺 Navigate → {navigateName}
+                          ðŸ—º Navigate â†’ {navigateName}
                         </button>
                       )}
                     </div>
                   )
                 })()}
                 {allDone && (
-                  <div style={{ padding: '10px 14px', fontSize: '12px', fontWeight: '700', color: '#15803d', textAlign: 'center' }}>✅ All stops completed</div>
+                  <div style={{ padding: '10px 14px', fontSize: '12px', fontWeight: '700', color: '#15803d', textAlign: 'center' }}>âœ… All stops completed</div>
                 )}
               </div>
             )
@@ -1111,7 +1111,7 @@ export default function CaptainGoPage() {
         </div>
       </div>
 
-      {/* Overlay IN CORSA — banner sticky con Arrived */}
+      {/* Overlay IN CORSA â€” banner sticky con Arrived */}
       {mapTrip && (() => {
         const mpPickup  = locsMap[mapTrip.pickup_id]
         const mpDropoff = locsMap[mapTrip.dropoff_id]
@@ -1127,18 +1127,18 @@ export default function CaptainGoPage() {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
-                <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>🟡 IN CORSA</div>
+                <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>ðŸŸ¡ IN CORSA</div>
                 <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>
-                  {mpPickup?.name || '–'} → {mpDropoff?.name || '–'}
+                  {mpPickup?.name || 'â€“'} â†’ {mpDropoff?.name || 'â€“'}
                 </div>
               </div>
-              <button onClick={() => setMapTrip(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', fontSize: '18px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <button onClick={() => setMapTrip(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', width: '32px', height: '32px', fontSize: '18px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>âœ•</button>
             </div>
             <button
               onClick={() => { setMapTrip(null); handleArrived(mapTrip) }}
               disabled={tripAction === mapTrip.id}
               style={{ width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: tripAction === mapTrip.id ? '#94a3b8' : '#f59e0b', color: 'white', fontSize: '16px', fontWeight: '900', cursor: tripAction === mapTrip.id ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-              {tripAction === mapTrip.id ? '⏳...' : '✅ Sono Arrivato'}
+              {tripAction === mapTrip.id ? 'â³...' : 'âœ… Sono Arrivato'}
             </button>
           </div>
         )
@@ -1146,7 +1146,7 @@ export default function CaptainGoPage() {
 
       {/* Footer */}
       <div style={{ padding: '24px 20px 100px', textAlign: 'center' }}>
-        <div style={{ fontSize: '10px', color: '#94a3b8' }}>CaptainDispatch · Captain Go</div>
+        <div style={{ fontSize: '10px', color: '#94a3b8' }}>CaptainDispatch Â· Captain Go</div>
       </div>
 
       {/* Banner reconnecting */}
@@ -1158,7 +1158,7 @@ export default function CaptainGoPage() {
           display: 'flex', alignItems: 'center', gap: '10px',
           boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
         }}>
-          <span style={{ fontSize: '20px' }}>📶</span>
+          <span style={{ fontSize: '20px' }}>ðŸ“¶</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '13px', fontWeight: '800', color: 'white' }}>Reconnecting...</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '1px' }}>Waiting for connection</div>
@@ -1180,12 +1180,12 @@ export default function CaptainGoPage() {
       {/* Screen trip creato */}
       {wizardDone && (
         <div style={{ position: 'fixed', inset: 0, background: '#f1f5f9', zIndex: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
-          <div style={{ width: '80px', height: '80px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', marginBottom: '20px' }}>✓</div>
+          <div style={{ width: '80px', height: '80px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', marginBottom: '20px' }}>âœ“</div>
           <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', marginBottom: '8px' }}>Trip Created!</div>
           <div style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '18px', color: '#2563eb', marginBottom: '24px' }}>{wizardDone}</div>
           <button onClick={() => setWizardDone(null)}
             style={{ width: '100%', maxWidth: '320px', padding: '15px', borderRadius: '10px', border: 'none', background: '#0f2340', color: 'white', fontSize: '15px', fontWeight: '800', cursor: 'pointer' }}>
-            ← Back to Captain Go
+            â† Back to Captain Go
           </button>
         </div>
       )}
@@ -1201,10 +1201,10 @@ export default function CaptainGoPage() {
           boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
           transition: 'background 0.3s',
         }}>
-          <span style={{ fontSize: '20px' }}>📡</span>
+          <span style={{ fontSize: '20px' }}>ðŸ“¡</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '13px', fontWeight: '800', color: 'white' }}>
-              {pingBanner === 'sent' ? '✅ Position sent' : pingBanner === 'error' ? '❌ GPS error' : '📡 Position requested'}
+              {pingBanner === 'sent' ? 'âœ… Position sent' : pingBanner === 'error' ? 'âŒ GPS error' : 'ðŸ“¡ Position requested'}
             </div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '1px' }}>
               {pingBanner === 'sent' ? 'Your coordinator can see you' : pingBanner === 'error' ? 'Could not get GPS position' : 'Getting your location...'}
@@ -1217,7 +1217,7 @@ export default function CaptainGoPage() {
         </div>
       )}
 
-      {/* Bottom bar GPS — visibile solo ON DUTY */}
+      {/* Bottom bar GPS â€” visibile solo ON DUTY */}
       {session && (
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
@@ -1243,10 +1243,10 @@ export default function CaptainGoPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
               transition: 'background 0.2s',
             }}>
-            {gpsStatus === 'sending' ? '⏳ Invio...'
-           : gpsStatus === 'sent'    ? '✅ Inviato'
-           : gpsStatus === 'error'   ? '❌ Errore GPS'
-           : '📍 Sono Qui'}
+            {gpsStatus === 'sending' ? 'â³ Invio...'
+           : gpsStatus === 'sent'    ? 'âœ… Inviato'
+           : gpsStatus === 'error'   ? 'âŒ Errore GPS'
+           : 'ðŸ“ Sono Qui'}
           </button>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', flexShrink: 0, padding: '4px 6px' }}>
             <div style={{
@@ -1269,7 +1269,7 @@ export default function CaptainGoPage() {
               cursor: ending ? 'default' : 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
             }}>
-            <span style={{ fontSize: '16px' }}>🔴</span>
+            <span style={{ fontSize: '16px' }}>ðŸ”´</span>
             <span>End</span>
           </button>
         </div>
@@ -1279,7 +1279,7 @@ export default function CaptainGoPage() {
       {showEndConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ background: 'white', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔴</div>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>ðŸ”´</div>
             <div style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', marginBottom: '8px' }}>End Your Day?</div>
             <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px', lineHeight: 1.5 }}>
               Your coordinator will see you offline. GPS tracking will stop.
@@ -1291,7 +1291,7 @@ export default function CaptainGoPage() {
               </button>
               <button onClick={handleEndSession}
                 style={{ flex: 1, padding: '13px', borderRadius: '10px', border: 'none', background: '#dc2626', color: 'white', fontSize: '14px', fontWeight: '800', cursor: 'pointer' }}>
-                {ending ? '⏳...' : 'End Day'}
+                {ending ? 'â³...' : 'End Day'}
               </button>
             </div>
           </div>
