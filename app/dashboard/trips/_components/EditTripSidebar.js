@@ -362,7 +362,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       service_type_id: form.service_type_id || null,
       duration_min: mainDurMin,
       arr_time:   mainArrTime,
-      call_min:   mainCallMin,
+      call_min:   (form.pickup_time && transferClass === 'STANDARD') ? timeStrToMin(form.pickup_time) : mainCallMin,
       ...(!isMulti && {
         pickup_min: form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin,
         start_dt:   (() => {
@@ -1086,4 +1086,5 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 }
 
 export default EditTripSidebar
+
 
