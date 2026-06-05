@@ -463,7 +463,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           body: JSON.stringify({
             leg_ids: group.map(g => g.id),
             production_id: PRODUCTION_ID,
-            ...(form.pickup_time && !(group && group.length > 1) ? { anchor_pickup_min: timeStrToMin(form.pickup_time), respect_leg_order: true } : {}),
+            ...(form.pickup_time ? { anchor_pickup_min: timeStrToMin(form.pickup_time), respect_leg_order: true } : {}),
           }),
         })
       } catch (e) { console.warn('[handleSubmit] compute-chain:', e) }
