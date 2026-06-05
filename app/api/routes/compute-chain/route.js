@@ -316,49 +316,50 @@ export async function POST (request) {
       const callMin = anchor_pickup_min !== undefined ? null : sorted[0].call_min
       const date    = sorted[0].date
 
-      // Step 3: compute pickup_min chain backwards
+      // Step 3: compute pickup_min chain
       const results = new Array(sorted.length)
       const n       = sorted.length
 
-      // Last leg (closest to hub): pickup = call - duration
-      // If anchor_pickup_min provided, use it directly for the FIRST leg (leg_order=1)
-      const lastDur    = sorted[n - 1].duration_min ?? 0
-      const lastPickup = anchor_pickup_min !== undefined
-        ? (() => {
-            // anchor is for the first leg (sorted[0]), walk forward to find lastPickup
-            let t = anchor_pickup_min
-            for (let k = 0; k < n - 1; k++) {
-              const d = sorted[k].duration_min ?? 10
-              t = (t + d) % 1440
-            }
-            return t
-          })()
-        : callMin !== null
+      if (anchor_pickup_min !== undefined && respect_leg_order) {
+        // anchor = pickup of first leg (sorted[0]); walk forward for subsequent legs
+        results[0] = { id: sorted[0].id, pickup_min: anchor_pickup_min, leg: sorted[0] }
+        for (let i = 1; i < n; i++) {
+          const prevPickup = results[i - 1].pickup_min
+          const drive = (await getOrComputeDuration(
+            sorted[i - 1].pickup_id,
+            sorted[i].pickup_id,
+            production_id,
+            supabase
+          )) ?? 10
+          results[i] = { id: sorted[i].id, pickup_min: (prevPickup + drive) % 1440, leg: sorted[i] }
+        }
+      } else {
+        // Original backward chain from call_min
+        const lastDur    = sorted[n - 1].duration_min ?? 0
+        const lastPickup = callMin !== null
           ? ((callMin - lastDur) % 1440 + 1440) % 1440
           : sorted[n - 1].pickup_min
+        results[n - 1] = { id: sorted[n - 1].id, pickup_min: lastPickup, leg: sorted[n - 1] }
 
-      results[n - 1] = { id: sorted[n - 1].id, pickup_min: lastPickup, leg: sorted[n - 1] }
-
-      // Walk backwards: for each leg, get drive time to the NEXT hotel in chain
-      for (let i = n - 2; i >= 0; i--) {
-        const nextPickup = results[i + 1].pickup_min
-        if (nextPickup === null) {
-          results[i] = { id: sorted[i].id, pickup_min: null, leg: sorted[i] }
-          continue
-        }
-        // Hotel[i] (farther) → Hotel[i+1] (closer to hub = next in route)
-        const driveBetween = await getOrComputeDuration(
-          sorted[i].pickup_id,
-          sorted[i + 1].pickup_id,
-          production_id,
-          supabase
-        )
-        // Fallback: 10 min if no route computable (rare, prevents same-time display)
-        const driveMin = driveBetween ?? 10
-        results[i] = {
-          id:         sorted[i].id,
-          pickup_min: ((nextPickup - driveMin) % 1440 + 1440) % 1440,
-          leg:        sorted[i],
+        // Walk backwards: for each leg, get drive time to the NEXT hotel in chain
+        for (let i = n - 2; i >= 0; i--) {
+          const nextPickup = results[i + 1].pickup_min
+          if (nextPickup === null) {
+            results[i] = { id: sorted[i].id, pickup_min: null, leg: sorted[i] }
+            continue
+          }
+          const driveBetween = await getOrComputeDuration(
+            sorted[i].pickup_id,
+            sorted[i + 1].pickup_id,
+            production_id,
+            supabase
+          )
+          const driveMin = driveBetween ?? 10
+          results[i] = {
+            id:         sorted[i].id,
+            pickup_min: ((nextPickup - driveMin) % 1440 + 1440) % 1440,
+            leg:        sorted[i],
+          }
         }
       }
 
