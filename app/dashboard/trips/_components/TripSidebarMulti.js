@@ -178,10 +178,8 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
       const mistoGroupId = crypto.randomUUID()
 
       const points = []
-      validMisto.forEach(l => {
-        if (!points.find(p => p.locId === l.pickupId))  points.push({ locId: l.pickupId })
-        if (!points.find(p => p.locId === l.dropoffId)) points.push({ locId: l.dropoffId })
-      })
+      validMisto.forEach(l => { if (!points.find(p => p.locId === l.pickupId))  points.push({ locId: l.pickupId  }) })
+      validMisto.forEach(l => { if (!points.find(p => p.locId === l.dropoffId)) points.push({ locId: l.dropoffId }) })
 
       const insertedMistoIds = []
       try {
@@ -581,9 +579,9 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
 
                 {mistoLegs.length >= 2 && mistoLegs.every(l => l.pickupId && l.dropoffId) && (() => {
                   const points = []
-                  mistoLegs.forEach(l => { points.push({ type: 'pickup', locId: l.pickupId }); points.push({ type: 'dropoff', locId: l.dropoffId }) })
-                  const uniqueOrdered = []
-                  points.forEach(p => { if (!uniqueOrdered.find(u => u.locId === p.locId)) uniqueOrdered.push(p) })
+                  mistoLegs.forEach(l => { if (!points.find(p => p.locId === l.pickupId))  points.push({ type: 'pickup',  locId: l.pickupId  }) })
+                  mistoLegs.forEach(l => { if (!points.find(p => p.locId === l.dropoffId)) points.push({ type: 'dropoff', locId: l.dropoffId }) })
+                  const uniqueOrdered = points
                   const generatedLegs = []
                   for (let i = 0; i < uniqueOrdered.length - 1; i++) {
                     const from = locations.find(l => l.uuid === uniqueOrdered[i].locId)?.name || uniqueOrdered[i].locId
