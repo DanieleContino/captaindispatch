@@ -363,22 +363,20 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       duration_min: mainDurMin,
       arr_time:   mainArrTime,
       call_min:   (form.pickup_time && transferClass === 'STANDARD') ? timeStrToMin(form.pickup_time) : mainCallMin,
-      ...(!isMulti && {
-        pickup_min: form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin,
-        start_dt:   (() => {
-          const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin
-          if (pm === null || pm === undefined) return mainStartDt
-          const [y, mo, dd] = form.date.split('-').map(Number)
-          return new Date(y, mo - 1, dd, Math.floor(pm / 60), pm % 60, 0, 0).toISOString()
-        })(),
-        end_dt:     (() => {
-          const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin
-          const dur = mainDurMin
-          if (pm === null || pm === undefined || !dur) return mainEndDt
-          const [y, mo, dd] = form.date.split('-').map(Number)
-          return new Date(new Date(y, mo - 1, dd, Math.floor(pm / 60), pm % 60, 0, 0).getTime() + dur * 60000).toISOString()
-        })(),
-      }),
+      pickup_min: form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin,
+      start_dt:   (() => {
+        const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin
+        if (pm === null || pm === undefined) return mainStartDt
+        const [y, mo, dd] = form.date.split('-').map(Number)
+        return new Date(y, mo - 1, dd, Math.floor(pm / 60), pm % 60, 0, 0).toISOString()
+      })(),
+      end_dt:     (() => {
+        const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : mainPickupMin
+        const dur = mainDurMin
+        if (pm === null || pm === undefined || !dur) return mainEndDt
+        const [y, mo, dd] = form.date.split('-').map(Number)
+        return new Date(new Date(y, mo - 1, dd, Math.floor(pm / 60), pm % 60, 0, 0).getTime() + dur * 60000).toISOString()
+      })(),
       flight_no: form.flight_no || null, terminal: form.terminal || null, notes: form.notes || null,
       status: form.status,
     }
