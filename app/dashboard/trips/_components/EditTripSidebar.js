@@ -566,7 +566,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
         try {
           await fetch('/api/routes/compute-chain', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ leg_ids: allLegIds, production_id: PRODUCTION_ID }),
+            body: JSON.stringify({ leg_ids: allLegIds, production_id: PRODUCTION_ID, ...(form.pickup_time ? { anchor_pickup_min: timeStrToMin(form.pickup_time), respect_leg_order: true } : {}) }),
           })
         } catch (e) { console.warn('[handleSubmit] extra legs compute-chain:', e) }
       }
