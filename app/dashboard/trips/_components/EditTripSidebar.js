@@ -62,14 +62,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
     const arrStr  = leg.arr_time ? leg.arr_time.slice(0, 5) : ''
     const isMultiGroup = group && group.length > 1
+    const groupCallMin = isMultiGroup
+      ? (group.find(g => g.call_min !== null)?.call_min ?? null)
+      : null
     const callStr = isMultiGroup
-      ? (() => {
-          const lastLeg = [...group].sort((a, b) => (b.leg_order ?? 0) - (a.leg_order ?? 0))[0]
-          if (lastLeg?.pickup_min != null && lastLeg?.duration_min) {
-            return minToHHMM((lastLeg.pickup_min + lastLeg.duration_min) % 1440)
-          }
-          return ''
-        })()
+      ? (groupCallMin !== null ? minToHHMM(groupCallMin) : '')
       : (leg.transfer_class === 'STANDARD' && leg.call_min !== null)
         ? minToHHMM(leg.call_min) : ''
 
@@ -108,8 +105,14 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       return
     }
     const arrStr  = activeLeg.arr_time ? activeLeg.arr_time.slice(0, 5) : ''
-    const callStr = (activeLeg.transfer_class === 'STANDARD' && activeLeg.call_min !== null)
-      ? minToHHMM(activeLeg.call_min) : ''
+    const isMultiGroupActive = group && group.length > 1
+    const groupCallMinActive = isMultiGroupActive
+      ? (group.find(g => g.call_min !== null)?.call_min ?? null)
+      : null
+    const callStr = isMultiGroupActive
+      ? (groupCallMinActive !== null ? minToHHMM(groupCallMinActive) : '')
+      : (activeLeg.transfer_class === 'STANDARD' && activeLeg.call_min !== null)
+        ? minToHHMM(activeLeg.call_min) : ''
     setForm({
       date:            activeLeg.date || isoToday(),
       pickup_id:       activeLeg.pickup_id  || '',
