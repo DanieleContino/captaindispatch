@@ -166,7 +166,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
     setError(null)
     if (!tripId) { setError('Trip ID required'); return }
     if (!date) { setError('Date required'); return }
-    if (!commonLocId) { setError(tripType === 'MULTI-PICK' ? 'Dropoff required' : 'Pickup required'); return }
+    if (tripType !== 'MISTO' && !commonLocId) { setError(tripType === 'MULTI-PICK' ? 'Dropoff required' : 'Pickup required'); return }
     const validLegs = legs.filter(l => l.locationId)
     if (validLegs.length < 2) { setError('Add at least 2 stops'); return }
 
