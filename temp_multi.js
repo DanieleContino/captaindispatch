@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { timeStrToMin, isVehicleAvailableForDate } from '../../../../lib/tripUtils'
@@ -166,7 +166,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
     setError(null)
     if (!tripId) { setError('Trip ID required'); return }
     if (!date) { setError('Date required'); return }
-    if (tripType !== 'MISTO' && !commonLocId) { setError(tripType === 'MULTI-PICK' ? 'Dropoff required' : 'Pickup required'); return }
+    if (!commonLocId) { setError(tripType === 'MULTI-PICK' ? 'Dropoff required' : 'Pickup required'); return }
     const validLegs = legs.filter(l => l.locationId)
     if (validLegs.length < 2) { setError('Add at least 2 stops'); return }
 
@@ -706,7 +706,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
           </button>
           <button type="button" onClick={handleMultiSubmit} disabled={saving}
             style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#15803d', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
-            {saving ? '⏳ Saving...' : tripType === 'MISTO' ? `💾 Save mixed (${mistoLegs.filter(l => l.pickupId && l.dropoffId).length} pairs)` : `💾 Save ${tripType === 'MULTI-PICK' ? 'multi-pick' : 'multi-drop'} (${validLegs.length} stop${validLegs.length !== 1 ? 's' : ''})`}
+            {saving ? '⏳ Saving...' : `💾 Save ${tripType === 'MULTI-PICK' ? 'multi-pick' : tripType === 'MULTI-DROP' ? 'multi-drop' : 'mixed'} (${validLegs.length} stop${validLegs.length !== 1 ? 's' : ''})`}
           </button>
         </div>
 
