@@ -1051,7 +1051,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               {!confirmDel ? (
                 <button type="button" onClick={handleDelete}
                   style={{ width: '100%', padding: '7px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>
-                  🗑 Delete Trip {baseTripId(initial?.trip_id)}{group && group.length > 1 ? ` (${group.length} legs)` : ''}
+                  🗑 Delete Trip {baseTripId(initial?.trip_id)}{group && group.length > 1 ? ` (${group.length} stops)` : ''}
                 </button>
               ) : (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1086,3 +1086,4 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 }
 
 export default EditTripSidebar
+
