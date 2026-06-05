@@ -19,6 +19,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
   const [crewForLeg,  setCrewForLeg]  = useState({}) // { [localId]: [{ uuid, full_name, department }] }
   const [crewLists,   setCrewLists]   = useState({}) // { [locationUuid]: [{ uuid, full_name, department }] }
   const [legDurations, setLegDurations] = useState({}) // { [locationUuid]: duration_min }
+  const [mistoLegs, setMistoLegs] = useState([]) // [{ localId, pickupId, dropoffId, crew: [] }]
   const [saving,      setSaving]      = useState(false)
   const [error,       setError]       = useState(null)
 
@@ -382,12 +383,121 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
                 {tripType === 'MULTI-PICK' ? 'Pickup stops' : tripType === 'MULTI-DROP' ? 'Dropoff stops' : 'Stops'} ({legs.length})
               </div>
-              <button type="button" onClick={addLeg}
+              <button type="button" onClick={tripType === 'MISTO' ? () => setMistoLegs(prev => [...prev, { localId: Date.now().toString(), pickupId: '', dropoffId: '', crew: [] }]) : addLeg}
                 style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '4px 10px', fontSize: '11px', color: '#374151', cursor: 'pointer', fontWeight: '700' }}>
                 + Add stop
               </button>
             </div>
 
+            {tripType === 'MISTO' ? (
+              <>
+                {mistoLegs.length === 0 && (
+                  <div style={{ padding: '20px', textAlign: 'center', border: '1px dashed #e2e8f0', borderRadius: '8px', color: '#94a3b8', fontSize: '12px' }}>
+                    Add pairs with the button above
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {mistoLegs.map((leg, idx) => {
+                    const pickupLoc = locations.find(l => l.uuid === leg.pickupId)
+                    const availCrew = leg.pickupId ? (crewLists[leg.pickupId] || []) : []
+                    return (
+                      <div key={leg.localId} style={{ border: '0.5px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', background: '#f8fafc' }}>
+                          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#0f2340', color: 'white', fontSize: '9px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{idx + 1}</div>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#374151' }}>Pair {idx + 1}</div>
+                          <button type="button" onClick={() => setMistoLegs(prev => prev.filter(l => l.localId !== leg.localId))}
+                            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#dc2626', fontSize: '14px', cursor: 'pointer', padding: '0' }}>✕</button>
+                        </div>
+                        <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div>
+                            <label style={{ fontSize: '9px', fontWeight: '800', color: '#15803d', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Pickup</label>
+                            <select value={leg.pickupId} onChange={e => {
+                              const pid = e.target.value
+                              setMistoLegs(prev => prev.map(l => l.localId === leg.localId ? { ...l, pickupId: pid, crew: [] } : l))
+                              if (pid) loadCrewForLocation(pid)
+                            }} style={{ width: '100%', padding: '5px 8px', border: '1px solid #86efac', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: '#f0fdf4', boxSizing: 'border-box' }}>
+                              <option value="">Select pickup…</option>
+                              <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
+                              <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '9px', fontWeight: '800', color: '#dc2626', letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>Dropoff</label>
+                            <select value={leg.dropoffId} onChange={e => setMistoLegs(prev => prev.map(l => l.localId === leg.localId ? { ...l, dropoffId: e.target.value } : l))}
+                              style={{ width: '100%', padding: '5px 8px', border: '1px solid #fca5a5', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: '#fef2f2', boxSizing: 'border-box' }}>
+                              <option value="">Select dropoff…</option>
+                              <optgroup label="Hubs">{locations.filter(l => l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
+                              <optgroup label="Hotels / Locations">{locations.filter(l => !l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}</optgroup>
+                            </select>
+                          </div>
+                          {leg.pickupId && (
+                            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
+                              <div style={{ fontSize: '9px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                Crew at {pickupLoc?.name || ''}
+                                {availCrew.length > 0 && (
+                                  <button type="button" onClick={() => setMistoLegs(prev => prev.map(l => l.localId === leg.localId ? { ...l, crew: availCrew } : l))}
+                                    style={{ marginLeft: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', fontSize: '9px', fontWeight: '700' }}>
+                                    Add all ({availCrew.length})
+                                  </button>
+                                )}
+                              </div>
+                              {availCrew.length === 0 ? (
+                                <div style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>No confirmed crew at this location</div>
+                              ) : availCrew.map(c => {
+                                const sel = leg.crew.some(x => x.uuid === c.uuid)
+                                return (
+                                  <div key={c.uuid} onClick={() => setMistoLegs(prev => prev.map(l => l.localId === leg.localId ? { ...l, crew: sel ? l.crew.filter(x => x.uuid !== c.uuid) : [...l.crew, c] } : l))}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 6px', cursor: 'pointer', background: sel ? '#eff6ff' : 'white', borderRadius: '5px', border: `0.5px solid ${sel ? '#bfdbfe' : '#f1f5f9'}`, marginBottom: '2px' }}>
+                                    <div style={{ width: '13px', height: '13px', borderRadius: '3px', border: `2px solid ${sel ? '#2563eb' : '#cbd5e1'}`, background: sel ? '#2563eb' : 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      {sel && <span style={{ color: 'white', fontSize: '9px', fontWeight: '900' }}>✓</span>}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontSize: '11px', fontWeight: sel ? '700' : '500', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
+                                      <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {mistoLegs.length >= 2 && mistoLegs.every(l => l.pickupId && l.dropoffId) && (() => {
+                  const points = []
+                  mistoLegs.forEach(l => { points.push({ type: 'pickup', locId: l.pickupId }); points.push({ type: 'dropoff', locId: l.dropoffId }) })
+                  const uniqueOrdered = []
+                  points.forEach(p => { if (!uniqueOrdered.find(u => u.locId === p.locId)) uniqueOrdered.push(p) })
+                  const generatedLegs = []
+                  for (let i = 0; i < uniqueOrdered.length - 1; i++) {
+                    const from = locations.find(l => l.uuid === uniqueOrdered[i].locId)?.name || uniqueOrdered[i].locId
+                    const to   = locations.find(l => l.uuid === uniqueOrdered[i + 1].locId)?.name || uniqueOrdered[i + 1].locId
+                    const pax  = mistoLegs.filter(ml => {
+                      const pickupIdx  = uniqueOrdered.findIndex(u => u.locId === ml.pickupId)
+                      const dropoffIdx = uniqueOrdered.findIndex(u => u.locId === ml.dropoffId)
+                      return pickupIdx <= i && dropoffIdx > i
+                    }).flatMap(ml => ml.crew.map(c => c.full_name.split(' ').slice(-1)[0]))
+                    generatedLegs.push({ from, to, pax })
+                  }
+                  return (
+                    <div style={{ background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '8px 10px' }}>
+                      <div style={{ fontSize: '9px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>Leg generati</div>
+                      {generatedLegs.map((gl, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '9px', fontWeight: '800', background: '#e2e8f0', color: '#374151', padding: '1px 5px', borderRadius: '4px', fontFamily: 'monospace', flexShrink: 0 }}>{tripId}{i === 0 ? '' : 'BCDEFGHIJKLMNOPQRSTUVWXYZ'[i - 1]}</span>
+                          <span style={{ fontSize: '10px', color: '#0f172a', flex: 1 }}>{gl.from} → {gl.to}</span>
+                          {gl.pax.length > 0 && <span style={{ fontSize: '9px', color: '#15803d', flexShrink: 0 }}>{gl.pax.join('+')}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </>
+            ) : (
+              <>
             {legs.length === 0 && (
               <div style={{ padding: '20px', textAlign: 'center', border: '1px dashed #e2e8f0', borderRadius: '8px', color: '#94a3b8', fontSize: '12px' }}>
                 {tripType !== 'MISTO' && !commonLocId ? 'Select the common location first' : 'Add stops with the button above'}
@@ -468,6 +578,8 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
                 )
               })}
             </div>
+            </>
+            )}
           </div>
 
           {error && <div style={{ margin: '12px 18px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
