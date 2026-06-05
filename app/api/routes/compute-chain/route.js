@@ -210,30 +210,39 @@ export async function POST (request) {
       const callMin = sortedByDur[0].call_min  // all sibling legs share call_min
       const date    = sortedByDur[0].date
 
-      // Step 5: backward chain — pickup times (starting from first dropoff arrival = callMin)
-      // last pickup → first dropoff: drive = distance computed above
-      const lastPickup2FirstDropoff = sortedDropoffs[0].dur  // lastPickup → firstDropoff
+      // Step 5: compute pickup times
+      const lastPickup2FirstDropoff = sortedDropoffs[0].dur
       const n = sortedByDur.length
-
-      // pickupTimes[i] = pickup_min for sortedByDur[i]
       const pickupTimes = new Array(n).fill(null)
 
-      // Last pickup: pickup = callMin - drive(lastPickup → firstDropoff)
-      pickupTimes[n - 1] = callMin !== null
-        ? ((callMin - lastPickup2FirstDropoff) % 1440 + 1440) % 1440
-        : (sortedByDur[n - 1].pickup_min ?? null)
-
-      // Walk backwards through pickups
-      for (let i = n - 2; i >= 0; i--) {
-        const nextPickupTime = pickupTimes[i + 1]
-        if (nextPickupTime === null) { pickupTimes[i] = null; continue }
-        const drive = (await getOrComputeDuration(
-          sortedByDur[i].pickup_id,
-          sortedByDur[i + 1].pickup_id,
-          production_id,
-          supabase
-        )) ?? 10
-        pickupTimes[i] = ((nextPickupTime - drive) % 1440 + 1440) % 1440
+      if (anchor_pickup_min !== undefined && respect_leg_order) {
+        // Forward chain da anchor_pickup_min
+        pickupTimes[0] = anchor_pickup_min
+        for (let i = 1; i < n; i++) {
+          const drive = (await getOrComputeDuration(
+            sortedByDur[i - 1].pickup_id,
+            sortedByDur[i].pickup_id,
+            production_id,
+            supabase
+          )) ?? 10
+          pickupTimes[i] = (pickupTimes[i - 1] + drive) % 1440
+        }
+      } else {
+        // Backward chain da callMin
+        pickupTimes[n - 1] = callMin !== null
+          ? ((callMin - lastPickup2FirstDropoff) % 1440 + 1440) % 1440
+          : (sortedByDur[n - 1].pickup_min ?? null)
+        for (let i = n - 2; i >= 0; i--) {
+          const nextPickupTime = pickupTimes[i + 1]
+          if (nextPickupTime === null) { pickupTimes[i] = null; continue }
+          const drive = (await getOrComputeDuration(
+            sortedByDur[i].pickup_id,
+            sortedByDur[i + 1].pickup_id,
+            production_id,
+            supabase
+          )) ?? 10
+          pickupTimes[i] = ((nextPickupTime - drive) % 1440 + 1440) % 1440
+        }
       }
 
       // Step 6: forward chain — dropoff arrival times (starting from callMin = first dropoff)
