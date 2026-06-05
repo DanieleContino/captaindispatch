@@ -847,7 +847,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {/* Passengers */}
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '10px' }}>
-                Passengers ({assignedPax.length}{initial?.capacity ? `/${initial.capacity}` : ''})
+                Passengers ({(activeLeg ? assignedPax.filter(p => p.trip_row_id === activeLeg.id) : assignedPax).length}{initial?.capacity ? `/${initial.capacity}` : ``})
               </div>
 
               {paxLoading ? (
@@ -857,11 +857,11 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                   {assignedPax.length > 0 && (
                     <div style={{ marginBottom: '12px' }}>
                       <div style={{ fontSize: '10px', fontWeight: '700', color: '#15803d', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                        {t.assignedSection} ({assignedPax.length})
+                        {t.assignedSection} ({(activeLeg ? assignedPax.filter(p => p.trip_row_id === activeLeg.id) : assignedPax).length})
                       </div>
                       {group && group.length > 1 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {group.map(leg => {
+                          {[activeLeg ?? group[0]].map(leg => {
                             const legPax = assignedPax.filter(p => p.trip_row_id === leg.id)
                             const legHotelId = leg.transfer_class === 'ARRIVAL' ? leg.dropoff_id : leg.pickup_id
                             const legHotelName = locShortEdit(legHotelId)
