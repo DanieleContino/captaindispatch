@@ -1227,6 +1227,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
           defaultDate={defaultDate}
           PRODUCTION_ID={PRODUCTION_ID}
           initialTripType={tripMode}
+          onSwitchToSingle={() => setTripMode('SINGLE')}
         />
       )}
     </>

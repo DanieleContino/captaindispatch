@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { timeStrToMin, isVehicleAvailableForDate } from '../../../../lib/tripUtils'
 
-export default function TripSidebarMulti({ open, onClose, onSaved, locations, vehicles, serviceTypes, defaultDate, PRODUCTION_ID, initialTripType }) {
+export default function TripSidebarMulti({ open, onClose, onSaved, locations, vehicles, serviceTypes, defaultDate, PRODUCTION_ID, initialTripType, onSwitchToSingle }) {
 
   const [tripType,    setTripType]    = useState('MULTI-PICK') // 'MULTI-PICK' | 'MULTI-DROP' | 'MISTO'
   const [date,        setDate]        = useState(defaultDate || '')
@@ -265,16 +265,21 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
         </div>
 
         {/* Type selector */}
-        <div style={{ padding: '12px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '6px', flexShrink: 0 }}>
+        <div style={{ padding: '10px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '6px', flexShrink: 0, background: '#0f2340' }}>
+          {onSwitchToSingle && (
+            <button type="button" onClick={onSwitchToSingle}
+              style={{ flex: 1, padding: '7px 4px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '800', background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)' }}>
+              → Single
+            </button>
+          )}
           {[
-            { key: 'MULTI-PICK', label: '📍 Multi-Pick', desc: 'Multiple pickups → one destination' },
-            { key: 'MULTI-DROP', label: '📍 Multi-Drop', desc: 'One pickup → multiple dropoffs' },
-            { key: 'MISTO',      label: '🔀 Mixed',      desc: 'Custom pickup & dropoff per stop' },
-          ].map(({ key, label, desc }) => (
+            { key: 'MULTI-PICK', label: '📍 Multi-Pick' },
+            { key: 'MULTI-DROP', label: '📍 Multi-Drop' },
+            { key: 'MISTO',      label: '🔀 Mixed'      },
+          ].map(({ key, label }) => (
             <button key={key} type="button" onClick={() => { setTripType(key); setCommonLocId(''); setLegs([]) }}
-              style={{ flex: 1, padding: '8px 6px', borderRadius: '8px', border: `2px solid ${tripType === key ? '#0f2340' : '#e2e8f0'}`, background: tripType === key ? '#0f2340' : '#f8fafc', color: tripType === key ? 'white' : '#374151', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center', lineHeight: 1.3 }}>
-              <div>{label}</div>
-              <div style={{ fontSize: '9px', fontWeight: '400', marginTop: '3px', opacity: 0.7 }}>{desc}</div>
+              style={{ flex: 1, padding: '7px 4px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '800', background: tripType === key ? 'white' : 'rgba(255,255,255,0.15)', color: tripType === key ? '#0f2340' : 'rgba(255,255,255,0.8)' }}>
+              {label}
             </button>
           ))}
         </div>
