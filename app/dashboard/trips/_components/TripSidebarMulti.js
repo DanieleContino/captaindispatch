@@ -203,6 +203,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
             durMin = routeData?.duration_min || null
           }
 
+          if (i === 0) console.log('[MISTO submit] pickupTime:', pickupTime, 'callTime:', callTime, 'pickupMin:', timeStrToMin(pickupTime) || timeStrToMin(callTime) || null)
           const pickupMin = i === 0 ? (timeStrToMin(pickupTime) || timeStrToMin(callTime) || null) : null
 
           const [y, mo, dd] = date.split('-').map(Number)
