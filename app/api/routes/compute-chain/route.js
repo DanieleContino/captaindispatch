@@ -379,13 +379,21 @@ export async function POST (request) {
         }
       }
 
-      // Step 5: update all legs in DB
+      // Step 5: compute call_min = last leg pickup_min + duration_min
+      const lastResult = results[results.length - 1]
+      const lastLegDur = lastResult.leg.duration_min ?? 0
+      const computedCallMin = lastResult.pickup_min !== null
+        ? (lastResult.pickup_min + lastLegDur) % 1440
+        : null
+
+      // Update all legs in DB
       await Promise.all(
         results.map(r =>
           supabase.from('trips').update({
             pickup_min: r.pickup_min,
             start_dt:   r.start_dt,
             end_dt:     r.end_dt,
+            call_min:   computedCallMin,
           }).eq('id', r.id)
         )
       )
