@@ -807,7 +807,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     return (
                       <button key={tp} type="button" onClick={() => setMultiType(tp)}
                         style={{ flex: 1, padding: '7px 4px', borderRadius: '8px', border: `2px solid ${multiType === tp ? c.border : '#e2e8f0'}`, background: multiType === tp ? c.bg : 'white', color: multiType === tp ? c.color : '#94a3b8', fontSize: '10px', fontWeight: '800', cursor: 'pointer', letterSpacing: '0.04em' }}>
-                        {tp === 'ARRIVAL' ? '🛬 ARR' : tp === 'DEPARTURE' ? '🛫 DEP' : '🔀 STD'}
+                        {tp === 'ARRIVAL' ? '🛬 ARR' : tp === 'DEPARTURE' ? '🛫 DEP' : '🔀 TRF'}
                       </button>
                     )
                   })}
@@ -855,7 +855,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                 )}
                 {multiType === 'STANDARD' && (
                   <div style={{ fontSize: '10px', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #93c5fd', borderRadius: '7px', padding: '6px 10px' }}>
-                    💡 <strong>STANDARD</strong>: Pickup e Dropoff liberi per ogni leg (MIXED)
+                    💡 <strong>TRANSFER</strong>: Pickup e Dropoff liberi per ogni leg (MIXED)
                   </div>
                 )}
               </>
