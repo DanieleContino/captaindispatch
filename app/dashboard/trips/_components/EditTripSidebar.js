@@ -61,8 +61,17 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     setActiveLeg(leg)
 
     const arrStr  = leg.arr_time ? leg.arr_time.slice(0, 5) : ''
-    const callStr = (leg.transfer_class === 'STANDARD' && leg.call_min !== null)
-      ? minToHHMM(leg.call_min) : ''
+    const isMultiGroup = group && group.length > 1
+    const callStr = isMultiGroup
+      ? (() => {
+          const lastLeg = [...group].sort((a, b) => (b.leg_order ?? 0) - (a.leg_order ?? 0))[0]
+          if (lastLeg?.pickup_min != null && lastLeg?.duration_min) {
+            return minToHHMM((lastLeg.pickup_min + lastLeg.duration_min) % 1440)
+          }
+          return ''
+        })()
+      : (leg.transfer_class === 'STANDARD' && leg.call_min !== null)
+        ? minToHHMM(leg.call_min) : ''
 
     setForm({
       date:            leg.date || isoToday(),
@@ -451,7 +460,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           body: JSON.stringify({
             leg_ids: group.map(g => g.id),
             production_id: PRODUCTION_ID,
-            ...(form.pickup_time ? { anchor_pickup_min: timeStrToMin(form.pickup_time), respect_leg_order: true } : {}),
+            ...(form.pickup_time && !(group && group.length > 1) ? { anchor_pickup_min: timeStrToMin(form.pickup_time), respect_leg_order: true } : {}),
           }),
         })
       } catch (e) { console.warn('[handleSubmit] compute-chain:', e) }
@@ -764,7 +773,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {/* Time inputs */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
-                <label style={lbl}>{transferClass === 'ARRIVAL' ? 'Arrival Time' : transferClass === 'DEPARTURE' ? 'Departure Time' : 'Pickup Time'}</label>
+                <label style={lbl}>{transferClass === 'ARRIVAL' ? 'Arrival Time' : transferClass === 'DEPARTURE' ? 'Departure Time' : (group && group.length > 1) ? 'Call Time' : 'Pickup Time'}</label>
                 <input type="time"
                   value={transferClass !== 'STANDARD' ? form.arr_time : form.call_time}
                   onChange={e => transferClass !== 'STANDARD' ? set('arr_time', e.target.value) : set('call_time', e.target.value)}

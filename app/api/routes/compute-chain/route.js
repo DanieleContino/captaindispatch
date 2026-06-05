@@ -119,7 +119,7 @@ export async function POST (request) {
   try {
     const body = await request.json()
     const { production_id, respect_leg_order, anchor_pickup_min } = body
-    console.log("[compute-chain] body:", JSON.stringify({ leg_ids: body.leg_ids?.length, anchor_pickup_min, respect_leg_order }))
+    
     let leg_ids = body.leg_ids
     const trip_group_id = body.trip_group_id
 
