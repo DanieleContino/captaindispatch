@@ -118,7 +118,7 @@ async function getOrComputeDuration (fromId, toId, productionId, supabase) {
 export async function POST (request) {
   try {
     const body = await request.json()
-    const { production_id, respect_leg_order } = body
+    const { production_id, respect_leg_order, anchor_pickup_min } = body
     let leg_ids = body.leg_ids
     const trip_group_id = body.trip_group_id
 
@@ -312,7 +312,7 @@ export async function POST (request) {
         ? [...enriched].sort((a, b) => (a.leg_order ?? 999) - (b.leg_order ?? 999))
         : [...enriched].sort((a, b) => (b.duration_min ?? 0) - (a.duration_min ?? 0))
 
-      const callMin = sorted[0].call_min
+      const callMin = anchor_pickup_min !== undefined ? null : sorted[0].call_min
       const date    = sorted[0].date
 
       // Step 3: compute pickup_min chain backwards
@@ -320,10 +320,21 @@ export async function POST (request) {
       const n       = sorted.length
 
       // Last leg (closest to hub): pickup = call - duration
-      const lastDur     = sorted[n - 1].duration_min ?? 0
-      const lastPickup  = callMin !== null
-        ? ((callMin - lastDur) % 1440 + 1440) % 1440
-        : sorted[n - 1].pickup_min  // preserve if no call_min
+      // If anchor_pickup_min provided, use it directly for the FIRST leg (leg_order=1)
+      const lastDur    = sorted[n - 1].duration_min ?? 0
+      const lastPickup = anchor_pickup_min !== undefined
+        ? (() => {
+            // anchor is for the first leg (sorted[0]), walk forward to find lastPickup
+            let t = anchor_pickup_min
+            for (let k = 0; k < n - 1; k++) {
+              const d = sorted[k].duration_min ?? 10
+              t = (t + d) % 1440
+            }
+            return t
+          })()
+        : callMin !== null
+          ? ((callMin - lastDur) % 1440 + 1440) % 1440
+          : sorted[n - 1].pickup_min
 
       results[n - 1] = { id: sorted[n - 1].id, pickup_min: lastPickup, leg: sorted[n - 1] }
 
@@ -413,12 +424,19 @@ export async function POST (request) {
       const results = new Array(sorted.length)
       const date    = sorted[0].date
 
+      // If anchor_pickup_min provided, update pickup_min for all ARRIVAL legs
+      const arrivalAnchor = anchor_pickup_min !== undefined ? anchor_pickup_min : null
+      if (arrivalAnchor !== null) {
+        await Promise.all(sorted.map(leg =>
+          supabase.from('trips').update({ pickup_min: arrivalAnchor, call_min: arrivalAnchor,
+            start_dt: (() => { const [y,mo,dd] = date.split('-').map(Number); return new Date(y,mo-1,dd,Math.floor(arrivalAnchor/60),arrivalAnchor%60,0,0).toISOString() })()
+          }).eq('id', leg.id)
+        ))
+      }
       // First hotel: driver goes directly from hub (pickup_min + duration[0])
-      // pickup_min is the same for all ARRIVAL legs (= arr_time)
-      // We update duration_min to represent "time from hub until this dropoff in the chain"
       results[0] = {
         id:          sorted[0].id,
-        duration_min: sorted[0].duration_min,  // direct from hub, unchanged
+        duration_min: sorted[0].duration_min,
       }
 
       for (let i = 1; i < sorted.length; i++) {
