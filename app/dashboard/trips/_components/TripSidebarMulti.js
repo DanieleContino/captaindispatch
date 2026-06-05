@@ -170,6 +170,119 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
     const validLegs = legs.filter(l => l.locationId)
     if (validLegs.length < 2) { setError('Add at least 2 stops'); return }
 
+    if (tripType === 'MISTO') {
+      const validMisto = mistoLegs.filter(l => l.pickupId && l.dropoffId)
+      if (validMisto.length < 2) { setError('Add at least 2 pairs'); return }
+
+      setSaving(true)
+      const mistoGroupId = crypto.randomUUID()
+
+      const points = []
+      validMisto.forEach(l => {
+        if (!points.find(p => p.locId === l.pickupId))  points.push({ locId: l.pickupId })
+        if (!points.find(p => p.locId === l.dropoffId)) points.push({ locId: l.dropoffId })
+      })
+
+      const insertedMistoIds = []
+      try {
+        for (let i = 0; i < points.length - 1; i++) {
+          const fromId = points[i].locId
+          const toId   = points[i + 1].locId
+
+          const legPax = validMisto.filter(ml => {
+            const pickupIdx  = points.findIndex(p => p.locId === ml.pickupId)
+            const dropoffIdx = points.findIndex(p => p.locId === ml.dropoffId)
+            return pickupIdx <= i && dropoffIdx > i
+          }).flatMap(ml => ml.crew)
+
+          const uniquePax = legPax.filter((c, idx, arr) => arr.findIndex(x => x.uuid === c.uuid) === idx)
+
+          let durMin = null
+          if (PRODUCTION_ID) {
+            const { data: routeData } = await supabase.from('routes')
+              .select('duration_min').eq('production_id', PRODUCTION_ID)
+              .eq('from_id', fromId).eq('to_id', toId).maybeSingle()
+            durMin = routeData?.duration_min || null
+          }
+
+          const pickupMin = (() => {
+            const base = timeStrToMin(pickupTime) || timeStrToMin(callTime)
+            if (base === null) return null
+            if (i === 0) return base
+            let total = base
+            for (let j = 0; j < i; j++) {
+              total += legDurations[points[j].locId + '_' + points[j + 1].locId] || 10
+            }
+            return total
+          })()
+
+          const [y, mo, dd] = date.split('-').map(Number)
+          const startDt = pickupMin !== null
+            ? new Date(y, mo - 1, dd, Math.floor(pickupMin / 60), pickupMin % 60, 0, 0).toISOString()
+            : null
+          const endDt = startDt && durMin
+            ? new Date(new Date(startDt).getTime() + durMin * 60000).toISOString()
+            : null
+
+          const legTripId = i === 0 ? tripId : tripId + 'BCDEFGHIJKLMNOPQRSTUVWXYZ'[i - 1]
+
+          const row = {
+            production_id: PRODUCTION_ID,
+            trip_id:       legTripId,
+            trip_group_id: mistoGroupId,
+            leg_order:     i + 1,
+            date,
+            pickup_id:     fromId,
+            dropoff_id:    toId,
+            vehicle_id:    vehicleId || null,
+            driver_name:   selVehicle?.driver_name || null,
+            sign_code:     selVehicle?.sign_code   || null,
+            capacity:      selVehicle?.capacity    || null,
+            service_type:  'MISTO',
+            call_min:      timeStrToMin(callTime),
+            pickup_min:    pickupMin,
+            start_dt:      startDt,
+            end_dt:        endDt,
+            duration_min:  durMin,
+            status:        'PLANNED',
+            pax_count:     uniquePax.length,
+            passenger_list: uniquePax.length > 0 ? uniquePax.map(c => c.full_name).join(', ') : null,
+          }
+
+          const { data: ins, error: tripErr } = await supabase.from('trips').insert(row).select('id').single()
+          if (tripErr || !ins?.id) throw new Error(tripErr?.message || `Error inserting leg ${i + 1}`)
+          insertedMistoIds.push(ins.id)
+
+          if (uniquePax.length > 0) {
+            await supabase.from('trip_passengers').insert(
+              uniquePax.map(c => ({ production_id: PRODUCTION_ID, trip_row_id: ins.id, crew_id: c.uuid }))
+            )
+          }
+        }
+
+        if (insertedMistoIds.length >= 2) {
+          await fetch('/api/routes/compute-chain', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              leg_ids: insertedMistoIds,
+              production_id: PRODUCTION_ID,
+              anchor_pickup_min: timeStrToMin(pickupTime) || timeStrToMin(callTime) || null,
+              respect_leg_order: true,
+            }),
+          })
+        }
+
+        setSaving(false)
+        onSaved()
+        return
+      } catch (e) {
+        setSaving(false)
+        setError(e.message)
+        return
+      }
+    }
+
     setSaving(true)
     const multiGroupId = crypto.randomUUID()
     const insertedIds = []
