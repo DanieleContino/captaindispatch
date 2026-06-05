@@ -129,7 +129,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
   }, [form.pickup_id, form.dropoff_id])
 
   const locsById = Object.fromEntries((locations || []).map(l => [l.uuid, l.name]))
-  const locsDisplayMap = Object.fromEntries((locations || []).map(l => [l.uuid, l.id]))
+  const locsDisplayMap = Object.fromEntries((locations || []).map(l => [l.uuid, l.display_id]))
 
   const transferClass = getClass(locsDisplayMap?.[form.pickup_id], locsDisplayMap?.[form.dropoff_id])
   const arrMin  = timeStrToMin(form.arr_time)
@@ -349,9 +349,9 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
     const mainArrTime   = activeLeg?.isNew ? initial.arr_time   : (form.arr_time ? form.arr_time + ':00' : null)
     const mainDurMin    = activeLeg?.isNew ? (initial.duration_min || null) : durMin
     const mainCallMin   = activeLeg?.isNew ? initial.call_min   : (computed?.callMin ?? null)
-    const mainPickupMin = activeLeg?.isNew ? initial.pickup_min : (computed?.pickupMin ?? null)
-    const mainStartDt   = activeLeg?.isNew ? initial.start_dt   : (computed?.startDt ?? null)
-    const mainEndDt     = activeLeg?.isNew ? initial.end_dt     : (computed?.endDt ?? null)
+    const mainPickupMin = activeLeg?.isNew ? initial.pickup_min : (form.pickup_time ? timeStrToMin(form.pickup_time) : (computed?.pickupMin ?? null))
+    const mainStartDt   = activeLeg?.isNew ? initial.start_dt   : (() => { const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : computed?.pickupMin; if (pm === null || pm === undefined) return computed?.startDt ?? null; const [y,mo,dd] = form.date.split('-').map(Number); return new Date(y,mo-1,dd,Math.floor(pm/60),pm%60,0,0).toISOString() })()
+    const mainEndDt     = activeLeg?.isNew ? initial.end_dt     : (() => { const pm = form.pickup_time ? timeStrToMin(form.pickup_time) : computed?.pickupMin; const dur = durMin; if (pm === null || pm === undefined || !dur) return computed?.endDt ?? null; const [y,mo,dd] = form.date.split('-').map(Number); return new Date(new Date(y,mo-1,dd,Math.floor(pm/60),pm%60,0,0).getTime()+dur*60000).toISOString() })()
 
     const row = {
       date: form.date, pickup_id: mainPickupId, dropoff_id: mainDropoffId,
@@ -615,14 +615,14 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       {open && <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(15,35,64,0.15)' }} />}
       <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: isMobile ? '100vw' : `${SIDEBAR_W}px`, background: 'white', borderLeft: '1px solid #e2e8f0', boxShadow: '-4px 0 24px rgba(0,0,0,0.1)', zIndex: 50, transform: open ? 'translateX(0)' : `translateX(${isMobile ? '100vw' : SIDEBAR_W + 'px'})`, transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)', display: 'flex', flexDirection: 'column' }}>
 
-        <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1e3a5f', flexShrink: 0 }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#0f2340', flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: '10px', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t.editTrip}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ fontSize: '18px', fontWeight: '900', color: 'white', fontFamily: 'monospace', letterSpacing: '-0.5px' }}>{baseTripId(initial?.trip_id)}</div>
               {group && group.length > 1 && (
-                <span style={{ fontSize: '10px', fontWeight: '800', background: '#f59e0b', color: 'white', padding: '2px 8px', borderRadius: '999px', letterSpacing: '0.04em' }}>
-                  🔀 MULTI · {group.length} legs
+                <span style={{ fontSize: '10px', fontWeight: '800', background: '#f59e0b', color: '#451a03', padding: '2px 8px', borderRadius: '999px', letterSpacing: '0.04em' }}>
+                  {(() => { const st = group[0]?.service_type; return st === 'MULTI-PICK' ? 'MULTI-PICK' : st === 'MULTI-DROP' ? 'MULTI-DROP' : st === 'MISTO' ? 'MIXED' : 'MULTI' })() } · {group.length} stops
                 </span>
               )}
             </div>
@@ -640,10 +640,10 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
             {/* Leg Selector */}
             {open && (
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '4px 0 2px' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', padding: '8px 18px', background: '#0f2340', borderBottom: '1px solid rgba(255,255,255,0.08)', marginLeft: '-18px', marginRight: '-18px', marginTop: '-16px', marginBottom: '4px' }}>
                 {[...(group || [initial].filter(Boolean)), ...extraLegs].map((leg, i) => {
                   const isNew = extraLegs.some(e => e.id === leg.id)
-                  const label = i === 0 ? 'Leg A' : `Leg ${String.fromCharCode(65 + i)}${isNew ? ' ✦' : ''}`
+                  const label = i === 0 ? 'Stop A' : `Stop ${String.fromCharCode(65 + i)}${isNew ? ' ✦' : ''}`
                   const isActive = activeLeg?.id === leg.id
                   return (
                     <button key={leg.id} type="button" onClick={() => setActiveLeg(leg)}
@@ -672,8 +672,8 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
                       setExtraLegs(prev => [...prev, newLeg])
                       setActiveLeg(newLeg)
                     }}
-                    style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '11px', background: 'transparent', color: '#534AB7', border: '0.5px solid #534AB7', cursor: 'pointer' }}>
-                    + Add Leg
+                    style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '11px', background: 'transparent', color: 'rgba(255,255,255,0.5)', border: '0.5px solid rgba(255,255,255,0.25)', cursor: 'pointer' }}>
+                    + Add Stop
                   </button>
                 )}
               </div>
@@ -762,7 +762,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {/* Time inputs */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
-                <label style={lbl}>{transferClass === 'ARRIVAL' ? 'Arrival Time' : transferClass === 'DEPARTURE' ? 'Departure Time' : 'Call Time'}</label>
+                <label style={lbl}>{transferClass === 'ARRIVAL' ? 'Arrival Time' : transferClass === 'DEPARTURE' ? 'Departure Time' : 'Pickup Time'}</label>
                 <input type="time"
                   value={transferClass !== 'STANDARD' ? form.arr_time : form.call_time}
                   onChange={e => transferClass !== 'STANDARD' ? set('arr_time', e.target.value) : set('call_time', e.target.value)}
