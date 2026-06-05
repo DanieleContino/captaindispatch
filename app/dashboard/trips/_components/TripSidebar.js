@@ -82,7 +82,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
     setError(null); setSelCrew([]); setCrewSearch(''); setVCheck(null)
     setSelExistingTrip(null); setAddedToTrip(null)
     setCrewLookupQ(''); setCrewLookupResults([]); setCrewInfoCrew(null)
-    setMultiMode(false); setSavedLegs([]); setEditingLegLocalId(null)
+    setMultiMode(false); setSavedLegs([]); setEditingLegLocalId(null); setTripMode('SINGLE')
     setLocalLocs(locations)
     setNewLocTarget(null); setNewLocForm({ id: '', name: '', is_hub: false }); setNewLocError(null); setNewLocDoneMsg(null)
     setNewLocPlaceQuery(''); setNewLocPredictions([]); setNewLocPlaceOpen(false); setNewLocLat(''); setNewLocLng(''); setNewLocType('')
@@ -1234,3 +1234,4 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
 }
 
 export default TripSidebar
+
