@@ -232,7 +232,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
         await fetch('/api/routes/compute-chain', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ leg_ids: insertedIds, production_id: PRODUCTION_ID, trip_group_id: multiGroupId }),
+          body:    JSON.stringify({ leg_ids: insertedIds, production_id: PRODUCTION_ID, trip_group_id: multiGroupId, anchor_pickup_min: timeStrToMin(pickupTime) || timeStrToMin(callTime) || null }),
         })
       }
 
