@@ -58,7 +58,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
   const [tripMode,          setTripMode]          = useState('SINGLE') // 'SINGLE' | 'MULTI-PICK' | 'MULTI-DROP' | 'MISTO'
 
   // UUID→TEXT id lookup so getClass (which uses hub prefix patterns) still works after migration
-  const locUuidToTextId = Object.fromEntries(localLocs.map(l => [l.uuid, l.id]).filter(([k]) => k))
+  const locUuidToTextId = Object.fromEntries(localLocs.map(l => [l.uuid, l.display_id]).filter(([k]) => k))
   const transferClass = getClass(locUuidToTextId[form.pickup_id] || form.pickup_id, locUuidToTextId[form.dropoff_id] || form.dropoff_id)
   const arrMin  = timeStrToMin(form.arr_time)
   const callMin = timeStrToMin(form.call_time)
@@ -758,12 +758,6 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={() => { setMultiMode(m => !m); setSavedLegs([]); setEditingLegLocalId(null) }}
-              style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '10px', fontWeight: '800', background: multiMode ? '#f59e0b' : 'rgba(255,255,255,0.15)', color: multiMode ? '#0f2340' : 'white', letterSpacing: '0.04em' }}>
-              🔀 MULTI
-            </button>
             {(!multiMode && form.pickup_id && form.dropoff_id) && (
               <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{transferClass}</span>
             )}
@@ -1009,7 +1003,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
               {multiMode && savedLegs.length > 0 ? (
                 <div style={{ padding: '8px 12px', border: '1px solid #bbf7d0', borderRadius: '8px', background: '#f0fdf4', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: '800', color: '#15803d', flex: 1 }}>
-                    🚐 {selVehicle ? `${selVehicle.id} — ${selVehicle.driver_name} (${selVehicle.sign_code}) ×${selVehicle.capacity}` : 'No vehicle'}
+                    🚐 {selVehicle ? `${selVehicle.display_id} — ${selVehicle.driver_name} (${selVehicle.sign_code}) ×${selVehicle.capacity}` : 'No vehicle'}
                   </span>
                   <span style={{ fontSize: '10px', fontWeight: '800', color: '#15803d', background: '#bbf7d0', padding: '2px 7px', borderRadius: '999px', flexShrink: 0 }}>🔒 shared</span>
                 </div>
@@ -1232,6 +1226,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
           serviceTypes={serviceTypes}
           defaultDate={defaultDate}
           PRODUCTION_ID={PRODUCTION_ID}
+          initialTripType={tripMode}
         />
       )}
     </>
