@@ -972,7 +972,9 @@ export default function CaptainGoPage() {
               || legs.find(l => l.status === 'PLANNED')
             const allDone      = doneLegCount === legs.length
             const firstLeg     = legs[0]
-            const serviceLabel = firstLeg.service_type || 'Multi-leg'
+            const allSameDropoff = legs.every(l => l.dropoff_id === legs[0].dropoff_id)
+            const allSamePickup  = legs.every(l => l.pickup_id  === legs[0].pickup_id)
+            const serviceLabel = firstLeg.service_type || (allSameDropoff ? 'Multi-Pick' : allSamePickup ? 'Multi-Drop' : 'Multi-leg')
 
             // Determina se Mix ha sezioni pickup/dropoff separate
             const isMix = serviceLabel === 'Mix'
