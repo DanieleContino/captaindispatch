@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
@@ -283,7 +283,7 @@ export default function ListsPage() {
         .neq('status', 'CANCELLED')
         .order('pickup_min', { ascending: true, nullsLast: true }),
       supabase.from('locations').select('uuid,display_id,name,default_pickup_point').eq('production_id', id),
-      supabase.from('vehicles').select('display_id').eq('production_id', id).eq('in_transport', true),
+      supabase.from('vehicles').select('uuid').eq('production_id', id).eq('in_transport', true),
       supabase.from('transport_list_sections').select('*')
         .eq('production_id', id).eq('date', d)
         .order('display_order', { ascending: true })
@@ -299,7 +299,7 @@ export default function ListsPage() {
     const tripsFiltered = (tR.data || []).filter(t => !t.vehicle_id || inTransportIds.has(t.vehicle_id))
     setTrips(tripsFiltered)
     if (lR.data) {
-      const m = {}; lR.data.forEach(l => { m[l.id] = { name: l.name, pickup_point: l.default_pickup_point } }); setLocsMap(m)
+      const m = {}; lR.data.forEach(l => { m[l.uuid] = { name: l.name, pickup_point: l.default_pickup_point } }); setLocsMap(m)
     }
     setSections(sR.data || [])
     setAssignments(aR.data || [])
