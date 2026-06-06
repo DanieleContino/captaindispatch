@@ -733,10 +733,7 @@ export default function EditTripSidebarMisto({ open, initial, group, locations, 
           )}
 
           {/* SECTION 4 — Danger zone */}
-          <div style={{ borderTop: '2px solid #fecaca', padding: '16px 18px' }}>
-            <div style={{ fontSize: '10px', fontWeight: '800', color: '#dc2626', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '8px' }}>
-              Danger Zone
-            </div>
+          <div style={{ borderTop: '1px solid #fecaca', paddingTop: '12px', marginTop: '4px', padding: '12px 18px' }}>
             {error && (
               <div style={{ marginBottom: '8px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>
                 ❌ {error}
@@ -767,7 +764,7 @@ export default function EditTripSidebarMisto({ open, initial, group, locations, 
               <button
                 type="button"
                 onClick={handleDelete}
-                style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: '12px', cursor: 'pointer', fontWeight: '700' }}
+                style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '11px', fontWeight: '600', padding: '4px 0', opacity: 0.7 }}
               >
                 🗑 Delete all legs ({group?.length})
               </button>

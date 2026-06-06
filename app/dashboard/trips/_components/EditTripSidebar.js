@@ -1082,7 +1082,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             <div style={{ borderTop: '1px solid #fecaca', paddingTop: '12px', marginTop: '4px' }}>
               {!confirmDel ? (
                 <button type="button" onClick={handleDelete}
-                  style={{ width: '100%', padding: '7px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}>
+                  style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '11px', fontWeight: '600', padding: '4px 0', opacity: 0.7 }}>
                   🗑 Delete Trip {baseTripId(initial?.trip_id)}{group && group.length > 1 ? ` (${group.length} stops)` : ''}
                 </button>
               ) : (
@@ -1102,7 +1102,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
           </div>
 
           {error && <div style={{ margin: '0 18px 12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px' }}>❌ {error}</div>}
-          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexShrink: 0, background: 'white' }}>
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', flexShrink: 0, background: 'white', position: 'sticky', bottom: 0 }}>
             <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>{t.cancel}</button>
             <button type="submit" disabled={saving} style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#1e3a5f', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}>
               {saving ? t.saving : t.saveChanges}
