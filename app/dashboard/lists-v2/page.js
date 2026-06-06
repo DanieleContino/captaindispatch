@@ -10,6 +10,7 @@ import { COLUMNS_CATALOG, CAPTAIN_PRESET } from '../../../lib/listColumnsCatalog
 import { ColumnsEditorSidebar } from '../../../lib/ColumnsEditorSidebar'
 import { HeaderFooterEditorSidebar } from '../../../lib/HeaderFooterEditorSidebar'
 import { TLHeaderFooterRenderer } from '../../../lib/TLHeaderFooterRenderer'
+import TripGroupRow from './_components/TripGroupRow'
 
 // ─── Utility ──────────────────────────────────────────────────
 function isoToday() { return new Date().toISOString().split('T')[0] }
@@ -666,11 +667,10 @@ export default function ListsPage() {
                           </span>
                         </div>
                         {columnsConfig.length > 0 && groups.map(group => (
-                          <TripTableRow
-                            key={group.trip_id + '::' + (group.vehicle_id || 'none')}
+                          <TripGroupRow
+                            key={group.group_key}
                             group={group}
                             locsMap={locsMap}
-                            sectionColor={color}
                             sections={sections}
                             moveMenuOpenFor={moveMenuOpenFor}
                             setMoveMenuOpenFor={setMoveMenuOpenFor}
@@ -705,11 +705,10 @@ export default function ListsPage() {
                         </span>
                       </div>
                       {columnsConfig.length > 0 && groups.map(group => (
-                        <TripTableRow
-                          key={group.trip_id + '::' + (group.vehicle_id || 'none')}
+                        <TripGroupRow
+                          key={group.group_key}
                           group={group}
                           locsMap={locsMap}
-                          sectionColor={color}
                           sections={sections}
                           moveMenuOpenFor={moveMenuOpenFor}
                           setMoveMenuOpenFor={setMoveMenuOpenFor}
@@ -756,11 +755,10 @@ export default function ListsPage() {
                             )}
                           </div>
                           {columnsConfig.length > 0 && unassignedGroups.map(group => (
-                            <TripTableRow
-                              key={group.trip_id + '::' + (group.vehicle_id || 'none')}
+                            <TripGroupRow
+                              key={group.group_key}
                               group={group}
                               locsMap={locsMap}
-                              sectionColor="#cbd5e1"
                               sections={sections}
                               moveMenuOpenFor={moveMenuOpenFor}
                               setMoveMenuOpenFor={setMoveMenuOpenFor}
