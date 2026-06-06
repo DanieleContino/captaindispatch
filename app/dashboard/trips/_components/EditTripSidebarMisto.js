@@ -783,7 +783,7 @@ export default function EditTripSidebarMisto({ open, initial, group, locations, 
             <button
               type="submit"
               disabled={saving}
-              style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#15803d', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}
+              style={{ flex: 2, padding: '9px', borderRadius: '8px', border: 'none', background: saving ? '#94a3b8' : '#1e3a5f', color: 'white', fontSize: '13px', cursor: saving ? 'default' : 'pointer', fontWeight: '800' }}
             >
               {saving ? '⏳ Saving…' : `💾 Save mixed (${validMistoCount} pairs)`}
             </button>
