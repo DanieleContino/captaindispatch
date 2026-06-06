@@ -493,22 +493,26 @@ export default function PaxCoveragePage() {
     if (!PRODUCTION_ID) return
     setLoading(true)
 
-    const [crewRes, tripsRes] = await Promise.all([
+    const [crewRes, tripsRes, vehiclesRes] = await Promise.all([
       supabase.from('crew').select('uuid,display_id,full_name,department,hotel_id,hotel_status,travel_status,arrival_date,departure_date,no_transport_needed,on_location')
         .eq('production_id', PRODUCTION_ID)
         .eq('hotel_status', 'CONFIRMED')
         .order('department', { nullsLast: true })
         .order('full_name'),
-      supabase.from('trips').select('id,trip_id,pickup_min,call_min,transfer_class,vehicle_id,pickup_id,dropoff_id,status')
+      supabase.from('trips').select('id,trip_id,pickup_min,call_min,transfer_class,vehicle_id,pickup_id,dropoff_id,status,trip_group_id')
         .eq('production_id', PRODUCTION_ID)
         .eq('date', d)
         .neq('status', 'CANCELLED'),
+      supabase.from('vehicles').select('uuid,display_id')
+        .eq('production_id', PRODUCTION_ID),
     ])
 
     // Filtra il crew per data: escludi chi è già partito o non è ancora arrivato
     const crewData  = (crewRes.data || []).filter(c => isCrewActiveOnDate(c, d))
     const tripsData = tripsRes.data || []
     const tripIds   = tripsData.map(t => t.id)
+    const vehicleMap = {}
+    ;(vehiclesRes.data || []).forEach(v => { vehicleMap[v.uuid] = v.display_id })
 
     setCrew(crewData)
 
