@@ -867,7 +867,7 @@ export default function PaxCoveragePage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {assigned.map(c => (
-                    <AssignedRow key={c.uuid} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} />
+                    <AssignedRow key={c.uuid} member={c} trips={assignMap[c.uuid] || []} locsMap={locsMap} vehicleMap={vehicleMap} />
                   ))}
                 </div>
               </div>
@@ -916,6 +916,7 @@ export default function PaxCoveragePage() {
     </div>
   )
 }
+
 
 
 
