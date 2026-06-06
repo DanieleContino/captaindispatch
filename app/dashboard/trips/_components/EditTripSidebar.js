@@ -11,6 +11,7 @@ import {
   getClass, calcTimes, isVehicleAvailableForDate, checkVehicleAvail,
 } from '../../../../lib/tripUtils'
 import CrewInfoModal from './CrewInfoModal'
+import EditTripSidebarMisto from './EditTripSidebarMisto'
 
 function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTypes, onClose, onSaved, onPaxChanged, currentUser }) {
   const t = useT()
@@ -139,6 +140,23 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
       .eq('production_id', PRODUCTION_ID).eq('from_id', form.pickup_id).eq('to_id', form.dropoff_id).maybeSingle()
       .then(({ data }) => { if (data?.duration_min) set('duration_min', String(data.duration_min)); setDurLoading(false) })
   }, [form.pickup_id, form.dropoff_id])
+
+  if (group?.[0]?.service_type === 'MISTO') {
+    return (
+      <EditTripSidebarMisto
+        open={open}
+        initial={initial}
+        group={group}
+        locations={locations}
+        vehicles={vehicles}
+        serviceTypes={serviceTypes}
+        onClose={onClose}
+        onSaved={onSaved}
+        onPaxChanged={onPaxChanged}
+        currentUser={currentUser}
+      />
+    )
+  }
 
   const locsById = Object.fromEntries((locations || []).map(l => [l.uuid, l.name]))
   const locsDisplayMap = Object.fromEntries((locations || []).map(l => [l.uuid, l.display_id]))
