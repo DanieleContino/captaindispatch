@@ -528,23 +528,47 @@ export default function PaxCoveragePage() {
       .select('crew_id,trip_row_id')
       .in('trip_row_id', tripIds)
 
-    // Costruisci mappa crewId → trips
+    // Costruisci mappa crewId → legs raw
     const map = {}
     for (const p of paxData || []) {
       const trip = tripsData.find(t => t.id === p.trip_row_id)
       if (!trip) continue
       if (!map[p.crew_id]) map[p.crew_id] = []
-      // Evita duplicati (trip_id già presente)
       if (!map[p.crew_id].find(x => x.id === trip.id)) {
         map[p.crew_id].push(trip)
       }
     }
-    // Ordina i trip per pickup_min
-    for (const key of Object.keys(map)) {
-      map[key].sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999))
+    // Raggruppa per trip_group_id: collassa multi-leg in un singolo oggetto display
+    const groupedMap = {}
+    for (const crewId of Object.keys(map)) {
+      const legs = map[crewId].sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999))
+      const seen = new Set()
+      const groups = []
+      for (const leg of legs) {
+        const key = leg.trip_group_id || leg.id
+        if (seen.has(key)) continue
+        seen.add(key)
+        const siblings = leg.trip_group_id
+          ? legs.filter(l => l.trip_group_id === leg.trip_group_id)
+          : [leg]
+        const first = siblings[0]
+        const last  = siblings[siblings.length - 1]
+        groups.push({
+          id:             first.id,
+          trip_id:        first.trip_id,
+          pickup_min:     first.pickup_min ?? first.call_min,
+          call_min:       first.call_min,
+          pickup_id:      first.pickup_id,
+          dropoff_id:     last.dropoff_id,
+          vehicle_id:     first.vehicle_id,
+          transfer_class: first.transfer_class,
+          leg_count:      siblings.length,
+        })
+      }
+      groupedMap[crewId] = groups
     }
 
-    setAssignMap(map)
+    setAssignMap(groupedMap)
     setLoading(false)
   }, [])
 
