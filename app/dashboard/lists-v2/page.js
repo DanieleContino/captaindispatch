@@ -67,14 +67,14 @@ function groupByTripId(tripRows) {
 }
 
 // ─── Riga tabella trip ─────────────────────────────────────────
-function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign, paxByTripRow, columnsConfig, gridTemplate, driverPhonesByName }) {
+function TripTableRow({ group, locsMap, sectionColor, sections, moveMenuOpenFor, setMoveMenuOpenFor, onAssign, paxByTripRow, columnsConfig, gridTemplate, driverPhonesByName, vehicleMap }) {
   const dragId = 'trip::' + group.trip_id + '::' + (group.vehicle_id || 'none')
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
     data: { group },
   })
 
-  const ctx = { locsMap, paxByTripRow, driverPhonesByName }
+  const ctx = { locsMap, paxByTripRow, driverPhonesByName, vehicleMap }
 
   return (
     <div
@@ -227,6 +227,7 @@ export default function ListsPage() {
       const [moveMenuOpenFor, setMoveMenuOpenFor] = useState(null)
       const [paxByTripRow, setPaxByTripRow] = useState({})
       const [driverPhonesByName, setDriverPhonesByName] = useState({})
+      const [vehicleMap, setVehicleMap] = useState({})
       const [columnsConfig, setColumnsConfig] = useState([])
       const [applyingPreset, setApplyingPreset] = useState(false)
       const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
@@ -283,7 +284,7 @@ export default function ListsPage() {
         .neq('status', 'CANCELLED')
         .order('pickup_min', { ascending: true, nullsLast: true }),
       supabase.from('locations').select('uuid,display_id,name,default_pickup_point').eq('production_id', id),
-      supabase.from('vehicles').select('uuid').eq('production_id', id).eq('in_transport', true),
+      supabase.from('vehicles').select('uuid,display_id').eq('production_id', id).eq('in_transport', true),
       supabase.from('transport_list_sections').select('*')
         .eq('production_id', id).eq('date', d)
         .order('display_order', { ascending: true })
@@ -297,6 +298,9 @@ export default function ListsPage() {
     ])
     const inTransportIds = new Set((vR.data || []).map(v => v.uuid))
     const tripsFiltered = (tR.data || []).filter(t => !t.vehicle_id || inTransportIds.has(t.vehicle_id))
+    const vMap = {}
+    ;(vR.data || []).forEach(v => { vMap[v.uuid] = v.display_id })
+    setVehicleMap(vMap)
     setTrips(tripsFiltered)
     if (lR.data) {
       const m = {}; lR.data.forEach(l => { m[l.uuid] = { name: l.name, pickup_point: l.default_pickup_point } }); setLocsMap(m)
@@ -674,6 +678,7 @@ export default function ListsPage() {
                             onAssign={assignGroupToSection}
                             paxByTripRow={paxByTripRow}
                             driverPhonesByName={driverPhonesByName}
+                            vehicleMap={vehicleMap}
                             columnsConfig={columnsConfig}
                             gridTemplate={gridTemplate}
                           />
@@ -712,6 +717,7 @@ export default function ListsPage() {
                           onAssign={assignGroupToSection}
                           paxByTripRow={paxByTripRow}
                           driverPhonesByName={driverPhonesByName}
+                          vehicleMap={vehicleMap}
                           columnsConfig={columnsConfig}
                           gridTemplate={gridTemplate}
                         />
@@ -762,6 +768,7 @@ export default function ListsPage() {
                               onAssign={assignGroupToSection}
                               paxByTripRow={paxByTripRow}
                               driverPhonesByName={driverPhonesByName}
+                              vehicleMap={vehicleMap}
                               columnsConfig={columnsConfig}
                               gridTemplate={gridTemplate}
                             />
