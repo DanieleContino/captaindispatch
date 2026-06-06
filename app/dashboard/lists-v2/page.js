@@ -314,7 +314,7 @@ export default function ListsPage() {
     if (tripIds.length > 0) {
       const { data: paxData } = await supabase
         .from('trip_passengers')
-        .select('trip_row_id, crew:crew_id(id, full_name, role, department)')
+        .select('trip_row_id, crew:crew_id(uuid, full_name, role, department)')
         .in('trip_row_id', tripIds)
       const map = {}
       for (const p of (paxData || [])) {
