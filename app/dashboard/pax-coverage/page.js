@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * /dashboard/pax-coverage
@@ -470,6 +470,7 @@ export default function PaxCoveragePage() {
   const [locsMap,  setLocsMap]  = useState({})
   // crewId → [trips] per la data selezionata
   const [assignMap, setAssignMap] = useState({})
+  const [vehicleMap, setVehicleMap] = useState({})
 
   // Filtri
   const [filterTS,   setFTS]   = useState('ALL')   // travel status
@@ -511,8 +512,9 @@ export default function PaxCoveragePage() {
     const crewData  = (crewRes.data || []).filter(c => isCrewActiveOnDate(c, d))
     const tripsData = tripsRes.data || []
     const tripIds   = tripsData.map(t => t.id)
-    const vehicleMap = {}
-    ;(vehiclesRes.data || []).forEach(v => { vehicleMap[v.uuid] = v.display_id })
+    const vMap = {}
+    ;(vehiclesRes.data || []).forEach(v => { vMap[v.uuid] = v.display_id })
+    setVehicleMap(vMap)
 
     setCrew(crewData)
 
