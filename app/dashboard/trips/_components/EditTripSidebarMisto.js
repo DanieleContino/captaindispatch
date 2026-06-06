@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { useIsMobile } from '../../../../lib/useIsMobile'
@@ -92,7 +92,7 @@ export default function EditTripSidebarMisto({ open, initial, group, locations, 
       const dropoffIdx = points.indexOf(dropoffId)
 
       // Crew that board at this pickup leg
-      const boardingLegId = sortedLegs[pickupIdx]?.id
+      const boardingLegId = sortedLegs.find(l => l.pickup_id === pickupId)?.id
       const pairCrew = (paxData || [])
         .filter(p => p.trip_row_id === boardingLegId)
         .map(p => ({ uuid: p.crew.uuid, full_name: p.crew.full_name, department: p.crew.department }))
