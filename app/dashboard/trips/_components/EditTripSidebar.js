@@ -711,26 +711,6 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
               </div>
             )}
 
-            {/* Crew Lookup */}
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px' }}>
-              <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '7px' }}>🔍 Crew Lookup</div>
-              <input type="text" placeholder="Search by name or department…" value={crewLookupQ} onChange={e => setCrewLookupQ(e.target.value)} style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }} />
-              {crewLookupResults.length > 0 && (
-                <div style={{ marginTop: '4px', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden', background: 'white' }}>
-                  {crewLookupResults.map(c => (
-                    <div key={c.uuid} onClick={() => setCrewInfoCrew(c)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: 'white' }} onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
-                        <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
-                      </div>
-                      <span style={{ fontSize: '11px', color: '#94a3b8', flexShrink: 0 }}>ℹ️</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {crewLookupQ.length >= 2 && crewLookupResults.length === 0 && <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', padding: '6px 0 2px', fontStyle: 'italic' }}>No results</div>}
-            </div>
-
             {/* Date + Status */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
@@ -864,6 +844,25 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
 
             {/* Passengers */}
             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
+              {/* Crew Lookup */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', marginBottom: '10px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '7px' }}>🔍 Crew Lookup</div>
+                <input type="text" placeholder="Search by name or department…" value={crewLookupQ} onChange={e => setCrewLookupQ(e.target.value)} style={{ width: '100%', padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '7px', fontSize: '12px', color: '#0f172a', background: 'white', boxSizing: 'border-box' }} />
+                {crewLookupResults.length > 0 && (
+                  <div style={{ marginTop: '4px', border: '1px solid #e2e8f0', borderRadius: '7px', overflow: 'hidden', background: 'white' }}>
+                    {crewLookupResults.map(c => (
+                      <div key={c.uuid} onClick={() => setCrewInfoCrew(c)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: 'white' }} onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '12px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.full_name}</div>
+                          <div style={{ fontSize: '10px', color: '#94a3b8' }}>{c.department}</div>
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#94a3b8', flexShrink: 0 }}>ℹ️</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {crewLookupQ.length >= 2 && crewLookupResults.length === 0 && <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', padding: '6px 0 2px', fontStyle: 'italic' }}>No results</div>}
+              </div>
               <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '10px' }}>
                 Passengers ({(activeLeg ? assignedPax.filter(p => p.trip_row_id === activeLeg.id) : assignedPax).length}{initial?.capacity ? `/${initial.capacity}` : ``})
               </div>
