@@ -23,17 +23,16 @@ function fmtDateLong(d) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
 }
-// ─── baseTripId: strip lettera finale (es. R_0326_01A → R_0326_01) ──
-function baseTripId(id) { return id ? id.replace(/[A-Z]$/, '') : id }
-
-// ─── Raggruppa trip per baseTripId + vehicle_id ──
-function groupByTripId(tripRows) {
+// ─── Raggruppa trip per trip_group_id + vehicle_id (multi-leg) o per id (singoli) ──
+function groupByGroupId(tripRows) {
   const map = {}
   for (const t of tripRows) {
-    const key = baseTripId(t.trip_id) + '::' + (t.vehicle_id || '__none__')
+    const key = (t.trip_group_id || t.id) + '::' + (t.vehicle_id || '__none__')
     if (!map[key]) {
       map[key] = {
-        trip_id:     baseTripId(t.trip_id),
+        group_key:   key,
+        trip_id:     t.trip_id,
+        trip_group_id: t.trip_group_id || null,
         vehicle_id:  t.vehicle_id,
         driver_name: t.driver_name,
         sign_code:   t.sign_code,
@@ -50,9 +49,6 @@ function groupByTripId(tripRows) {
       }
     } else {
       map[key].rows.push(t)
-      // Accumula notes e terminal se presenti in più rows
-      if (t.notes && !map[key].notes) map[key].notes = t.notes
-      if (t.terminal && !map[key].terminal) map[key].terminal = t.terminal
       if (t.pickup_min != null && (map[key].pickup_min == null || t.pickup_min < map[key].pickup_min)) {
         map[key].pickup_min = t.pickup_min
       }
@@ -60,6 +56,10 @@ function groupByTripId(tripRows) {
         map[key].call_min = t.call_min
       }
     }
+  }
+  // Ordina le rows di ogni gruppo per pickup_min
+  for (const g of Object.values(map)) {
+    g.rows.sort((a, b) => (a.pickup_min ?? 9999) - (b.pickup_min ?? 9999))
   }
   return Object.values(map).sort((a, b) =>
     (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999)
@@ -343,7 +343,7 @@ export default function ListsPage() {
   // Build lookup: assignment by trip group key
   const assignmentByKey = {}
   for (const a of assignments) {
-    const key = a.base_trip_id + '::' + (a.vehicle_id || '__none__')
+    const key = (a.trip_group_id || a.base_trip_id) + '::' + (a.vehicle_id || '__none__')
     assignmentByKey[key] = a
   }
 
@@ -360,12 +360,11 @@ export default function ListsPage() {
   async function assignGroupToSection(group, sectionId) {
     const id = getProductionId()
     if (!id) return
-    const baseId = group.trip_id
+    const groupKey = group.trip_group_id || group.trip_id
     const vehId  = group.vehicle_id || null
-    const key = baseId + '::' + (vehId || '__none__')
+    const key = groupKey + '::' + (vehId || '__none__')
     const existing = assignmentByKey[key]
     if (sectionId === null) {
-      // Unassign
       if (existing) {
         await supabase.from('transport_list_section_assignments')
           .delete().eq('id', existing.id)
@@ -379,7 +378,7 @@ export default function ListsPage() {
         .insert({
           production_id: id,
           date,
-          base_trip_id: baseId,
+          base_trip_id: groupKey,
           vehicle_id: vehId,
           section_id: sectionId,
         })
@@ -391,7 +390,7 @@ export default function ListsPage() {
   useEffect(() => { if (user) loadData(date) }, [user, date, loadData])
 
   const totalPax   = trips.reduce((s, t) => s + (t.pax_count || 0), 0)
-  const totalTrips = groupByTripId(trips).length
+  const totalTrips = groupByGroupId(trips).length
 
   const gridTemplate = columnsConfig.length > 0
     ? columnsConfig.map(c => c.width || '110px').join(' ')
@@ -625,7 +624,7 @@ export default function ListsPage() {
 
             {(() => {
               // All grouped trips for this day
-              const allGroups = groupByTripId(trips)
+              const allGroups = groupByGroupId(trips)
 
               // Build section -> groups map
               const groupsBySection = {}
