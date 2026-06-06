@@ -76,39 +76,38 @@ export default function EditTripSidebarMisto({ open, initial, group, locations, 
       if (!points.find(p => p === leg.dropoff_id)) points.push(leg.dropoff_id)
     }
 
-    const allPickupIds  = new Set(sortedLegs.map(l => l.pickup_id))
-    const allDropoffIds = new Set(sortedLegs.map(l => l.dropoff_id))
-    // Pure pickups: appear as pickup but never as dropoff
-    console.log('[MISTO reconstruct] points:', points, 'allPickupIds:', [...allPickupIds], 'allDropoffIds:', [...allDropoffIds])
-    const purePickups  = points.filter(p => allPickupIds.has(p) && !allDropoffIds.has(p))
-    // Pure dropoffs: appear as dropoff but never as pickup
-    const pureDropoffs = points.filter(p => allDropoffIds.has(p) && !allPickupIds.has(p))
-
-    // 3. Reconstruct pairs
-    const reconstructed = []
-    for (let pi = 0; pi < purePickups.length; pi++) {
-      const pickupId  = purePickups[pi]
-      const dropoffId = pureDropoffs[pi] || pureDropoffs[0]
-      const pickupIdx  = points.indexOf(pickupId)
-      const dropoffIdx = points.indexOf(dropoffId)
-
-      // Crew that board at this pickup leg
-      const boardingLegId = sortedLegs.find(l => l.pickup_id === pickupId)?.id
-      const pairCrew = (paxData || [])
-        .filter(p => p.trip_row_id === boardingLegId)
-        .map(p => ({ uuid: p.crew.uuid, full_name: p.crew.full_name, department: p.crew.department }))
-
-      reconstructed.push({
-        localId:  `pair_${pi}_${Date.now()}`,
-        pickupId,
-        dropoffId,
-        crew:     pairCrew,
-        isNew:    false,
-      })
-
-      // Load crew list for this pickup location
-      loadCrewForLocation(pickupId)
+    // 3. Reconstruct pairs from pax boarding/exit pattern
+    // For each crew member: boarding leg = first leg they appear in (sorted by leg_order)
+    // exit leg = last leg they appear in
+    // pair key = boardingPickupId + exitDropoffId
+    const crewTrips = {}
+    for (const p of (paxData || [])) {
+      const uuid = p.crew?.uuid
+      if (!uuid) continue
+      if (!crewTrips[uuid]) crewTrips[uuid] = {
+        crew: { uuid: p.crew.uuid, full_name: p.crew.full_name, department: p.crew.department },
+        legIds: []
+      }
+      crewTrips[uuid].legIds.push(p.trip_row_id)
     }
+    const pairMap = {}
+    for (const { crew, legIds } of Object.values(crewTrips)) {
+      const crewLegs = sortedLegs.filter(l => legIds.includes(l.id))
+      if (crewLegs.length === 0) continue
+      const boardingLeg = crewLegs[0]
+      const exitLeg     = crewLegs[crewLegs.length - 1]
+      const key = `${boardingLeg.pickup_id}__${exitLeg.dropoff_id}`
+      if (!pairMap[key]) pairMap[key] = { pickupId: boardingLeg.pickup_id, dropoffId: exitLeg.dropoff_id, crew: [] }
+      pairMap[key].crew.push(crew)
+    }
+    const reconstructed = Object.values(pairMap)
+      .sort((a, b) => points.indexOf(a.pickupId) - points.indexOf(b.pickupId))
+      .map((pair, pi) => ({
+        ...pair,
+        localId: `pair_${pi}_${Date.now()}`,
+        isNew:   false,
+      }))
+    reconstructed.forEach(pair => loadCrewForLocation(pair.pickupId))
 
     setMistoLegs(reconstructed)
     setOriginalMistoLegs(JSON.parse(JSON.stringify(reconstructed)))
