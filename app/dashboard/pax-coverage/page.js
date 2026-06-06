@@ -175,7 +175,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose }) {
 }
 
 // ─── Riga crew assegnato ──────────────────────────────────────
-function AssignedRow({ member, trips, locsMap }) {
+function AssignedRow({ member, trips, locsMap, vehicleMap }) {
   const tc = TC[member.travel_status] || TC.PRESENT
   const hotel = locsMap[member.hotel_id] || member.hotel_id || '–'
   const dep = isTomorrow(member.departure_date)
@@ -216,7 +216,7 @@ function AssignedRow({ member, trips, locsMap }) {
                 <span style={{ color: '#94a3b8' }}>·</span>
                 <span style={{ fontWeight: '700', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{minToHHMM(t.pickup_min ?? t.call_min)}</span>
                 <span style={{ color: '#64748b' }}>{from} → {to}</span>
-                {t.vehicle_id && <span style={{ color: '#2563eb', marginLeft: '2px' }}>🚐 {t.vehicle_id}</span>}
+                {t.vehicle_id && <span style={{ color: '#2563eb', marginLeft: '2px' }}>🚐 {(vehicleMap || {})[t.vehicle_id] || t.vehicle_id}</span>}
               </div>
             )
           })}
