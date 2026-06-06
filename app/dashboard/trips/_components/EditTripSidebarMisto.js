@@ -79,6 +79,7 @@ export default function EditTripSidebarMisto({ open, initial, group, locations, 
     const allPickupIds  = new Set(sortedLegs.map(l => l.pickup_id))
     const allDropoffIds = new Set(sortedLegs.map(l => l.dropoff_id))
     // Pure pickups: appear as pickup but never as dropoff
+    console.log('[MISTO reconstruct] points:', points, 'allPickupIds:', [...allPickupIds], 'allDropoffIds:', [...allDropoffIds])
     const purePickups  = points.filter(p => allPickupIds.has(p) && !allDropoffIds.has(p))
     // Pure dropoffs: appear as dropoff but never as pickup
     const pureDropoffs = points.filter(p => allDropoffIds.has(p) && !allPickupIds.has(p))
