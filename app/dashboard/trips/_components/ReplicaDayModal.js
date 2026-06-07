@@ -181,10 +181,22 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, veh
 
         {!loading && grouped.length > 0 && (
           <div style={{ padding: '8px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: '#f8fafc' }}>
-            <button onClick={toggleAll}
-              style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151' }}>
-              {allSelected ? '☑ Deseleziona tutti' : '☐ Seleziona tutti'}
-            </button>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button onClick={() => {
+                const tlKeys = grouped.filter(g => {
+                  const t0 = g[0]
+                  return t0.trip_group_id ? tlTripKeys.has(t0.trip_group_id) : tlTripKeys.has(t0.id)
+                }).map(groupKey)
+                setSelected(new Set(tlKeys))
+              }}
+                style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#1e40af' }}>
+                ☑ Select all TL
+              </button>
+              <button onClick={toggleAll}
+                style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151' }}>
+                {allSelected ? '☑ Tutti' : '☐ Tutti'}
+              </button>
+            </div>
             <span style={{ fontSize: '12px', fontWeight: '700', color: selectedCount > 0 ? '#1d4ed8' : '#94a3b8' }}>
               {selectedCount} / {grouped.length} selezionati
             </span>
