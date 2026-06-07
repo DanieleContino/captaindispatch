@@ -220,12 +220,9 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, veh
               const isSel = selected.has(key)
               const cls  = CLS[t.transfer_class] || CLS.STANDARD
               const callTime   = t.call_min !== null && t.call_min !== undefined ? minToHHMM(t.call_min) : '–'
-              const dropoffIds = [...new Set(group.map(r => r.dropoff_id).filter(Boolean))]
-              const pickupIds  = [...new Set(group.map(r => r.pickup_id).filter(Boolean))]
-              const isMixed    = pickupIds.length > 1 || dropoffIds.length > 1
-              const dropoffLoc = dropoffIds.length > 1
-                ? dropoffIds.map(id => locShort(id)).join(' / ')
-                : locShort(t.dropoff_id)
+              const lastLeg = group[group.length - 1]
+              const isMixed = group.length > 1
+              const dropoffLoc = locShort(lastLeg.dropoff_id)
               const totalPax = group.reduce((s, r) => s + (r.pax_count || 0), 0)
               return (
                 <div key={key + i} onClick={() => toggleGroup(key)}
