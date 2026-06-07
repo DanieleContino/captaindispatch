@@ -1860,7 +1860,7 @@ export default function CrewPage() {
     const dvMap = {}
     const pvMap = {}
     for (const v of vehiclesData || []) {
-      if (v.driver_crew_id) { console.log("[dvMap]", v.driver_crew_id, v.license_plate)
+      if (v.driver_crew_id) {
         if (!dvMap[v.driver_crew_id]) dvMap[v.driver_crew_id] = []
         dvMap[v.driver_crew_id].push(v)
       }
