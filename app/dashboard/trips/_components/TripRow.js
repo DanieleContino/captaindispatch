@@ -115,9 +115,8 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
       <div style={{ minWidth: 0 }}>
         {t.vehicle_id ? (
           <>
-            <div style={{ fontSize: '12px', fontWeight: '800', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🚐 {t.sign_code || (vehicles && vehicles[t.vehicle_id]) || t.vehicle_id}</div>
+            <div style={{ fontSize: '12px', fontWeight: '800', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🚐 {t.sign_code ? `${t.sign_code} · ${(vehicles && vehicles[t.vehicle_id]) || t.vehicle_id}` : ((vehicles && vehicles[t.vehicle_id]) || t.vehicle_id)}</div>
             <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', lineHeight: 1.4 }}>
-              {t.sign_code && <div style={{ color: '#94a3b8' }}>{(vehicles && vehicles[t.vehicle_id]) || t.vehicle_id}</div>}
               {t.driver_name && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>👤 {t.driver_name}</div>}
               {t.capacity && <div>×{t.capacity} seats</div>}
             </div>
