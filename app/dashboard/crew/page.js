@@ -2199,13 +2199,13 @@ export default function CrewPage() {
             {selectedIds.length > 0 && (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '9px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
                 <span style={{ fontSize: '13px', fontWeight: '700', color: '#dc2626' }}>
-                  ☑ {selectedIds.length} {t.selectedCount}
+                  ☑ {selectedIds.length} {t.selectedCrewCount}
                 </span>
                 <div style={{ flex: 1 }} />
                 {!bulkConfirm ? (
                   <button onClick={handleBulkDelete}
                     style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '7px', padding: '6px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>
-                    {t.deleteSelected}
+                    {t.deleteSelectedCrew}
                   </button>
                 ) : (
                   <>
@@ -2224,7 +2224,7 @@ export default function CrewPage() {
                 )}
                 <button onClick={clearSelection}
                   style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
-                  {t.cancelSelection}
+                  {t.cancelCrewSelection}
                 </button>
               </div>
             )}
@@ -2237,9 +2237,9 @@ export default function CrewPage() {
               ref={el => { if (el) el.indeterminate = selectedIds.length > 0 && !filtered.every(m => selectedIds.includes(m.uuid)) }}
                 onChange={selectAll}
                 style={{ width: '16px', height: '16px', accentColor: '#2563eb', cursor: 'pointer' }}
-                title={t.selectAll}
+                title={t.selectAllCrew}
               />
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.selectAll}</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.selectAllCrew}</span>
             </div>
 
             {groups.map(([dept, members]) => (
