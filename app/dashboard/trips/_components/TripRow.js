@@ -32,8 +32,9 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
     : (callTime || pickupTime || '–')
 
   const paxNames = isMixed
-    ? group.flatMap(r => r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : [])
+    ? [...new Set(group.flatMap(r => r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []))]
     : (t.passenger_list ? t.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : [])
+  const uniquePaxCount = isMixed ? paxNames.length : (t.pax_count || 0)
   const paxColor = (!t.pax_count || !t.capacity) ? '#64748b'
     : t.pax_count >= t.capacity ? '#dc2626'
     : t.pax_count >= t.capacity * 0.75 ? '#d97706'
@@ -200,7 +201,7 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
       {/* PAX COUNT */}
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: '11px', fontWeight: '800', color: paxColor, lineHeight: 1.3 }}>
-          👥 {isMixed ? group.reduce((s, r) => s + (r.pax_count || 0), 0) : (t.pax_count || 0)}{t.capacity ? `/${t.capacity}` : ''}
+          👥 {uniquePaxCount}{t.capacity ? `/${t.capacity}` : ''}
         </div>
         <div style={{ fontSize: '9px', color: paxColor, fontWeight: '700' }}>pax</div>
         {t.pax_conflict_flag && <div style={{ fontSize: '9px', color: '#dc2626', fontWeight: '800', marginTop: '2px' }}>⚠ conflict</div>}
