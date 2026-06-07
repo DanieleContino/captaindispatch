@@ -120,6 +120,14 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
               {t.driver_name && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>👤 {t.driver_name}</div>}
               {(t.sign_code || t.capacity) && <div>{[t.sign_code, t.capacity ? `×${t.capacity} seats` : null].filter(Boolean).join(' · ')}</div>}
             </div>
+            {isMixed && onOptimize && (
+              <div style={{ marginTop: '6px' }}>
+                <button type="button" onClick={e => { e.stopPropagation(); onOptimize(group) }}
+                  style={{ padding: '3px 9px', borderRadius: '6px', border: 'none', background: '#1e3a5f', color: 'white', fontSize: '10px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '0.03em' }}>
+                  ⚡ Optimize
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <span style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>{i18n.noVehicle}</span>
@@ -167,16 +175,6 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
             {t.notes && <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📝 {t.notes}</div>}
             {t.duration_min && <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '1px' }}>⏱ {t.duration_min} min</div>}
           </>
-        )}
-      </div>
-
-      {/* OPTIMIZE */}
-      <div style={{ minWidth: 0, display: 'flex', alignItems: 'flex-start' }}>
-        {isMixed && onOptimize && (
-          <button type="button" onClick={e => { e.stopPropagation(); onOptimize(group) }}
-            style={{ padding: '3px 9px', borderRadius: '6px', border: 'none', background: '#1e3a5f', color: 'white', fontSize: '10px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '0.03em' }}>
-            ⚡ Optimize
-          </button>
         )}
       </div>
 
