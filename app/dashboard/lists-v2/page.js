@@ -710,36 +710,50 @@ export default function ListsPage() {
               <div style={{ fontSize: '36px', marginBottom: '10px' }}>📒</div>
               <div style={{ color: '#64748b', fontSize: '15px', fontWeight: '600' }}>No trips for this day</div>
             </div>
+          ) : columnsConfig.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', fontSize: '13px', border: '1px dashed #cbd5e1', borderRadius: '8px', background: '#f8fafc' }}>
+              <div style={{ fontWeight: '700', color: '#64748b', marginBottom: '6px' }}>No columns configured</div>
+              <div>Switch to Transport List tab and apply Captain Preset first.</div>
+            </div>
           ) : (
-            <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '70px 80px 1fr 1fr 60px', gap: '0 8px', padding: '6px 14px', borderBottom: '2px solid #15803d', fontWeight: '700', fontSize: '10px', color: '#15803d', background: '#f0fdf4', letterSpacing: '0.5px', textTransform: 'uppercase', borderRadius: '10px 10px 0 0' }}>
-                <div>Time</div>
-                <div>Sign</div>
-                <div>From → To</div>
-                <div>Passengers</div>
-                <div>Type</div>
+            <div className="print-card" style={{ background: 'white', borderRadius: '10px', padding: '16px 20px', border: '1px solid #e2e8f0' }}>
+              <div className="col-header" style={{
+                display: 'grid',
+                gridTemplateColumns: gridTemplate,
+                gap: '0 8px',
+                padding: '6px 14px',
+                borderBottom: '2px solid #15803d',
+                fontWeight: '700',
+                fontSize: '10px',
+                color: '#15803d',
+                background: '#f0fdf4',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+              }}>
+                {columnsConfig.map(c => <div key={c.id}>{c.header_label}</div>)}
               </div>
-              {[...trips].sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999)).map(t => {
+              {groupByGroupId(trips).map(group => {
                 const tlTripIds = new Set(assignments.map(a => a.base_trip_id))
-                const isTL = t.trip_group_id ? tlTripIds.has(t.trip_group_id) : tlTripIds.has(t.id)
-                const pickup = locsMap[t.pickup_id]?.name || '–'
-                const dropoff = locsMap[t.dropoff_id]?.name || '–'
-                const pax = paxByTripRow[t.id] || []
-                const timeStr = t.pickup_min != null ? (String(Math.floor(t.pickup_min / 60)).padStart(2,'0') + ':' + String(t.pickup_min % 60).padStart(2,'0')) : (t.call_min != null ? (String(Math.floor(t.call_min / 60)).padStart(2,'0') + ':' + String(t.call_min % 60).padStart(2,'0')) : '–')
+                const isTL = group.trip_group_id ? tlTripIds.has(group.trip_group_id) : tlTripIds.has(group.trip_id)
+                const ctx = { locsMap, paxByTripRow, driverPhonesByName, vehicleMap }
                 return (
-                  <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '70px 80px 1fr 1fr 60px', gap: '0 8px', padding: '7px 14px', borderBottom: '1px solid #e2e8f0', fontSize: '12px', alignItems: 'flex-start' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>{timeStr}</div>
-                    <div style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f' }}>{t.trip_id}</div>
-                    <div><span style={{ color: '#94a3b8' }}>{pickup}</span><span style={{ color: '#cbd5e1', margin: '0 4px' }}>→</span><span style={{ fontWeight: '700' }}>{dropoff}</span></div>
-                    <div style={{ fontSize: '11px', color: '#374151' }}>
-                      {pax.length > 0 ? pax.map(p => p.full_name).join(', ') : <span style={{ color: '#94a3b8' }}>–</span>}
-                    </div>
-                    <div>
-                      {isTL
-                        ? <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', background: '#dbeafe', color: '#1e40af' }}>TL</span>
-                        : <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', background: '#f3e8ff', color: '#6d28d9' }}>Extra</span>
-                      }
-                    </div>
+                  <div key={group.group_key} style={{ position: 'relative' }}>
+                    <TripGroupRow
+                      group={group}
+                      locsMap={locsMap}
+                      sections={[]}
+                      moveMenuOpenFor={null}
+                      setMoveMenuOpenFor={() => {}}
+                      onAssign={() => {}}
+                      paxByTripRow={paxByTripRow}
+                      driverPhonesByName={driverPhonesByName}
+                      vehicleMap={vehicleMap}
+                      columnsConfig={columnsConfig}
+                      gridTemplate={gridTemplate}
+                    />
+                    <span style={{ position: 'absolute', top: '8px', right: '8px', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', background: isTL ? '#dbeafe' : '#f3e8ff', color: isTL ? '#1e40af' : '#6d28d9' }}>
+                      {isTL ? 'TL' : 'Extra'}
+                    </span>
                   </div>
                 )
               })}
