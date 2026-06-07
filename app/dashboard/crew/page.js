@@ -10,6 +10,7 @@ import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
 import { generateDisplayId } from '../../../lib/generateDisplayId'
 import { computeCrewWarnings } from '../../../lib/tripWarnings'
+import TransportAccordion from './_components/TransportAccordion'
 
 const SIDEBAR_W = 400
 
@@ -1614,6 +1615,7 @@ function CrewSidebar({ open, mode, initial, locations, deptOptions = [], onClose
                   }}
                 />
                 <TravelAccordion key={`travel-${initial.display_id}-${editKey}`} crewId={initial.uuid} crewFullName={initial.full_name} />
+                <TransportAccordion key={`transport-${initial.display_id}-${editKey}`} crewId={initial.uuid} productionId={PRODUCTION_ID} />
                 <FamilyAccordion key={`family-${initial.display_id}-${editKey}`} crewId={initial.uuid} personType={form.person_type} linkedCrewId={form.linked_crew_id} />
                 <NotesPanel accordion key={`notes-${initial.display_id}-${editKey}`} crewId={initial.uuid} productionId={PRODUCTION_ID} currentUser={currentUser} onNotesChanged={onNotesChanged} />
               </>
