@@ -1016,10 +1016,6 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
             </span>
           )
         })()}
-        {member.no_transport_needed && (
-          <span title="No Transport Needed — excluded from hub pickup/dropoff assignments."
-            style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', cursor: 'help' }}>🚐 NTN</span>
-        )}
       </div>
 
       {/* Accommodation */}
