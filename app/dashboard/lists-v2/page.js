@@ -234,6 +234,9 @@ export default function ListsPage() {
       const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
       const [headerFooterOpen, setHeaderFooterOpen] = useState(false)
       const [headerFooterReloadKey, setHeaderFooterReloadKey] = useState(0)
+      const [activeTab, setActiveTab] = useState('tl')
+      const [tlPublication, setTlPublication] = useState(null)
+      const [publishing, setPublishing] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -337,6 +340,15 @@ export default function ListsPage() {
       if (c.full_name && c.phone) phoneMap[c.full_name] = c.phone
     }
     setDriverPhonesByName(phoneMap)
+
+    // Fetch tl_publications for this date
+    const { data: pubData } = await supabase
+      .from('tl_publications')
+      .select('*')
+      .eq('production_id', id)
+      .eq('date', d)
+      .maybeSingle()
+    setTlPublication(pubData || null)
 
     setLoading(false)
   }, [])
