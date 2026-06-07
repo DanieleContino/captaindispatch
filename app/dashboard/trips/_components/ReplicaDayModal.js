@@ -14,27 +14,36 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, veh
   const [done,      setDone]      = useState(false)
   const [doneCount, setDoneCount] = useState(0)
 
+  const [tlTripKeys, setTlTripKeys] = useState(new Set())
+
   useEffect(() => {
     if (!open || !PRODUCTION_ID || !sourceDate) return
     setLoading(true)
     setError(null)
     setDone(false)
     setDoneCount(0)
-    supabase.from('trips').select('*')
-      .eq('production_id', PRODUCTION_ID)
-      .eq('date', sourceDate)
-      .order('pickup_min', { ascending: true, nullsLast: true })
-      .then(({ data }) => {
-        const rows = data || []
-        setPrevTrips(rows)
-        const keys = new Set()
-        for (const t of rows) {
-          const key = t.trip_group_id || (baseTripId(t.trip_id) + '::' + (t.vehicle_id || '__none__'))
-          keys.add(key)
-        }
-        setSelected(keys)
-        setLoading(false)
-      })
+    Promise.all([
+      supabase.from('trips').select('*')
+        .eq('production_id', PRODUCTION_ID)
+        .eq('date', sourceDate)
+        .order('pickup_min', { ascending: true, nullsLast: true }),
+      supabase.from('transport_list_section_assignments').select('base_trip_id')
+        .eq('production_id', PRODUCTION_ID)
+        .eq('date', sourceDate),
+    ]).then(([{ data: tripsData }, { data: assignData }]) => {
+      const rows = tripsData || []
+      setPrevTrips(rows)
+      const tlKeys = new Set((assignData || []).map(a => a.base_trip_id))
+      setTlTripKeys(tlKeys)
+      const keys = new Set()
+      for (const t of rows) {
+        const key = t.trip_group_id || (baseTripId(t.trip_id) + '::' + (t.vehicle_id || '__none__'))
+        const isTL = t.trip_group_id ? tlKeys.has(t.trip_group_id) : tlKeys.has(t.id)
+        if (isTL) keys.add(key)
+      }
+      setSelected(keys)
+      setLoading(false)
+    })
   }, [open, sourceDate, PRODUCTION_ID])
 
   const grouped = Object.values(
