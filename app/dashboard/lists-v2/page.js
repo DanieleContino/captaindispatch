@@ -571,13 +571,65 @@ export default function ListsPage() {
               </button>
             </>
           )}
+          {tlPublication ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
+              ✅ TL {date} — {tlPublication.published_at ? 'Re-published' : 'Published'} {tlPublication.published_at ? new Date(tlPublication.published_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : ''}
+            </span>
+          ) : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600', background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>
+              ⏳ Not published yet
+            </span>
+          )}
+          {tlPublication ? (
+            <button
+              onClick={handleRepublish}
+              disabled={publishing}
+              className="no-print"
+              style={{ padding: '6px 14px', borderRadius: '7px', border: 'none', background: publishing ? '#94a3b8' : '#15803d', color: 'white', fontSize: '12px', fontWeight: '700', cursor: publishing ? 'default' : 'pointer' }}>
+              {publishing ? 'Publishing…' : '🔄 Re-publish'}
+            </button>
+          ) : (
+            <button
+              onClick={handlePublish}
+              disabled={publishing}
+              className="no-print"
+              style={{ padding: '6px 14px', borderRadius: '7px', border: 'none', background: publishing ? '#94a3b8' : '#0f2340', color: 'white', fontSize: '12px', fontWeight: '700', cursor: publishing ? 'default' : 'pointer' }}>
+              {publishing ? 'Publishing…' : '📋 Publish TL'}
+            </button>
+          )}
           <button onClick={() => window.print()}
             className="no-print"
-            style={{ background: '#0f2340', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 18px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            style={{ background: '#475569', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 18px', fontSize: '13px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
             🖨 Print / PDF
           </button>
         </div>
       </div>
+
+      {/* ── Tab bar ── */}
+      <div className="no-print" style={{ background: 'white', borderBottom: '1px solid #e2e8f0', padding: '0 24px', display: 'flex', alignItems: 'center' }}>
+        {['tl', 'dailylog'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '10px 18px',
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              border: 'none',
+              borderBottom: activeTab === tab ? `2px solid ${tab === 'tl' ? '#0f2340' : '#15803d'}` : '2px solid transparent',
+              color: activeTab === tab ? (tab === 'tl' ? '#0f2340' : '#15803d') : '#64748b',
+              background: 'transparent',
+            }}>
+            {tab === 'tl' ? '📋 Transport List' : '📒 Daily Log'}
+          </button>
+        ))}
+      </div>
+      {activeTab === 'tl' && tlPublication && (
+        <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 24px', background: '#fef9c3', borderBottom: '1px solid #fde047', fontSize: '12px', color: '#854d0e' }}>
+          ⚠️ TL already sent — you are editing a published version
+        </div>
+      )}
 
       {/* ── Contenuto stampabile ── */}
       <div className="print-wrap" style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px', background: '#f1f5f9', minHeight: '80vh' }}>
