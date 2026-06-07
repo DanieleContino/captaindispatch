@@ -155,6 +155,14 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
                 {r.pax_count > 0 && <span style={{ color: '#64748b', flexShrink: 0 }}>· {r.pax_count}pax</span>}
               </div>
             ))}
+            {isMixed && onOptimize && (
+              <div style={{ marginTop: '6px' }}>
+                <button type="button" onClick={e => { e.stopPropagation(); onOptimize(group) }}
+                  style={{ padding: '3px 9px', borderRadius: '6px', border: 'none', background: '#1e3a5f', color: 'white', fontSize: '10px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '0.03em' }}>
+                  ⚡ Optimize
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <>
