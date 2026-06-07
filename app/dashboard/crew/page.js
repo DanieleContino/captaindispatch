@@ -2210,7 +2210,7 @@ export default function CrewPage() {
                 ) : (
                   <>
                     <span style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626' }}>
-                      {t.deleteSelectedConfirm.replace('{n}', selectedIds.length)}
+                      {t.deleteSelectedCrewConfirm.replace('{n}', selectedIds.length)}
                     </span>
                     <button onClick={() => setBulkConfirm(false)}
                       style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>
