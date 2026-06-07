@@ -4481,6 +4481,23 @@ export default function VehiclesPage() {
 
   useEffect(() => { if (user) load() }, [user, load])
 
+  useEffect(() => {
+    if (!user || !vhcs.length) return
+    const raw = sessionStorage.getItem('vehiclesOpenEdit')
+    if (!raw) return
+    sessionStorage.removeItem('vehiclesOpenEdit')
+    try {
+      const { uuid, tab } = JSON.parse(raw)
+      const v = vhcs.find(x => x.uuid === uuid)
+      if (!v) return
+      setActiveTab(tab)
+      if (tab === 'rental') { setRentalVehicleSidebarMode('edit'); setRentalVehicleSidebarTarget(v); setRentalVehicleSidebarOpen(true) }
+      else if (tab === 'ncc') { setNccVehicleSidebarMode('edit'); setNccVehicleTarget(v); setNccVehicleSidebarOpen(true) }
+      else if (tab === 'comodato') { setLoanVehicleSidebarMode('edit'); setLoanVehicleTarget(v); setLoanVehicleSidebarOpen(true) }
+      else { setMode('edit'); setEdit(v); setSO(true) }
+    } catch (e) {}
+  }, [user, vhcs])
+
   function handleEditInTab(tab, v) {
     setSO(false)
     setActiveTab(tab)
