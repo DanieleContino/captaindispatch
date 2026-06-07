@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useT } from '../../../../lib/i18n'
 import { CLS, STS, TRIP_COLS, minToHHMM, baseTripId, fmtPax } from '../../../../lib/tripUtils'
@@ -184,7 +184,7 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
           group.map((r, ri) => {
             const legPax = r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
             return (
-              <div key={r.id || ri} style={{ fontSize: '10px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '16.5px', marginBottom: ri < group.length - 1 ? '4px' : 0 }}>
+              <div key={r.id || ri} style={{ fontSize: '10px', color: '#374151', lineHeight: '16.5px', marginBottom: ri < group.length - 1 ? '4px' : 0 }}>
                 {legPax.length > 0 ? legPax.map(fmtPax).join(' · ') : <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>}
               </div>
             )
