@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { getProductionId } from '../../../../lib/production'
 import { fmtDate, minToHHMM, baseTripId, fmtPax, CLS, isoAdd } from '../../../../lib/tripUtils'
 
-function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, onDone }) {
+function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, vehicleMap, onDone }) {
   const PRODUCTION_ID = getProductionId()
   const [prevTrips, setPrevTrips] = useState([])
   const [loading,   setLoading]   = useState(false)
@@ -215,7 +215,7 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, onD
                     <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '900', color: '#1e3a5f' }}>{baseTripId(t.trip_id)}</span>
                     <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '9px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{t.transfer_class?.slice(0, 3) || 'STD'}</span>
                     {isMixed && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe' }}>🔀 MULTI</span>}
-                    {t.vehicle_id && <span style={{ fontSize: '11px', fontWeight: '700', color: '#374151' }}>🚐 {t.vehicle_id}</span>}
+                    {t.vehicle_id && <span style={{ fontSize: '11px', fontWeight: '700', color: '#374151' }}>🚐 {(vehicleMap && vehicleMap[t.vehicle_id]) || t.vehicle_id}</span>}
                   </div>
                   <div style={{ fontSize: '11px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
                     <span style={{ color: '#94a3b8' }}>{locShort(t.pickup_id)}</span>
