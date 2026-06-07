@@ -215,14 +215,17 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, veh
             const tlGroups    = grouped.filter(g => { const t0 = g[0]; return t0.trip_group_id ? tlTripKeys.has(t0.trip_group_id) : tlTripKeys.has(t0.id) })
             const extraGroups = grouped.filter(g => { const t0 = g[0]; return !(t0.trip_group_id ? tlTripKeys.has(t0.trip_group_id) : tlTripKeys.has(t0.id)) })
             const renderGroup = (group, i) => {
-              const t   = group[0]
+              const firstLeg = group.reduce((min, r) => (r.leg_order ?? 99) < (min.leg_order ?? 99) ? r : min, group[0])
+              const lastLeg  = group.reduce((max, r) => (r.leg_order ?? 0) > (max.leg_order ?? 0) ? r : max, group[0])
+              const t   = firstLeg
               const key = groupKey(group)
               const isSel = selected.has(key)
               const cls  = CLS[t.transfer_class] || CLS.STANDARD
-              const callTime   = t.call_min !== null && t.call_min !== undefined ? minToHHMM(t.call_min) : '–'
-              const lastLeg = group[group.length - 1]
+              const firstMin = group.reduce((m, r) => { const v = r.call_min ?? r.pickup_min ?? 9999; return v < m ? v : m }, 9999)
+              const callTime = firstMin < 9999 ? minToHHMM(firstMin) : '–'
               const isMixed = group.length > 1
               const dropoffLoc = locShort(lastLeg.dropoff_id)
+              const allPax = [...new Set(group.flatMap(r => (r.passenger_list || '').split(',').map(s => s.trim()).filter(Boolean)))]
               const totalPax = group.reduce((s, r) => s + (r.pax_count || 0), 0)
               return (
                 <div key={key + i} onClick={() => toggleGroup(key)}
@@ -245,9 +248,9 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, veh
                       {totalPax > 0 && <span style={{ color: '#64748b', marginLeft: '4px' }}>· 👥 {totalPax} pax</span>}
                       {t.flight_no && <span style={{ color: '#2563eb', fontWeight: '700', marginLeft: '4px' }}>✈ {t.flight_no}</span>}
                     </div>
-                    {t.passenger_list && (
+                    {allPax.length > 0 && (
                       <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {t.passenger_list.split(',').map(s => fmtPax(s.trim())).join(' · ')}
+                        {allPax.map(s => fmtPax(s)).join(' · ')}
                       </div>
                     )}
                   </div>
