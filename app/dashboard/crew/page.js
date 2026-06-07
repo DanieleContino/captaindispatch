@@ -1112,6 +1112,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
             )}
             {driverVehicles.map((v, idx) => {
               const typeIcon = v.is_rental ? '🔑' : v.is_ncc ? '🏢' : '🚐'
+              const plate = v.license_plate ? ` · ${v.license_plate}` : ''
               const label = v.is_rental
                 ? [v.rental_brand, v.rental_model].filter(Boolean).join(' ') || v.sign_code || v.vehicle_type
                 : v.sign_code || v.vehicle_type
@@ -1122,7 +1123,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
               return (
                 <span key={idx} title={tooltip}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '5px', fontSize: '10px', whiteSpace: 'nowrap', background: v.is_rental ? '#fefce8' : v.is_ncc ? '#f0f9ff' : '#eff6ff', border: `1px solid ${v.is_rental ? '#fde68a' : v.is_ncc ? '#bae6fd' : '#bfdbfe'}`, color: v.is_rental ? '#a16207' : v.is_ncc ? '#0369a1' : '#1d4ed8', cursor: 'help' }}>
-                  {typeIcon} DRIVER · {label}{dates}
+                  {typeIcon} DRIVER · {label}{plate}{dates}
                 </span>
               )
             })}
