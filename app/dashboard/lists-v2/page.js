@@ -436,6 +436,70 @@ export default function ListsPage() {
     }
   }
 
+  async function handlePublish() {
+    const id = getProductionId()
+    if (!id || publishing || trips.length === 0) return
+    setPublishing(true)
+    try {
+      const tripIds = trips.map(t => t.id)
+      await supabase.from('trips').update({ planned_pickup_min: null }).eq('production_id', id).eq('date', date)
+      for (const t of trips) {
+        if (t.pickup_min !== null && t.pickup_min !== undefined) {
+          await supabase.from('trips').update({ planned_pickup_min: t.pickup_min }).eq('id', t.id)
+        }
+      }
+      const { data: { user: u } } = await supabase.auth.getUser()
+      const { data: pub } = await supabase
+        .from('tl_publications')
+        .upsert({
+          production_id: id,
+          date,
+          published_at: new Date().toISOString(),
+          pdf_url: null,
+          published_by: u?.id || null,
+        }, { onConflict: 'production_id,date' })
+        .select()
+        .single()
+      setTlPublication(pub)
+      window.print()
+    } catch (e) {
+      alert('Publish failed: ' + (e.message || 'unknown error'))
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  async function handleRepublish() {
+    const id = getProductionId()
+    if (!id || publishing || trips.length === 0) return
+    setPublishing(true)
+    try {
+      for (const t of trips) {
+        if (t.pickup_min !== null && t.pickup_min !== undefined) {
+          await supabase.from('trips').update({ planned_pickup_min: t.pickup_min }).eq('id', t.id)
+        }
+      }
+      const { data: { user: u } } = await supabase.auth.getUser()
+      const { data: pub } = await supabase
+        .from('tl_publications')
+        .upsert({
+          production_id: id,
+          date,
+          published_at: new Date().toISOString(),
+          pdf_url: null,
+          published_by: u?.id || null,
+        }, { onConflict: 'production_id,date' })
+        .select()
+        .single()
+      setTlPublication(pub)
+      window.print()
+    } catch (e) {
+      alert('Re-publish failed: ' + (e.message || 'unknown error'))
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   if (!user) return (
     <div style={{ minHeight: '100vh', background: '#0f2340', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>Loading…</div>
   )
