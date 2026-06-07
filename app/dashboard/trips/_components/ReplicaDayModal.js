@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../../lib/supabase'
 import { getProductionId } from '../../../../lib/production'
 import { fmtDate, minToHHMM, baseTripId, fmtPax, CLS, isoAdd } from '../../../../lib/tripUtils'
+import ReplicaTripRow from './ReplicaTripRow'
 
 function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, vehicleMap, onDone }) {
   const PRODUCTION_ID = getProductionId()
@@ -215,46 +216,15 @@ function ReplicaDayModal({ open, onClose, sourceDate, targetDate, locations, veh
             const tlGroups    = grouped.filter(g => { const t0 = g[0]; return t0.trip_group_id ? tlTripKeys.has(t0.trip_group_id) : tlTripKeys.has(t0.id) })
             const extraGroups = grouped.filter(g => { const t0 = g[0]; return !(t0.trip_group_id ? tlTripKeys.has(t0.trip_group_id) : tlTripKeys.has(t0.id)) })
             const renderGroup = (group, i) => {
-              const firstLeg = group.reduce((min, r) => (r.leg_order ?? 99) < (min.leg_order ?? 99) ? r : min, group[0])
-              const lastLeg  = group.reduce((max, r) => (r.leg_order ?? 0) > (max.leg_order ?? 0) ? r : max, group[0])
-              const t   = firstLeg
               const key = groupKey(group)
-              const isSel = selected.has(key)
-              const cls  = CLS[t.transfer_class] || CLS.STANDARD
-              const firstMin = group.reduce((m, r) => { const v = r.call_min ?? r.pickup_min ?? 9999; return v < m ? v : m }, 9999)
-              const callTime = firstMin < 9999 ? minToHHMM(firstMin) : '–'
-              const isMixed = group.length > 1
-              const dropoffLoc = locShort(lastLeg.dropoff_id)
-              const allPax = [...new Set(group.flatMap(r => (r.passenger_list || '').split(',').map(s => s.trim()).filter(Boolean)))]
-              const totalPax = group.reduce((s, r) => s + (r.pax_count || 0), 0)
               return (
-                <div key={key + i} onClick={() => toggleGroup(key)}
-                  style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', marginBottom: '5px', borderRadius: '10px', border: `2px solid ${isSel ? '#2563eb' : '#e2e8f0'}`, background: isSel ? '#eff6ff' : 'white', cursor: 'pointer', transition: 'border-color 0.1s, background 0.1s' }}>
-                  <div style={{ width: '20px', height: '20px', borderRadius: '5px', border: `2px solid ${isSel ? '#2563eb' : '#cbd5e1'}`, background: isSel ? '#2563eb' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
-                    {isSel && <span style={{ color: 'white', fontSize: '13px', lineHeight: 1 }}>✓</span>}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
-                      <span style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px', lineHeight: 1 }}>{callTime}</span>
-                      <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '900', color: '#1e3a5f' }}>{baseTripId(t.trip_id)}</span>
-                      <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '9px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{t.transfer_class?.slice(0, 3) || 'STD'}</span>
-                      {isMixed && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe' }}>🔀 MULTI</span>}
-                      {t.vehicle_id && <span style={{ fontSize: '11px', fontWeight: '700', color: '#374151' }}>🚐 {(vehicleMap && vehicleMap[t.vehicle_id]) || t.vehicle_id}</span>}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#374151', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                      <span style={{ color: '#94a3b8' }}>{locShort(t.pickup_id)}</span>
-                      <span style={{ color: '#cbd5e1' }}>→</span>
-                      <span style={{ fontWeight: '700', color: '#0f172a' }}>{dropoffLoc}</span>
-                      {totalPax > 0 && <span style={{ color: '#64748b', marginLeft: '4px' }}>· 👥 {totalPax} pax</span>}
-                      {t.flight_no && <span style={{ color: '#2563eb', fontWeight: '700', marginLeft: '4px' }}>✈ {t.flight_no}</span>}
-                    </div>
-                    {allPax.length > 0 && (
-                      <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {allPax.map(s => fmtPax(s)).join(' · ')}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <ReplicaTripRow
+                  key={key + i}
+                  group={group}
+                  locations={locsMap}
+                  selected={selected.has(key)}
+                  onToggle={() => toggleGroup(key)}
+                />
               )
             }
             return (
