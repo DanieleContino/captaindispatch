@@ -120,14 +120,6 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
               {t.driver_name && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>👤 {t.driver_name}</div>}
               {(t.sign_code || t.capacity) && <div>{[t.sign_code, t.capacity ? `×${t.capacity} seats` : null].filter(Boolean).join(' · ')}</div>}
             </div>
-            {isMixed && onOptimize && (
-              <div style={{ marginTop: '6px' }}>
-                <button type="button" onClick={e => { e.stopPropagation(); onOptimize(group) }}
-                  style={{ padding: '3px 9px', borderRadius: '6px', border: 'none', background: '#1e3a5f', color: 'white', fontSize: '10px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '0.03em' }}>
-                  ⚡ Optimize
-                </button>
-              </div>
-            )}
           </>
         ) : (
           <span style={{ fontSize: '11px', color: '#cbd5e1', fontStyle: 'italic' }}>{i18n.noVehicle}</span>
@@ -153,12 +145,12 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
                   }
                   return <span style={{ color: '#ea580c', flexShrink: 0, fontSize: '9px', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '3px', padding: '1px 4px' }}>⚠ no route</span>
                 })()}
-                <span style={{ color: '#94a3b8', fontWeight: '500', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75px' }}>
-                  {(locations[r.pickup_id] || r.pickup_id || '–').split(' ').slice(0, 2).join(' ')}
+                <span style={{ color: '#94a3b8', fontWeight: '500', flexShrink: 0 }}>
+                  {locations[r.pickup_id] || r.pickup_id || '–'}
                 </span>
                 <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
                 <span style={{ fontWeight: '700', color: '#0f172a', flexShrink: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {(locations[r.dropoff_id] || r.dropoff_id || '–').split(' ').slice(0, 2).join(' ')}
+                  {locations[r.dropoff_id] || r.dropoff_id || '–'}
                 </span>
                 {r.pax_count > 0 && <span style={{ color: '#64748b', flexShrink: 0 }}>· {r.pax_count}pax</span>}
               </div>
