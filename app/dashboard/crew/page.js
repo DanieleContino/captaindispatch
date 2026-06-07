@@ -953,6 +953,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.full_name}</span>
+            <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', flexShrink: 0 }}>{member.display_id}</span>
             {warnings.length > 0 && (
               <button onClick={e => { e.stopPropagation(); setWarnOpen(true) }}
                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', minWidth: '18px', height: '18px', padding: '0 4px', cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}>!</button>
@@ -976,7 +977,7 @@ function CrewCard({ member, locations, onStatusChange, onNTNChange, onRemoteChan
             )}
           </div>
           <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {member.role || '—'} · {member.display_id}{member.department ? ' · ' + member.department : ''}
+            {member.role || '—'}{member.department ? ' · ' + member.department : ''}
           </div>
         </div>
       </div>
