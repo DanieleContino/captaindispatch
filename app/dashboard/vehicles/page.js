@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
@@ -1873,7 +1873,7 @@ function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, producti
       const r = await supabase.from('rental_suppliers').insert(row)
       err = r.error
     } else {
-      const r = await supabase.from('rental_suppliers').update(row).eq('uuid', initial.uuid)
+      const r = await supabase.from('rental_suppliers').update(row).eq('id', initial.id)
       err = r.error
     }
     setSaving(false)
@@ -2219,7 +2219,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
         await supabase.from('rental_vouchers').update({ used: true, vehicle_id: form.id.trim().toUpperCase() }).eq('id', form.rental_voucher_id)
       }
     } else {
-      const r = await supabase.from('vehicles').update(row).eq('uuid', initial.uuid).eq('production_id', productionId)
+      const r = await supabase.from('vehicles').update(row).eq('id', initial.id).eq('production_id', productionId)
       err = r.error
     }
     setSaving(false)
@@ -2930,7 +2930,7 @@ function NccAgencySidebar({ open, mode, initial, onClose, onSaved, productionId,
     }
     let err
     if (mode === 'new') { const r = await supabase.from('ncc_agencies').insert(row); err = r.error }
-    else { const r = await supabase.from('ncc_agencies').update(row).eq('uuid', initial.uuid); err = r.error }
+    else { const r = await supabase.from('ncc_agencies').update(row).eq('id', initial.id); err = r.error }
     setSaving(false)
     if (err) { setError(err.message); return }
     onSaved()
@@ -3149,7 +3149,7 @@ function NccOrderSidebar({ open, mode, initial, onClose, onSaved, productionId, 
     }
     let err
     if (mode === 'new') { const r = await supabase.from('ncc_orders').insert(row); err = r.error }
-    else { const r = await supabase.from('ncc_orders').update(row).eq('uuid', initial.uuid); err = r.error }
+    else { const r = await supabase.from('ncc_orders').update(row).eq('id', initial.id); err = r.error }
     setSaving(false)
     if (err) { setError(err.message); return }
     onSaved()
@@ -3753,7 +3753,7 @@ function ComodatoExpenseSidebar({ open, mode, initial, onClose, onSaved, product
     }
     let err
     if (mode === 'new') { const r = await supabase.from('comodato_expenses').insert(row); err = r.error }
-    else { const r = await supabase.from('comodato_expenses').update(row).eq('uuid', initial.uuid); err = r.error }
+    else { const r = await supabase.from('comodato_expenses').update(row).eq('id', initial.id); err = r.error }
     setSaving(false)
     if (err) { setError(err.message); return }
     onSaved()
@@ -4118,7 +4118,7 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
       const r = await supabase.from('vehicles').insert({ ...row, display_id: form.id.trim().toUpperCase() })
       err = r.error
     } else {
-      const r = await supabase.from('vehicles').update(row).eq('uuid', initial.uuid).eq('production_id', productionId)
+      const r = await supabase.from('vehicles').update(row).eq('id', initial.id).eq('production_id', productionId)
       err = r.error
     }
     setSaving(false)
