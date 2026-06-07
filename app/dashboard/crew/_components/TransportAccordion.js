@@ -18,18 +18,32 @@ export default function TransportAccordion({ crewId, productionId }) {
     setLoading(true)
     const [{ data: dData }, { data: pData }] = await Promise.all([
       supabase.from('vehicles')
-        .select('uuid, display_id, vehicle_type, sign_code, license_plate, is_rental, is_ncc, is_comodato, rental_brand, rental_model')
+        .select('uuid, display_id, vehicle_type, sign_code, license_plate, is_rental, is_ncc, is_comodato, rental_brand, rental_model, rental_supplier_id, ncc_agency_id')
         .eq('production_id', productionId)
         .eq('active', true)
         .eq('driver_crew_id', crewId),
       supabase.from('vehicles')
-        .select('uuid, display_id, vehicle_type, sign_code, license_plate, is_rental, is_ncc, is_comodato')
+        .select('uuid, display_id, vehicle_type, sign_code, license_plate, is_rental, is_ncc, is_comodato, rental_supplier_id, ncc_agency_id')
         .eq('production_id', productionId)
         .eq('active', true)
         .contains('preferred_crew_ids', [crewId]),
     ])
-    setDriverVehicles(dData || [])
-    setPaxVehicles(pData || [])
+    const allVehicles = [...(dData || []), ...(pData || [])]
+    const supplierIds = [...new Set(allVehicles.filter(v => v.rental_supplier_id).map(v => v.rental_supplier_id))]
+    const agencyIds   = [...new Set(allVehicles.filter(v => v.ncc_agency_id).map(v => v.ncc_agency_id))]
+    const supplierMap = {}
+    const agencyMap   = {}
+    if (supplierIds.length > 0) {
+      const { data: sData } = await supabase.from('rental_suppliers').select('id, name').in('id', supplierIds)
+      ;(sData || []).forEach(s => { supplierMap[s.id] = s.name })
+    }
+    if (agencyIds.length > 0) {
+      const { data: aData } = await supabase.from('ncc_agencies').select('id, name').in('id', agencyIds)
+      ;(aData || []).forEach(a => { agencyMap[a.id] = a.name })
+    }
+    const enrich = v => ({ ...v, _supplierName: supplierMap[v.rental_supplier_id] || null, _agencyName: agencyMap[v.ncc_agency_id] || null })
+    setDriverVehicles((dData || []).map(enrich))
+    setPaxVehicles((pData || []).map(enrich))
     setLoading(false)
     setLoaded(true)
   }
@@ -71,13 +85,12 @@ export default function TransportAccordion({ crewId, productionId }) {
             <>
               {driverVehicles.map(v => {
                 const icon = TYPE_ICON[v.vehicle_type] || '🚐'
-                const label = v.is_rental
-                  ? [v.rental_brand, v.rental_model].filter(Boolean).join(' ') || v.sign_code || v.display_id
-                  : v.sign_code || v.display_id
+                const catLabel = v.is_rental ? `🔑 ${v._supplierName || 'Rental'}` : v.is_ncc ? `🏢 ${v._agencyName || 'NCC'}` : v.is_comodato ? '🤝 Loan' : '🎥 Production'
+                const parts = [icon, v.vehicle_type, v.sign_code || v.display_id, v.license_plate, catLabel].filter(Boolean)
                 return (
                   <div key={v.uuid} style={{ background: 'white', border: '1px solid #bfdbfe', borderRadius: '7px', padding: '7px 10px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ flex: 1, fontSize: '12px' }}>
-                      <span style={{ fontWeight: '700', color: '#1d4ed8' }}>{icon} DRIVER · {label}{v.license_plate ? ` · ${v.license_plate}` : ''}</span>
+                      <span style={{ fontWeight: '700', color: '#1d4ed8' }}>{parts.join(' · ')}</span>
                     </div>
                     <button type="button" onClick={() => openVehicle(v)}
                       style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#1d4ed8', flexShrink: 0 }}>
@@ -88,11 +101,12 @@ export default function TransportAccordion({ crewId, productionId }) {
               })}
               {paxVehicles.map(v => {
                 const icon = TYPE_ICON[v.vehicle_type] || '🚐'
-                const label = v.sign_code || v.display_id
+                const catLabel = v.is_rental ? `🔑 ${v._supplierName || 'Rental'}` : v.is_ncc ? `🏢 ${v._agencyName || 'NCC'}` : v.is_comodato ? '🤝 Loan' : '🎥 Production'
+                const parts = [icon, v.vehicle_type, v.sign_code || v.display_id, v.license_plate, catLabel].filter(Boolean)
                 return (
                   <div key={v.uuid} style={{ background: 'white', border: '1px solid #86efac', borderRadius: '7px', padding: '7px 10px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ flex: 1, fontSize: '12px' }}>
-                      <span style={{ fontWeight: '700', color: '#15803d' }}>🚌 PAX · {label}{v.license_plate ? ` · ${v.license_plate}` : ''}</span>
+                      <span style={{ fontWeight: '700', color: '#15803d' }}>🚌 PAX · {parts.join(' · ')}</span>
                     </div>
                     <button type="button" onClick={() => openVehicle(v)}
                       style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '5px', padding: '3px 8px', cursor: 'pointer', fontSize: '11px', color: '#15803d', flexShrink: 0 }}>
