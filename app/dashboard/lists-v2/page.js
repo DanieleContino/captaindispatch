@@ -695,7 +695,61 @@ export default function ListsPage() {
         </div>
       )}
 
+      {/* ── Daily Log ── */}
+      {activeTab === 'dailylog' && (
+        <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px', background: '#f1f5f9', minHeight: '80vh' }}>
+          {tlPublication && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', fontSize: '12px', color: '#15803d', marginBottom: '16px' }}>
+              ✅ TL published at {new Date(tlPublication.published_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Loading…</div>
+          ) : trips.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '36px', marginBottom: '10px' }}>📒</div>
+              <div style={{ color: '#64748b', fontSize: '15px', fontWeight: '600' }}>No trips for this day</div>
+            </div>
+          ) : (
+            <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '70px 80px 1fr 1fr 60px', gap: '0 8px', padding: '6px 14px', borderBottom: '2px solid #15803d', fontWeight: '700', fontSize: '10px', color: '#15803d', background: '#f0fdf4', letterSpacing: '0.5px', textTransform: 'uppercase', borderRadius: '10px 10px 0 0' }}>
+                <div>Time</div>
+                <div>Sign</div>
+                <div>From → To</div>
+                <div>Passengers</div>
+                <div>Type</div>
+              </div>
+              {[...trips].sort((a, b) => (a.pickup_min ?? a.call_min ?? 9999) - (b.pickup_min ?? b.call_min ?? 9999)).map(t => {
+                const tlTripIds = new Set(assignments.map(a => a.base_trip_id))
+                const isTL = t.trip_group_id ? tlTripIds.has(t.trip_group_id) : tlTripIds.has(t.id)
+                const pickup = locsMap[t.pickup_id]?.name || '–'
+                const dropoff = locsMap[t.dropoff_id]?.name || '–'
+                const pax = paxByTripRow[t.id] || []
+                const timeStr = t.pickup_min != null ? (String(Math.floor(t.pickup_min / 60)).padStart(2,'0') + ':' + String(t.pickup_min % 60).padStart(2,'0')) : (t.call_min != null ? (String(Math.floor(t.call_min / 60)).padStart(2,'0') + ':' + String(t.call_min % 60).padStart(2,'0')) : '–')
+                return (
+                  <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '70px 80px 1fr 1fr 60px', gap: '0 8px', padding: '7px 14px', borderBottom: '1px solid #e2e8f0', fontSize: '12px', alignItems: 'flex-start' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>{timeStr}</div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f' }}>{t.trip_id}</div>
+                    <div><span style={{ color: '#94a3b8' }}>{pickup}</span><span style={{ color: '#cbd5e1', margin: '0 4px' }}>→</span><span style={{ fontWeight: '700' }}>{dropoff}</span></div>
+                    <div style={{ fontSize: '11px', color: '#374151' }}>
+                      {pax.length > 0 ? pax.map(p => p.full_name).join(', ') : <span style={{ color: '#94a3b8' }}>–</span>}
+                    </div>
+                    <div>
+                      {isTL
+                        ? <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', background: '#dbeafe', color: '#1e40af' }}>TL</span>
+                        : <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', background: '#f3e8ff', color: '#6d28d9' }}>Extra</span>
+                      }
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Contenuto stampabile ── */}
+      {activeTab === 'tl' && (
       <div className="print-wrap" style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px', background: '#f1f5f9', minHeight: '80vh' }}>
 
         {/* ── Transport List Header (data-driven) ── */}
@@ -956,6 +1010,7 @@ export default function ListsPage() {
         productionLabel={production?.name || null}
       />
       </div>
+      )}
     </div>
   )
 }
