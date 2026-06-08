@@ -74,7 +74,9 @@ function GrandTotals({ trips }) {
     return s + (d != null ? d : 0)
   }, 0)
   const activeDrivers = new Set(
-    trips.map(t => t.driver_crew_id).filter(id => id != null && id !== '__unassigned__')
+    trips
+      .map(t => t.driver_crew_id || t.driver_name)
+      .filter(id => id != null && id !== '__unassigned__')
   ).size
 
   const cards = [
