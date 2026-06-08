@@ -881,22 +881,61 @@ export default function CaptainGoPage() {
                   <div style={{ fontSize: '11px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     {tomorrowData.trips.length} Trip{tomorrowData.trips.length !== 1 ? 's' : ''} Tomorrow
                   </div>
-                  {tomorrowData.trips.map(trip => {
-                    const pickup  = tomorrowData.locsMap[trip.pickup_id]
-                    const dropoff = tomorrowData.locsMap[trip.dropoff_id]
-                    const cls     = CLS_COLOR[trip.transfer_class] || CLS_COLOR.STANDARD
+                  {groupTrips(tomorrowData.trips).map((group, gIdx) => {
+                    if (group.type === 'single') {
+                      const trip    = group.trip
+                      const pickup  = tomorrowData.locsMap[trip.pickup_id]
+                      const dropoff = tomorrowData.locsMap[trip.dropoff_id]
+                      const cls     = CLS_COLOR[trip.transfer_class] || CLS_COLOR.STANDARD
+                      return (
+                        <div key={trip.id} style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: `5px solid ${cls.dot}`, padding: '12px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>{minToHHMM(trip.pickup_min ?? trip.call_min)}</span>
+                            <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>#{trip.trip_id}</span>
+                          </div>
+                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>
+                            {pickup?.name || '–'} → {dropoff?.name || '–'}
+                          </div>
+                          {trip.passenger_list && (
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>👥 {trip.passenger_list}</div>
+                          )}
+                        </div>
+                      )
+                    }
+                    const { legs } = group
+                    const firstLeg = legs[0]
+                    const lastLeg  = legs[legs.length - 1]
+                    const pickup   = tomorrowData.locsMap[firstLeg.pickup_id]
+                    const dropoff  = tomorrowData.locsMap[lastLeg.dropoff_id]
+                    const cls      = CLS_COLOR[firstLeg.transfer_class] || CLS_COLOR.STANDARD
+                    const allSameDropoff = legs.every(l => l.dropoff_id === firstLeg.dropoff_id)
+                    const allSamePickup  = legs.every(l => l.pickup_id  === firstLeg.pickup_id)
+                    const serviceLabel   = firstLeg.service_type || (allSameDropoff ? 'Multi-Pick' : allSamePickup ? 'Multi-Drop' : 'Multi-leg')
                     return (
-                      <div key={trip.id} style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: `5px solid ${cls.dot}`, padding: '12px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                          <span style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>{minToHHMM(trip.pickup_min ?? trip.call_min)}</span>
-                          <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>#{trip.trip_id}</span>
+                      <div key={group.trip_group_id} style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: `5px solid ${cls.dot}`, overflow: 'hidden' }}>
+                        <div style={{ background: '#0f2340', padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ color: 'white', fontSize: '12px', fontWeight: '700' }}>
+                            {serviceLabel} · {minToHHMM(firstLeg.pickup_min ?? firstLeg.call_min)}
+                          </div>
+                          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontFamily: 'monospace' }}>#{firstLeg.trip_id}</div>
                         </div>
-                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>
-                          {pickup?.name || '–'} → {dropoff?.name || '–'}
+                        <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {legs.map((leg, i) => {
+                            const lPickup  = tomorrowData.locsMap[leg.pickup_id]
+                            const lDropoff = tomorrowData.locsMap[leg.dropoff_id]
+                            const routeLabel = allSameDropoff
+                              ? `📍 ${lPickup?.name || '–'}`
+                              : allSamePickup
+                              ? `📍 ${lDropoff?.name || '–'}`
+                              : `${lPickup?.name || '–'} → ${lDropoff?.name || '–'}`
+                            return (
+                              <div key={leg.id} style={{ fontSize: '12px', color: '#374151', padding: '4px 0', borderBottom: i < legs.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                                <span style={{ fontWeight: '600' }}>{i + 1}. {routeLabel}</span>
+                                {leg.passenger_list && <span style={{ color: '#94a3b8', marginLeft: '6px' }}>· {leg.passenger_list}</span>}
+                              </div>
+                            )
+                          })}
                         </div>
-                        {trip.passenger_list && (
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>👥 {trip.passenger_list}</div>
-                        )}
                       </div>
                     )
                   })}
