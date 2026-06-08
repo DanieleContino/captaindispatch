@@ -103,8 +103,9 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
         <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '9px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}`, letterSpacing: '0.04em', alignSelf: 'flex-start' }}>
           {t.transfer_class === 'STANDARD' ? 'TRF' : (t.transfer_class?.slice(0, 3) || 'TRF')}
         </span>
-        {isMultiPickup  && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', alignSelf: 'flex-start' }}>🔀 MULTI-PKP</span>}
-        {isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe', alignSelf: 'flex-start' }}>🔀 MULTI-DRP</span>}
+        {isMultiPickup && !isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', alignSelf: 'flex-start' }}>🔀 MULTI-PKP</span>}
+        {isMultiDropoff && !isMultiPickup && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe', alignSelf: 'flex-start' }}>🔀 MULTI-DRP</span>}
+        {isMultiPickup && isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#ecfdf5', color: '#065f46', border: '1px solid #6ee7b7', alignSelf: 'flex-start' }}>🔀 MIXED</span>}
         {isSuggested    && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef9c3', color: '#92400e', border: '1px solid #fbbf24', alignSelf: 'flex-start' }}>⭐ MATCH</span>}
         <span style={{ padding: '2px 5px', borderRadius: '5px', fontSize: '9px', fontWeight: '700', background: sts.bg, color: sts.color, alignSelf: 'flex-start' }}>
           {t.status || 'PLANNED'}
@@ -286,8 +287,9 @@ export function TripCardMobile({ group, locations, vehicles, selected, onClick, 
       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px', flexWrap: 'wrap' }}>
         <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '900', color: '#1e3a5f' }}>{baseTripId(t.trip_id)}</span>
         <span style={{ padding: '2px 7px', borderRadius: '999px', fontSize: '9px', fontWeight: '800', background: cls.bg, color: cls.color, border: `1px solid ${cls.border}` }}>{t.transfer_class === 'STANDARD' ? 'TRF' : (t.transfer_class?.slice(0, 3) || 'TRF')}</span>
-        {isMultiPickup  && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>🔀 PKP</span>}
-        {isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe' }}>🔀 DRP</span>}
+        {isMultiPickup && !isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>🔀 MULTI-PKP</span>}
+        {isMultiDropoff && !isMultiPickup && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe' }}>🔀 MULTI-DRP</span>}
+        {isMultiPickup && isMultiDropoff && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#ecfdf5', color: '#065f46', border: '1px solid #6ee7b7' }}>🔀 MIXED</span>}
         {isSuggested    && <span style={{ padding: '2px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef9c3', color: '#92400e', border: '1px solid #fbbf24' }}>⭐ MATCH</span>}
         <span style={{ padding: '2px 5px', borderRadius: '5px', fontSize: '9px', fontWeight: '700', background: sts.bg, color: sts.color, marginLeft: 'auto' }}>{t.status || 'PLANNED'}</span>
       </div>
