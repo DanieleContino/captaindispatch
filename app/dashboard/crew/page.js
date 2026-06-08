@@ -850,7 +850,7 @@ function FamilyModal({ crew, onClose, onEdit }) {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
             {crew.members.map(m => (
-              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '8px' }}>
+              <div key={m.uuid} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '8px' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#FAEEDA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#633806', flexShrink: 0 }}>
                   {m.full_name.split(' ').map(p => p[0]).slice(0, 2).join('')}
                 </div>
@@ -2276,7 +2276,7 @@ export default function CrewPage() {
                 {familyFiltered.map(m => {
                   const linkedCrew = crew.find(c => c.uuid === m.linked_crew_id)
                   return (
-                    <div key={m.id} style={{ background: '#fefce8', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <div key={m.uuid} style={{ background: '#fefce8', border: '1px solid #fde68a', borderLeft: '4px solid #f59e0b', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginBottom: '4px' }}>
                           <span style={{ fontWeight: '700', fontSize: '14px', color: '#0f172a' }}>{m.full_name}</span>
