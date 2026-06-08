@@ -1127,7 +1127,7 @@ export default function CaptainGoPage() {
                 ? `📍 ${pickup?.name || leg.pickup_id || '–'}`
                 : serviceLabel === 'Multi-Drop' || serviceLabel === 'MULTI-DROP'
                 ? `📍 ${dropoff?.name || leg.dropoff_id || '–'}`
-                : `${pickup?.name || leg.pickup_id || '–'} → ${dropoff?.name || leg.dropoff_id || '–'}`
+                : `📍 ${pickup?.name || leg.pickup_id || '–'} → ${dropoff?.name || leg.dropoff_id || '–'}`
 
               // Badge progressivo: Done / In corso / First / Next / Dopo
               const pendingLegs   = legs.filter(l => l.status !== 'DONE' && l.status !== 'COMPLETED')
