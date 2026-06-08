@@ -18,7 +18,7 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
 
   const pickupLoc  = locations[t.pickup_id]  || t.pickup_id  || '–'
   const dropoffLoc = isMultiDropoff
-    ? dropoffIds.map(id => (locations[id] || id || '').split(' ').slice(0, 2).join(' ')).join(' / ')
+    ? dropoffIds.map(id => (locations[id] || id || '')).join(' / ')
     : (locations[t.dropoff_id] || t.dropoff_id || '–')
 
   const callTime   = t.call_min   !== null ? minToHHMM(t.call_min)   : null
@@ -167,7 +167,7 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
         ) : (
           <>
             <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'baseline', gap: '4px', minWidth: 0 }}>
-              <span style={{ color: '#94a3b8', fontSize: '10px', fontWeight: '500', flexShrink: 0 }}>{pickupLoc.split(' ').slice(0, 2).join(' ')}</span>
+              <span style={{ color: '#94a3b8', fontSize: '10px', fontWeight: '500', flexShrink: 0 }}>{pickupLoc}</span>
               <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{dropoffLoc}</span>
             </div>
@@ -220,7 +220,7 @@ export function TripCardMobile({ group, locations, vehicles, selected, onClick, 
   const isMixed        = isMultiPickup || isMultiDropoff
   const pickupLoc  = locations[t.pickup_id]  || t.pickup_id  || '–'
   const dropoffLoc = isMultiDropoff
-    ? dropoffIds.map(id => (locations[id] || id || '').split(' ').slice(0, 2).join(' ')).join(' / ')
+    ? dropoffIds.map(id => (locations[id] || id || '')).join(' / ')
     : (locations[t.dropoff_id] || t.dropoff_id || '–')
   const callTime   = t.call_min   !== null ? minToHHMM(t.call_min)   : null
   const pickupTime = t.pickup_min !== null ? minToHHMM(t.pickup_min) : callTime
@@ -255,7 +255,7 @@ export function TripCardMobile({ group, locations, vehicles, selected, onClick, 
         <span style={{ padding: '2px 5px', borderRadius: '5px', fontSize: '9px', fontWeight: '700', background: sts.bg, color: sts.color, marginLeft: 'auto' }}>{t.status || 'PLANNED'}</span>
       </div>
       <div style={{ fontSize: '12px', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-        <span style={{ color: '#94a3b8', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '40%' }}>{pickupLoc.split(' ').slice(0, 2).join(' ')}</span>
+        <span style={{ color: '#94a3b8', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '40%' }}>{pickupLoc}</span>
         <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
         <span style={{ fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{dropoffLoc}</span>
       </div>
