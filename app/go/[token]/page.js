@@ -781,6 +781,22 @@ export default function CaptainGoPage() {
 
   const tripGroups = groupTrips(trips)
 
+  async function loadTomorrow() {
+    if (tomorrowLoading) return
+    setTomorrowLoading(true)
+    try {
+      const res = await fetch(`/api/go/tomorrow?token=${token}`)
+      const d = await res.json()
+      setTomorrowData(d)
+    } catch {}
+    finally { setTomorrowLoading(false) }
+  }
+
+  function handleTabSwitch(tab) {
+    setActiveTab(tab)
+    if (tab === 'tomorrow' && !tomorrowData) loadTomorrow()
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
 
@@ -819,6 +835,78 @@ export default function CaptainGoPage() {
           )}
         </div>
       </div>
+
+      {/* Tab switcher Today / Tomorrow */}
+      <div style={{ background: '#1e3a5f', padding: '0 20px', display: 'flex', gap: '4px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        {['today', 'tomorrow'].map(tab => (
+          <button key={tab} onClick={() => handleTabSwitch(tab)} style={{
+            padding: '10px 16px', border: 'none', background: 'none', cursor: 'pointer',
+            fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em',
+            color: activeTab === tab ? 'white' : 'rgba(255,255,255,0.4)',
+            borderBottom: activeTab === tab ? '2px solid #60a5fa' : '2px solid transparent',
+            transition: 'all 0.15s',
+          }}>
+            {tab === 'today' ? '📅 Today' : '🌙 Tomorrow'}
+          </button>
+        ))}
+      </div>
+
+      {/* Tomorrow tab content */}
+      {activeTab === 'tomorrow' && (
+        <div style={{ padding: '16px 20px 100px' }}>
+          {tomorrowLoading ? (
+            <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8', fontSize: '14px' }}>Loading...</div>
+          ) : tomorrowData ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {tomorrowData.tl_published && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '20px' }}>✅</span>
+                  <div>
+                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#15803d' }}>Transport List Published</div>
+                    {tomorrowData.tl_published_at && (
+                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                        {new Date(tomorrowData.tl_published_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {tomorrowData.trips.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🌙</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#64748b' }}>No trips scheduled for tomorrow</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {tomorrowData.trips.length} Trip{tomorrowData.trips.length !== 1 ? 's' : ''} Tomorrow
+                  </div>
+                  {tomorrowData.trips.map(trip => {
+                    const pickup  = tomorrowData.locsMap[trip.pickup_id]
+                    const dropoff = tomorrowData.locsMap[trip.dropoff_id]
+                    const cls     = CLS_COLOR[trip.transfer_class] || CLS_COLOR.STANDARD
+                    return (
+                      <div key={trip.id} style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: `5px solid ${cls.dot}`, padding: '12px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>{minToHHMM(trip.pickup_min ?? trip.call_min)}</span>
+                          <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>#{trip.trip_id}</span>
+                        </div>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>
+                          {pickup?.name || '–'} → {dropoff?.name || '–'}
+                        </div>
+                        {trip.passenger_list && (
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>👥 {trip.passenger_list}</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <button onClick={loadTomorrow} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', fontSize: '12px', color: '#64748b', cursor: 'pointer', fontWeight: '700' }}>↻ Refresh</button>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Data */}
       <div style={{ padding: '12px 20px', background: '#1e3a5f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
