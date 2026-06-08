@@ -971,6 +971,7 @@ export default function CaptainGoPage() {
         </div>
       </div>
 
+      {activeTab === 'today' && <>
       {/* Inizia Giornata */}
       {!session && vehicle && (
         <div style={{ margin: '16px 20px 0' }}>
@@ -1240,6 +1241,8 @@ export default function CaptainGoPage() {
           })}
         </div>
       </div>
+
+      </>}
 
       {/* Overlay IN CORSA — banner sticky con Arrived */}
       {mapTrip && (() => {
