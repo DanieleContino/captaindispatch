@@ -46,6 +46,7 @@ function TripsPageInner() {
   const [showAssignInfo, setShowAssignInfo] = useState(false)
   const [replicaOpen,   setReplicaOpen]   = useState(false)
   const [optimizeGroup, setOptimizeGroup] = useState(null)
+  const [view,          setView]          = useState('trips')
 
   const anySidebarOpen = newTripOpen || !!editTripRow
 
@@ -260,6 +261,10 @@ function TripsPageInner() {
             <button onClick={() => setReplicaOpen(true)}
               style={{ background: '#f8fafc', color: '#374151', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               📋 Replica
+            </button>
+            <button onClick={() => setView('reports')}
+              style={{ background: view === 'reports' ? '#0f172a' : '#f8fafc', color: view === 'reports' ? 'white' : '#374151', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              📊 Reports
             </button>
           </div>
         }
