@@ -800,7 +800,7 @@ function FamilyAccordion({ crewId, personType, linkedCrewId }) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {members.map(m => (
-                <div key={m.id} style={{ background: 'white', border: `1px solid ${borderColor}`, borderRadius: '7px', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div key={m.uuid} style={{ background: 'white', border: `1px solid ${borderColor}`, borderRadius: '7px', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#FAEEDA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '700', color: '#633806', flexShrink: 0 }}>
                     {m.full_name.split(' ').map(p => p[0]).slice(0, 2).join('')}
                   </div>
@@ -818,7 +818,7 @@ function FamilyAccordion({ crewId, personType, linkedCrewId }) {
                       )}
                     </div>
                   </div>
-                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '2px 6px', borderRadius: '5px', flexShrink: 0 }}>{m.id}</span>
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '2px 6px', borderRadius: '5px', flexShrink: 0 }}>{m.display_id}</span>
                 </div>
               ))}
             </div>
