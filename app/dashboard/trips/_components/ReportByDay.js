@@ -282,9 +282,11 @@ function MultiLegGroupRow({ legs, locsMap, vhcMap }) {
   const durMins = durationMinutes(earliestStart, latestArr)
 
   const firstLeg = legs[0]
-  const pickup = locsMap[firstLeg.pickup_id] || firstLeg.pickup_id || '—'
   const lastLeg = legs[legs.length - 1]
-  const dropoff = locsMap[lastLeg.dropoff_id] || lastLeg.dropoff_id || '—'
+  const allStops = legs.map(l => locsMap[l.pickup_id] || l.pickup_id || '—')
+  allStops.push(locsMap[lastLeg.dropoff_id] || lastLeg.dropoff_id || '—')
+  const uniqueStops = allStops.filter((s, i) => i === 0 || s !== allStops[i - 1])
+  const routeSummary = uniqueStops.join(' → ')
   const driverName = firstLeg.driver_name || '—'
 
   return (
@@ -322,10 +324,8 @@ function MultiLegGroupRow({ legs, locsMap, vhcMap }) {
         </div>
 
         {/* Route summary */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-          <span style={{ color: '#94a3b8', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '42%' }}>{pickup}</span>
-          <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
-          <span style={{ fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{dropoff}</span>
+        <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px', color: '#0f172a', fontWeight: '500' }}>
+          {routeSummary}
         </div>
 
         {/* Time range */}
@@ -345,7 +345,10 @@ function MultiLegGroupRow({ legs, locsMap, vhcMap }) {
 
         {/* Pax */}
         <div style={{ fontSize: '11px', color: '#374151' }}>
-          {firstLeg.pax_count != null ? firstLeg.pax_count : '—'}
+          {(() => {
+            const maxPax = Math.max(...legs.map(l => l.pax_count ?? 0))
+            return maxPax > 0 ? maxPax : '—'
+          })()}
         </div>
 
         {/* Status */}
