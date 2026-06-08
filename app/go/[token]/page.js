@@ -927,7 +927,7 @@ export default function CaptainGoPage() {
                               ? `📍 ${lPickup?.name || '–'}`
                               : allSamePickup
                               ? `📍 ${lDropoff?.name || '–'}`
-                              : `${lPickup?.name || '–'} → ${lDropoff?.name || '–'}`
+                              : `📍 ${lPickup?.name || '–'} → ${lDropoff?.name || '–'}`
                             return (
                               <div key={leg.id} style={{ fontSize: '12px', color: '#374151', padding: '4px 0', borderBottom: i < legs.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                                 <span style={{ fontWeight: '600' }}>{i + 1}. {routeLabel}</span>
