@@ -181,13 +181,24 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
       {/* PASSENGERS */}
       <div style={{ minWidth: 0 }}>
         {isMixed ? (() => {
-          // Build pax→dropoff map: for each pax name, find the last leg it appears in → that leg's dropoff is its final destination
+          const isTrueMixed = isMultiPickup && isMultiDropoff
+          if (!isTrueMixed) {
+            // MULTI-PKP only or MULTI-DRP only — comportamento originale
+            return group.map((r, ri) => {
+              const legPax = r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
+              return (
+                <div key={r.id || ri} style={{ fontSize: '10px', color: '#374151', lineHeight: '16.5px', marginBottom: ri < group.length - 1 ? '4px' : 0 }}>
+                  {legPax.length > 0 ? legPax.map(fmtPax).join(' · ') : <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>}
+                </div>
+              )
+            })
+          }
+          // MIXED (MULTI-PKP + MULTI-DRP): boarding per leg + riepilogo destinazioni
           const paxDropoff = {}
           group.forEach(r => {
             const names = r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
             names.forEach(name => { paxDropoff[name] = r.dropoff_id })
           })
-          // Group pax by dropoff
           const dropoffGroups = {}
           Object.entries(paxDropoff).forEach(([name, dropoffId]) => {
             if (!dropoffGroups[dropoffId]) dropoffGroups[dropoffId] = []
@@ -199,7 +210,6 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
               {group.map((r, ri) => {
                 if (ri === lastLegIndex) return null
                 const legPax = r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
-                // boarding only: pax that appear in this leg but not in previous leg
                 const prevPax = ri > 0 && group[ri - 1].passenger_list ? group[ri - 1].passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
                 const boarding = ri === 0 ? legPax : legPax.filter(n => !prevPax.includes(n))
                 return (
