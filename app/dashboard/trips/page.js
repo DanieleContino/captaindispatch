@@ -19,6 +19,8 @@ import TripSidebar from './_components/TripSidebar'
 import EditTripSidebar from './_components/EditTripSidebar'
 import WaypointReviewModal from './_components/WaypointReviewModal'
 import ReplicaDayModal from './_components/ReplicaDayModal'
+import ReportByDriver from './_components/ReportByDriver'
+import ReportByDay from './_components/ReportByDay'
 
 function TripsPageInner() {
   const t = useT()
@@ -47,6 +49,16 @@ function TripsPageInner() {
   const [replicaOpen,   setReplicaOpen]   = useState(false)
   const [optimizeGroup, setOptimizeGroup] = useState(null)
   const [view,          setView]          = useState('trips')
+  const [reportSubTab,  setReportSubTab]  = useState('weekly')
+  const [reportWeekStart, setReportWeekStart] = useState(() => {
+    const d = new Date()
+    const day = d.getDay()
+    const diff = day === 0 ? -6 : 1 - day
+    d.setDate(d.getDate() + diff)
+    return d.toISOString().slice(0, 10)
+  })
+  const [reportTrips, setReportTrips] = useState([])
+  const [reportLoading, setReportLoading] = useState(false)
 
   const anySidebarOpen = newTripOpen || !!editTripRow
 
@@ -96,6 +108,44 @@ function TripsPageInner() {
   }, [])
 
   useEffect(() => { if (user) loadTrips(date) }, [user, date, loadTrips])
+
+  const loadReportTrips = useCallback(async (weekStart) => {
+    if (!PRODUCTION_ID) return
+    setReportLoading(true)
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekEnd.getDate() + 6)
+    const weekEndStr = weekEnd.toISOString().slice(0, 10)
+    const { data } = await supabase.from('trips').select('*')
+      .eq('production_id', PRODUCTION_ID)
+      .gte('date', weekStart)
+      .lte('date', weekEndStr)
+      .order('date', { ascending: true })
+      .order('pickup_min', { ascending: true, nullsLast: true })
+    setReportTrips(data || [])
+    setReportLoading(false)
+  }, [PRODUCTION_ID])
+
+  useEffect(() => { if (user && view === 'reports') loadReportTrips(reportWeekStart) }, [user, view, reportWeekStart, loadReportTrips])
+
+  const reportWeekLabel = (() => {
+    const start = new Date(reportWeekStart)
+    const end = new Date(reportWeekStart)
+    end.setDate(end.getDate() + 6)
+    const fmt = d => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Rome' })
+    return `${start.getDate()} – ${fmt(end)}`
+  })()
+
+  const handlePrevWeek = () => {
+    const d = new Date(reportWeekStart)
+    d.setDate(d.getDate() - 7)
+    setReportWeekStart(d.toISOString().slice(0, 10))
+  }
+
+  const handleNextWeek = () => {
+    const d = new Date(reportWeekStart)
+    d.setDate(d.getDate() + 7)
+    setReportWeekStart(d.toISOString().slice(0, 10))
+  }
 
   // Mantieni editTripGroup sincronizzato con trips dopo ogni reload
   useEffect(() => {
@@ -162,6 +212,38 @@ function TripsPageInner() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
+
+      {view === 'reports' && !reportLoading && (
+        reportSubTab === 'weekly'
+          ? <ReportByDriver
+              trips={reportTrips}
+              locsMap={locsMap}
+              vhcMap={vhcMap}
+              weekLabel={reportWeekLabel}
+              onBack={() => setView('trips')}
+              onTabChange={setReportSubTab}
+              activeSubTab={reportSubTab}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+            />
+          : <ReportByDay
+              trips={reportTrips}
+              locsMap={locsMap}
+              vhcMap={vhcMap}
+              weekLabel={reportWeekLabel}
+              onBack={() => setView('trips')}
+              onTabChange={setReportSubTab}
+              activeSubTab={reportSubTab}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+            />
+      )}
+
+      {view === 'reports' && reportLoading && (
+        <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>Loading report…</div>
+      )}
+
+      {view === 'trips' && <>
 
       {/* Mobile toolbar */}
       {isMobile && (
@@ -395,6 +477,8 @@ function TripsPageInner() {
         locations={locsList}
         onDone={() => loadTrips(date)}
       />
+
+      </> }
 
       {/* Waypoint Review Modal */}
       <WaypointReviewModal
