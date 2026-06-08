@@ -498,6 +498,8 @@ export default function CaptainGoPage() {
     }
 
     const msgInterval = setInterval(checkMessages, 15_000)
+    // Check TL badge silenzioso al mount
+    checkTlBadge()
     return () => { clearInterval(interval); clearInterval(msgInterval) }
   }, [token])
 
@@ -864,7 +866,17 @@ export default function CaptainGoPage() {
             borderBottom: activeTab === tab ? '2px solid #60a5fa' : '2px solid transparent',
             transition: 'all 0.15s',
           }}>
-            {tab === 'today' ? '📅 Today' : '🌙 Tomorrow'}
+            {tab === 'today' ? '📅 Today' : (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                🌙 Tomorrow
+                {tlBadge === 'published' && (
+                  <span style={{ background: '#22c55e', color: 'white', fontSize: '9px', fontWeight: '900', padding: '1px 5px', borderRadius: '999px' }}>NEW</span>
+                )}
+                {tlBadge === 'updated' && (
+                  <span style={{ background: '#f59e0b', color: 'white', fontSize: '9px', fontWeight: '900', padding: '1px 5px', borderRadius: '999px' }}>UPD</span>
+                )}
+              </span>
+            )}
           </button>
         ))}
       </div>
