@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useDraggable } from '@dnd-kit/core'
 import { COLUMNS_CATALOG } from '../../../../lib/listColumnsCatalog'
 
@@ -19,7 +19,7 @@ export default function TripGroupRow({ group, locsMap, sections, moveMenuOpenFor
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      style={{ opacity: isDragging ? 0.4 : 1, cursor: 'grab' }}
+      style={{ opacity: isDragging ? 0.4 : 1, cursor: 'grab', pageBreakInside: 'avoid', breakInside: 'avoid' }}
     >
       {group.rows.map((row, legIndex) => {
         const isFirst = legIndex === 0
