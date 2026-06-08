@@ -180,16 +180,43 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
 
       {/* PASSENGERS */}
       <div style={{ minWidth: 0 }}>
-        {isMixed ? (
-          group.map((r, ri) => {
-            const legPax = r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
-            return (
-              <div key={r.id || ri} style={{ fontSize: '10px', color: '#374151', lineHeight: '16.5px', marginBottom: ri < group.length - 1 ? '4px' : 0 }}>
-                {legPax.length > 0 ? legPax.map(fmtPax).join(' · ') : <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>}
-              </div>
-            )
+        {isMixed ? (() => {
+          // Build pax→dropoff map: for each pax name, find the last leg it appears in → that leg's dropoff is its final destination
+          const paxDropoff = {}
+          group.forEach(r => {
+            const names = r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
+            names.forEach(name => { paxDropoff[name] = r.dropoff_id })
           })
-        ) : paxNames.length > 0 ? (
+          // Group pax by dropoff
+          const dropoffGroups = {}
+          Object.entries(paxDropoff).forEach(([name, dropoffId]) => {
+            if (!dropoffGroups[dropoffId]) dropoffGroups[dropoffId] = []
+            dropoffGroups[dropoffId].push(name)
+          })
+          const lastLegIndex = group.length - 1
+          return (
+            <>
+              {group.map((r, ri) => {
+                if (ri === lastLegIndex) return null
+                const legPax = r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
+                // boarding only: pax that appear in this leg but not in previous leg
+                const prevPax = ri > 0 && group[ri - 1].passenger_list ? group[ri - 1].passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
+                const boarding = ri === 0 ? legPax : legPax.filter(n => !prevPax.includes(n))
+                return (
+                  <div key={r.id || ri} style={{ fontSize: '10px', color: '#374151', lineHeight: '16.5px', marginBottom: '3px' }}>
+                    {boarding.length > 0 ? boarding.map(fmtPax).join(' · ') : <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>—</span>}
+                  </div>
+                )
+              })}
+              {Object.entries(dropoffGroups).map(([dropoffId, names]) => (
+                <div key={dropoffId} style={{ fontSize: '10px', color: '#374151', lineHeight: '16.5px', marginTop: '2px' }}>
+                  <span style={{ color: '#94a3b8' }}>→ {locations[dropoffId] || dropoffId}: </span>
+                  {names.map(fmtPax).join(' · ')}
+                </div>
+              ))}
+            </>
+          )
+        })() : paxNames.length > 0 ? (
           <div style={{ fontSize: '10px', color: '#374151', lineHeight: 1.5 }}>{paxNames.map(fmtPax).join(' · ')}</div>
         ) : (
           <div style={{ fontSize: '10px', color: '#cbd5e1', fontStyle: 'italic' }}>{i18n.noPaxAssigned}</div>
