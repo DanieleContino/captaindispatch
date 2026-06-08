@@ -181,38 +181,25 @@ export function TripRow({ group, locations, vehicles, selected, onClick, isSugge
       {/* PASSENGERS */}
       <div style={{ minWidth: 0 }}>
         {isMixed ? (() => {
-          // Build pax→dropoff map: last leg each pax appears in = their final destination
+          // Build pax→dropoff map: for each pax name, find the last leg it appears in → that leg's dropoff is its final destination
           const paxDropoff = {}
           group.forEach(r => {
             const names = r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
             names.forEach(name => { paxDropoff[name] = r.dropoff_id })
           })
-          // Group pax by dropoff destination
+          // Group pax by dropoff
           const dropoffGroups = {}
           Object.entries(paxDropoff).forEach(([name, dropoffId]) => {
             if (!dropoffGroups[dropoffId]) dropoffGroups[dropoffId] = []
             dropoffGroups[dropoffId].push(name)
           })
-          if (!isMultiPickup) {
-            // MULTI-DRP only: show directly grouped by destination
-            return (
-              <>
-                {Object.entries(dropoffGroups).map(([dropoffId, names]) => (
-                  <div key={dropoffId} style={{ fontSize: '10px', color: '#374151', lineHeight: '16.5px', marginBottom: '3px' }}>
-                    <span style={{ color: '#94a3b8' }}>→ {locations[dropoffId] || dropoffId}: </span>
-                    {names.map(fmtPax).join(' · ')}
-                  </div>
-                ))}
-              </>
-            )
-          }
-          // MULTI-PKP (with or without MULTI-DRP): boarding per leg + dropoff summary on last leg
           const lastLegIndex = group.length - 1
           return (
             <>
               {group.map((r, ri) => {
                 if (ri === lastLegIndex) return null
                 const legPax = r.passenger_list ? r.passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
+                // boarding only: pax that appear in this leg but not in previous leg
                 const prevPax = ri > 0 && group[ri - 1].passenger_list ? group[ri - 1].passenger_list.split(',').map(s => s.trim()).filter(Boolean) : []
                 const boarding = ri === 0 ? legPax : legPax.filter(n => !prevPax.includes(n))
                 return (
