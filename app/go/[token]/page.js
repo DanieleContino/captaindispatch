@@ -423,6 +423,9 @@ export default function CaptainGoPage() {
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [tripAction,     setTripAction]     = useState(null) // trip.id in corso di update
   const [mapTrip,        setMapTrip]        = useState(null) // trip in visualizzazione mappa
+  const [activeTab,      setActiveTab]      = useState('today')
+  const [tomorrowData,   setTomorrowData]   = useState(null)
+  const [tomorrowLoading, setTomorrowLoading] = useState(false)
   const [trafficData,    setTrafficData]    = useState({})   // { [trip.id]: { delayMin, severity, loading } }
   const wakeLockRef = useRef(null)
   const [unreadCount,    setUnreadCount]    = useState(() => {
