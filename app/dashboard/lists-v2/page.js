@@ -461,7 +461,6 @@ export default function ListsPage() {
         .select()
         .single()
       setTlPublication(pub)
-      window.print()
     } catch (e) {
       alert('Publish failed: ' + (e.message || 'unknown error'))
     } finally {
@@ -492,7 +491,6 @@ export default function ListsPage() {
         .select()
         .single()
       setTlPublication(pub)
-      window.print()
     } catch (e) {
       alert('Re-publish failed: ' + (e.message || 'unknown error'))
     } finally {
