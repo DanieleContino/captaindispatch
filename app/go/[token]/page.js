@@ -947,6 +947,7 @@ export default function CaptainGoPage() {
         </div>
       )}
 
+      {activeTab === 'today' && <>
       {/* Data */}
       <div style={{ padding: '12px 20px', background: '#1e3a5f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ fontSize: '13px', fontWeight: '700', color: 'rgba(255,255,255,0.8)' }}>
@@ -970,6 +971,8 @@ export default function CaptainGoPage() {
           )}
         </div>
       </div>
+
+      </>}
 
       {activeTab === 'today' && <>
       {/* Inizia Giornata */}
