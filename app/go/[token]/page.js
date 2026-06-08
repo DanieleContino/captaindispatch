@@ -426,6 +426,7 @@ export default function CaptainGoPage() {
   const [activeTab,      setActiveTab]      = useState('today')
   const [tomorrowData,   setTomorrowData]   = useState(null)
   const [tomorrowLoading, setTomorrowLoading] = useState(false)
+  const [tlBadge, setTlBadge] = useState(null) // null | 'published' | 'updated'
   const [trafficData,    setTrafficData]    = useState({})   // { [trip.id]: { delayMin, severity, loading } }
   const wakeLockRef = useRef(null)
   const [unreadCount,    setUnreadCount]    = useState(() => {
@@ -788,13 +789,30 @@ export default function CaptainGoPage() {
       const res = await fetch(`/api/go/tomorrow?token=${token}`)
       const d = await res.json()
       setTomorrowData(d)
+      if (d.tl_published && d.tl_published_at) {
+        try { localStorage.setItem(`tl_seen_${token}`, d.tl_published_at) } catch {}
+        setTlBadge(null)
+      }
     } catch {}
     finally { setTomorrowLoading(false) }
+  }
+
+  async function checkTlBadge() {
+    try {
+      const res = await fetch(`/api/go/tomorrow?token=${token}`)
+      const d = await res.json()
+      if (!d.tl_published || !d.tl_published_at) { setTlBadge(null); return }
+      const seen = localStorage.getItem(`tl_seen_${token}`)
+      if (!seen) { setTlBadge('published'); return }
+      if (new Date(d.tl_published_at) > new Date(seen)) { setTlBadge('updated'); return }
+      setTlBadge(null)
+    } catch {}
   }
 
   function handleTabSwitch(tab) {
     setActiveTab(tab)
     if (tab === 'tomorrow' && !tomorrowData) loadTomorrow()
+    else if (tab === 'tomorrow' && tomorrowData) loadTomorrow()
   }
 
   return (
