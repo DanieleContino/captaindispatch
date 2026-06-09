@@ -21,6 +21,7 @@ import WaypointReviewModal from './_components/WaypointReviewModal'
 import ReplicaDayModal from './_components/ReplicaDayModal'
 import ReportByDriver from './_components/ReportByDriver'
 import ReportByDay from './_components/ReportByDay'
+import ReportSummary from './_components/ReportSummary'
 
 function TripsPageInner() {
   const t = useT()
@@ -49,7 +50,7 @@ function TripsPageInner() {
   const [replicaOpen,   setReplicaOpen]   = useState(false)
   const [optimizeGroup, setOptimizeGroup] = useState(null)
   const [view,          setView]          = useState('trips')
-  const [reportSubTab,  setReportSubTab]  = useState('weekly')
+  const [reportSubTab,  setReportSubTab]  = useState('summary')
   const [reportWeekStart, setReportWeekStart] = useState(() => {
     const d = new Date()
     const day = d.getDay()
@@ -87,7 +88,7 @@ function TripsPageInner() {
           { onConflict: 'user_id,production_id', ignoreDuplicates: true }
         )
         const [locsR, vhcR, stR] = await Promise.all([
-          supabase.from('locations').select('uuid,display_id,name,is_hub').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name'),
+          supabase.from('locations').select('uuid,display_id,name,is_hub,location_type').eq('production_id', PRODUCTION_ID).order('is_hub', { ascending: false }).order('name'),
           supabase.from('vehicles').select('uuid,display_id,driver_name,sign_code,capacity,vehicle_type,available_from,available_to,preferred_dept,preferred_crew_ids').eq('production_id', PRODUCTION_ID).eq('active', true).eq('in_transport', true).order('display_id'),
           supabase.from('service_types').select('id,name').eq('production_id', PRODUCTION_ID).order('sort_order'),
         ])
@@ -226,10 +227,23 @@ function TripsPageInner() {
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
 
       {view === 'reports' && !reportLoading && (
-        reportSubTab === 'weekly'
+        reportSubTab === 'summary'
+          ? <ReportSummary
+              trips={reportTrips}
+              reportLocsMap={reportLocsMap}
+              weekLabel={reportWeekLabel}
+              onBack={() => setView('trips')}
+              onTabChange={setReportSubTab}
+              activeSubTab={reportSubTab}
+              onPrevWeek={handlePrevWeek}
+              onNextWeek={handleNextWeek}
+              reportDate={reportDate}
+              onDateChange={setReportDate}
+            />
+          : reportSubTab === 'byDriver'
           ? <ReportByDriver
               trips={reportTrips}
-              locsMap={locsMap}
+              reportLocsMap={reportLocsMap}
               vhcMap={vhcMap}
               weekLabel={reportWeekLabel}
               onBack={() => setView('trips')}
@@ -240,7 +254,7 @@ function TripsPageInner() {
             />
           : <ReportByDay
               trips={reportTrips}
-              locsMap={locsMap}
+              reportLocsMap={reportLocsMap}
               vhcMap={vhcMap}
               weekLabel={reportWeekLabel}
               onBack={() => setView('trips')}
@@ -248,6 +262,8 @@ function TripsPageInner() {
               activeSubTab={reportSubTab}
               onPrevWeek={handlePrevWeek}
               onNextWeek={handleNextWeek}
+              reportDate={reportDate}
+              onDateChange={setReportDate}
             />
       )}
 
