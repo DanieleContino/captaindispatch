@@ -178,13 +178,21 @@ function MultiLegGroupRow({ legs, reportLocsMap }) {
   const isMultiPickup  = pickupIds.length > 1
   const isMultiDropoff = dropoffIds.length > 1
 
-  const allStops = []
-  legs.forEach(l => {
-    allStops.push(locName(reportLocsMap, l.pickup_id))
-    allStops.push(locName(reportLocsMap, l.dropoff_id))
-  })
-  const uniqueStops = allStops.filter((s, i) => i === 0 || s !== allStops[i - 1])
-  const routeSummary = uniqueStops.join(' → ')
+  const isTrueMixed = isMultiPickup && isMultiDropoff
+  let routeStops = []
+  if (isTrueMixed) {
+    legs.forEach(l => {
+      routeStops.push(locName(reportLocsMap, l.pickup_id))
+      routeStops.push(locName(reportLocsMap, l.dropoff_id))
+    })
+  } else if (isMultiPickup) {
+    legs.forEach(l => routeStops.push(locName(reportLocsMap, l.pickup_id)))
+    routeStops.push(locName(reportLocsMap, legs[legs.length - 1].dropoff_id))
+  } else {
+    routeStops.push(locName(reportLocsMap, legs[0].pickup_id))
+    legs.forEach(l => routeStops.push(locName(reportLocsMap, l.dropoff_id)))
+  }
+  const routeSummary = routeStops.filter((s, i) => i === 0 || s !== routeStops[i - 1]).join(' → ')
 
   const startTimes = legs.map(l => l.started_at).filter(Boolean).sort()
   const arrTimes   = legs.map(l => l.arrived_at).filter(Boolean).sort()
@@ -196,7 +204,10 @@ function MultiLegGroupRow({ legs, reportLocsMap }) {
   const realKm = legs.reduce((s, l) => s + (l.actual_km != null ? Number(l.actual_km) : 0), 0)
   const hasEst  = legs.some(l => l.estimated_km != null)
   const hasReal = legs.some(l => l.actual_km != null)
-  const maxPax  = Math.max(...legs.map(l => l.pax_count ?? 0))
+  const totalPax = legs.reduce((s, l) => s + (l.pax_count ?? 0), 0)
+  const maxPax   = isMultiPickup && !isMultiDropoff
+    ? totalPax
+    : Math.max(...legs.map(l => l.pax_count ?? 0))
   const firstLeg = legs[0]
   const late = isLate(firstLeg.pickup_min, firstLeg.started_at)
 
