@@ -1,9 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useIsMobile } from '../../../../lib/useIsMobile'
 
 // ─── Helpers ──────────────────────────────────────────────────
+
+function minsToHHMM(mins) {
+  if (mins == null) return '—'
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
 
 function fmtTime(isoStr) {
   if (!isoStr) return null
@@ -12,9 +19,7 @@ function fmtTime(isoStr) {
     const h = String(d.getUTCHours()).padStart(2, '0')
     const m = String(d.getUTCMinutes()).padStart(2, '0')
     return `${h}:${m}`
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 function durationMinutes(startedAt, arrivedAt) {
@@ -23,13 +28,11 @@ function durationMinutes(startedAt, arrivedAt) {
     const diff = new Date(arrivedAt) - new Date(startedAt)
     if (diff < 0) return null
     return Math.round(diff / 60000)
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 function fmtDuration(mins) {
-  if (mins === null || mins === undefined) return '—'
+  if (mins == null) return '—'
   const h = Math.floor(mins / 60)
   const m = mins % 60
   if (h === 0) return `${m}m`
@@ -38,20 +41,14 @@ function fmtDuration(mins) {
 }
 
 function fmtTotalHours(totalMins) {
-  if (!totalMins) return '0h'
+  if (!totalMins) return '—'
   const h = Math.floor(totalMins / 60)
   const m = totalMins % 60
   if (m === 0) return `${h}h`
   return `${h}h ${m}m`
 }
 
-function isoDatePart(isoStr) {
-  if (!isoStr) return null
-  return isoStr.slice(0, 10)
-}
-
 function fmtDayLabel(dateStr) {
-  // Returns e.g. "MON 9 JUN"
   if (!dateStr) return dateStr
   try {
     const d = new Date(dateStr + 'T00:00:00Z')
@@ -59,420 +56,242 @@ function fmtDayLabel(dateStr) {
     const day = d.toLocaleDateString('en-GB', { day: 'numeric', timeZone: 'UTC' })
     const month = d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' }).toUpperCase()
     return `${weekday} ${day} ${month}`
-  } catch {
-    return dateStr
-  }
+  } catch { return dateStr }
 }
 
-// ─── Grand Totals ─────────────────────────────────────────────
-
-function GrandTotals({ trips }) {
-  const totalTrips = trips.length
-  const totalKm = trips.reduce((s, t) => s + (t.actual_km != null ? Number(t.actual_km) : 0), 0)
-  const totalMins = trips.reduce((s, t) => {
-    const d = durationMinutes(t.started_at, t.arrived_at)
-    return s + (d != null ? d : 0)
-  }, 0)
-  const activeDrivers = new Set(
-    trips
-      .map(t => t.driver_crew_id || t.driver_name)
-      .filter(id => id != null && id !== '__unassigned__')
-  ).size
-
-  const cards = [
-    { label: 'Total Trips', value: totalTrips, icon: '🗓' },
-    { label: 'Total km', value: totalKm > 0 ? `${totalKm.toFixed(1)} km` : '—', icon: '📍' },
-    { label: 'Total Hours', value: fmtTotalHours(totalMins), icon: '⏱' },
-    { label: 'Active Drivers', value: activeDrivers, icon: '👤' },
-  ]
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
-      {cards.map(c => (
-        <div key={c.label} style={{
-          background: 'white',
-          border: '1px solid #e2e8f0',
-          borderRadius: '10px',
-          padding: '14px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-        }}>
-          <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.06em' }}>
-            {c.icon} {c.label}
-          </div>
-          <div style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
-            {c.value}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
+function locName(reportLocsMap, id) {
+  if (!id) return '—'
+  return reportLocsMap[id]?.name || id
 }
 
-// ─── Status Icon ──────────────────────────────────────────────
-
-function StatusIcon({ trip }) {
-  const done = trip.started_at && trip.arrived_at
-  if (done) {
-    return (
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        width: '22px', height: '22px', borderRadius: '50%',
-        background: '#EAF3DE', color: '#3B6D11', fontSize: '12px', fontWeight: '900',
-      }}>✓</span>
-    )
-  }
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: '22px', height: '22px', borderRadius: '4px',
-      background: '#FAEEDA', color: '#854F0B', fontSize: '12px', fontWeight: '900',
-    }}>⚠</span>
-  )
+function locType(reportLocsMap, id) {
+  if (!id) return 'OTHER'
+  return reportLocsMap[id]?.location_type || 'OTHER'
 }
 
-// ─── Multi-leg pill ───────────────────────────────────────────
-
-function MultiLegPill({ isMultiPickup, isMultiDropoff }) {
-  if (isMultiPickup && isMultiDropoff) {
-    return (
-      <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800',
-        background: '#ecfdf5', color: '#065f46', border: '1px solid #6ee7b7' }}>
-        MIXED
-      </span>
-    )
-  }
-  if (isMultiPickup) {
-    return (
-      <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800',
-        background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>
-        MULTI-PKP
-      </span>
-    )
-  }
-  if (isMultiDropoff) {
-    return (
-      <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800',
-        background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe' }}>
-        MULTI-DRP
-      </span>
-    )
-  }
-  return null
+function isLate(pickup_min, started_at) {
+  if (pickup_min == null || !started_at) return false
+  try {
+    const d = new Date(started_at)
+    const actualMins = d.getUTCHours() * 60 + d.getUTCMinutes()
+    return actualMins > pickup_min + 5
+  } catch { return false }
 }
 
-// ─── Column header row ────────────────────────────────────────
+const HUB_TYPES = [
+  { value: 'ALL',           label: 'All hubs' },
+  { value: 'AIRPORT',       label: '✈ Airport' },
+  { value: 'TRAIN_STATION', label: '🚂 Train' },
+  { value: 'BUS_STATION',   label: '🚌 Bus' },
+  { value: 'PORT',          label: '⚓ Port' },
+]
 
-// Columns: Trip ID | Driver | Route | Start → Arrived | Km | Pax | status
-const COL_WIDTHS = '120px 130px 1fr 160px 80px 50px 32px'
+const CLASS_TYPES = [
+  { value: 'ALL',       label: 'All' },
+  { value: 'ARRIVAL',   label: 'Arrival' },
+  { value: 'DEPARTURE', label: 'Departure' },
+  { value: 'STANDARD',  label: 'Standard' },
+]
+
+// Grid: Trip ID | Type | Driver | Route | Planned | Start→Arrived | Est.km | Real km | Pax
+const COL = '100px 90px 110px 1fr 70px 150px 65px 65px 40px'
+
+const BTN = { padding: '6px 13px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }
+
+// ─── Type Pill ────────────────────────────────────────────────
+
+function TypePill({ trip, isMultiPickup, isMultiDropoff, isMultiLeg }) {
+  if (isMultiLeg) {
+    if (isMultiPickup && isMultiDropoff) return <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#ecfdf5', color: '#065f46', border: '1px solid #6ee7b7' }}>MIXED</span>
+    if (isMultiPickup) return <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>MULTI-PKP</span>
+    if (isMultiDropoff) return <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f3e8ff', color: '#6d28d9', border: '1px solid #d8b4fe' }}>MULTI-DRP</span>
+  }
+  const tc = trip?.transfer_class
+  if (tc === 'ARRIVAL')   return <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#E6F1FB', color: '#185FA5', border: '1px solid #85B7EB' }}>ARRIVAL</span>
+  if (tc === 'DEPARTURE') return <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#FAEEDA', color: '#854F0B', border: '1px solid #FAC775' }}>DEPARTURE</span>
+  return <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>STANDARD</span>
+}
+
+// ─── ColHeaders ───────────────────────────────────────────────
 
 function ColHeaders() {
-  const cols = ['Trip ID', 'Driver', 'Route', 'Start → Arrived', 'Km', 'Pax', '']
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: COL_WIDTHS,
-      gap: '8px',
-      padding: '6px 14px',
-      borderBottom: '1px solid #e2e8f0',
-    }}>
-      {cols.map((c, i) => (
-        <div key={i} style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.06em' }}>
-          {c}
-        </div>
+    <div style={{ display: 'grid', gridTemplateColumns: COL, gap: '8px', padding: '6px 14px', borderBottom: '1px solid #e2e8f0' }}>
+      {['Trip ID', 'Type', 'Driver', 'Route', 'Planned', 'Start → Arrived', 'Est. km', 'Real km', 'Pax'].map((c, i) => (
+        <div key={i} style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.05em' }}>{c}</div>
       ))}
     </div>
   )
 }
 
-// ─── Single trip row ──────────────────────────────────────────
+// ─── TripDataRow ──────────────────────────────────────────────
 
-function TripDataRow({ trip, locsMap, vhcMap, indent, label }) {
-  const pickup = locsMap[trip.pickup_id] || trip.pickup_id || '—'
-  const dropoff = locsMap[trip.dropoff_id] || trip.dropoff_id || '—'
+function TripDataRow({ trip, reportLocsMap, indent, label }) {
+  const pickup    = locName(reportLocsMap, trip.pickup_id)
+  const dropoff   = locName(reportLocsMap, trip.dropoff_id)
   const startTime = fmtTime(trip.started_at)
-  const arrTime = fmtTime(trip.arrived_at)
-  const durMins = durationMinutes(trip.started_at, trip.arrived_at)
-  const driverName = trip.driver_name || '—'
+  const arrTime   = fmtTime(trip.arrived_at)
+  const durMins   = durationMinutes(trip.started_at, trip.arrived_at)
+  const late      = isLate(trip.pickup_min, trip.started_at)
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: COL_WIDTHS,
-      gap: '8px',
-      padding: '8px 14px',
-      paddingLeft: indent ? '32px' : '14px',
-      borderBottom: '1px solid #f1f5f9',
-      alignItems: 'center',
-      fontSize: '12px',
-      background: indent ? '#fafafa' : 'white',
-    }}>
-      {/* Trip ID */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-        {label && (
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: '18px', height: '18px', borderRadius: '3px',
-            background: '#e2e8f0', color: '#475569', fontSize: '10px', fontWeight: '800',
-            flexShrink: 0,
-          }}>{label}</span>
-        )}
-        <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {trip.trip_id || '—'}
-        </span>
+    <div style={{ display: 'grid', gridTemplateColumns: COL, gap: '8px', padding: '8px 14px', paddingLeft: indent ? '28px' : '14px', borderBottom: '1px solid #f1f5f9', alignItems: 'center', fontSize: '12px', background: indent ? '#fafafa' : 'white' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+        {label && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '3px', background: '#e2e8f0', color: '#475569', fontSize: '9px', fontWeight: '800', flexShrink: 0 }}>{label}</span>}
+        <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.trip_id || '—'}</span>
       </div>
-
-      {/* Driver */}
-      <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {driverName}
-      </div>
-
-      {/* Route */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+      <div><TypePill trip={trip} /></div>
+      <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.driver_name || '—'}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
         <span style={{ color: '#94a3b8', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '42%' }}>{pickup}</span>
         <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
         <span style={{ fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{dropoff}</span>
       </div>
-
-      {/* Start → Arrived */}
-      <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#374151', whiteSpace: 'nowrap' }}>
-        {startTime ? startTime : '—'}
-        <span style={{ color: '#cbd5e1', margin: '0 4px' }}>→</span>
-        {arrTime ? arrTime : '—'}
-        {durMins != null && (
-          <span style={{ color: '#94a3b8', fontSize: '10px', marginLeft: '6px' }}>({fmtDuration(durMins)})</span>
-        )}
+      <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{minsToHHMM(trip.pickup_min)}</div>
+      <div style={{ fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'nowrap' }}>
+        <span style={{ color: late ? '#D85A30' : '#374151', fontWeight: late ? '700' : '400' }}>{startTime || '—'}</span>
+        <span style={{ color: '#cbd5e1', margin: '0 3px' }}>→</span>
+        <span style={{ color: '#374151' }}>{arrTime || '—'}</span>
+        {durMins != null && <span style={{ color: '#94a3b8', fontSize: '10px', marginLeft: '4px' }}>({fmtDuration(durMins)})</span>}
       </div>
-
-      {/* Km */}
-      <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#374151' }}>
-        {trip.actual_km != null ? `${Number(trip.actual_km).toFixed(1)}` : '—'}
-      </div>
-
-      {/* Pax */}
-      <div style={{ fontSize: '11px', color: '#374151' }}>
-        {trip.pax_count != null ? trip.pax_count : '—'}
-      </div>
-
-      {/* Status */}
-      <div>
-        <StatusIcon trip={trip} />
-      </div>
+      <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{trip.estimated_km != null ? Number(trip.estimated_km).toFixed(1) : '—'}</div>
+      <div style={{ fontFamily: 'monospace', fontSize: '11px', color: trip.actual_km != null ? '#16a34a' : '#94a3b8', fontWeight: trip.actual_km != null ? '700' : '400' }}>{trip.actual_km != null ? Number(trip.actual_km).toFixed(1) : '—'}</div>
+      <div style={{ fontSize: '11px', color: '#374151' }}>{trip.pax_count != null ? trip.pax_count : '—'}</div>
     </div>
   )
 }
 
-// ─── Multi-leg group row ──────────────────────────────────────
+// ─── MultiLegGroupRow ─────────────────────────────────────────
 
-function MultiLegGroupRow({ legs, locsMap, vhcMap }) {
+function MultiLegGroupRow({ legs, reportLocsMap }) {
   const [expanded, setExpanded] = useState(false)
 
-  const pickupIds = [...new Set(legs.map(l => l.pickup_id).filter(Boolean))]
+  const pickupIds  = [...new Set(legs.map(l => l.pickup_id).filter(Boolean))]
   const dropoffIds = [...new Set(legs.map(l => l.dropoff_id).filter(Boolean))]
-  const isMultiPickup = pickupIds.length > 1
+  const isMultiPickup  = pickupIds.length > 1
   const isMultiDropoff = dropoffIds.length > 1
 
-  const totalKm = legs.reduce((s, l) => s + (l.actual_km != null ? Number(l.actual_km) : 0), 0)
-  const hasAnyKm = legs.some(l => l.actual_km != null)
-
-  const startTimes = legs.map(l => l.started_at).filter(Boolean).sort()
-  const arrTimes = legs.map(l => l.arrived_at).filter(Boolean).sort()
-  const earliestStart = startTimes[0] || null
-  const latestArr = arrTimes[arrTimes.length - 1] || null
-
-  const durMins = durationMinutes(earliestStart, latestArr)
-
-  const firstLeg = legs[0]
-  const lastLeg = legs[legs.length - 1]
   const allStops = []
-  legs.forEach((l, i) => {
-    allStops.push(locsMap[l.pickup_id] || l.pickup_id || '—')
-    allStops.push(locsMap[l.dropoff_id] || l.dropoff_id || '—')
+  legs.forEach(l => {
+    allStops.push(locName(reportLocsMap, l.pickup_id))
+    allStops.push(locName(reportLocsMap, l.dropoff_id))
   })
   const uniqueStops = allStops.filter((s, i) => i === 0 || s !== allStops[i - 1])
   const routeSummary = uniqueStops.join(' → ')
-  const driverName = firstLeg.driver_name || '—'
+
+  const startTimes = legs.map(l => l.started_at).filter(Boolean).sort()
+  const arrTimes   = legs.map(l => l.arrived_at).filter(Boolean).sort()
+  const earliestStart = startTimes[0] || null
+  const latestArr     = arrTimes[arrTimes.length - 1] || null
+  const durMins       = durationMinutes(earliestStart, latestArr)
+
+  const estKm  = legs.reduce((s, l) => s + (l.estimated_km != null ? Number(l.estimated_km) : 0), 0)
+  const realKm = legs.reduce((s, l) => s + (l.actual_km != null ? Number(l.actual_km) : 0), 0)
+  const hasEst  = legs.some(l => l.estimated_km != null)
+  const hasReal = legs.some(l => l.actual_km != null)
+  const maxPax  = Math.max(...legs.map(l => l.pax_count ?? 0))
+  const firstLeg = legs[0]
+  const late = isLate(firstLeg.pickup_min, firstLeg.started_at)
 
   return (
     <>
-      {/* Multi-leg summary row */}
-      <div
-        onClick={() => setExpanded(e => !e)}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: COL_WIDTHS,
-          gap: '8px',
-          padding: '8px 14px',
-          borderBottom: expanded ? 'none' : '1px solid #f1f5f9',
-          alignItems: 'center',
-          fontSize: '12px',
-          background: '#fffbeb',
-          cursor: 'pointer',
-        }}
+      <div onClick={() => setExpanded(e => !e)}
+        style={{ display: 'grid', gridTemplateColumns: COL, gap: '8px', padding: '8px 14px', borderBottom: expanded ? 'none' : '1px solid #f1f5f9', alignItems: 'center', fontSize: '12px', background: '#fffbeb', cursor: 'pointer' }}
         onMouseEnter={e => { e.currentTarget.style.background = '#fef9c3' }}
-        onMouseLeave={e => { e.currentTarget.style.background = '#fffbeb' }}
-      >
-        {/* Trip ID + pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {firstLeg.trip_id || '—'}
-          </span>
-          <MultiLegPill isMultiPickup={isMultiPickup} isMultiDropoff={isMultiDropoff} />
-          <span style={{ fontSize: '10px', color: '#94a3b8' }}>({legs.length} legs)</span>
-          <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '2px' }}>{expanded ? '▲' : '▼'}</span>
+        onMouseLeave={e => { e.currentTarget.style.background = '#fffbeb' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f' }}>{firstLeg.trip_id || '—'}</span>
+          <span style={{ fontSize: '10px', color: '#94a3b8' }}>({legs.length}) {expanded ? '▲' : '▼'}</span>
         </div>
-
-        {/* Driver */}
-        <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {driverName}
+        <div><TypePill isMultiLeg isMultiPickup={isMultiPickup} isMultiDropoff={isMultiDropoff} /></div>
+        <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{firstLeg.driver_name || '—'}</div>
+        <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px', color: '#0f172a', fontWeight: '500' }}>{routeSummary}</div>
+        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{minsToHHMM(firstLeg.pickup_min)}</div>
+        <div style={{ fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'nowrap' }}>
+          <span style={{ color: late ? '#D85A30' : '#374151', fontWeight: late ? '700' : '400' }}>{fmtTime(earliestStart) || '—'}</span>
+          <span style={{ color: '#cbd5e1', margin: '0 3px' }}>→</span>
+          <span style={{ color: '#374151' }}>{fmtTime(latestArr) || '—'}</span>
+          {durMins != null && <span style={{ color: '#94a3b8', fontSize: '10px', marginLeft: '4px' }}>({fmtDuration(durMins)})</span>}
         </div>
-
-        {/* Route summary */}
-        <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px', color: '#0f172a', fontWeight: '500' }}>
-          {routeSummary}
-        </div>
-
-        {/* Time range */}
-        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#374151', whiteSpace: 'nowrap' }}>
-          {fmtTime(earliestStart) || '—'}
-          <span style={{ color: '#cbd5e1', margin: '0 4px' }}>→</span>
-          {fmtTime(latestArr) || '—'}
-          {durMins != null && (
-            <span style={{ color: '#94a3b8', fontSize: '10px', marginLeft: '6px' }}>({fmtDuration(durMins)})</span>
-          )}
-        </div>
-
-        {/* Km */}
-        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#374151', lineHeight: 1.5 }}>
-          {(() => {
-            const estKm = legs.reduce((s, l) => s + (l.estimated_km != null ? Number(l.estimated_km) : 0), 0)
-            const hasEst = legs.some(l => l.estimated_km != null)
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                <span style={{ color: '#94a3b8', fontSize: '10px' }}>
-                  est. {hasEst ? `${estKm.toFixed(1)}` : '—'}
-                </span>
-                <span style={{ color: hasAnyKm ? '#16a34a' : '#374151', fontWeight: hasAnyKm ? '700' : '400' }}>
-                  {hasAnyKm ? `${totalKm.toFixed(1)}` : '—'}
-                </span>
-              </div>
-            )
-          })()}
-        </div>
-
-        {/* Pax */}
-        <div style={{ fontSize: '11px', color: '#374151' }}>
-          {(() => {
-            const maxPax = Math.max(...legs.map(l => l.pax_count ?? 0))
-            return maxPax > 0 ? maxPax : '—'
-          })()}
-        </div>
-
-        {/* Status */}
-        <div>
-          <StatusIcon trip={firstLeg} />
-        </div>
+        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{hasEst ? estKm.toFixed(1) : '—'}</div>
+        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: hasReal ? '#16a34a' : '#94a3b8', fontWeight: hasReal ? '700' : '400' }}>{hasReal ? realKm.toFixed(1) : '—'}</div>
+        <div style={{ fontSize: '11px', color: '#374151' }}>{maxPax > 0 ? maxPax : '—'}</div>
       </div>
-
-      {/* Expanded legs */}
       {expanded && legs.map((leg, idx) => (
-        <TripDataRow
-          key={leg.id || idx}
-          trip={leg}
-          locsMap={locsMap}
-          vhcMap={vhcMap}
-          indent
-          label={String.fromCharCode(65 + idx)}
-        />
+        <TripDataRow key={leg.id || idx} trip={leg} reportLocsMap={reportLocsMap} indent label={String.fromCharCode(65 + idx)} />
       ))}
-      {expanded && (
-        <div style={{ borderBottom: '1px solid #f1f5f9' }} />
-      )}
+      {expanded && <div style={{ borderBottom: '1px solid #f1f5f9' }} />}
     </>
   )
 }
 
-// ─── Day block ────────────────────────────────────────────────
+// ─── DayBlock ─────────────────────────────────────────────────
 
-function DayBlock({ dateStr, trips, locsMap, vhcMap }) {
-  // Sort trips by pickup_min ASC nulls last
+function DayBlock({ dateStr, trips, reportLocsMap }) {
   const sorted = [...trips].sort((a, b) => (a.pickup_min ?? 9999) - (b.pickup_min ?? 9999))
 
-  // Sub-group by trip_group_id
   const groups = []
   const seen = new Set()
-
   for (const trip of sorted) {
     if (trip.trip_group_id) {
       if (seen.has(trip.trip_group_id)) continue
       seen.add(trip.trip_group_id)
-      const legGroup = sorted.filter(t => t.trip_group_id === trip.trip_group_id)
-      groups.push({ type: 'multi', legs: legGroup })
+      groups.push({ type: 'multi', legs: sorted.filter(t => t.trip_group_id === trip.trip_group_id) })
     } else {
       groups.push({ type: 'single', trip })
     }
   }
 
-  // Day totals
-  const dayKm = trips.reduce((s, t) => s + (t.actual_km != null ? Number(t.actual_km) : 0), 0)
-  const hasAnyKm = trips.some(t => t.actual_km != null)
-  const dayMins = trips.reduce((s, t) => {
-    const d = durationMinutes(t.started_at, t.arrived_at)
-    return s + (d != null ? d : 0)
-  }, 0)
-  const tripCount = trips.length
-  const distinctDrivers = new Set(
-    trips.map(t => t.driver_crew_id).filter(id => id != null)
-  ).size
+  const dayEst  = trips.reduce((s, t) => s + (t.estimated_km != null ? Number(t.estimated_km) : 0), 0)
+  const dayReal = trips.reduce((s, t) => s + (t.actual_km != null ? Number(t.actual_km) : 0), 0)
+  const hasEst  = trips.some(t => t.estimated_km != null)
+  const hasReal = trips.some(t => t.actual_km != null)
+  const dayMins = trips.reduce((s, t) => s + (durationMinutes(t.started_at, t.arrived_at) || 0), 0)
+  const drivers = new Set(trips.map(t => t.driver_name).filter(Boolean)).size
 
   return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #e2e8f0',
-      borderRadius: '10px',
-      marginBottom: '16px',
-      overflow: 'hidden',
-    }}>
-      {/* Day header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '10px 14px',
-        background: '#f8fafc',
-        borderBottom: '1px solid #e2e8f0',
-      }}>
-        <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b', letterSpacing: '0.04em' }}>
-          {fmtDayLabel(dateStr)}
-        </div>
+    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '16px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+        <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b', letterSpacing: '0.04em' }}>{fmtDayLabel(dateStr)}</div>
         <div style={{ display: 'flex', gap: '16px', fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>
-          <span>{tripCount} trip{tripCount !== 1 ? 's' : ''}</span>
-          <span style={{ fontFamily: 'monospace' }}>{hasAnyKm ? `${dayKm.toFixed(1)} km` : '—'}</span>
+          <span>{trips.length} trip{trips.length !== 1 ? 's' : ''}</span>
+          <span>est. {hasEst ? `${dayEst.toFixed(1)} km` : '—'}</span>
+          <span>real {hasReal ? `${dayReal.toFixed(1)} km` : '—'}</span>
           <span>{fmtTotalHours(dayMins)}</span>
-          <span>{distinctDrivers} driver{distinctDrivers !== 1 ? 's' : ''}</span>
+          <span>{drivers} driver{drivers !== 1 ? 's' : ''}</span>
         </div>
       </div>
-
-      {/* Column headers */}
       <ColHeaders />
-
-      {/* Trip rows */}
-      {groups.map((g, gi) => {
-        if (g.type === 'multi') {
-          return <MultiLegGroupRow key={g.legs[0].trip_group_id || gi} legs={g.legs} locsMap={locsMap} vhcMap={vhcMap} />
-        }
-        return <TripDataRow key={g.trip.id || gi} trip={g.trip} locsMap={locsMap} vhcMap={vhcMap} />
-      })}
+      {groups.map((g, gi) =>
+        g.type === 'multi'
+          ? <MultiLegGroupRow key={g.legs[0].trip_group_id || gi} legs={g.legs} reportLocsMap={reportLocsMap} />
+          : <TripDataRow key={g.trip.id || gi} trip={g.trip} reportLocsMap={reportLocsMap} />
+      )}
     </div>
   )
 }
 
-// ─── Main component ───────────────────────────────────────────
+// ─── FilterBar ────────────────────────────────────────────────
+
+function FilterBar({ filterClass, setFilterClass, filterHub, setFilterHub }) {
+  const PILL = { padding: '4px 10px', borderRadius: '999px', border: '1px solid #e2e8f0', background: 'white', color: '#94a3b8', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }
+  const PILL_A = { ...PILL, background: '#1e3a5f', color: 'white', borderColor: '#1e3a5f' }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+      <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700' }}>TYPE</span>
+      {CLASS_TYPES.map(c => <button key={c.value} onClick={() => setFilterClass(c.value)} style={filterClass === c.value ? PILL_A : PILL}>{c.label}</button>)}
+      <div style={{ width: '1px', height: '20px', background: '#e2e8f0' }} />
+      <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700' }}>HUB</span>
+      {HUB_TYPES.map(h => <button key={h.value} onClick={() => setFilterHub(h.value)} style={filterHub === h.value ? PILL_A : PILL}>{h.label}</button>)}
+    </div>
+  )
+}
+
+// ─── Main ─────────────────────────────────────────────────────
 
 export default function ReportByDay({
   trips = [],
-  locsMap = {},
+  reportLocsMap = {},
   vhcMap = {},
   weekLabel = '',
   onBack,
@@ -480,118 +299,83 @@ export default function ReportByDay({
   activeSubTab,
   onPrevWeek,
   onNextWeek,
+  reportDate,
+  onDateChange,
 }) {
   const isMobile = useIsMobile()
+  const [filterClass, setFilterClass] = useState('ALL')
+  const [filterHub,   setFilterHub]   = useState('ALL')
 
-  if (isMobile) {
-    return (
-      <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
-        Report disponibile solo su desktop
-      </div>
-    )
-  }
+  const availableDates = useMemo(() => {
+    return [...new Set(trips.map(t => t.date).filter(Boolean))].sort()
+  }, [trips])
 
-  // 1. Group trips by date ASC
-  const dateMap = {}
-  for (const trip of trips) {
-    const d = trip.date || isoDatePart(trip.started_at) || 'unknown'
-    if (!dateMap[d]) dateMap[d] = []
-    dateMap[d].push(trip)
-  }
-  const dates = Object.keys(dateMap).sort()
+  const activeDate = availableDates.includes(reportDate) ? reportDate : (availableDates[0] || reportDate)
+
+  const filteredTrips = useMemo(() => {
+    return trips.filter(t => {
+      if (t.date !== activeDate) return false
+      if (filterClass !== 'ALL' && t.transfer_class !== filterClass) return false
+      if (filterHub !== 'ALL') {
+        const pt = locType(reportLocsMap, t.pickup_id)
+        const dt = locType(reportLocsMap, t.dropoff_id)
+        if (pt !== filterHub && dt !== filterHub) return false
+      }
+      return true
+    })
+  }, [trips, activeDate, filterClass, filterHub, reportLocsMap])
+
+  if (isMobile) return <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>Report disponibile solo su desktop</div>
 
   return (
     <div style={{ background: '#f1f5f9', minHeight: '100vh', padding: '20px 24px' }}>
-
-      {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-        {/* Left: back + sub-tabs */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={onBack}
-            style={{
-              padding: '6px 14px', borderRadius: '7px', border: '1px solid #e2e8f0',
-              background: 'white', color: '#374151', fontSize: '12px', fontWeight: '700',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
-            }}
-          >
-            ← Back to Trips
-          </button>
-
+          <button onClick={onBack} style={BTN}>← Back to trips</button>
           <div style={{ display: 'flex', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-            {['weekly', 'daily'].map(tab => (
-              <button
-                key={tab}
-                onClick={() => onTabChange && onTabChange(tab)}
-                style={{
-                  padding: '6px 16px',
-                  border: 'none',
-                  background: activeSubTab === tab ? '#1e3a5f' : 'transparent',
-                  color: activeSubTab === tab ? 'white' : '#64748b',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  textTransform: 'capitalize',
-                  letterSpacing: '0.02em',
-                }}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {[['summary', 'Summary'], ['byDriver', 'By driver'], ['byDay', 'By day']].map(([val, lbl]) => (
+              <button key={val} onClick={() => onTabChange(val)}
+                style={{ padding: '6px 16px', border: 'none', background: activeSubTab === val ? '#1e3a5f' : 'transparent', color: activeSubTab === val ? 'white' : '#64748b', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                {lbl}
               </button>
             ))}
           </div>
         </div>
-
-        {/* Center: week navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            onClick={onPrevWeek}
-            style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-          >
-            ‹
-          </button>
-          <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', minWidth: '140px', textAlign: 'center' }}>
-            {weekLabel}
-          </span>
-          <button
-            onClick={onNextWeek}
-            style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
-          >
-            ›
-          </button>
+          <button style={BTN} onClick={() => {
+            const idx = availableDates.indexOf(activeDate)
+            if (idx > 0) onDateChange(availableDates[idx - 1])
+          }}>‹</button>
+          <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', minWidth: '140px', textAlign: 'center' }}>{fmtDayLabel(activeDate)}</span>
+          <button style={BTN} onClick={() => {
+            const idx = availableDates.indexOf(activeDate)
+            if (idx < availableDates.length - 1) onDateChange(availableDates[idx + 1])
+          }}>›</button>
         </div>
-
-        {/* Right: print */}
-        <button
-          onClick={() => window.print()}
-          style={{
-            padding: '6px 16px', borderRadius: '7px', border: '1px solid #e2e8f0',
-            background: 'white', color: '#374151', fontSize: '12px', fontWeight: '700',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
-          }}
-        >
-          🖨 Print
-        </button>
+        <button onClick={() => window.print()} style={BTN}>🖨 Print</button>
       </div>
 
-      {/* Grand totals */}
-      <GrandTotals trips={trips} />
+      <FilterBar filterClass={filterClass} setFilterClass={setFilterClass} filterHub={filterHub} setFilterHub={setFilterHub} />
 
-      {/* Day blocks */}
-      {dates.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px', padding: '40px 0' }}>
-          No trips for this week.
-        </div>
-      ) : (
-        dates.map(d => (
-          <DayBlock
-            key={d}
-            dateStr={d}
-            trips={dateMap[d]}
-            locsMap={locsMap}
-            vhcMap={vhcMap}
-          />
-        ))
-      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '16px' }}>
+        {[
+          { label: 'Total trips', value: filteredTrips.length },
+          { label: 'Est. km', value: filteredTrips.some(t => t.estimated_km != null) ? filteredTrips.reduce((s, t) => s + (t.estimated_km != null ? Number(t.estimated_km) : 0), 0).toFixed(1) : '—' },
+          { label: 'Real km', value: filteredTrips.some(t => t.actual_km != null) ? filteredTrips.reduce((s, t) => s + (t.actual_km != null ? Number(t.actual_km) : 0), 0).toFixed(1) : '—', green: filteredTrips.some(t => t.actual_km != null) },
+          { label: 'Total hours', value: fmtTotalHours(filteredTrips.reduce((s, t) => s + (durationMinutes(t.started_at, t.arrived_at) || 0), 0)) },
+          { label: 'Active drivers', value: new Set(filteredTrips.map(t => t.driver_name).filter(Boolean)).size },
+        ].map(c => (
+          <div key={c.label} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px' }}>
+            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{c.label}</div>
+            <div style={{ fontSize: '22px', fontWeight: '900', color: c.green ? '#16a34a' : '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{c.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {filteredTrips.length === 0
+        ? <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px', padding: '40px 0' }}>No trips for this day.</div>
+        : <DayBlock dateStr={activeDate} trips={filteredTrips} reportLocsMap={reportLocsMap} />
+      }
     </div>
   )
 }
