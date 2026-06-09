@@ -509,10 +509,17 @@ export default function ReportByDriver({
           <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', minWidth: '140px', textAlign: 'center' }}>{weekLabel}</span>
           <button onClick={onNextWeek} style={BTN}>›</button>
         </div>
-        <button onClick={() => window.print()} style={BTN}>🖨 Print</button>
-      </div>
+      <button onClick={() => window.print()} style={BTN}>🖨 Print</button>
+    </div>
 
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+      <DriverMultiSelect
+        drivers={allDriverNames}
+        selected={selectedDrivers}
+        onChange={setSelectedDrivers}
+      />
       <FilterBar filterClass={filterClass} setFilterClass={setFilterClass} filterHub={filterHub} setFilterHub={setFilterHub} />
+    </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '16px' }}>
         {[
