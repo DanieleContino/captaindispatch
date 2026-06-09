@@ -451,7 +451,8 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
   const routeLabel = g => {
     if (!g) return '–'
     const st = g.service_type || ''
-    if (st === 'Mix') {
+    const dt = g.detectedType || st
+    if (dt === 'Mix') {
       const sorted = [...(g.rows || [])].sort((a, b) => (a.leg_order || 0) - (b.leg_order || 0))
       const stops = []
       sorted.forEach((r, i) => {
@@ -460,10 +461,10 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
       })
       return [...new Set(stops)].join(' → ')
     }
-    if (st === 'Multi-Pick') {
-      const froms = (g.pickup_ids?.length > 1 ? g.pickup_ids : [g.pickup_id]).map(shortLoc).join(' / ')
-      const tos   = g.dropoff_ids.map(shortLoc).join(' / ')
-      return `${froms} → ${tos}`
+    if (dt === 'Multi-Pick') {
+      const froms = [...new Set(g.rows.map(r => r.pickup_id).filter(Boolean))].map(shortLoc).join(' / ')
+      const to    = shortLoc(g.rows[0]?.dropoff_id)
+      return `${froms} → ${to}`
     }
     const from = shortLoc(g.pickup_id)
     const to   = g.dropoff_ids.map(shortLoc).join(' / ')
