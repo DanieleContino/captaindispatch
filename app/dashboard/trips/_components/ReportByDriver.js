@@ -289,11 +289,8 @@ function DaySection({ dateStr, trips, reportLocsMap }) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 14px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', borderTop: '1px solid #e2e8f0' }}>
         <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569' }}>{fmtDateLabel(dateStr)}</div>
-        <div style={{ display: 'flex', gap: '16px', fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>
-          <span>{trips.length} trip{trips.length !== 1 ? 's' : ''}</span>
-          <span>est. {hasEst ? `${dayEst.toFixed(1)} km` : '—'}</span>
-          <span>real {hasReal ? `${dayReal.toFixed(1)} km` : '—'}</span>
-          <span>{fmtTotalHours(dayMins)}</span>
+        <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>
+          {trips.length} trip{trips.length !== 1 ? 's' : ''}
         </div>
       </div>
       {groups.map((g, gi) =>
@@ -301,6 +298,16 @@ function DaySection({ dateStr, trips, reportLocsMap }) {
           ? <MultiLegGroupRow key={g.legs[0].trip_group_id || gi} legs={g.legs} reportLocsMap={reportLocsMap} />
           : <TripDataRow key={g.trip.id || gi} trip={g.trip} reportLocsMap={reportLocsMap} />
       )}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 14px', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ fontSize: '10px', fontWeight: '700', color: '#475569' }}>
+          Totale {fmtDateLabel(dateStr)}
+        </div>
+        <div style={{ display: 'flex', gap: '16px', fontSize: '10px', fontWeight: '700', fontFamily: 'monospace' }}>
+          <span style={{ color: '#64748b' }}>est. {hasEst ? `${dayEst.toFixed(1)} km` : '—'}</span>
+          <span style={{ color: hasReal ? '#16a34a' : '#94a3b8' }}>real {hasReal ? `${dayReal.toFixed(1)} km` : '—'}</span>
+          <span style={{ color: '#64748b' }}>{fmtTotalHours(dayMins)}</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -339,11 +346,9 @@ function DriverBlock({ driverName, trips, reportLocsMap }) {
           <span style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>{driverName || 'No driver assigned'}</span>
           <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }}>{trips.length} trip{trips.length !== 1 ? 's' : ''} · {dates.length} day{dates.length !== 1 ? 's' : ''}</span>
         </div>
-        <div style={{ display: 'flex', gap: '20px', fontSize: '11px', fontFamily: 'monospace' }}>
-          <span style={{ color: '#64748b' }}>est. {hasEst ? `${totalEst.toFixed(1)} km` : '—'}</span>
-          <span style={{ color: hasReal ? '#16a34a' : '#64748b', fontWeight: hasReal ? '700' : '400' }}>real {hasReal ? `${totalReal.toFixed(1)} km` : '—'}</span>
-          <span style={{ color: '#64748b' }}>{fmtTotalHours(totalMins)}</span>
-        </div>
+        <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>
+          {dates.length} day{dates.length !== 1 ? 's' : ''}
+        </span>
       </div>
       {noCaptainGoData && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 14px', background: '#FAEEDA', borderBottom: '1px solid #fde68a', fontSize: '11px', color: '#854F0B', fontWeight: '600' }}>
