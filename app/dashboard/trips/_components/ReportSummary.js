@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useIsMobile } from '../../../../lib/useIsMobile'
+import ReportHeader from './ReportHeader'
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -300,8 +301,8 @@ export default function ReportSummary({
   }
 
   return (
-    <div style={{ background: '#f1f5f9', minHeight: '100vh', padding: '20px 24px' }}>
-      <TopBar
+    <div style={{ background: '#f1f5f9', minHeight: '100vh' }}>
+      <ReportHeader
         activeSubTab={activeSubTab}
         onTabChange={onTabChange}
         onBack={onBack}
@@ -313,13 +314,12 @@ export default function ReportSummary({
         reportDate={activeDate}
         onDateChange={onDateChange}
         availableDates={availableDates}
-      />
-      <FilterBar
         filterClass={filterClass}
         setFilterClass={setFilterClass}
         filterHub={filterHub}
         setFilterHub={setFilterHub}
       />
+      <div style={{ padding: '20px 24px' }}>
       <GrandTotals trips={sourceTrips} />
       {rows.length === 0 ? (
         <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px', padding: '40px 0' }}>
@@ -328,6 +328,7 @@ export default function ReportSummary({
       ) : (
         <SummaryTable rows={rows} mode={summaryMode} />
       )}
+      </div>
     </div>
   )
 }
