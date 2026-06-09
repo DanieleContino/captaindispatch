@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { useIsMobile } from '../../../../lib/useIsMobile'
@@ -342,7 +342,7 @@ function DriverMultiSelect({ drivers, selected, onChange }) {
             const isSel = selected.includes(key)
             return (
               <div key={key} onClick={() => toggle(key)}
-                style={{ padding: '7px 14px', fontSize: '12px', color: '#374151', cursor: 'pointer', background: isSel ? '#eff6ff' : 'white', fontWeight: isSel ? '700' : '400', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                style={{ padding: '7px 14px', fontSize: '12px', color: '#374151', cursor: 'pointer', background: isSel ? '#eff6ff' : 'white', fontWeight: isSel ? '700' : '400', display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
                 <span style={{ width: '14px', height: '14px', borderRadius: '3px', border: '1px solid #e2e8f0', background: isSel ? '#1e3a5f' : 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {isSel && <span style={{ color: 'white', fontSize: '9px', fontWeight: '900' }}>✓</span>}
                 </span>
@@ -438,7 +438,7 @@ export default function ReportByDay({
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
           <button style={BTN} onClick={() => {
             const idx = availableDates.indexOf(activeDate)
             if (idx > 0) onDateChange(availableDates[idx - 1])
