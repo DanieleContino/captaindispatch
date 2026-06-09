@@ -85,7 +85,7 @@ export default function CrewInfoModal({ crew, productionId, locations, onClose, 
     setLoading(true)
     Promise.all([
       supabase.from('crew')
-        .select('uuid, display_id, full_name, role, department, phone, email, hotel_id, arrival_date, departure_date, hotel:hotel_id(uuid, name)')
+        .select('uuid, display_id, full_name, role, department, phone, email, hotel_id, arrival_date, departure_date')
         .eq('uuid', crew.uuid)
         .single(),
       supabase.from('travel_movements')
@@ -93,15 +93,23 @@ export default function CrewInfoModal({ crew, productionId, locations, onClose, 
         .eq('crew_id', crew.uuid)
         .eq('production_id', productionId)
         .order('travel_date', { ascending: true }),
-    ]).then(([crewRes, movRes]) => {
-      setDetails(crewRes.data)
+    ]).then(async ([crewRes, movRes]) => {
+      const crewData = crewRes.data
+      let hotelName = '–'
+      if (crewData?.hotel_id) {
+        const { data: locData } = await supabase.from('locations')
+          .select('uuid, name')
+          .eq('uuid', crewData.hotel_id)
+          .single()
+        if (locData) hotelName = locData.name
+      }
+      setDetails({ ...crewData, hotelName })
       setMovements(movRes.data || [])
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
   }, [crew?.uuid, productionId])
 
-  const locsById  = Object.fromEntries((locations || []).map(l => [l.uuid, l.name]))
-  const hotelName = details?.hotel?.name || (details?.hotel_id ? (locsById[details.hotel_id] || details.hotel_id) : '–')
+  const hotelName = details?.hotelName || '–'
   if (!crew) return null
 
   return (
