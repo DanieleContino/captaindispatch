@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../../lib/supabase'
@@ -85,7 +85,7 @@ export default function CrewInfoModal({ crew, productionId, locations, onClose, 
     setLoading(true)
     Promise.all([
       supabase.from('crew')
-        .select('uuid, display_id, full_name, role, department, phone, email, hotel_id, arrival_date, departure_date, hotel:hotel_id(id, name)')
+        .select('uuid, display_id, full_name, role, department, phone, email, hotel_id, arrival_date, departure_date, hotel:hotel_id(uuid, name)')
         .eq('uuid', crew.uuid)
         .single(),
       supabase.from('travel_movements')
@@ -100,7 +100,7 @@ export default function CrewInfoModal({ crew, productionId, locations, onClose, 
     })
   }, [crew?.uuid, productionId])
 
-  const locsById  = Object.fromEntries((locations || []).map(l => [l.id, l.name]))
+  const locsById  = Object.fromEntries((locations || []).map(l => [l.uuid, l.name]))
   const hotelName = details?.hotel?.name || (details?.hotel_id ? (locsById[details.hotel_id] || details.hotel_id) : '–')
   if (!crew) return null
 
