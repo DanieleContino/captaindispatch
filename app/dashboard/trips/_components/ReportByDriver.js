@@ -375,6 +375,48 @@ function DriverBlock({ driverName, trips, reportLocsMap }) {
   )
 }
 
+// ─── DriverMultiSelect ────────────────────────────────────────
+
+function DriverMultiSelect({ drivers, selected, onChange }) {
+  const [open, setOpen] = useState(false)
+  const allSelected = selected.length === 0
+  const toggle = (name) => {
+    if (selected.includes(name)) onChange(selected.filter(d => d !== name))
+    else onChange([...selected, name])
+  }
+  const label = allSelected ? 'All drivers' : selected.length === 1 ? (selected[0] === '__unassigned__' ? 'No driver' : selected[0]) : `${selected.length} drivers`
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ padding: '5px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: allSelected ? 'white' : '#1e3a5f', color: allSelected ? '#374151' : 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span>👤</span><span>{label}</span><span style={{ fontSize: '10px' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '36px', left: 0, zIndex: 50, background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', minWidth: '220px', maxHeight: '280px', overflowY: 'auto', padding: '6px 0' }}>
+          <div onClick={() => { onChange([]); setOpen(false) }}
+            style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '700', color: allSelected ? '#1e3a5f' : '#374151', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: allSelected ? '#eff6ff' : 'white' }}>
+            ✓ All drivers
+          </div>
+          {drivers.map(d => {
+            const key = d || '__unassigned__'
+            const lbl = d || 'No driver assigned'
+            const isSel = selected.includes(key)
+            return (
+              <div key={key} onClick={() => toggle(key)}
+                style={{ padding: '7px 14px', fontSize: '12px', color: '#374151', cursor: 'pointer', background: isSel ? '#eff6ff' : 'white', fontWeight: isSel ? '700' : '400', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '14px', height: '14px', borderRadius: '3px', border: '1px solid #e2e8f0', background: isSel ? '#1e3a5f' : 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {isSel && <span style={{ color: 'white', fontSize: '9px', fontWeight: '900' }}>✓</span>}
+                </span>
+                {lbl}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── FilterBar ────────────────────────────────────────────────
 
 function FilterBar({ filterClass, setFilterClass, filterHub, setFilterHub }) {
@@ -405,8 +447,14 @@ export default function ReportByDriver({
   onNextWeek,
 }) {
   const isMobile = useIsMobile()
-  const [filterClass, setFilterClass] = useState('ALL')
-  const [filterHub,   setFilterHub]   = useState('ALL')
+  const [filterClass,     setFilterClass]     = useState('ALL')
+  const [filterHub,       setFilterHub]       = useState('ALL')
+  const [selectedDrivers, setSelectedDrivers] = useState([])
+
+  const allDriverNames = useMemo(() => {
+    const names = [...new Set(trips.map(t => t.driver_name || null))]
+    return names.sort((a, b) => { if (!a) return 1; if (!b) return -1; return a.localeCompare(b) })
+  }, [trips])
 
   const filteredTrips = useMemo(() => {
     return trips.filter(t => {
@@ -416,9 +464,13 @@ export default function ReportByDriver({
         const dt = locType(reportLocsMap, t.dropoff_id)
         if (pt !== filterHub && dt !== filterHub) return false
       }
+      if (selectedDrivers.length > 0) {
+        const key = t.driver_name || '__unassigned__'
+        if (!selectedDrivers.includes(key)) return false
+      }
       return true
     })
-  }, [trips, filterClass, filterHub, reportLocsMap])
+  }, [trips, filterClass, filterHub, reportLocsMap, selectedDrivers])
 
   const driverMap = useMemo(() => {
     const map = {}
