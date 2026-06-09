@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
@@ -149,7 +149,7 @@ function groupByTripId(tripRows) {
     else if (multiDrop)               g.detectedType = 'Multi-Drop'
     else                              g.detectedType = 'Standard'
     // Fix pax_count for Multi-Pick: sum across legs
-    if (g.detectedType === 'Multi-Pick') {
+    if (g.detectedType === 'Multi-Pick' || g.detectedType === 'Multi-Drop') {
       g.pax_count = g.rows.reduce((sum, r) => sum + (r.pax_count || 0), 0)
     } else {
       g.pax_count = Math.max(...g.rows.map(r => r.pax_count || 0))
