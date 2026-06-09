@@ -1,12 +1,12 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { useIsMobile } from '../../../../lib/useIsMobile'
 
-// ─── Helpers ──────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function minsToHHMM(mins) {
-  if (mins == null) return '—'
+  if (mins == null) return 'â€”'
   const h = Math.floor(mins / 60)
   const m = mins % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
@@ -22,7 +22,7 @@ function durationMinutes(startedAt, arrivedAt) {
 }
 
 function fmtTotalHours(totalMins) {
-  if (!totalMins) return '—'
+  if (!totalMins) return 'â€”'
   const h = Math.floor(totalMins / 60)
   const m = totalMins % 60
   if (m === 0) return `${h}h`
@@ -42,10 +42,10 @@ function fmtDayLabel(dateStr) {
 
 const HUB_TYPES = [
   { value: 'ALL',           label: 'All hubs' },
-  { value: 'AIRPORT',       label: '✈ Airport' },
-  { value: 'TRAIN_STATION', label: '🚂 Train' },
-  { value: 'BUS_STATION',   label: '🚌 Bus' },
-  { value: 'PORT',          label: '⚓ Port' },
+  { value: 'AIRPORT',       label: 'âœˆ Airport' },
+  { value: 'TRAIN_STATION', label: 'ðŸš‚ Train' },
+  { value: 'BUS_STATION',   label: 'ðŸšŒ Bus' },
+  { value: 'PORT',          label: 'âš“ Port' },
 ]
 
 const CLASS_TYPES = [
@@ -61,12 +61,12 @@ const BTN_ACTIVE = { ...BTN, background: '#1e3a5f', color: 'white', borderColor:
 const BTN_PILL = { padding: '4px 12px', borderRadius: '999px', border: '1px solid #e2e8f0', background: 'white', color: '#94a3b8', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }
 const BTN_PILL_ACTIVE = { ...BTN_PILL, background: '#1e3a5f', color: 'white', borderColor: '#1e3a5f' }
 
-// ─── TopBar ───────────────────────────────────────────────────
+// â”€â”€â”€ TopBar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TopBar({ activeSubTab, onTabChange, onBack, weekLabel, onPrevWeek, onNextWeek, summaryMode, setSummaryMode, reportDate, onDateChange, availableDates }) {
   return (
     <div style={TOP_BAR}>
-      <button style={BTN} onClick={onBack}>← Back to trips</button>
+      <button style={BTN} onClick={onBack}>â† Back to trips</button>
 
       <div style={{ display: 'flex', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
         {[['summary', 'Summary'], ['byDriver', 'By driver'], ['byDay', 'By day']].map(([val, lbl]) => (
@@ -91,29 +91,29 @@ function TopBar({ activeSubTab, onTabChange, onBack, weekLabel, onPrevWeek, onNe
           <button style={BTN} onClick={() => {
             const idx = availableDates.indexOf(reportDate)
             if (idx > 0) onDateChange(availableDates[idx - 1])
-          }}>‹</button>
+          }}>â€¹</button>
           <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', minWidth: '140px', textAlign: 'center' }}>
             {fmtDayLabel(reportDate)}
           </span>
           <button style={BTN} onClick={() => {
             const idx = availableDates.indexOf(reportDate)
             if (idx < availableDates.length - 1) onDateChange(availableDates[idx + 1])
-          }}>›</button>
+          }}>â€º</button>
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
-          <button style={BTN} onClick={onPrevWeek}>‹</button>
+          <button style={BTN} onClick={onPrevWeek}>â€¹</button>
           <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', minWidth: '140px', textAlign: 'center' }}>{weekLabel}</span>
-          <button style={BTN} onClick={onNextWeek}>›</button>
+          <button style={BTN} onClick={onNextWeek}>â€º</button>
         </div>
       )}
 
-      <button style={BTN} onClick={() => window.print()}>🖨 Print</button>
+      <button style={BTN} onClick={() => window.print()}>ðŸ–¨ Print</button>
     </div>
   )
 }
 
-// ─── FilterBar ────────────────────────────────────────────────
+// â”€â”€â”€ FilterBar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function FilterBar({ filterClass, setFilterClass, filterHub, setFilterHub }) {
   return (
@@ -137,7 +137,7 @@ function FilterBar({ filterClass, setFilterClass, filterHub, setFilterHub }) {
   )
 }
 
-// ─── GrandTotals ──────────────────────────────────────────────
+// â”€â”€â”€ GrandTotals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function GrandTotals({ trips }) {
   const totalTrips = trips.length
@@ -150,8 +150,8 @@ function GrandTotals({ trips }) {
 
   const cards = [
     { label: 'Total trips', value: totalTrips },
-    { label: 'Est. km', value: hasEst ? `${estKm.toFixed(1)}` : '—' },
-    { label: 'Real km', value: hasReal ? `${realKm.toFixed(1)}` : '—', green: hasReal },
+    { label: 'Est. km', value: hasEst ? `${estKm.toFixed(1)}` : 'â€”' },
+    { label: 'Real km', value: hasReal ? `${realKm.toFixed(1)}` : 'â€”', green: hasReal },
     { label: 'Total hours', value: fmtTotalHours(totalMins) },
     { label: 'Active drivers', value: drivers },
   ]
@@ -168,7 +168,7 @@ function GrandTotals({ trips }) {
   )
 }
 
-// ─── Summary Table ────────────────────────────────────────────
+// â”€â”€â”€ Summary Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function SummaryTable({ rows, mode }) {
   const totalTrips = rows.reduce((s, r) => s + r.trips, 0)
@@ -201,8 +201,8 @@ function SummaryTable({ rows, mode }) {
               <td style={{ ...TD, fontWeight: '700', color: '#1e293b' }}>{r.driver || 'No driver assigned'}</td>
               <td style={TDR}>{r.trips}</td>
               {mode === 'weekly' && <td style={TDR}>{r.days}</td>}
-              <td style={{ ...TDR, color: '#64748b' }}>{r.estKm > 0 ? r.estKm.toFixed(1) : '—'}</td>
-              <td style={{ ...TDR, color: r.realKm > 0 ? '#16a34a' : '#374151', fontWeight: r.realKm > 0 ? '700' : '400' }}>{r.realKm > 0 ? r.realKm.toFixed(1) : '—'}</td>
+              <td style={{ ...TDR, color: '#64748b' }}>{r.estKm > 0 ? r.estKm.toFixed(1) : 'â€”'}</td>
+              <td style={{ ...TDR, color: r.realKm > 0 ? '#16a34a' : '#374151', fontWeight: r.realKm > 0 ? '700' : '400' }}>{r.realKm > 0 ? r.realKm.toFixed(1) : 'â€”'}</td>
               <td style={TDR}>{fmtTotalHours(r.totalMins)}</td>
             </tr>
           ))}
@@ -211,9 +211,9 @@ function SummaryTable({ rows, mode }) {
           <tr style={{ background: '#f1f5f9', borderTop: '2px solid #e2e8f0' }}>
             <td style={{ ...TD, fontWeight: '900', color: '#0f172a' }}>TOTAL</td>
             <td style={{ ...TDR, fontWeight: '900', color: '#0f172a' }}>{totalTrips}</td>
-            {mode === 'weekly' && <td style={TDR}>—</td>}
-            <td style={{ ...TDR, fontWeight: '700', color: '#64748b' }}>{hasEst ? totalEst.toFixed(1) : '—'}</td>
-            <td style={{ ...TDR, fontWeight: '900', color: hasReal ? '#16a34a' : '#374151' }}>{hasReal ? totalReal.toFixed(1) : '—'}</td>
+            {mode === 'weekly' && <td style={TDR}>â€”</td>}
+            <td style={{ ...TDR, fontWeight: '700', color: '#64748b' }}>{hasEst ? totalEst.toFixed(1) : 'â€”'}</td>
+            <td style={{ ...TDR, fontWeight: '900', color: hasReal ? '#16a34a' : '#374151' }}>{hasReal ? totalReal.toFixed(1) : 'â€”'}</td>
             <td style={{ ...TDR, fontWeight: '700', color: '#0f172a' }}>{fmtTotalHours(totalMins)}</td>
           </tr>
         </tfoot>
@@ -222,7 +222,7 @@ function SummaryTable({ rows, mode }) {
   )
 }
 
-// ─── Main ─────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function ReportSummary({
   trips = [],
@@ -246,7 +246,7 @@ export default function ReportSummary({
     return dates
   }, [trips])
 
-  // Se reportDate non è tra le date disponibili, usa la prima
+  // Se reportDate non Ã¨ tra le date disponibili, usa la prima
   const activeDate = availableDates.includes(reportDate) ? reportDate : (availableDates[0] || reportDate)
 
   const filteredTrips = useMemo(() => {
@@ -300,7 +300,7 @@ export default function ReportSummary({
   return (
     <div style={{ background: '#f1f5f9', minHeight: '100vh', padding: '20px 24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-        <span style={{ fontSize: '20px' }}>📊</span>
+        <span style={{ fontSize: '20px' }}>ðŸ“Š</span>
         <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>Trips Report</span>
       </div>
       <TopBar

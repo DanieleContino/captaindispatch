@@ -1,12 +1,12 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { useIsMobile } from '../../../../lib/useIsMobile'
 
-// ─── Helpers ──────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function minsToHHMM(mins) {
-  if (mins == null) return '—'
+  if (mins == null) return 'â€”'
   const h = Math.floor(mins / 60)
   const m = mins % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
@@ -32,7 +32,7 @@ function durationMinutes(startedAt, arrivedAt) {
 }
 
 function fmtDuration(mins) {
-  if (mins == null) return '—'
+  if (mins == null) return 'â€”'
   const h = Math.floor(mins / 60)
   const m = mins % 60
   if (h === 0) return `${m}m`
@@ -41,7 +41,7 @@ function fmtDuration(mins) {
 }
 
 function fmtTotalHours(totalMins) {
-  if (!totalMins) return '—'
+  if (!totalMins) return 'â€”'
   const h = Math.floor(totalMins / 60)
   const m = totalMins % 60
   if (m === 0) return `${h}h`
@@ -60,7 +60,7 @@ function fmtDayLabel(dateStr) {
 }
 
 function locName(reportLocsMap, id) {
-  if (!id) return '—'
+  if (!id) return 'â€”'
   return reportLocsMap[id]?.name || id
 }
 
@@ -80,10 +80,10 @@ function isLate(pickup_min, started_at) {
 
 const HUB_TYPES = [
   { value: 'ALL',           label: 'All hubs' },
-  { value: 'AIRPORT',       label: '✈ Airport' },
-  { value: 'TRAIN_STATION', label: '🚂 Train' },
-  { value: 'BUS_STATION',   label: '🚌 Bus' },
-  { value: 'PORT',          label: '⚓ Port' },
+  { value: 'AIRPORT',       label: 'âœˆ Airport' },
+  { value: 'TRAIN_STATION', label: 'ðŸš‚ Train' },
+  { value: 'BUS_STATION',   label: 'ðŸšŒ Bus' },
+  { value: 'PORT',          label: 'âš“ Port' },
 ]
 
 const CLASS_TYPES = [
@@ -93,12 +93,12 @@ const CLASS_TYPES = [
   { value: 'STANDARD',  label: 'Standard' },
 ]
 
-// Grid: Trip ID | Type | Driver | Route | Planned | Start→Arrived | Est.km | Real km | Pax
+// Grid: Trip ID | Type | Driver | Route | Planned | Startâ†’Arrived | Est.km | Real km | Pax
 const COL = '100px 90px 110px 1fr 70px 150px 65px 65px 40px'
 
 const BTN = { padding: '6px 13px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }
 
-// ─── Type Pill ────────────────────────────────────────────────
+// â”€â”€â”€ Type Pill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TypePill({ trip, isMultiPickup, isMultiDropoff, isMultiLeg }) {
   if (isMultiLeg) {
@@ -112,7 +112,7 @@ function TypePill({ trip, isMultiPickup, isMultiDropoff, isMultiLeg }) {
   return <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>STANDARD</span>
 }
 
-// ─── HubIcon ──────────────────────────────────────────────────
+// â”€â”€â”€ HubIcon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function HubIcon({ reportLocsMap, pickupId, dropoffId }) {
   const types = [
@@ -121,7 +121,7 @@ function HubIcon({ reportLocsMap, pickupId, dropoffId }) {
   ]
   const hubType = types.find(t => t && t !== 'OTHER')
   if (!hubType) return null
-  const icons = { AIRPORT: '✈', TRAIN_STATION: '🚂', BUS_STATION: '🚌', PORT: '⚓' }
+  const icons = { AIRPORT: 'âœˆ', TRAIN_STATION: 'ðŸš‚', BUS_STATION: 'ðŸšŒ', PORT: 'âš“' }
   const icon = icons[hubType]
   if (!icon) return null
   return (
@@ -129,19 +129,19 @@ function HubIcon({ reportLocsMap, pickupId, dropoffId }) {
   )
 }
 
-// ─── ColHeaders ───────────────────────────────────────────────
+// â”€â”€â”€ ColHeaders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ColHeaders() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: COL, gap: '8px', padding: '6px 14px', borderBottom: '1px solid #e2e8f0' }}>
-      {['Trip ID', 'Type', 'Driver', 'Route', 'Planned', 'Start → Arrived', 'Est. km', 'Real km', 'Pax'].map((c, i) => (
+      {['Trip ID', 'Type', 'Driver', 'Route', 'Planned', 'Start â†’ Arrived', 'Est. km', 'Real km', 'Pax'].map((c, i) => (
         <div key={i} style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700', letterSpacing: '0.05em' }}>{c}</div>
       ))}
     </div>
   )
 }
 
-// ─── TripDataRow ──────────────────────────────────────────────
+// â”€â”€â”€ TripDataRow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TripDataRow({ trip, reportLocsMap, indent, label }) {
   const pickup    = locName(reportLocsMap, trip.pickup_id)
@@ -155,33 +155,33 @@ function TripDataRow({ trip, reportLocsMap, indent, label }) {
     <div style={{ display: 'grid', gridTemplateColumns: COL, gap: '8px', padding: '8px 14px', paddingLeft: indent ? '28px' : '14px', borderBottom: '1px solid #f1f5f9', alignItems: 'center', fontSize: '12px', background: indent ? '#fafafa' : 'white' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
         {label && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '3px', background: '#e2e8f0', color: '#475569', fontSize: '9px', fontWeight: '800', flexShrink: 0 }}>{label}</span>}
-        <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.trip_id || '—'}</span>
+        <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.trip_id || 'â€”'}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
         <TypePill trip={trip} />
         <HubIcon reportLocsMap={reportLocsMap} pickupId={trip.pickup_id} dropoffId={trip.dropoff_id} />
       </div>
-      <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.driver_name || '—'}</div>
+      <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.driver_name || 'â€”'}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
         <span style={{ color: '#94a3b8', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '42%' }}>{pickup}</span>
-        <span style={{ color: '#cbd5e1', flexShrink: 0 }}>→</span>
+        <span style={{ color: '#cbd5e1', flexShrink: 0 }}>â†’</span>
         <span style={{ fontWeight: '700', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{dropoff}</span>
       </div>
       <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{minsToHHMM(trip.pickup_min)}</div>
       <div style={{ fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'nowrap' }}>
-        <span style={{ color: late ? '#D85A30' : '#374151', fontWeight: late ? '700' : '400' }}>{startTime || '—'}</span>
-        <span style={{ color: '#cbd5e1', margin: '0 3px' }}>→</span>
-        <span style={{ color: '#374151' }}>{arrTime || '—'}</span>
+        <span style={{ color: late ? '#D85A30' : '#374151', fontWeight: late ? '700' : '400' }}>{startTime || 'â€”'}</span>
+        <span style={{ color: '#cbd5e1', margin: '0 3px' }}>â†’</span>
+        <span style={{ color: '#374151' }}>{arrTime || 'â€”'}</span>
         {durMins != null && <span style={{ color: '#94a3b8', fontSize: '10px', marginLeft: '4px' }}>({fmtDuration(durMins)})</span>}
       </div>
-      <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{trip.estimated_km != null ? Number(trip.estimated_km).toFixed(1) : '—'}</div>
-      <div style={{ fontFamily: 'monospace', fontSize: '11px', color: trip.actual_km != null ? '#16a34a' : '#94a3b8', fontWeight: trip.actual_km != null ? '700' : '400' }}>{trip.actual_km != null ? Number(trip.actual_km).toFixed(1) : '—'}</div>
-      <div style={{ fontSize: '11px', color: '#374151' }}>{trip.pax_count != null ? trip.pax_count : '—'}</div>
+      <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{trip.estimated_km != null ? Number(trip.estimated_km).toFixed(1) : 'â€”'}</div>
+      <div style={{ fontFamily: 'monospace', fontSize: '11px', color: trip.actual_km != null ? '#16a34a' : '#94a3b8', fontWeight: trip.actual_km != null ? '700' : '400' }}>{trip.actual_km != null ? Number(trip.actual_km).toFixed(1) : 'â€”'}</div>
+      <div style={{ fontSize: '11px', color: '#374151' }}>{trip.pax_count != null ? trip.pax_count : 'â€”'}</div>
     </div>
   )
 }
 
-// ─── MultiLegGroupRow ─────────────────────────────────────────
+// â”€â”€â”€ MultiLegGroupRow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function MultiLegGroupRow({ legs, reportLocsMap }) {
   const [expanded, setExpanded] = useState(false)
@@ -205,7 +205,7 @@ function MultiLegGroupRow({ legs, reportLocsMap }) {
     routeStops.push(locName(reportLocsMap, legs[0].pickup_id))
     legs.forEach(l => routeStops.push(locName(reportLocsMap, l.dropoff_id)))
   }
-  const routeSummary = routeStops.filter((s, i) => i === 0 || s !== routeStops[i - 1]).join(' → ')
+  const routeSummary = routeStops.filter((s, i) => i === 0 || s !== routeStops[i - 1]).join(' â†’ ')
 
   const startTimes = legs.map(l => l.started_at).filter(Boolean).sort()
   const arrTimes   = legs.map(l => l.arrived_at).filter(Boolean).sort()
@@ -231,25 +231,25 @@ function MultiLegGroupRow({ legs, reportLocsMap }) {
         onMouseEnter={e => { e.currentTarget.style.background = '#fef9c3' }}
         onMouseLeave={e => { e.currentTarget.style.background = '#fffbeb' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f' }}>{firstLeg.trip_id || '—'}</span>
-          <span style={{ fontSize: '10px', color: '#94a3b8' }}>({legs.length}) {expanded ? '▲' : '▼'}</span>
+          <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f' }}>{firstLeg.trip_id || 'â€”'}</span>
+          <span style={{ fontSize: '10px', color: '#94a3b8' }}>({legs.length}) {expanded ? 'â–²' : 'â–¼'}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
           <TypePill isMultiLeg isMultiPickup={isMultiPickup} isMultiDropoff={isMultiDropoff} />
           <HubIcon reportLocsMap={reportLocsMap} pickupId={legs[0].pickup_id} dropoffId={legs[legs.length - 1].dropoff_id} />
         </div>
-        <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{firstLeg.driver_name || '—'}</div>
+        <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{firstLeg.driver_name || 'â€”'}</div>
         <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px', color: '#0f172a', fontWeight: '500' }}>{routeSummary}</div>
         <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{minsToHHMM(firstLeg.pickup_min)}</div>
         <div style={{ fontFamily: 'monospace', fontSize: '11px', whiteSpace: 'nowrap' }}>
-          <span style={{ color: late ? '#D85A30' : '#374151', fontWeight: late ? '700' : '400' }}>{fmtTime(earliestStart) || '—'}</span>
-          <span style={{ color: '#cbd5e1', margin: '0 3px' }}>→</span>
-          <span style={{ color: '#374151' }}>{fmtTime(latestArr) || '—'}</span>
+          <span style={{ color: late ? '#D85A30' : '#374151', fontWeight: late ? '700' : '400' }}>{fmtTime(earliestStart) || 'â€”'}</span>
+          <span style={{ color: '#cbd5e1', margin: '0 3px' }}>â†’</span>
+          <span style={{ color: '#374151' }}>{fmtTime(latestArr) || 'â€”'}</span>
           {durMins != null && <span style={{ color: '#94a3b8', fontSize: '10px', marginLeft: '4px' }}>({fmtDuration(durMins)})</span>}
         </div>
-        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{hasEst ? estKm.toFixed(1) : '—'}</div>
-        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: hasReal ? '#16a34a' : '#94a3b8', fontWeight: hasReal ? '700' : '400' }}>{hasReal ? realKm.toFixed(1) : '—'}</div>
-        <div style={{ fontSize: '11px', color: '#374151' }}>{maxPax > 0 ? maxPax : '—'}</div>
+        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{hasEst ? estKm.toFixed(1) : 'â€”'}</div>
+        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: hasReal ? '#16a34a' : '#94a3b8', fontWeight: hasReal ? '700' : '400' }}>{hasReal ? realKm.toFixed(1) : 'â€”'}</div>
+        <div style={{ fontSize: '11px', color: '#374151' }}>{maxPax > 0 ? maxPax : 'â€”'}</div>
       </div>
       {expanded && legs.map((leg, idx) => (
         <TripDataRow key={leg.id || idx} trip={leg} reportLocsMap={reportLocsMap} indent label={String.fromCharCode(65 + idx)} />
@@ -259,7 +259,7 @@ function MultiLegGroupRow({ legs, reportLocsMap }) {
   )
 }
 
-// ─── DayBlock ─────────────────────────────────────────────────
+// â”€â”€â”€ DayBlock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DayBlock({ dateStr, trips, reportLocsMap }) {
   const sorted = [...trips].sort((a, b) => (a.pickup_min ?? 9999) - (b.pickup_min ?? 9999))
@@ -304,8 +304,8 @@ function DayBlock({ dateStr, trips, reportLocsMap }) {
         </div>
         <div style={{ display: 'flex', gap: '20px', fontSize: '11px', fontWeight: '700', fontFamily: 'monospace' }}>
           <span style={{ color: '#94a3b8' }}>{groups.length} trips</span>
-          <span style={{ color: '#93c5fd' }}>est. {hasEst ? `${dayEst.toFixed(1)} km` : '—'}</span>
-          <span style={{ color: hasReal ? '#86efac' : '#94a3b8' }}>real {hasReal ? `${dayReal.toFixed(1)} km` : '—'}</span>
+          <span style={{ color: '#93c5fd' }}>est. {hasEst ? `${dayEst.toFixed(1)} km` : 'â€”'}</span>
+          <span style={{ color: hasReal ? '#86efac' : '#94a3b8' }}>real {hasReal ? `${dayReal.toFixed(1)} km` : 'â€”'}</span>
           <span style={{ color: '#cbd5e1' }}>{fmtTotalHours(dayMins)}</span>
           <span style={{ color: '#cbd5e1' }}>{drivers} driver{drivers !== 1 ? 's' : ''}</span>
         </div>
@@ -314,7 +314,7 @@ function DayBlock({ dateStr, trips, reportLocsMap }) {
   )
 }
 
-// ─── DriverMultiSelect ────────────────────────────────────────
+// â”€â”€â”€ DriverMultiSelect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function DriverMultiSelect({ drivers, selected, onChange }) {
   const [open, setOpen] = useState(false)
@@ -328,13 +328,13 @@ function DriverMultiSelect({ drivers, selected, onChange }) {
     <div style={{ position: 'relative' }}>
       <button onClick={() => setOpen(o => !o)}
         style={{ padding: '5px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: allSelected ? 'white' : '#1e3a5f', color: allSelected ? '#374151' : 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span>👤</span><span>{label}</span><span style={{ fontSize: '10px' }}>{open ? '▲' : '▼'}</span>
+        <span>ðŸ‘¤</span><span>{label}</span><span style={{ fontSize: '10px' }}>{open ? 'â–²' : 'â–¼'}</span>
       </button>
       {open && (
         <div style={{ position: 'absolute', top: '36px', left: 0, zIndex: 50, background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', minWidth: '220px', maxHeight: '280px', overflowY: 'auto', padding: '6px 0' }}>
           <div onClick={() => { onChange([]); setOpen(false) }}
             style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '700', color: allSelected ? '#1e3a5f' : '#374151', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: allSelected ? '#eff6ff' : 'white' }}>
-            ✓ All drivers
+            âœ“ All drivers
           </div>
           {drivers.map(d => {
             const key = d || '__unassigned__'
@@ -344,7 +344,7 @@ function DriverMultiSelect({ drivers, selected, onChange }) {
               <div key={key} onClick={() => toggle(key)}
                 style={{ padding: '7px 14px', fontSize: '12px', color: '#374151', cursor: 'pointer', background: isSel ? '#eff6ff' : 'white', fontWeight: isSel ? '700' : '400', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ width: '14px', height: '14px', borderRadius: '3px', border: '1px solid #e2e8f0', background: isSel ? '#1e3a5f' : 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {isSel && <span style={{ color: 'white', fontSize: '9px', fontWeight: '900' }}>✓</span>}
+                  {isSel && <span style={{ color: 'white', fontSize: '9px', fontWeight: '900' }}>âœ“</span>}
                 </span>
                 {lbl}
               </div>
@@ -356,7 +356,7 @@ function DriverMultiSelect({ drivers, selected, onChange }) {
   )
 }
 
-// ─── FilterBar ────────────────────────────────────────────────
+// â”€â”€â”€ FilterBar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function FilterBar({ filterClass, setFilterClass, filterHub, setFilterHub }) {
   const PILL = { padding: '4px 10px', borderRadius: '999px', border: '1px solid #e2e8f0', background: 'white', color: '#94a3b8', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }
@@ -372,7 +372,7 @@ function FilterBar({ filterClass, setFilterClass, filterHub, setFilterHub }) {
   )
 }
 
-// ─── Main ─────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function ReportByDay({
   trips = [],
@@ -426,7 +426,7 @@ export default function ReportByDay({
     <div style={{ background: '#f1f5f9', minHeight: '100vh', padding: '20px 24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={onBack} style={BTN}>← Back to trips</button>
+          <button onClick={onBack} style={BTN}>â† Back to trips</button>
           <div style={{ display: 'flex', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
             {[['summary', 'Summary'], ['byDriver', 'By driver'], ['byDay', 'By day']].map(([val, lbl]) => (
               <button key={val} onClick={() => onTabChange(val)}
@@ -440,14 +440,14 @@ export default function ReportByDay({
           <button style={BTN} onClick={() => {
             const idx = availableDates.indexOf(activeDate)
             if (idx > 0) onDateChange(availableDates[idx - 1])
-          }}>‹</button>
+          }}>â€¹</button>
           <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', minWidth: '140px', textAlign: 'center' }}>{fmtDayLabel(activeDate)}</span>
           <button style={BTN} onClick={() => {
             const idx = availableDates.indexOf(activeDate)
             if (idx < availableDates.length - 1) onDateChange(availableDates[idx + 1])
-          }}>›</button>
+          }}>â€º</button>
         </div>
-      <button onClick={() => window.print()} style={BTN}>🖨 Print</button>
+      <button onClick={() => window.print()} style={BTN}>ðŸ–¨ Print</button>
     </div>
 
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
@@ -462,8 +462,8 @@ export default function ReportByDay({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '16px' }}>
         {[
           { label: 'Total trips', value: filteredTrips.length },
-          { label: 'Est. km', value: filteredTrips.some(t => t.estimated_km != null) ? filteredTrips.reduce((s, t) => s + (t.estimated_km != null ? Number(t.estimated_km) : 0), 0).toFixed(1) : '—' },
-          { label: 'Real km', value: filteredTrips.some(t => t.actual_km != null) ? filteredTrips.reduce((s, t) => s + (t.actual_km != null ? Number(t.actual_km) : 0), 0).toFixed(1) : '—', green: filteredTrips.some(t => t.actual_km != null) },
+          { label: 'Est. km', value: filteredTrips.some(t => t.estimated_km != null) ? filteredTrips.reduce((s, t) => s + (t.estimated_km != null ? Number(t.estimated_km) : 0), 0).toFixed(1) : 'â€”' },
+          { label: 'Real km', value: filteredTrips.some(t => t.actual_km != null) ? filteredTrips.reduce((s, t) => s + (t.actual_km != null ? Number(t.actual_km) : 0), 0).toFixed(1) : 'â€”', green: filteredTrips.some(t => t.actual_km != null) },
           { label: 'Total hours', value: fmtTotalHours(filteredTrips.reduce((s, t) => s + (durationMinutes(t.started_at, t.arrived_at) || 0), 0)) },
           { label: 'Active drivers', value: new Set(filteredTrips.map(t => t.driver_name).filter(Boolean)).size },
         ].map(c => (
