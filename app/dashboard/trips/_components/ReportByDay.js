@@ -289,9 +289,6 @@ function DayBlock({ dateStr, trips, reportLocsMap }) {
         <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b', letterSpacing: '0.04em' }}>{fmtDayLabel(dateStr)}</div>
         <div style={{ display: 'flex', gap: '16px', fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>
           <span>{trips.length} trip{trips.length !== 1 ? 's' : ''}</span>
-          <span>est. {hasEst ? `${dayEst.toFixed(1)} km` : '—'}</span>
-          <span>real {hasReal ? `${dayReal.toFixed(1)} km` : '—'}</span>
-          <span>{fmtTotalHours(dayMins)}</span>
           <span>{drivers} driver{drivers !== 1 ? 's' : ''}</span>
         </div>
       </div>
