@@ -301,6 +301,18 @@ function DayBlock({ dateStr, trips, reportLocsMap }) {
           ? <MultiLegGroupRow key={g.legs[0].trip_group_id || gi} legs={g.legs} reportLocsMap={reportLocsMap} />
           : <TripDataRow key={g.trip.id || gi} trip={g.trip} reportLocsMap={reportLocsMap} />
       )}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', background: '#1e3a5f', borderTop: '2px solid #e2e8f0' }}>
+        <div style={{ fontSize: '11px', fontWeight: '800', color: 'white' }}>
+          Totale {fmtDayLabel(dateStr)}
+        </div>
+        <div style={{ display: 'flex', gap: '20px', fontSize: '11px', fontWeight: '700', fontFamily: 'monospace' }}>
+          <span style={{ color: '#94a3b8' }}>{trips.length} trips</span>
+          <span style={{ color: '#93c5fd' }}>est. {hasEst ? `${dayEst.toFixed(1)} km` : '—'}</span>
+          <span style={{ color: hasReal ? '#86efac' : '#94a3b8' }}>real {hasReal ? `${dayReal.toFixed(1)} km` : '—'}</span>
+          <span style={{ color: '#cbd5e1' }}>{fmtTotalHours(dayMins)}</span>
+          <span style={{ color: '#cbd5e1' }}>{drivers} driver{drivers !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
     </div>
   )
 }
