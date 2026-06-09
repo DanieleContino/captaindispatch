@@ -299,6 +299,10 @@ export default function ReportSummary({
 
   return (
     <div style={{ background: '#f1f5f9', minHeight: '100vh', padding: '20px 24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <span style={{ fontSize: '20px' }}>📊</span>
+        <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>Trips Report</span>
+      </div>
       <TopBar
         activeSubTab={activeSubTab}
         onTabChange={onTabChange}
