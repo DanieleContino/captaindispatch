@@ -492,7 +492,11 @@ export default function ReportByDriver({
 
   return (
     <div style={{ background: '#f1f5f9', minHeight: '100vh', padding: '20px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+      <span style={{ fontSize: '20px' }}>📊</span>
+      <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>Trips Report</span>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button onClick={onBack} style={BTN}>← Back to trips</button>
           <div style={{ display: 'flex', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
