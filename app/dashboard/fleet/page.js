@@ -120,9 +120,17 @@ function groupByTripId(tripRows) {
       // Prende lo status più avanzato: DONE > BUSY > CANCELLED > PLANNED
       const STATUS_RANK = { DONE: 4, BUSY: 3, CANCELLED: 2, PLANNED: 1 }
       if ((STATUS_RANK[t.status] || 0) > (STATUS_RANK[g.status] || 0)) g.status = t.status
-      g.pax_count = Math.max(g.pax_count, t.pax_count || 0)
-      if (t.passenger_list && !g.passenger_list.includes(t.passenger_list)) {
-        g.passenger_list = [g.passenger_list, t.passenger_list].filter(Boolean).join(', ')
+      if (g.service_type === 'Multi-Pick' || t.service_type === 'Multi-Pick') {
+        g.service_type = g.service_type || t.service_type
+        g.pax_count = (g.pax_count || 0) + (t.pax_count || 0)
+      } else {
+        g.pax_count = Math.max(g.pax_count, t.pax_count || 0)
+      }
+      if (t.passenger_list) {
+        const existing = g.passenger_list ? g.passenger_list.split(', ') : []
+        const incoming = t.passenger_list.split(', ')
+        const merged = [...new Set([...existing, ...incoming])].filter(Boolean)
+        g.passenger_list = merged.join(', ')
       }
       if (!g.service_type && t.service_type) g.service_type = t.service_type
       if (sd && (!g.minStart || sd < g.minStart)) { g.minStart = sd; g.pickup_min = t.pickup_min; g.call_min = t.call_min }
@@ -425,7 +433,16 @@ function VehicleCard({ vehicle, groups, locsMap, routeDurMap, vehicleTrafficAler
   const routeLabel = g => {
     if (!g) return '–'
     const st = g.service_type || ''
-    if (st === 'Multi-Pick' || st === 'Mix') {
+    if (st === 'Mix') {
+      const sorted = [...(g.rows || [])].sort((a, b) => (a.leg_order || 0) - (b.leg_order || 0))
+      const stops = []
+      sorted.forEach((r, i) => {
+        if (i === 0 && r.pickup_id) stops.push(shortLoc(r.pickup_id))
+        if (r.dropoff_id) stops.push(shortLoc(r.dropoff_id))
+      })
+      return [...new Set(stops)].join(' → ')
+    }
+    if (st === 'Multi-Pick') {
       const froms = (g.pickup_ids?.length > 1 ? g.pickup_ids : [g.pickup_id]).map(shortLoc).join(' / ')
       const tos   = g.dropoff_ids.map(shortLoc).join(' / ')
       return `${froms} → ${tos}`
