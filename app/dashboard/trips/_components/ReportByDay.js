@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useIsMobile } from '../../../../lib/useIsMobile'
+import ReportHeader from './ReportHeader'
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -423,43 +424,26 @@ export default function ReportByDay({
   if (isMobile) return <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>Report disponibile solo su desktop</div>
 
   return (
-    <div style={{ background: '#f1f5f9', minHeight: '100vh', padding: '20px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '20px' }}>📊</span>
-          <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>Trips Report</span>
-          <button onClick={onBack} style={BTN}>← Back to trips</button>
-          <div style={{ display: 'flex', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-            {[['summary', 'Summary'], ['byDriver', 'By driver'], ['byDay', 'By day']].map(([val, lbl]) => (
-              <button key={val} onClick={() => onTabChange(val)}
-                style={{ padding: '6px 16px', border: 'none', background: activeSubTab === val ? '#1e3a5f' : 'transparent', color: activeSubTab === val ? 'white' : '#64748b', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                {lbl}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-          <button style={BTN} onClick={() => {
-            const idx = availableDates.indexOf(activeDate)
-            if (idx > 0) onDateChange(availableDates[idx - 1])
-          }}>‹</button>
-          <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', minWidth: '140px', textAlign: 'center' }}>{fmtDayLabel(activeDate)}</span>
-          <button style={BTN} onClick={() => {
-            const idx = availableDates.indexOf(activeDate)
-            if (idx < availableDates.length - 1) onDateChange(availableDates[idx + 1])
-          }}>›</button>
-        </div>
-        <button onClick={() => window.print()} style={{ padding: '6px 13px', borderRadius: '8px', border: '1px solid #334155', background: '#1e293b', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>🖨 Print / PDF</button>
-      </div>
-
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
-      <DriverMultiSelect
-        drivers={allDriverNames}
-        selected={selectedDrivers}
-        onChange={setSelectedDrivers}
+    <div style={{ background: '#f1f5f9', minHeight: '100vh' }}>
+      <ReportHeader
+        activeSubTab={activeSubTab}
+        onTabChange={onTabChange}
+        onBack={onBack}
+        weekLabel={weekLabel}
+        onPrevWeek={onPrevWeek}
+        onNextWeek={onNextWeek}
+        reportDate={activeDate}
+        onDateChange={onDateChange}
+        availableDates={availableDates}
+        filterClass={filterClass}
+        setFilterClass={setFilterClass}
+        filterHub={filterHub}
+        setFilterHub={setFilterHub}
+        allDriverNames={allDriverNames}
+        selectedDrivers={selectedDrivers}
+        onDriversChange={setSelectedDrivers}
       />
-      <FilterBar filterClass={filterClass} setFilterClass={setFilterClass} filterHub={filterHub} setFilterHub={setFilterHub} />
-    </div>
+      <div style={{ padding: '20px 24px' }}>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '16px' }}>
         {[
@@ -480,6 +464,7 @@ export default function ReportByDay({
         ? <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px', padding: '40px 0' }}>No trips for this day.</div>
         : <DayBlock dateStr={activeDate} trips={filteredTrips} reportLocsMap={reportLocsMap} />
       }
+      </div>
     </div>
   )
 }
