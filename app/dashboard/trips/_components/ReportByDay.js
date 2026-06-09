@@ -234,7 +234,10 @@ function MultiLegGroupRow({ legs, reportLocsMap }) {
           <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f' }}>{firstLeg.trip_id || '—'}</span>
           <span style={{ fontSize: '10px', color: '#94a3b8' }}>({legs.length}) {expanded ? '▲' : '▼'}</span>
         </div>
-        <div><TypePill isMultiLeg isMultiPickup={isMultiPickup} isMultiDropoff={isMultiDropoff} /></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+          <TypePill isMultiLeg isMultiPickup={isMultiPickup} isMultiDropoff={isMultiDropoff} />
+          <HubIcon reportLocsMap={reportLocsMap} pickupId={legs[0].pickup_id} dropoffId={legs[legs.length - 1].dropoff_id} />
+        </div>
         <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{firstLeg.driver_name || '—'}</div>
         <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px', color: '#0f172a', fontWeight: '500' }}>{routeSummary}</div>
         <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#64748b' }}>{minsToHHMM(firstLeg.pickup_min)}</div>
