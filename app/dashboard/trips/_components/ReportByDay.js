@@ -112,6 +112,23 @@ function TypePill({ trip, isMultiPickup, isMultiDropoff, isMultiLeg }) {
   return <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: '800', background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>STANDARD</span>
 }
 
+// ─── HubIcon ──────────────────────────────────────────────────
+
+function HubIcon({ reportLocsMap, pickupId, dropoffId }) {
+  const types = [
+    reportLocsMap[pickupId]?.location_type,
+    reportLocsMap[dropoffId]?.location_type,
+  ]
+  const hubType = types.find(t => t && t !== 'OTHER')
+  if (!hubType) return null
+  const icons = { AIRPORT: '✈', TRAIN_STATION: '🚂', BUS_STATION: '🚌', PORT: '⚓' }
+  const icon = icons[hubType]
+  if (!icon) return null
+  return (
+    <span style={{ fontSize: '11px', marginLeft: '3px' }} title={hubType}>{icon}</span>
+  )
+}
+
 // ─── ColHeaders ───────────────────────────────────────────────
 
 function ColHeaders() {
@@ -140,7 +157,10 @@ function TripDataRow({ trip, reportLocsMap, indent, label }) {
         {label && <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '3px', background: '#e2e8f0', color: '#475569', fontSize: '9px', fontWeight: '800', flexShrink: 0 }}>{label}</span>}
         <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: '700', color: '#1e3a5f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.trip_id || '—'}</span>
       </div>
-      <div><TypePill trip={trip} /></div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+        <TypePill trip={trip} />
+        <HubIcon reportLocsMap={reportLocsMap} pickupId={trip.pickup_id} dropoffId={trip.dropoff_id} />
+      </div>
       <div style={{ fontSize: '11px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.driver_name || '—'}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
         <span style={{ color: '#94a3b8', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '42%' }}>{pickup}</span>
