@@ -66,6 +66,8 @@ const BTN_PILL_ACTIVE = { ...BTN_PILL, background: '#1e3a5f', color: 'white', bo
 function TopBar({ activeSubTab, onTabChange, onBack, weekLabel, onPrevWeek, onNextWeek, summaryMode, setSummaryMode, reportDate, onDateChange, availableDates }) {
   return (
     <div style={TOP_BAR}>
+      <span style={{ fontSize: '20px' }}>📊</span>
+      <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginRight: '4px' }}>Trips Report</span>
       <button style={BTN} onClick={onBack}>← Back to trips</button>
 
       <div style={{ display: 'flex', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
@@ -108,7 +110,7 @@ function TopBar({ activeSubTab, onTabChange, onBack, weekLabel, onPrevWeek, onNe
         </div>
       )}
 
-      <button style={BTN} onClick={() => window.print()}>🖨 Print</button>
+      <button style={{ padding: '6px 13px', borderRadius: '8px', border: '1px solid #334155', background: '#1e293b', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }} onClick={() => window.print()}>🖨 Print / PDF</button>
     </div>
   )
 }
@@ -299,10 +301,6 @@ export default function ReportSummary({
 
   return (
     <div style={{ background: '#f1f5f9', minHeight: '100vh', padding: '20px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-        <span style={{ fontSize: '20px' }}>📊</span>
-        <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>Trips Report</span>
-      </div>
       <TopBar
         activeSubTab={activeSubTab}
         onTabChange={onTabChange}
