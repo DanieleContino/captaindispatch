@@ -450,10 +450,17 @@ export default function ReportByDay({
             if (idx < availableDates.length - 1) onDateChange(availableDates[idx + 1])
           }}>›</button>
         </div>
-        <button onClick={() => window.print()} style={BTN}>🖨 Print</button>
-      </div>
+      <button onClick={() => window.print()} style={BTN}>🖨 Print</button>
+    </div>
 
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+      <DriverMultiSelect
+        drivers={allDriverNames}
+        selected={selectedDrivers}
+        onChange={setSelectedDrivers}
+      />
       <FilterBar filterClass={filterClass} setFilterClass={setFilterClass} filterHub={filterHub} setFilterHub={setFilterHub} />
+    </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '16px' }}>
         {[
