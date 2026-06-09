@@ -506,7 +506,7 @@ export default function ReportByDriver({
             ))}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
           <button onClick={onPrevWeek} style={BTN}>‹</button>
           <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', minWidth: '140px', textAlign: 'center' }}>{weekLabel}</span>
           <button onClick={onNextWeek} style={BTN}>›</button>
