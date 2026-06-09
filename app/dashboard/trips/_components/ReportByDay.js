@@ -303,7 +303,7 @@ function DayBlock({ dateStr, trips, reportLocsMap }) {
           Totale {fmtDayLabel(dateStr)}
         </div>
         <div style={{ display: 'flex', gap: '20px', fontSize: '11px', fontWeight: '700', fontFamily: 'monospace' }}>
-          <span style={{ color: '#94a3b8' }}>{trips.length} trips</span>
+          <span style={{ color: '#94a3b8' }}>{groups.length} trips</span>
           <span style={{ color: '#93c5fd' }}>est. {hasEst ? `${dayEst.toFixed(1)} km` : '—'}</span>
           <span style={{ color: hasReal ? '#86efac' : '#94a3b8' }}>real {hasReal ? `${dayReal.toFixed(1)} km` : '—'}</span>
           <span style={{ color: '#cbd5e1' }}>{fmtTotalHours(dayMins)}</span>
