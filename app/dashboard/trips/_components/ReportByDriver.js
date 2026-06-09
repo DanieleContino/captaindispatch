@@ -360,6 +360,17 @@ function DriverBlock({ driverName, trips, reportLocsMap }) {
       {dates.map(d => (
         <DaySection key={d} dateStr={d} trips={dateMap[d]} reportLocsMap={reportLocsMap} />
       ))}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 14px', background: '#1e3a5f', borderTop: '2px solid #e2e8f0' }}>
+        <div style={{ fontSize: '11px', fontWeight: '800', color: 'white' }}>
+          Totale settimana
+        </div>
+        <div style={{ display: 'flex', gap: '20px', fontSize: '11px', fontWeight: '700', fontFamily: 'monospace' }}>
+          <span style={{ color: '#94a3b8' }}>{trips.length} trips</span>
+          <span style={{ color: '#93c5fd' }}>est. {hasEst ? `${totalEst.toFixed(1)} km` : '—'}</span>
+          <span style={{ color: hasReal ? '#86efac' : '#94a3b8' }}>real {hasReal ? `${totalReal.toFixed(1)} km` : '—'}</span>
+          <span style={{ color: '#cbd5e1' }}>{fmtTotalHours(totalMins)}</span>
+        </div>
+      </div>
     </div>
   )
 }
