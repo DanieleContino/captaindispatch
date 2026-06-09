@@ -285,8 +285,11 @@ function MultiLegGroupRow({ legs, locsMap, vhcMap }) {
 
   const firstLeg = legs[0]
   const lastLeg = legs[legs.length - 1]
-  const allStops = legs.map(l => locsMap[l.pickup_id] || l.pickup_id || '—')
-  allStops.push(locsMap[lastLeg.dropoff_id] || lastLeg.dropoff_id || '—')
+  const allStops = []
+  legs.forEach((l, i) => {
+    allStops.push(locsMap[l.pickup_id] || l.pickup_id || '—')
+    allStops.push(locsMap[l.dropoff_id] || l.dropoff_id || '—')
+  })
   const uniqueStops = allStops.filter((s, i) => i === 0 || s !== allStops[i - 1])
   const routeSummary = uniqueStops.join(' → ')
   const driverName = firstLeg.driver_name || '—'
@@ -341,8 +344,21 @@ function MultiLegGroupRow({ legs, locsMap, vhcMap }) {
         </div>
 
         {/* Km */}
-        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#374151' }}>
-          {hasAnyKm ? totalKm.toFixed(1) : '—'}
+        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#374151', lineHeight: 1.5 }}>
+          {(() => {
+            const estKm = legs.reduce((s, l) => s + (l.estimated_km != null ? Number(l.estimated_km) : 0), 0)
+            const hasEst = legs.some(l => l.estimated_km != null)
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                <span style={{ color: '#94a3b8', fontSize: '10px' }}>
+                  est. {hasEst ? `${estKm.toFixed(1)}` : '—'}
+                </span>
+                <span style={{ color: hasAnyKm ? '#16a34a' : '#374151', fontWeight: hasAnyKm ? '700' : '400' }}>
+                  {hasAnyKm ? `${totalKm.toFixed(1)}` : '—'}
+                </span>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Pax */}

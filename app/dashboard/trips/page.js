@@ -123,7 +123,7 @@ function TripsPageInner() {
       .order('pickup_min', { ascending: true, nullsLast: true })
     setReportTrips(data || [])
     setReportLoading(false)
-  }, [PRODUCTION_ID])
+  }, [PRODUCTION_ID, setReportLoading, setReportTrips])
 
   useEffect(() => { if (user && view === 'reports') loadReportTrips(reportWeekStart) }, [user, view, reportWeekStart, loadReportTrips])
 
