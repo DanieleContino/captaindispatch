@@ -134,7 +134,33 @@ function TripsPageInner() {
       .lte('date', weekEndStr)
       .order('date', { ascending: true })
       .order('pickup_min', { ascending: true, nullsLast: true })
-    setReportTrips(data || [])
+    const trips = data || []
+
+    // Arricchisci estimated_km dai dati routes per trip che non ce l'hanno
+    const missingEst = trips.filter(t => t.estimated_km == null && t.pickup_id && t.dropoff_id)
+    if (missingEst.length > 0) {
+      const pickupIds  = [...new Set(missingEst.map(t => t.pickup_id))]
+      const dropoffIds = [...new Set(missingEst.map(t => t.dropoff_id))]
+      const allIds     = [...new Set([...pickupIds, ...dropoffIds])]
+      const { data: routesData } = await supabase
+        .from('routes')
+        .select('from_id, to_id, distance_km')
+        .eq('production_id', PRODUCTION_ID)
+        .in('from_id', allIds)
+        .in('to_id', allIds)
+      if (routesData && routesData.length > 0) {
+        const routeMap = {}
+        routesData.forEach(r => { routeMap[`${r.from_id}__${r.to_id}`] = r.distance_km })
+        trips.forEach(t => {
+          if (t.estimated_km == null && t.pickup_id && t.dropoff_id) {
+            const key = `${t.pickup_id}__${t.dropoff_id}`
+            if (routeMap[key] != null) t.estimated_km = routeMap[key]
+          }
+        })
+      }
+    }
+
+    setReportTrips(trips)
     setReportLoading(false)
   }, [PRODUCTION_ID, setReportLoading, setReportTrips])
 
