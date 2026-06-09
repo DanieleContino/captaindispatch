@@ -138,6 +138,24 @@ function groupByTripId(tripRows) {
       if (t.started_at && !g.started_at) g.started_at = t.started_at
     }
   }
+  // Detect trip type from data (service_type is NULL in DB)
+  for (const g of Object.values(map)) {
+    const uniquePickups  = new Set(g.rows.map(r => r.pickup_id).filter(Boolean))
+    const uniqueDropoffs = new Set(g.rows.map(r => r.dropoff_id).filter(Boolean))
+    const multiPick = uniquePickups.size > 1
+    const multiDrop = uniqueDropoffs.size > 1
+    if (multiPick && multiDrop)       g.detectedType = 'Mix'
+    else if (multiPick)               g.detectedType = 'Multi-Pick'
+    else if (multiDrop)               g.detectedType = 'Multi-Drop'
+    else                              g.detectedType = 'Standard'
+    // Fix pax_count for Multi-Pick: sum across legs
+    if (g.detectedType === 'Multi-Pick') {
+      g.pax_count = g.rows.reduce((sum, r) => sum + (r.pax_count || 0), 0)
+    } else {
+      g.pax_count = Math.max(...g.rows.map(r => r.pax_count || 0))
+    }
+  }
+
   // Sort: DONE per started_at reale, altri per minStart pianificato
   return Object.values(map).sort((a, b) => {
     const aTime = (a.status === 'DONE' && a.started_at) ? new Date(a.started_at) : a.minStart
