@@ -2005,9 +2005,11 @@ export default function RocketPage() {
                               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', cursor: 'pointer', background: excluded ? '#fef9f0' : 'white', opacity: excluded ? 0.85 : 1, transition: 'all 0.12s' }}>
                               <input type="checkbox" checked={!excluded} readOnly style={{ width: '14px', height: '14px', accentColor: '#2563eb', flexShrink: 0, cursor: 'pointer' }} />
                               <span style={{ fontSize: '14px', flexShrink: 0 }}>{TYPE_ICON[v.vehicle_type] || '🚐'}</span>
-                              <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '12px', color: '#0f172a', minWidth: '60px' }}>{v.display_id}</span>
-                              <span style={{ fontSize: '11px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.driver_name || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>{t.rocketNoDriver}</span>}</span>
-                              <span style={{ background: '#eff6ff', color: '#1d4ed8', padding: '1px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '700', flexShrink: 0 }}>{sug}/{max}</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '13px', color: '#0f172a', flexShrink: 0 }}>{v.sign_code || v.display_id}</span>
+              {v.sign_code && <span style={{ fontFamily: 'monospace', fontWeight: '400', fontSize: '10px', color: '#94a3b8', flexShrink: 0 }}>{v.display_id}</span>}
+              {v.preferred_dept && (() => { const [bg, tx] = deptColor(v.preferred_dept); return <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', background: bg, color: tx, flexShrink: 0 }}>{v.preferred_dept}</span> })()}
+              <span style={{ fontSize: '11px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.driver_name || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>{t.rocketNoDriver}</span>}</span>
+              <span style={{ background: '#eff6ff', color: '#1d4ed8', padding: '1px 6px', borderRadius: '5px', fontSize: '10px', fontWeight: '700', flexShrink: 0 }}>{sug}/{max}</span>
                               {excluded && (
                                 <span style={{ fontSize: '9px', fontWeight: '800', color: reason ? '#dc2626' : '#94a3b8', textTransform: 'uppercase', flexShrink: 0 }}>
                                   OUT{reason && ' ✓'}
