@@ -2279,7 +2279,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
         await supabase.from('rental_vouchers').update({ used: true, vehicle_id: form.id.trim().toUpperCase() }).eq('id', form.rental_voucher_id)
       }
     } else {
-      const r = await supabase.from('vehicles').update(row).eq('id', initial.id).eq('production_id', productionId)
+      const r = await supabase.from('vehicles').update(row).eq('uuid', initial.uuid).eq('production_id', productionId)
       err = r.error
     }
     setSaving(false)
@@ -4127,7 +4127,7 @@ function LoanVehicleSidebar({ open, mode, initial, onClose, onSaved, productionI
       const r = await supabase.from('vehicles').insert({ ...row, display_id: form.id.trim().toUpperCase() })
       err = r.error
     } else {
-      const r = await supabase.from('vehicles').update(row).eq('id', initial.id).eq('production_id', productionId)
+      const r = await supabase.from('vehicles').update(row).eq('uuid', initial.uuid).eq('production_id', productionId)
       err = r.error
     }
     setSaving(false)
