@@ -1569,7 +1569,7 @@ function RentalTab({ productionId, isMobile, openTriggerRef, crewList = [], exte
     setLoading(true)
     const [{ data: vData }, { data: sData }, { data: cData }, { data: allV }] = await Promise.all([
       supabase.from('vehicles').select(`
-        display_id, vehicle_type, vehicle_class, license_plate, driver_name, driver_crew_id,
+        uuid, display_id, vehicle_type, vehicle_class, license_plate, driver_name, driver_crew_id,
         rental_brand, rental_model, rental_supplier_id, rental_start, rental_end,
         rental_status, rental_billing_unit, rental_daily_rate, rental_vat_pct,
         rental_currency, rental_voucher_id, rental_po_number, rental_contract_no,
