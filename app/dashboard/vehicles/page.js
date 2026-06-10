@@ -2234,6 +2234,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
       vehicle_type:               form.vehicle_type || null,
       vehicle_class:              form.vehicle_class.length > 0 ? form.vehicle_class : null,
       license_plate:              form.license_plate.trim().toUpperCase() || null,
+      capacity:                   form.capacity !== '' ? parseInt(form.capacity) : null,
       is_rental:                  true,
       rental_brand:               form.rental_brand.trim() || null,
       rental_model:               form.rental_model.trim() || null,
@@ -2379,9 +2380,15 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                 <input value={form.rental_model} onChange={e => set('rental_model', e.target.value)} style={inp} placeholder="C-HR, 2008..." />
               </div>
             </div>
-            <div style={fld}>
-              <label style={lbl}>License Plate</label>
-              <input value={form.license_plate} onChange={e => set('license_plate', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.1em' }} placeholder="AB123CD" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div>
+                <label style={lbl}>License Plate</label>
+                <input value={form.license_plate} onChange={e => set('license_plate', e.target.value.toUpperCase())} style={{ ...inp, fontFamily: 'monospace', fontWeight: '700', letterSpacing: '0.1em' }} placeholder="AB123CD" />
+              </div>
+              <div>
+                <label style={lbl}>Capacity</label>
+                <input type="number" value={form.capacity} onChange={e => set('capacity', e.target.value)} style={inp} placeholder="8" min="1" max="60" />
+              </div>
             </div>
 
             {/* ── RENTAL SECTION ── */}
