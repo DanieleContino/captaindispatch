@@ -2084,7 +2084,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
   const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'AUD', 'CAD', 'NOK', 'SEK', 'DKK']
   const EMPTY = {
     id: '', vehicle_type: 'VAN', vehicle_class: [],
-    rental_brand: '', rental_model: '', license_plate: '',
+    rental_brand: '', rental_model: '', license_plate: '', capacity: '',
     rental_supplier_id: initialSupplierId || '',
     rental_pickup_location_id: '', rental_dropoff_location_id: '',
     rental_start: '', rental_end: '',
@@ -2165,6 +2165,7 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
         rental_brand:               initial.rental_brand              || '',
         rental_model:               initial.rental_model              || '',
         license_plate:              initial.license_plate             || '',
+        capacity:                   initial.capacity                  ?? '',
         rental_supplier_id:         initial.rental_supplier_id        || '',
         rental_pickup_location_id:  initial.rental_pickup_location_id || '',
         rental_dropoff_location_id: initial.rental_dropoff_location_id|| '',
