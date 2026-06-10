@@ -739,7 +739,7 @@ function TripCard({ trip, locMap, routeMap, allTrips, onMoveCrew, globalServiceT
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px', marginBottom: '2px' }}>
               {isUnassigned
                 ? <span style={{ fontWeight: '900', fontSize: '13px', color: '#b91c1c' }}>{t.rocketNoVehicleRow}</span>
-                : <span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '15px', color: '#0f172a', flexShrink: 0 }}>{trip.vehicleId}</span>
+                : <><span style={{ fontFamily: 'monospace', fontWeight: '900', fontSize: '15px', color: '#0f172a', flexShrink: 0 }}>{trip.vehicle?.sign_code || trip.vehicle?.display_id}</span>{trip.vehicle?.sign_code && <span style={{ fontFamily: 'monospace', fontWeight: '400', fontSize: '10px', color: '#94a3b8', flexShrink: 0, marginLeft: '4px' }}>{trip.vehicle?.display_id}</span>}</>
               }
               {isMultiPickup && <span style={{ fontSize: '9px', fontWeight: '800', color: '#d97706', background: '#fffbeb', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fde68a', flexShrink: 0 }}>🔀 MULTI-PKP</span>}
               {isMultiDropoff && <span style={{ fontSize: '9px', fontWeight: '800', color: '#7c3aed', background: '#fdf4ff', padding: '1px 5px', borderRadius: '4px', border: '1px solid #c4b5fd', flexShrink: 0 }}>🔀 MULTI-DRP</span>}
