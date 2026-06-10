@@ -2019,6 +2019,66 @@ function RentalSupplierSidebar({ open, mode, initial, onClose, onSaved, producti
   )
 }
 
+// ─── DriverField ─────────────────────────────────────────────
+function DriverField({ label, nameVal, crewIdVal, searchVal, setSearch, showSugg, setShowSugg, notFound, setNotFound, onSelect, onClear, crewList, inp, lbl, fld }) {
+  return (
+    <div style={fld}>
+      <label style={lbl}>{label}</label>
+      {crewIdVal ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: '1px solid #86efac', borderRadius: '8px', background: '#f0fdf4' }}>
+          <span style={{ fontSize: '14px' }}>🔗</span>
+          <span style={{ flex: 1, fontSize: '13px', fontWeight: '700', color: '#15803d' }}>{nameVal}</span>
+          <button type="button" onClick={onClear} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '14px', lineHeight: 1, padding: '0 2px' }}>✕</button>
+        </div>
+      ) : (
+        <div style={{ position: 'relative' }}>
+          <input
+            value={searchVal}
+            onChange={e => {
+              setSearch(e.target.value)
+              setShowSugg(e.target.value.length > 0)
+              setNotFound(false)
+            }}
+            onBlur={() => setTimeout(() => {
+              setShowSugg(false)
+              if (searchVal && !crewIdVal) setNotFound(true)
+              else setNotFound(false)
+            }, 160)}
+            style={inp}
+            placeholder="Search crew..."
+            autoComplete="off"
+          />
+          {showSugg && (() => {
+            const q = searchVal.toLowerCase()
+            const matches = (crewList || []).filter(c => q && (c.full_name || '').toLowerCase().includes(q)).slice(0, 6)
+            if (matches.length === 0) return null
+            return (
+              <div style={{ position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 200, overflow: 'hidden' }}>
+                {matches.map(cm => (
+                  <div key={cm.uuid}
+                    onMouseDown={() => onSelect(cm)}
+                    style={{ padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', borderBottom: '1px solid #f1f5f9' }}
+                    onMouseOver={e => e.currentTarget.style.background = '#f0fdf4'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                    <span style={{ flex: 1, fontWeight: '600', color: '#0f172a' }}>{cm.full_name}</span>
+                    {cm.department && <span style={{ fontSize: '10px', color: '#94a3b8' }}>{cm.department}</span>}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+        </div>
+      )}
+      {notFound && !crewIdVal && searchVal && (
+        <div style={{ marginTop: '4px', padding: '6px 10px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '11px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>⚠ Driver not found in crew list.</span>
+          <a href="/dashboard/crew" target="_blank" style={{ color: '#1d4ed8', fontWeight: '700', textDecoration: 'none' }}>+ Add to crew →</a>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── RentalVehicleSidebar ────────────────────────────────────
 function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productionId, crewList = [], vehicles = [], initialSupplierId = null, compactMode = false }) {
   const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'AUD', 'CAD', 'NOK', 'SEK', 'DKK']
