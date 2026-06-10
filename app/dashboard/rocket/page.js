@@ -2348,7 +2348,7 @@ export default function RocketPage() {
                 })()}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <a href="/dashboard/trips" style={{ display: 'block', background: '#0f2340', color: 'white', padding: '15px', borderRadius: '11px', fontSize: '15px', fontWeight: '800', textDecoration: 'none' }}>{t.rocketViewTrips}</a>
+                  <a href={`/dashboard/trips?date=${date}`} style={{ display: 'block', background: '#0f2340', color: 'white', padding: '15px', borderRadius: '11px', fontSize: '15px', fontWeight: '800', textDecoration: 'none' }}>{t.rocketViewTrips}</a>
                   <a href="/dashboard/fleet" style={{ display: 'block', background: '#1e3a5f', color: 'white', padding: '15px', borderRadius: '11px', fontSize: '15px', fontWeight: '800', textDecoration: 'none' }}>{t.rocketFleetMonitor}</a>
                   <button onClick={() => { setStep(1); setDraftTrips([]); setSuggestions([]); setCreatedCount(0); setCreateError(null) }}
                     style={{ padding: '14px', borderRadius: '11px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', cursor: 'pointer', fontSize: '14px', fontWeight: '700' }}>
