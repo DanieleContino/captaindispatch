@@ -927,10 +927,10 @@ function LocSelect({ value, onChange, locations, placeholder = '— Select —',
       style={{ padding: '7px 10px', border: `1px solid ${!value ? '#fca5a5' : '#e2e8f0'}`, borderRadius: '7px', fontSize: '12px', fontWeight: '600', background: 'white', color: value ? '#0f172a' : '#94a3b8', boxSizing: 'border-box', ...style }}>
       <option value="">{placeholder}</option>
       <optgroup label="Locations / Sets">
-        {locations.filter(l => !l.is_hub).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+        {locations.filter(l => !l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>{l.name}</option>)}
       </optgroup>
       <optgroup label="Hubs / Airports">
-        {locations.filter(l => l.is_hub).map(l => <option key={l.id} value={l.id}>✈ {l.name}</option>)}
+        {locations.filter(l => l.is_hub).map(l => <option key={l.uuid} value={l.uuid}>✈ {l.name}</option>)}
       </optgroup>
     </select>
   )
