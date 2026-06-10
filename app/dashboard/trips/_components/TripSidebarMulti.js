@@ -408,7 +408,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
                   const avail = isVehicleAvailableForDate(v, date)
                   return (
                     <option key={v.uuid} value={v.uuid}>
-                      {avail ? '' : '⚠ '}{v.display_id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}
+                      {avail ? '' : '⚠ '}{v.sign_code || v.display_id} — {v.driver_name} · {v.display_id} ×{v.capacity}
                     </option>
                   )
                 })}

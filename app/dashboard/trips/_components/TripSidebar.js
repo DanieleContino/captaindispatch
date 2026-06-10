@@ -1016,7 +1016,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                     const hasPref = v.preferred_dept || v.preferred_crew_ids?.length > 0
                     return (
                       <option key={v.uuid} value={v.uuid}>
-                        {avail ? '' : '⚠ '}{v.display_id} — {v.driver_name} ({v.sign_code}) ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
+                        {avail ? '' : '⚠ '}{v.sign_code || v.display_id} — {v.driver_name} · {v.display_id} ×{v.capacity}{hasPref ? ` · ⭐ ${[v.preferred_dept, v.preferred_crew_ids?.length > 0 ? `${v.preferred_crew_ids.length}p` : null].filter(Boolean).join(' ')}` : ''}{avail ? '' : ` · ${t.vehicleNotAvailable}`}
                       </option>
                     )
                   })}
