@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * /dashboard/accommodation/cost-report
@@ -248,7 +248,7 @@ export default function CostReportPage() {
         id, hotel_id, arrival_date, departure_date,
         city_tax_total, total_cost_no_vat, total_cost_vat,
         crew:crew_id(department),
-        hotel:hotel_id(id, name),
+        hotel:hotel_id(uuid, name),
         subgroup:subgroup_id(id, name)
       `)
       .eq('production_id', PRODUCTION_ID)

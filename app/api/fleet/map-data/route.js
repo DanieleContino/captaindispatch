@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabaseServer'
+﻿import { createSupabaseServerClient } from '@/lib/supabaseServer'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -32,7 +32,7 @@ export async function GET(request) {
   // Load vehicles
   const { data: vehicles, error: vehiclesError } = await supabase
     .from('vehicles')
-    .select('uuid,id,sign_code,driver_name,ncc_driver_name,vehicle_type')
+    .select('uuid,sign_code,driver_name,ncc_driver_name,vehicle_type')
     .eq('production_id', productionId)
     .eq('active', true)
     .eq('in_transport', true)

@@ -69,7 +69,7 @@ function CrewInfoMiniModal({ member, locsMap, onClose, currentUser }) {
     setLoading(true)
     Promise.all([
       supabase.from('crew')
-        .select('uuid,display_id,full_name,role,department,phone,email,hotel_id,arrival_date,departure_date,no_transport_needed,hotel:hotel_id(id,name)')
+        .select('uuid,display_id,full_name,role,department,phone,email,hotel_id,arrival_date,departure_date,no_transport_needed,hotel:hotel_id(uuid,name)')
         .eq('uuid', member.uuid).single(),
       supabase.from('travel_movements')
         .select('travel_date,direction,travel_type,from_location,from_time,to_location,to_time,travel_number,needs_transport,pickup_dep,pickup_arr')

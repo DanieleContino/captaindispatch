@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * /dashboard/rocket — Generazione automatica trip v2
@@ -1547,7 +1547,7 @@ export default function RocketPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, date, loading])
 
-  const locMap             = Object.fromEntries((locations || []).map(l => [l.id, l.name]))
+  const locMap             = Object.fromEntries((locations || []).map(l => [l.uuid, l.name]))
   const globalCallMin      = hhmmToMin(globalCallTime) ?? 420
   const allCrewWithHotel   = allCrew.filter(c => c.hotel_id)
   const eligibleCrew       = allCrewWithHotel.filter(c => !getCrewIneligibleReason(c, date))
