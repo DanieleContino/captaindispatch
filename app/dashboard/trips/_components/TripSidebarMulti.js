@@ -402,7 +402,7 @@ export default function TripSidebarMulti({ open, onClose, onSaved, locations, ve
             </div>
             <div>
               <label style={lbl}>Vehicle</label>
-              <select value={vehicleId} onChange={e => setVehicleId(e.target.value)} style={inp}>
+              <select value={vehicleId} onChange={e => setVehicleId(e.target.value)} style={{...inp, fontSize: '11px'}}>
                 <option value="">No vehicle</option>
                 {vehicles.map(v => {
                   const avail = isVehicleAvailableForDate(v, date)

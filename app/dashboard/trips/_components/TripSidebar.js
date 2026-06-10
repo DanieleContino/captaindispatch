@@ -1009,7 +1009,7 @@ function TripSidebar({ open, onClose, defaultDate, locations, vehicles, serviceT
                   <span style={{ fontSize: '10px', fontWeight: '800', color: '#15803d', background: '#bbf7d0', padding: '2px 7px', borderRadius: '999px', flexShrink: 0 }}>🔒 shared</span>
                 </div>
               ) : (
-                <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={inp}>
+                <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={{...inp, fontSize: '11px'}}>
                   <option value="">No vehicle</option>
                   {vehicles.map(v => {
                     const avail   = isVehicleAvailableForDate(v, form.date)

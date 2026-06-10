@@ -752,7 +752,7 @@ function EditTripSidebar({ open, initial, group, locations, vehicles, serviceTyp
             {/* Vehicle */}
             <div>
               <label style={lbl}>Vehicle</label>
-              <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={inp}>
+              <select value={form.vehicle_id} onChange={e => set('vehicle_id', e.target.value)} style={{...inp, fontSize: '11px'}}>
                 <option value="">No vehicle</option>
                 {vehicles.map(v => {
                   const avail   = isVehicleAvailableForDate(v, form.date)
