@@ -1867,20 +1867,8 @@ export default function AccommodationPage() {
   const [columnsConfig,     setColumnsConfig]     = useState([])
   const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
   const [applyingPreset,    setApplyingPreset]    = useState(false)
-  const [windowStart,  setWindowStart]  = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('accom_window_start')
-      if (saved) return saved
-    }
-    return isoAdd(isoToday(), -3)
-  })
-  const [windowEnd,    setWindowEnd]    = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('accom_window_end')
-      if (saved) return saved
-    }
-    return isoAdd(isoToday(), 10)
-  })
+  const [windowStart,  setWindowStart]  = useState('2026-01-01')
+  const [windowEnd,    setWindowEnd]    = useState('2026-12-31')
   const [showCosts,    setShowCosts]    = useState(false)
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [sidebarMode,   setSidebarMode]   = useState('new')
