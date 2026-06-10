@@ -1510,8 +1510,8 @@ export default function RocketPage() {
     for (const r of (rR.data || [])) rm[`${r.from_id}||${r.to_id}`] = r.duration_min
     setRouteMap(rm)
     const sets = (lR.data || []).filter(l => !l.is_hub)
-    if (sets.length && !destId) setDestId(sets[0].id)
-    const locationIdSet = new Set((lR.data || []).map(l => l.id))
+    if (sets.length && !destId) setDestId(sets[0].uuid)
+    const locationIdSet = new Set((lR.data || []).map(l => l.uuid))
     setDeptDestOverrides(loadDeptConfig(locationIdSet))
 
     // ── TASK 3: load "last config" for the banner ─────────
