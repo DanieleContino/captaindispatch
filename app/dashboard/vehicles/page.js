@@ -2464,6 +2464,10 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                 setNotFound={setDriverNotFound}
                 onSelect={cm => { setForm(f => ({ ...f, driver_name: cm.full_name, driver_crew_id: cm.uuid, driver_dept: cm.department || '' })); setDriverSearch(cm.full_name); setShowDriverSugg(false); setDriverNotFound(false) }}
                 onClear={() => { setForm(f => ({ ...f, driver_name: '', driver_crew_id: '', driver_dept: '' })); setDriverSearch(''); setDriverNotFound(false) }}
+                crewList={crewList}
+                inp={inp}
+                lbl={lbl}
+                fld={fld}
               />
               <DriverField
                 label="Second Driver"
@@ -2477,6 +2481,10 @@ function RentalVehicleSidebar({ open, mode, initial, onClose, onSaved, productio
                 setNotFound={setDriver2NotFound}
                 onSelect={cm => { setForm(f => ({ ...f, rental_second_driver: cm.full_name, rental_second_driver_crew_id: cm.uuid })); setDriver2Search(cm.full_name); setShowDriver2Sugg(false); setDriver2NotFound(false) }}
                 onClear={() => { setForm(f => ({ ...f, rental_second_driver: '', rental_second_driver_crew_id: '' })); setDriver2Search(''); setDriver2NotFound(false) }}
+                crewList={crewList}
+                inp={inp}
+                lbl={lbl}
+                fld={fld}
               />
             </div>
 
