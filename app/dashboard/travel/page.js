@@ -1835,6 +1835,10 @@ export default function TravelPage() {
           </button>
           <button onClick={() => loadData(windowStart, windowEnd)}
             style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }} title="Reload data">↻</button>
+          <button onClick={() => setActiveTab(t => t === 'hubs' ? 'movements' : 'hubs')}
+            style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid', fontSize: '12px', fontWeight: '700', cursor: 'pointer', ...(activeTab === 'hubs' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#64748b', borderColor: '#e2e8f0' }) }}>
+            🛫 Hubs
+          </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
             {[
               { key: 'FLIGHT', icon: '✈️' },
@@ -1891,7 +1895,7 @@ export default function TravelPage() {
         background: 'white', borderBottom: '1px solid #e2e8f0',
         padding: '6px 16px',
         display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
-        position: 'sticky', top: '0px', zIndex: 20,
+        position: 'sticky', top: '52px', zIndex: 20,
       }}>
         <input type="text" placeholder="Search name..." value={search}
           onChange={e => setSearch(e.target.value)}
