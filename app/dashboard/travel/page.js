@@ -1964,6 +1964,10 @@ export default function TravelPage() {
             x Reset
           </button>
         )}
+        <button onClick={() => setHubsModalOpen(true)}
+          style={{ marginLeft: 'auto', padding: '4px 12px', borderRadius: '7px', border: '1px solid #bfdbfe', fontSize: '12px', fontWeight: '700', cursor: 'pointer', background: '#eff6ff', color: '#1d4ed8', flexShrink: 0 }}>
+          🛫 Hubs
+        </button>
       </div>
 
       {/* ── Content ── */}
