@@ -16,6 +16,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getProductionId } from '../../../lib/production'
+import { HubLocationsSection } from '../../../lib/HubLocationsSection'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import { TravelColumnsEditorSidebar } from '../../../lib/TravelColumnsEditorSidebar'
 import { TRAVEL_DEFAULT_PRESET } from '../../../lib/travelColumnsCatalog'
@@ -1332,6 +1333,7 @@ export default function TravelPage() {
   const [movements, setMovements] = useState([])
   const [loading,   setLoading]   = useState(true)
   const [warningsMap,    setWarningsMap]    = useState({})
+  const [activeTab,      setActiveTab]      = useState('movements')
   const [cachedStays,    setCachedStays]    = useState([])
   const [warningModal,   setWarningModal]   = useState(null)
 
