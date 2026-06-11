@@ -1684,7 +1684,7 @@ export default function RocketPage() {
 
   async function handleConfirm() {
     setSaving(true); setCreateError(null)
-    const { count } = await supabase.from('trips').select('id', { count: 'exact', head: true }).eq('production_id', PRODUCTION_ID).eq('date', date)
+    const { count } = await supabase.from('trips').select('*', { count: 'exact', head: true }).eq('production_id', PRODUCTION_ID).eq('date', date)
     if (count > 0) {
       setCreateError(`⚠ Esistono già ${count} trip per il ${date}. Elimina i trip esistenti prima di rilanciare Rocket.`)
       setSaving(false); return
