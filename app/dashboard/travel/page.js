@@ -1332,6 +1332,7 @@ export default function TravelPage() {
   const [movements, setMovements] = useState([])
   const [loading,   setLoading]   = useState(true)
   const [warningsMap,    setWarningsMap]    = useState({})
+  const [cachedStays,    setCachedStays]    = useState([])
   const [warningModal,   setWarningModal]   = useState(null)
 
   // Column config
@@ -1561,6 +1562,7 @@ export default function TravelPage() {
         (crewFlagsData || []).filter(c => c.is_local).map(c => c.uuid)
       )
       const filteredStays = (staysData || []).filter(s => !excludedIds.has(s.crew_id))
+      setCachedStays(filteredStays)
       setWarningsMap(computeCrewWarnings(movData, filteredStays))
     } else {
       setWarningsMap({})
