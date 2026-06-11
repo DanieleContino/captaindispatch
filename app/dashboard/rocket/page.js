@@ -1856,6 +1856,7 @@ export default function RocketPage() {
                       suggestions={historicalSuggestions}
                       weekday={weekday}
                       locMap={locMap}
+                      vehicles={vehicles}
                       onApply={handleApplySuggestion}
                       onDismiss={handleDismissSuggestion}
                     />
