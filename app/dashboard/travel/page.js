@@ -1069,11 +1069,11 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
 <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: '8px', marginBottom: '12px' }}>
               <div style={{ position: 'relative' }}>
                 <label style={lbl}>To</label>
-                <input ref={fieldRefs.to_location} value={form.to_location} onChange={e => set('to_location', e.target.value)} style={inp} placeholder="Bari BRI" autoComplete="off" />
-                {form.to_location.length > 0 && hubs.filter(h => h.name.toLowerCase().includes(form.to_location.toLowerCase()) || (h.display_id || '').toLowerCase().includes(form.to_location.toLowerCase())).length > 0 && (
+                <input ref={fieldRefs.to_location} value={form.to_location} onChange={e => { set('to_location', e.target.value); setToOpen(true) }} onFocus={() => setToOpen(true)} onBlur={() => setTimeout(() => setToOpen(false), 150)} style={inp} placeholder="Bari BRI" autoComplete="off" />
+                {toOpen && form.to_location.length > 0 && hubs.filter(h => h.name.toLowerCase().includes(form.to_location.toLowerCase()) || (h.display_id || '').toLowerCase().includes(form.to_location.toLowerCase())).length > 0 && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '2px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                     {hubs.filter(h => h.name.toLowerCase().includes(form.to_location.toLowerCase()) || (h.display_id || '').toLowerCase().includes(form.to_location.toLowerCase())).map(h => (
-                      <div key={h.uuid} onClick={() => set('to_location', h.name)}
+                      <div key={h.uuid} onClick={() => { set('to_location', h.name); setToOpen(false) }}
                         style={{ padding: '7px 12px', cursor: 'pointer', fontSize: '12px', color: '#0f172a', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}
                         onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                         onMouseLeave={e => e.currentTarget.style.background = 'white'}>
