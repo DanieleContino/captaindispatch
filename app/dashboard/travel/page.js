@@ -2070,6 +2070,21 @@ export default function TravelPage() {
         )}
       </div>
 
+      {hubsModalOpen && (
+        <>
+          <div onClick={() => setHubsModalOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,35,64,0.5)' }} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 61, width: 'calc(100% - 48px)', maxWidth: '640px', maxHeight: '85vh', background: 'white', borderRadius: '14px', boxShadow: '0 8px 40px rgba(0,0,0,0.25)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: '#0f2340', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <span style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>🛫 Hub Locations</span>
+              <button onClick={() => setHubsModalOpen(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', color: 'white', fontSize: '16px', borderRadius: '6px', padding: '4px 8px' }}>✕</button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '20px 24px' }}>
+              <HubLocationsSection productionId={PRODUCTION_ID} />
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Sidebars & overlays */}
       <MovementSidebar
         open={sidebarOpen} mode={sidebarMode} initial={sidebarTarget}
