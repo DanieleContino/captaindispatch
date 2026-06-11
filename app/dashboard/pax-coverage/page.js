@@ -504,7 +504,7 @@ export default function PaxCoveragePage() {
         .eq('production_id', PRODUCTION_ID)
         .eq('date', d)
         .neq('status', 'CANCELLED'),
-      supabase.from('vehicles').select('uuid,display_id')
+      supabase.from('vehicles').select('uuid,display_id,sign_code')
         .eq('production_id', PRODUCTION_ID),
     ])
 
@@ -513,7 +513,7 @@ export default function PaxCoveragePage() {
     const tripsData = tripsRes.data || []
     const tripIds   = tripsData.map(t => t.id)
     const vMap = {}
-    ;(vehiclesRes.data || []).forEach(v => { vMap[v.uuid] = v.display_id })
+    ;(vehiclesRes.data || []).forEach(v => { vMap[v.uuid] = { sign_code: v.sign_code, display_id: v.display_id } })
     setVehicleMap(vMap)
 
     setCrew(crewData)
