@@ -216,7 +216,7 @@ function AssignedRow({ member, trips, locsMap, vehicleMap }) {
                 <span style={{ color: '#94a3b8' }}>·</span>
                 <span style={{ fontWeight: '700', color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>{minToHHMM(t.pickup_min ?? t.call_min)}</span>
                 <span style={{ color: '#64748b' }}>{from} → {to}</span>
-                {t.vehicle_id && <span style={{ color: '#2563eb', marginLeft: '2px' }}>🚐 {(vehicleMap || {})[t.vehicle_id] || t.vehicle_id}</span>}
+                {t.vehicle_id && (() => { const v = (vehicleMap || {})[t.vehicle_id]; return v ? <span style={{ marginLeft: '2px' }}>🚐 <span style={{ fontWeight: '700', color: '#2563eb' }}>{v.sign_code || v.display_id}</span>{v.sign_code && <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '3px' }}>{v.display_id}</span>}</span> : <span style={{ color: '#2563eb', marginLeft: '2px' }}>🚐 {t.vehicle_id}</span> })()}
               </div>
             )
           })}
