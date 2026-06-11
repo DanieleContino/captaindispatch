@@ -73,11 +73,14 @@ function TripsPageInner() {
     const hotel = searchParams.get('assignHotelId')
     const ts    = searchParams.get('assignTS')
     const d     = searchParams.get('assignDate')
+    const dateParam = searchParams.get('date')
     if (id && name) {
       setAssignCtx({ id, uuid: uuid || null, name, hotel: hotel || '', ts: ts || 'PRESENT' })
       if (d) setDate(d)
+    } else if (dateParam) {
+      setDate(dateParam)
     }
-  }, [])
+  }, [searchParams])
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
