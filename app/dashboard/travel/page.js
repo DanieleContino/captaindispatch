@@ -1668,13 +1668,14 @@ export default function TravelPage() {
 
   // ── Movement callbacks ─────────────────────────────────────
   function handleMovementSaved(saved, mode) {
-    if (mode === 'new') {
-      setMovements(prev => [...prev, saved].sort((a, b) =>
-        a.travel_date.localeCompare(b.travel_date) || (a.from_time || '').localeCompare(b.from_time || '')
-      ))
-    } else {
-      setMovements(prev => prev.map(m => m.id === saved.id ? saved : m))
-    }
+    setMovements(prev => {
+      const updated = mode === 'new'
+        ? [...prev, saved].sort((a, b) =>
+            a.travel_date.localeCompare(b.travel_date) || (a.from_time || '').localeCompare(b.from_time || ''))
+        : prev.map(m => m.id === saved.id ? saved : m)
+      setWarningsMap(computeCrewWarnings(updated, cachedStays))
+      return updated
+    })
     showToast(mode === 'new' ? 'Movement added' : 'Movement updated')
   }
 
