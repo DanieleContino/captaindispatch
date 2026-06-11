@@ -1684,6 +1684,11 @@ export default function RocketPage() {
 
   async function handleConfirm() {
     setSaving(true); setCreateError(null)
+    const { count } = await supabase.from('trips').select('id', { count: 'exact', head: true }).eq('production_id', PRODUCTION_ID).eq('date', date)
+    if (count > 0) {
+      setCreateError(`⚠ Esistono già ${count} trip per il ${date}. Elimina i trip esistenti prima di rilanciare Rocket.`)
+      setSaving(false); return
+    }
     const mm = pad2(new Date().getMonth() + 1), dd2 = pad2(new Date().getDate())
     const prefix = `R_${mm}${dd2}`
     let created = 0, seqNum = 1
