@@ -1938,7 +1938,13 @@ export default function TravelPage() {
       {/* ── Content ── */}
       <div style={{ padding: isMobile ? '12px' : '16px 24px' }}>
 
-        {!PRODUCTION_ID && (
+        {activeTab === 'hubs' && (
+          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px' }}>
+            <HubLocationsSection productionId={PRODUCTION_ID} />
+          </div>
+        )}
+
+        {activeTab === 'movements' && !PRODUCTION_ID && (
           <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '12px', marginBottom: '16px' }}>
             NEXT_PUBLIC_PRODUCTION_ID not set in .env.local
           </div>
