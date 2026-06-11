@@ -1716,6 +1716,8 @@ export default function TravelPage() {
       return updated
     })
     showToast(mode === 'new' ? 'Movement added' : 'Movement updated')
+    loadNoMovementsCrew()
+    loadPendingCrew()
   }
 
   function handleMovementDeleted(id) {
