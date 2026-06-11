@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * /dashboard/travel
@@ -739,7 +739,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
     const match = crewStays.find(s =>
       s.arrival_date && s.departure_date &&
       s.arrival_date <= form.travel_date &&
-      form.travel_date < s.departure_date
+      form.travel_date <= s.departure_date
     )
     if (match) set('linked_stay_id', match.id)
   }, [crewStays, form.travel_date])
