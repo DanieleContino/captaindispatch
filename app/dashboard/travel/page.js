@@ -1368,6 +1368,7 @@ export default function TravelPage() {
   const [movements, setMovements] = useState([])
   const [loading,   setLoading]   = useState(true)
   const [warningsMap,    setWarningsMap]    = useState({})
+  const [hubsModalOpen,  setHubsModalOpen]  = useState(false)
   const [activeTab,      setActiveTab]      = useState('movements')
   const [cachedStays,    setCachedStays]    = useState([])
   const [warningModal,   setWarningModal]   = useState(null)
@@ -1870,8 +1871,8 @@ export default function TravelPage() {
           </button>
           <button onClick={() => loadData(windowStart, windowEnd)}
             style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }} title="Reload data">↻</button>
-          <button onClick={() => setActiveTab(t => t === 'hubs' ? 'movements' : 'hubs')}
-            style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid', fontSize: '12px', fontWeight: '700', cursor: 'pointer', ...(activeTab === 'hubs' ? { background: '#0f2340', color: 'white', borderColor: '#0f2340' } : { background: 'white', color: '#64748b', borderColor: '#e2e8f0' }) }}>
+          <button onClick={() => setHubsModalOpen(true)}
+            style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: '700', cursor: 'pointer', background: 'white', color: '#64748b' }}>
             🛫 Hubs
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
