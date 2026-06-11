@@ -1275,7 +1275,7 @@ function TemplatesPanel({ currentConfig, locMap, onLoad, onClose }) {
  *   onApply(s)   — callback con il suggerimento da applicare
  *   onDismiss(k) — callback con la chiave da marcare come dismissed
  */
-function SuggestionsHint({ suggestions, weekday, locMap, onApply, onDismiss }) {
+function SuggestionsHint({ suggestions, weekday, locMap, vehicles, onApply, onDismiss }) {
   const t = useT()
   const [collapsed, setCollapsed] = useState(false)
   if (!suggestions || suggestions.length === 0) return null
@@ -1361,7 +1361,7 @@ function SuggestionsHint({ suggestions, weekday, locMap, onApply, onDismiss }) {
                 <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: 'white', borderRadius: '9px', border: '1px solid #fde68a', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '10px', fontWeight: '800', color: '#d97706', textTransform: 'uppercase', flexShrink: 0 }}>🚐 Vehicle</span>
                   <div style={{ flex: 1, fontSize: '12px', color: '#374151', lineHeight: 1.5, minWidth: '200px' }}>
-                    <strong style={{ fontFamily: 'monospace' }}>{s.vehicleId}</strong>
+                    <strong style={{ fontFamily: 'monospace' }}>{(() => { const v = (vehicles || []).find(x => x.uuid === s.vehicleId); return v?.sign_code || v?.display_id || s.vehicleId })()}</strong>
                     {' '}usually picks up from{' '}
                     <strong style={{ color: '#0f172a' }}>{hotelName}</strong>
                     {' '}on {dayName}s
