@@ -606,6 +606,7 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
   const [crewResults, setCrewResults]   = useState([])
   const [crewSearching, setCrewSearching] = useState(false)
   const [crewStays,     setCrewStays]     = useState([])
+  const [hubs,          setHubs]          = useState([])
   const [linkedStay,    setLinkedStay]    = useState(null)
   const [showStayOverride, setShowStayOverride] = useState(false)
 
@@ -628,6 +629,12 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
   useEffect(() => {
     if (!open) return
     setError(null); setConfirmDel(false)
+
+    if (PRODUCTION_ID) {
+      supabase.from('locations').select('uuid,name,display_id,default_pickup_point')
+        .eq('production_id', PRODUCTION_ID).eq('is_hub', true).order('name')
+        .then(({ data }) => setHubs(data || []))
+    }
 
     if (mode === 'edit' && initial) {
       setForm({
