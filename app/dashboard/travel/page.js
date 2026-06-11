@@ -1040,9 +1040,23 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
             </div>
 
 <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: '8px', marginBottom: '12px' }}>
-              <div>
+              <div style={{ position: 'relative' }}>
                 <label style={lbl}>From</label>
-                <input ref={fieldRefs.from_location} value={form.from_location} onChange={e => set('from_location', e.target.value)} style={inp} placeholder="Rome FCO" />
+                <input ref={fieldRefs.from_location} value={form.from_location} onChange={e => set('from_location', e.target.value)} style={inp} placeholder="Rome FCO" autoComplete="off" />
+                {form.from_location.length > 0 && hubs.filter(h => h.name.toLowerCase().includes(form.from_location.toLowerCase()) || (h.display_id || '').toLowerCase().includes(form.from_location.toLowerCase())).length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '2px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                    {hubs.filter(h => h.name.toLowerCase().includes(form.from_location.toLowerCase()) || (h.display_id || '').toLowerCase().includes(form.from_location.toLowerCase())).map(h => (
+                      <div key={h.uuid} onClick={() => set('from_location', h.name)}
+                        style={{ padding: '7px 12px', cursor: 'pointer', fontSize: '12px', color: '#0f172a', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                        <span style={{ fontWeight: '700' }}>{h.name}</span>
+                        <span style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>{h.display_id}</span>
+                        {h.default_pickup_point && <span style={{ fontSize: '10px', color: '#64748b', marginLeft: 'auto' }}>{h.default_pickup_point}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label style={lbl}>Dep time</label>
@@ -1051,9 +1065,23 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
             </div>
 
 <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: '8px', marginBottom: '12px' }}>
-              <div>
+              <div style={{ position: 'relative' }}>
                 <label style={lbl}>To</label>
-                <input ref={fieldRefs.to_location} value={form.to_location} onChange={e => set('to_location', e.target.value)} style={inp} placeholder="Bari BRI" />
+                <input ref={fieldRefs.to_location} value={form.to_location} onChange={e => set('to_location', e.target.value)} style={inp} placeholder="Bari BRI" autoComplete="off" />
+                {form.to_location.length > 0 && hubs.filter(h => h.name.toLowerCase().includes(form.to_location.toLowerCase()) || (h.display_id || '').toLowerCase().includes(form.to_location.toLowerCase())).length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', marginTop: '2px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                    {hubs.filter(h => h.name.toLowerCase().includes(form.to_location.toLowerCase()) || (h.display_id || '').toLowerCase().includes(form.to_location.toLowerCase())).map(h => (
+                      <div key={h.uuid} onClick={() => set('to_location', h.name)}
+                        style={{ padding: '7px 12px', cursor: 'pointer', fontSize: '12px', color: '#0f172a', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                        <span style={{ fontWeight: '700' }}>{h.name}</span>
+                        <span style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>{h.display_id}</span>
+                        {h.default_pickup_point && <span style={{ fontSize: '10px', color: '#64748b', marginLeft: 'auto' }}>{h.default_pickup_point}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label style={lbl}>Arr time</label>
