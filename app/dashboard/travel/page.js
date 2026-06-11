@@ -607,6 +607,8 @@ function MovementSidebar({ open, mode, initial, onClose, onSaved, onDeleted, onA
   const [crewSearching, setCrewSearching] = useState(false)
   const [crewStays,     setCrewStays]     = useState([])
   const [hubs,          setHubs]          = useState([])
+  const [fromOpen,      setFromOpen]      = useState(false)
+  const [toOpen,        setToOpen]        = useState(false)
   const [linkedStay,    setLinkedStay]    = useState(null)
   const [showStayOverride, setShowStayOverride] = useState(false)
 
