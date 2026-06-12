@@ -138,8 +138,10 @@ function SectionTable({ title, tableRows, total, borderColor }) {
 function sumStays(stayList) {
   let tot_no_vat = 0, tot_vat = 0, city_tax = 0, vat = 0, tot_nights = 0
   for (const s of stayList) {
-    tot_no_vat += s.total_cost_no_vat || 0
-    tot_vat    += s.total_cost_vat    || 0
+    const eciF = s.early_checkin ? (parseFloat(s.early_checkin_fee) || 0) : 0
+    const lcoF = s.late_checkout  ? (parseFloat(s.late_checkout_fee)  || 0) : 0
+    tot_no_vat += (s.total_cost_no_vat || 0) + eciF + lcoF
+    tot_vat    += (s.total_cost_vat    || 0) + eciF + lcoF
     city_tax   += s.city_tax_total    || 0
     vat        += (s.total_cost_vat || 0) - (s.total_cost_no_vat || 0)
     if (s.arrival_date && s.departure_date) {
@@ -247,6 +249,7 @@ export default function CostReportPage() {
       .select(`
         id, hotel_id, arrival_date, departure_date,
         city_tax_total, total_cost_no_vat, total_cost_vat,
+        early_checkin, early_checkin_fee, late_checkout, late_checkout_fee,
         crew:crew_id(department),
         hotel:hotel_id(uuid, name),
         subgroup:subgroup_id(id, name)
