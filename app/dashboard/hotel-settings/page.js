@@ -1145,6 +1145,20 @@ export default function HotelSettingsPage() {
                       🗺 Google Maps
                     </a>
                   )}
+                  {(hotel.default_checkin_time || hotel.default_checkout_time) && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+                      {hotel.default_checkin_time && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac' }}>
+                          🕐 CI {hotel.default_checkin_time.slice(0, 5)}
+                        </span>
+                      )}
+                      {hotel.default_checkout_time && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+                          🕐 CO {hotel.default_checkout_time.slice(0, 5)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {!hotel.hotel_id && (
                     <div style={{ marginTop: '6px', fontSize: '11px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '3px 8px', borderRadius: '6px', display: 'inline-block' }}>
                       ⚠ No hotel record — click Edit to configure
