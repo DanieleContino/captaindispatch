@@ -2007,6 +2007,7 @@ export default function AccommodationPage() {
   const [stayUnreadMap, setStayUnreadMap] = useState({})
   const [warningsMap,   setWarningsMap]   = useState({})
   const [warningModal,  setWarningModal]  = useState(null)
+  const [extrasModal,   setExtrasModal]   = useState(null)
   const [search,       setSearch]       = useState('')
   const [filterHotel,  setFilterHotel]  = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
@@ -2723,6 +2724,7 @@ export default function AccommodationPage() {
               roommateMap={roommateMap}
               warningsMap={warningsMap}
               setWarningModal={setWarningModal}
+              onExtrasClick={setExtrasModal}
             />
           </div>
         ) : (
