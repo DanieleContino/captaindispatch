@@ -19,6 +19,7 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
     name: '', address: '', city: '', zip: '', country: '', phone: '', email: '',
     website: '', contact_name: '', contact_phone: '', notes_ops: '',
     lat: '', lng: '', place_id: '', maps_url: '',
+    default_checkin_time: '', default_checkout_time: '',
   }
   const [form, setForm]     = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
@@ -86,6 +87,8 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
         lng:           initial.lng           != null ? String(initial.lng) : '',
         place_id:      initial.place_id      || '',
         maps_url:      initial.maps_url      || '',
+        default_checkin_time:  initial.default_checkin_time  || '',
+        default_checkout_time: initial.default_checkout_time || '',
       })
       loadRoomTypes(initial.hotel_id)
       loadExtras(initial.hotel_id)
