@@ -640,60 +640,20 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     onMouseLeave={e => { e.currentTarget.style.background = '' }}>
                     {stay.room_type_notes || <span style={{ color: '#cbd5e1' }}>—</span>}
                   </td>
-                  {/* Cost columns — 10 cols matching Excel, derived from room_type if available */}
                   {showCosts && (() => {
                     const rt     = stay.room_type || null
                     const ngts   = nights || 0
-                    // Rate no VAT: from room_type unless override or no room_type
-                    const rateNV = (!stay.rate_override && rt?.rate_no_vat != null)
-                      ? parseFloat(rt.rate_no_vat)
-                      : (parseFloat(stay.cost_per_night) || 0)
-                    const vatPct = (!stay.rate_override && rt?.vat_pct != null)
-                      ? parseFloat(rt.vat_pct)
-                      : null
-                    const ctN    = (!stay.rate_override && rt?.city_tax_night != null)
-                      ? parseFloat(rt.city_tax_night)
-                      : null
-                    // Derived values
+                    const rateNV = (!stay.rate_override && rt?.rate_no_vat != null) ? parseFloat(rt.rate_no_vat) : (parseFloat(stay.cost_per_night) || 0)
+                    const vatPct = (!stay.rate_override && rt?.vat_pct != null) ? parseFloat(rt.vat_pct) : null
+                    const ctN    = (!stay.rate_override && rt?.city_tax_night != null) ? parseFloat(rt.city_tax_night) : null
                     const nv     = rateNV > 0 && ngts > 0 ? rateNV * ngts : (parseFloat(stay.total_cost_no_vat) || 0)
                     const rateV  = rateNV > 0 && vatPct != null ? rateNV * (1 + vatPct / 100) : (rateNV > 0 ? rateNV * 1.10 : 0)
                     const tv     = rateV  > 0 && ngts > 0 ? rateV  * ngts : (parseFloat(stay.total_cost_vat)    || 0)
                     const ct     = ctN    != null && ngts > 0 ? ctN * ngts : (parseFloat(stay.city_tax_total)   || 0)
-                    const nv_t   = nv + ct
-                    const tv_t   = tv + ct
-                    const vata   = tv - nv
-                    const dash   = <span style={{ color: '#e2e8f0' }}>—</span>
-                    const fmtE   = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : dash
-                    const cellSt = { padding: '5px 6px', fontSize: '10px', textAlign: 'right', fontFamily: 'monospace', color: '#374151', borderLeft: '1px solid #dbeafe', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden' }
-                    return (
-                      <>
-                        <td style={cellSt}>{fmtE(ct)}</td>
-                        <td style={cellSt}>{fmtE(rateNV)}</td>
-                        <td style={cellSt}>{fmtE(nv)}</td>
-                        <td style={cellSt}>{fmtE(nv_t)}</td>
-                        <td style={{ ...cellSt, color: '#475569' }}>{fmtE(rateV)}</td>
-                        <td style={cellSt}>{fmtE(tv)}</td>
-                        <td style={cellSt}>{fmtE(tv_t)}</td>
-                        <td style={{ ...cellSt, color: '#7c3aed' }}>{fmtE(vata)}</td>
-                        <td
-                          onClick={() => {
-                            const eciF = stay.early_checkin ? (parseFloat(stay.early_checkin_fee) || 0) : 0
-                            const lcoF = stay.late_checkout  ? (parseFloat(stay.late_checkout_fee)  || 0) : 0
-                            if (eciF + lcoF > 0) onExtrasClick(stay)
-                          }}
-                          style={{ ...cellSt, color: '#15803d', fontWeight: '800', cursor: 'pointer' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(21,128,61,0.08)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = '' }}
-                        >{(() => {
-                          const eciF = stay.early_checkin ? (parseFloat(stay.early_checkin_fee) || 0) : 0
-                          const lcoF = stay.late_checkout  ? (parseFloat(stay.late_checkout_fee)  || 0) : 0
-                          const tot = eciF + lcoF
-                          return tot > 0 ? fmtE(tot) : dash
-                        })()}</td>
-                        <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.po_number      || dash}</td>
-                        <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.invoice_number || dash}</td>
-                      </>
-                    )
+                    const eciF   = stay.early_checkin ? (parseFloat(stay.early_checkin_fee) || 0) : 0
+                    const lcoF   = stay.late_checkout  ? (parseFloat(stay.late_checkout_fee)  || 0) : 0
+                    const computed = { rateNV, rateV, nv, tv, ct, nv_t: nv + ct, tv_t: tv + ct, vata: tv - nv, eciF, lcoF }
+                    return costColsConfig.map(col => renderCostCell(col.source_field, stay, computed, onExtrasClick))
                   })()}
                 </tr>
               )
