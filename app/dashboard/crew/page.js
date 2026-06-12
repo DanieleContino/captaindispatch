@@ -1809,12 +1809,28 @@ export default function CrewPage() {
         .map(tm => tm.crew_id)
     )
 
+    // Per ogni crew con movement OUT oggi, salva l'orario di partenza (from_time)
+    const outMovementTodayMap = {}
+    ;(travelData || [])
+      .filter(tm => tm.travel_date === today && tm.direction === 'OUT')
+      .forEach(tm => { outMovementTodayMap[tm.crew_id] = tm.from_time || null })
+
+    const nowRome = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' }))
+    const nowTime = `${String(nowRome.getHours()).padStart(2, '0')}:${String(nowRome.getMinutes()).padStart(2, '0')}`
+
     function expectedStatus(c) {
-      if (c.departure_date && today > c.departure_date)                    return 'OUT'
+      if (c.departure_date && today >= c.departure_date) {
+        if (c.uuid in outMovementTodayMap) {
+          // Ha un movement OUT oggi — è ancora qui se from_time non è ancora passato
+          const fromTime = outMovementTodayMap[c.uuid]
+          if (fromTime && fromTime.slice(0, 5) > nowTime) return 'PRESENT'
+          return 'OUT'
+        }
+        // NTN o nessun movement OUT → OUT immediato
+        return 'OUT'
+      }
       if (c.arrival_date   && today > c.arrival_date)                      return 'PRESENT'
       if (c.arrival_date   && today === c.arrival_date) {
-        // Arriva oggi con volo/treno IN → deve essere IN (anche se già switchato a PRESENT per errore)
-        // Arriva oggi senza volo (check-in hotel diretto) → PRESENT
         return hasInMovementToday.has(c.uuid) ? 'IN' : 'PRESENT'
       }
       if (c.arrival_date   && today < c.arrival_date)                      return 'IN'
