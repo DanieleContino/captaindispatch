@@ -888,6 +888,52 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
               </React.Fragment>
             )
           })}
+          {/* ── GRAND TOTAL — tutti gli hotel ── */}
+          {(() => {
+            const allStays = Object.values(groupedByHotel).flat()
+            const f = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+            const cs = { padding: '6px 6px', fontSize: '11px', fontWeight: '900', textAlign: 'right', fontFamily: 'monospace', color: 'white', background: '#0f2340', borderLeft: '1px solid #1e3a5f', whiteSpace: 'nowrap' }
+            const totals = allStays.reduce((acc, st) => {
+              const c = stayComputedCosts(st)
+              return { nv: acc.nv + c.nv, tv: acc.tv + c.tv, ct: acc.ct + c.ct }
+            }, { nv: 0, tv: 0, ct: 0 })
+            const { nv, tv, ct } = totals
+            const extrasTotal = allStays.reduce((sum, st) => sum + (st.early_checkin ? (parseFloat(st.early_checkin_fee) || 0) : 0) + (st.late_checkout ? (parseFloat(st.late_checkout_fee) || 0) : 0), 0)
+            return (
+              <tr style={{ background: '#0f2340', borderTop: '3px solid #1e3a5f' }}>
+                <td style={{ padding: '6px 8px', fontWeight: '900', fontSize: '11px', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', position: 'sticky', left: 0, background: '#0f2340', zIndex: 1, letterSpacing: '0.06em' }}>🌍 GRAND TOTAL</td>
+                <td style={{ padding: '6px 8px', background: '#0f2340', position: 'sticky', left: NAME_W, zIndex: 1 }} />
+                <td style={{ padding: '6px 8px', background: '#0f2340', position: 'sticky', left: NAME_W + ROLE_W, zIndex: 1, boxShadow: '2px 0 4px rgba(0,0,0,0.2)' }} />
+                {days.map(d => {
+                  const n = allStays.filter(s => s.arrival_date && s.departure_date && s.arrival_date <= d && d < s.departure_date).length
+                  return (
+                    <td key={d} style={{ padding: '2px 0', textAlign: 'center', fontSize: '10px', fontWeight: '900', color: n > 0 ? 'white' : 'transparent', background: n > 0 ? '#2563eb' : '#0f2340', borderLeft: '1px solid #1e3a5f' }}>
+                      {n > 0 ? n : ''}
+                    </td>
+                  )
+                })}
+                <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: '12px', fontWeight: '900', color: 'white', borderLeft: '1px solid #1e3a5f', background: '#0f2340' }}>
+                  {allStays.reduce((sum, s) => sum + (nightsBetween(s.arrival_date, s.departure_date) || 0), 0)}
+                </td>
+                <td style={{ padding: '6px 8px', borderLeft: '1px solid #1e3a5f', background: '#0f2340' }} />
+                {showCosts && (
+                  <>
+                    <td style={cs}>{f(ct)}</td>
+                    <td style={cs} />
+                    <td style={cs}>{f(nv)}</td>
+                    <td style={cs}>{f(nv + ct)}</td>
+                    <td style={cs} />
+                    <td style={cs}>{f(tv)}</td>
+                    <td style={cs}>{f(tv + ct)}</td>
+                    <td style={{ ...cs, color: '#a78bfa' }}>{f(tv - nv)}</td>
+                    <td style={{ ...cs, color: '#6ee7b7' }}>{f(extrasTotal)}</td>
+                    <td style={cs} />
+                    <td style={cs} />
+                  </>
+                )}
+              </tr>
+            )
+          })()}
         </tbody>
     </table>
   )
