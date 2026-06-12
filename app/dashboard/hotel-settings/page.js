@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 /**
  * /dashboard/hotel-settings
@@ -1031,6 +1031,8 @@ export default function HotelSettingsPage() {
       place_id:      hotelRow?.place_id || null,
       maps_url:      hotelRow?.maps_url || null,
       notes_ops:     hotelRow?.notes_ops || null,
+      default_checkin_time:  hotelRow?.default_checkin_time  || null,
+      default_checkout_time: hotelRow?.default_checkout_time || null,
       roomCount:     hotelRow ? (roomCounts[hotelRow.id]  || 0) : 0,
       extraCount:    hotelRow ? (extraCounts[hotelRow.id] || 0) : 0,
       roomTypes:     hotelRow ? (roomTypesMap[hotelRow.id] || []) : [],
