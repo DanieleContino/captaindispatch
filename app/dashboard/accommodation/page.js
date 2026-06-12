@@ -18,6 +18,7 @@ import NotesPanel from '../../../lib/NotesPanel'
 import { AccommodationColumnsEditorSidebar } from '../../../lib/AccommodationColumnsEditorSidebar'
 import { ACCOMMODATION_DEFAULT_PRESET, CALENDAR_COST_DEFAULT_PRESET } from '../../../lib/accommodationColumnsCatalog'
 import ExtrasModal from './_components/ExtrasModal'
+import { renderCostCell, renderCostTotalCell } from './_components/CalendarCostCell'
 import { computeCrewWarnings } from '../../../lib/tripWarnings'
 import SubgroupManagerSidebar from '../../../lib/SubgroupManagerSidebar'
 
@@ -442,7 +443,7 @@ function stayComputedCosts(stay) {
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
-function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {}, warningsMap = {}, setWarningModal, onExtrasClick }) {
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {}, warningsMap = {}, setWarningModal, onExtrasClick, costColsConfig = [] }) {
   const NAME_W        = 180
   const ROLE_W        = 100
   const DEPT_W        = 90
