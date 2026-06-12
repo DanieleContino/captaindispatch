@@ -1072,6 +1072,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
   const [crewSearching, setCrewSearching] = useState(false)
   const [hotelSubgroups, setHotelSubgroups] = useState([])
   const [hotelRoomTypes,  setHotelRoomTypes]  = useState([])
+  const [hotelDefaultTimes, setHotelDefaultTimes] = useState({ checkin: null, checkout: null })
   const [crewMovements,   setCrewMovements]   = useState([])
   const notesRef = React.useRef(null)
 
@@ -1363,11 +1364,12 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
 
   // Load subgroups + room types when hotel changes
   useEffect(() => {
-    if (!form.hotel_id || !PRODUCTION_ID) { setHotelSubgroups([]); setHotelRoomTypes([]); return }
+    if (!form.hotel_id || !PRODUCTION_ID) { setHotelSubgroups([]); setHotelRoomTypes([]); setHotelDefaultTimes({ checkin: null, checkout: null }); return }
     supabase.from('hotel_subgroups').select('id, name').eq('production_id', PRODUCTION_ID).eq('hotel_id', form.hotel_id).order('display_order').order('name').then(({ data }) => setHotelSubgroups(data || []))
-    // Load room types via hotels table (hotel_id in hotel_room_types is UUID from hotels, not location id)
-    supabase.from('hotels').select('id').eq('production_id', PRODUCTION_ID).eq('location_id', form.hotel_id).maybeSingle().then(({ data: hotelRow }) => {
-      if (!hotelRow) { setHotelRoomTypes([]); return }
+    // Load room types + default times via hotels table
+    supabase.from('hotels').select('id, default_checkin_time, default_checkout_time').eq('production_id', PRODUCTION_ID).eq('location_id', form.hotel_id).maybeSingle().then(({ data: hotelRow }) => {
+      if (!hotelRow) { setHotelRoomTypes([]); setHotelDefaultTimes({ checkin: null, checkout: null }); return }
+      setHotelDefaultTimes({ checkin: hotelRow.default_checkin_time || null, checkout: hotelRow.default_checkout_time || null })
       supabase.from('hotel_room_types').select('id, name, rate_no_vat, vat_pct, city_tax_night').eq('hotel_id', hotelRow.id).order('display_order').order('created_at').then(({ data }) => setHotelRoomTypes(data || []))
     })
   }, [form.hotel_id, PRODUCTION_ID])
