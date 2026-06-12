@@ -442,7 +442,7 @@ function stayComputedCosts(stay) {
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
-function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {}, warningsMap = {}, setWarningModal }) {
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {}, warningsMap = {}, setWarningModal, onExtrasClick }) {
   const NAME_W        = 180
   const ROLE_W        = 100
   const DEPT_W        = 90
