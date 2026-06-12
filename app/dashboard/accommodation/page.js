@@ -2317,7 +2317,7 @@ export default function AccommodationPage() {
     const savedStart = localStorage.getItem(`accom_range_${user.id}_start`)
     const savedEnd   = localStorage.getItem(`accom_range_${user.id}_end`)
     if (savedStart && savedEnd) { setWindowStart(savedStart); setWindowEnd(savedEnd) }
-    loadData(savedStart || windowStart, savedEnd || windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id); loadMismatches(); loadPendingCrew()
+    loadData(savedStart || windowStart, savedEnd || windowEnd); loadHotels(); loadColumnsConfig(); loadCostColsConfig(); loadNotesMap(user.id); loadMismatches(); loadPendingCrew()
     const raw = sessionStorage.getItem('crewSidebarOpenStay')
     if (!raw) return
     sessionStorage.removeItem('crewSidebarOpenStay')
@@ -2574,6 +2574,12 @@ export default function AccommodationPage() {
             <button onClick={() => setColumnsEditorOpen(true)}
               style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               Columns {columnsConfig.length > 0 && `(${columnsConfig.length})`}
+            </button>
+          )}
+          {viewMode === 'calendar' && showCosts && (
+            <button onClick={() => setColumnsEditorOpen(true)}
+              style={{ padding: '6px 12px', borderRadius: '7px', border: '1px solid #2563eb', background: 'white', color: '#2563eb', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              Columns {costColsConfig.length > 0 && `(${costColsConfig.length})`}
             </button>
           )}
           <a href="/dashboard/accommodation/cost-report"
