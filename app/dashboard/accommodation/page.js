@@ -848,21 +848,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                   {allStays.reduce((sum, s) => sum + (nightsBetween(s.arrival_date, s.departure_date) || 0), 0)}
                 </td>
                 <td style={{ padding: '6px 8px', borderLeft: '1px solid #1e3a5f', background: '#0f2340' }} />
-                {showCosts && (
-                  <>
-                    <td style={cs}>{f(ct)}</td>
-                    <td style={cs} />
-                    <td style={cs}>{f(nv)}</td>
-                    <td style={cs}>{f(nv + ct)}</td>
-                    <td style={cs} />
-                    <td style={cs}>{f(tv)}</td>
-                    <td style={cs}>{f(tv + ct)}</td>
-                    <td style={{ ...cs, color: '#a78bfa' }}>{f(tv - nv)}</td>
-                    <td style={{ ...cs, color: '#6ee7b7' }}>{f(extrasTotal)}</td>
-                    <td style={cs} />
-                    <td style={cs} />
-                  </>
-                )}
+                {showCosts && costColsConfig.map(col => renderCostTotalCell(col.source_field, { nv, tv, ct, extras: extrasTotal }, cs))}
               </tr>
             )
           })()}
