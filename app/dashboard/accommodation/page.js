@@ -1415,6 +1415,10 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       hotel_status:      form.hotel_status || 'PENDING',
       row_color:         form.row_color    || null,
       room_assignment_id: form.room_assignment_id || null,
+      early_checkin:        form.early_checkin        || false,
+      actual_checkin_time:  form.actual_checkin_time  || null,
+      late_checkout:        form.late_checkout         || false,
+      actual_checkout_time: form.actual_checkout_time || null,
     }
   }
 
