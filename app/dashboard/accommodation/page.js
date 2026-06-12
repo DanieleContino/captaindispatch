@@ -834,9 +834,9 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                               <td style={cs}>{f(tv)}</td>
                               <td style={cs}>{f(tv + ct)}</td>
                               <td style={cs}>{f(tv - nv)}</td>
-                              <td style={cs} />
-                              <td style={cs} />
                               <td style={cs}>{f(sectionStays.reduce((sum, st) => sum + (st.early_checkin ? (parseFloat(st.early_checkin_fee) || 0) : 0) + (st.late_checkout ? (parseFloat(st.late_checkout_fee) || 0) : 0), 0))}</td>
+                              <td style={cs} />
+                              <td style={cs} />
                             </>
                           )
                         })()}
@@ -886,10 +886,10 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                         <td style={cs} />
                         <td style={cs}>{f(tv)}</td>
                         <td style={cs}>{f(tv + ct)}</td>
-                        <td style={cs}>{f(tv - nv)}</td>
-                        <td style={cs} />
-                        <td style={cs} />
-                        <td style={cs}>{f(hotelStays.reduce((sum, st) => sum + (st.early_checkin ? (parseFloat(st.early_checkin_fee) || 0) : 0) + (st.late_checkout ? (parseFloat(st.late_checkout_fee) || 0) : 0), 0))}</td>
+                    <td style={cs}>{f(tv - nv)}</td>
+                    <td style={cs}>{f(hotelStays.reduce((sum, st) => sum + (st.early_checkin ? (parseFloat(st.early_checkin_fee) || 0) : 0) + (st.late_checkout ? (parseFloat(st.late_checkout_fee) || 0) : 0), 0))}</td>
+                    <td style={cs} />
+                    <td style={cs} />
                       </>
                     )
                   })()}
