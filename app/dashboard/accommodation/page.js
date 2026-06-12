@@ -460,19 +460,9 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
   const VAT_AMT_W     = 80
   const PO_W          = 80
   const INV_W         = 80
-  const costCols = showCosts ? [
-    { key: 'city_tax',      label: 'City Tax',        width: CITYTAX_W },
-    { key: 'rate_novat',    label: 'night w/o VAT',   width: RATE_NOVAT_W },
-    { key: 'tot_no_vat',    label: 'TOT W/O VAT',     width: TOTNOVAT_W },
-    { key: 'tot_novat_tax', label: 'Tot W/O VAT+tax', width: TOTNOVAT_TX_W },
-    { key: 'rate_vat',      label: 'night w VAT',     width: RATE_VAT_W },
-    { key: 'tot_vat',       label: 'TOT W.VAT',       width: TOTVAT_W },
-    { key: 'tot_vat_tax',   label: 'Tot. + City Tax', width: TOTVAT_TX_W },
-    { key: 'vat_amt',       label: 'TOT VAT',         width: VAT_AMT_W },
-    { key: 'extras',        label: 'Extras',          width: 80 },
-    { key: 'po',            label: 'P.O.',            width: PO_W },
-    { key: 'inv',           label: 'N°Fatt.',         width: INV_W },
-  ] : []
+  const costCols = showCosts
+    ? costColsConfig.map(col => ({ key: col.source_field, label: col.header_label, width: parseInt(col.width) || 80 }))
+    : []
   const totalWidth = NAME_W + ROLE_W + DEPT_W + days.length * DAY_W + NIGHT_W + ROOM_W + costCols.reduce((s, c) => s + c.width, 0)
 
   // Day-of-week abbreviation
