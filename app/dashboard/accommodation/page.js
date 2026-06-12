@@ -253,6 +253,8 @@ const EMPTY_STAY = {
   hotel_status: 'PENDING',
   row_color: null,
   room_assignment_id: null,
+  early_checkin: false, actual_checkin_time: '',
+  late_checkout: false, actual_checkout_time: '',
 }
 
 // ─── ClickableCell ─────────────────────────────────────────────
@@ -1108,6 +1110,10 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         hotel_status:      initial.hotel_status      || 'PENDING',
         row_color:            initial.row_color            || null,
         room_assignment_id:   initial.room_assignment_id   || null,
+        early_checkin:        initial.early_checkin        || false,
+        actual_checkin_time:  initial.actual_checkin_time  || '',
+        late_checkout:        initial.late_checkout        || false,
+        actual_checkout_time: initial.actual_checkout_time || '',
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
