@@ -56,6 +56,9 @@ function DataRow({ label, row, indent, isSubtotal, isHotelTotal }) {
       <td style={{ padding: '7px 14px', fontSize: fs, fontWeight: fw, fontFamily: 'monospace', color: '#374151', textAlign: 'right' }}>
         {fmtN(row.tot_nights)}
       </td>
+      <td style={{ padding: '7px 14px', fontSize: fs, fontWeight: fw, fontFamily: 'monospace', color: '#15803d', textAlign: 'right' }}>
+        {fmt(row.extras)}
+      </td>
     </tr>
   )
 }
@@ -158,6 +161,7 @@ function sumStays(stayList) {
     city_tax:   city_tax   || null,
     vat:        vat        || null,
     tot_nights: tot_nights || null,
+    extras:     extras     || null,
   }
 }
 
