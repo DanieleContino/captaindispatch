@@ -29,7 +29,7 @@ function fmtN(n) {
   return String(n)
 }
 
-const COL_HEADERS = ['Hotel / Group', 'Tot. W/O VAT', 'Tot. VAT Incl.', 'City Tax', 'VAT', 'Tot. Nights']
+const COL_HEADERS = ['Hotel / Group', 'Tot. W/O VAT', 'Tot. VAT Incl.', 'City Tax', 'VAT', 'Tot. Nights', 'Extras']
 
 function DataRow({ label, row, indent, isSubtotal, isHotelTotal }) {
   const bg = isHotelTotal ? '#f0fdf4' : isSubtotal ? '#eff6ff' : 'white'
@@ -136,10 +136,11 @@ function SectionTable({ title, tableRows, total, borderColor }) {
 
 // ── Aggregation helpers ───────────────────────────────────────────────────────
 function sumStays(stayList) {
-  let tot_no_vat = 0, tot_vat = 0, city_tax = 0, vat = 0, tot_nights = 0
+  let tot_no_vat = 0, tot_vat = 0, city_tax = 0, vat = 0, tot_nights = 0, extras = 0
   for (const s of stayList) {
     const eciF = s.early_checkin ? (parseFloat(s.early_checkin_fee) || 0) : 0
     const lcoF = s.late_checkout  ? (parseFloat(s.late_checkout_fee)  || 0) : 0
+    extras     += eciF + lcoF
     tot_no_vat += (s.total_cost_no_vat || 0) + eciF + lcoF
     tot_vat    += (s.total_cost_vat    || 0) + eciF + lcoF
     city_tax   += s.city_tax_total    || 0
