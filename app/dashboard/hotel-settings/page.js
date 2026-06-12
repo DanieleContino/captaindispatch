@@ -258,6 +258,8 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
         place_id:      form.place_id             || null,
         maps_url:      form.maps_url             || null,
         notes_ops:     form.notes_ops.trim()     || null,
+        default_checkin_time:  form.default_checkin_time  || null,
+        default_checkout_time: form.default_checkout_time || null,
       }
       const lat = form.lat !== '' ? parseFloat(form.lat) : null
       const lng = form.lng !== '' ? parseFloat(form.lng) : null
@@ -639,6 +641,20 @@ function HotelSettingsSidebar({ open, mode, initial, onClose, onSaved, productio
                   <div>
                     <label style={lbl}>Contact phone</label>
                     <input value={form.contact_phone} onChange={e => set('contact_phone', e.target.value)} style={inp} placeholder="+39 333..." />
+                  </div>
+                </div>
+
+                {/* Default check-in / check-out times */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                  <div>
+                    <label style={lbl}>Default check-in time</label>
+                    <input type="time" value={form.default_checkin_time || ''} onChange={e => set('default_checkin_time', e.target.value || null)} style={inp} />
+                    <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Standard hotel check-in time</div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Default check-out time</label>
+                    <input type="time" value={form.default_checkout_time || ''} onChange={e => set('default_checkout_time', e.target.value || null)} style={inp} />
+                    <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '3px' }}>Standard hotel check-out time</div>
                   </div>
                 </div>
 
