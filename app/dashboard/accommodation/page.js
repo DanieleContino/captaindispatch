@@ -469,6 +469,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
     { key: 'vat_amt',       label: 'TOT VAT',         width: VAT_AMT_W },
     { key: 'po',            label: 'P.O.',            width: PO_W },
     { key: 'inv',           label: 'N°Fatt.',         width: INV_W },
+    { key: 'extras',        label: 'Extras',          width: 80 },
   ] : []
   const totalWidth = NAME_W + ROLE_W + DEPT_W + days.length * DAY_W + NIGHT_W + ROOM_W + costCols.reduce((s, c) => s + c.width, 0)
 
@@ -684,6 +685,12 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                         <td style={{ ...cellSt, color: '#7c3aed' }}>{fmtE(vata)}</td>
                         <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.po_number      || dash}</td>
                         <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.invoice_number || dash}</td>
+                        <td style={{ ...cellSt, color: '#15803d', fontWeight: '800' }}>{(() => {
+                          const eciF = stay.early_checkin ? (parseFloat(stay.early_checkin_fee) || 0) : 0
+                          const lcoF = stay.late_checkout  ? (parseFloat(stay.late_checkout_fee)  || 0) : 0
+                          const tot = eciF + lcoF
+                          return tot > 0 ? fmtE(tot) : dash
+                        })()}</td>
                       </>
                     )
                   })()}
