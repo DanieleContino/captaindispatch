@@ -2135,7 +2135,16 @@ export default function AccommodationPage() {
       localStorage.setItem('accom_window_end', end)
     }
   }
-  function resetWindow() { setRange(isoAdd(isoToday(), -3), isoAdd(isoToday(), 10)) }
+  async function resetWindow() {
+    if (!PRODUCTION_ID) return
+    const { data } = await supabase.from('crew_stays')
+      .select('arrival_date, departure_date')
+      .eq('production_id', PRODUCTION_ID)
+    const arrivals   = (data || []).map(s => s.arrival_date).filter(Boolean).sort()
+    const departures = (data || []).map(s => s.departure_date).filter(Boolean).sort()
+    if (arrivals.length === 0) { setRange(isoAdd(isoToday(), -3), isoAdd(isoToday(), 10)); return }
+    setRange(arrivals[0], departures[departures.length - 1])
+  }
   function setThisMonth() { setRange(startOfMonth(0), endOfMonth(0)) }
   function setNextMonth() { setRange(startOfMonth(1), endOfMonth(1)) }
   function setFullPeriod() {
@@ -2288,7 +2297,10 @@ export default function AccommodationPage() {
 
   useEffect(() => {
     if (!user) return
-    loadData(windowStart, windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id); loadMismatches(); loadPendingCrew()
+    const savedStart = localStorage.getItem(`accom_range_${user.id}_start`)
+    const savedEnd   = localStorage.getItem(`accom_range_${user.id}_end`)
+    if (savedStart && savedEnd) { setWindowStart(savedStart); setWindowEnd(savedEnd) }
+    loadData(savedStart || windowStart, savedEnd || windowEnd); loadHotels(); loadColumnsConfig(); loadNotesMap(user.id); loadMismatches(); loadPendingCrew()
     const raw = sessionStorage.getItem('crewSidebarOpenStay')
     if (!raw) return
     sessionStorage.removeItem('crewSidebarOpenStay')
