@@ -2050,6 +2050,7 @@ export default function AccommodationPage() {
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState('list') // 'list' | 'calendar'
   const [columnsConfig,     setColumnsConfig]     = useState([])
+  const [costColsConfig,    setCostColsConfig]    = useState([])
   const [columnsEditorOpen, setColumnsEditorOpen] = useState(false)
   const [applyingPreset,    setApplyingPreset]    = useState(false)
   const [windowStart,  setWindowStart]  = useState('2026-01-01')
@@ -2119,8 +2120,14 @@ export default function AccommodationPage() {
 
   const loadColumnsConfig = useCallback(async () => {
     if (!PRODUCTION_ID) return
-    const { data } = await supabase.from('accommodation_columns').select('*').eq('production_id', PRODUCTION_ID).order('display_order', { ascending: true }).order('created_at', { ascending: true })
+    const { data } = await supabase.from('accommodation_columns').select('*').eq('production_id', PRODUCTION_ID).eq('view_type', 'list').order('display_order', { ascending: true }).order('created_at', { ascending: true })
     setColumnsConfig(data || [])
+  }, [PRODUCTION_ID])
+
+  const loadCostColsConfig = useCallback(async () => {
+    if (!PRODUCTION_ID) return
+    const { data } = await supabase.from('accommodation_columns').select('*').eq('production_id', PRODUCTION_ID).eq('view_type', 'calendar_cost').order('display_order', { ascending: true }).order('created_at', { ascending: true })
+    setCostColsConfig(data || [])
   }, [PRODUCTION_ID])
 
   async function applyDefaultPreset() {
