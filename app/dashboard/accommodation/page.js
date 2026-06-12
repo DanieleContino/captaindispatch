@@ -256,6 +256,7 @@ const EMPTY_STAY = {
   room_assignment_id: null,
   early_checkin: false, actual_checkin_time: '',
   late_checkout: false, actual_checkout_time: '',
+  early_checkin_fee: null, late_checkout_fee: null,
 }
 
 // ─── ClickableCell ─────────────────────────────────────────────
@@ -1137,6 +1138,8 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         actual_checkin_time:  initial.actual_checkin_time  || '',
         late_checkout:        initial.late_checkout        || false,
         actual_checkout_time: initial.actual_checkout_time || '',
+        early_checkin_fee:    initial.early_checkin_fee    ?? null,
+        late_checkout_fee:    initial.late_checkout_fee    ?? null,
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
