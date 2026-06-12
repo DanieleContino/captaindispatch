@@ -1399,6 +1399,23 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
     })
   }, [form.hotel_id, PRODUCTION_ID])
 
+  // Carica fee early checkin / late checkout dall'hotel quando checkbox cambia
+  useEffect(() => {
+    if (!form.hotel_id || !PRODUCTION_ID) return
+    supabase.from('hotels').select('id').eq('production_id', PRODUCTION_ID).eq('location_id', form.hotel_id).maybeSingle().then(({ data: hotelRow }) => {
+      if (!hotelRow) return
+      supabase.from('hotel_extra_costs').select('item_type, amount_no_vat').eq('hotel_id', hotelRow.id).in('item_type', ['early_ci', 'late_co']).then(({ data: extras }) => {
+        const eciRow = (extras || []).find(e => e.item_type === 'early_ci')
+        const lcoRow = (extras || []).find(e => e.item_type === 'late_co')
+        setForm(f => ({
+          ...f,
+          early_checkin_fee: f.early_checkin ? (eciRow?.amount_no_vat ?? f.early_checkin_fee) : null,
+          late_checkout_fee: f.late_checkout  ? (lcoRow?.amount_no_vat ?? f.late_checkout_fee) : null,
+        }))
+      })
+    })
+  }, [form.early_checkin, form.late_checkout, form.hotel_id, PRODUCTION_ID])
+
   // Carica movimenti del crew member quando crew_id cambia (per anteprima in new mode)
   useEffect(() => {
     if (!form.crew_id || !PRODUCTION_ID) { setCrewMovements([]); return }
@@ -1444,6 +1461,8 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       actual_checkin_time:  form.actual_checkin_time  || null,
       late_checkout:        form.late_checkout         || false,
       actual_checkout_time: form.actual_checkout_time || null,
+      early_checkin_fee:    form.early_checkin ? (form.early_checkin_fee ?? null) : null,
+      late_checkout_fee:    form.late_checkout  ? (form.late_checkout_fee  ?? null) : null,
     }
   }
 
