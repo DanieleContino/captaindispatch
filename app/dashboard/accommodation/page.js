@@ -1738,10 +1738,17 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
                   )}
                 </div>
                 {form.early_checkin && (
-                  <div style={{ marginTop: '8px' }}>
-                    <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '3px' }}>Actual check-in time</label>
-                    <input type="time" value={form.actual_checkin_time || ''} onChange={e => set('actual_checkin_time', e.target.value || null)}
-                      style={{ width: '140px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white' }} />
+                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '3px' }}>Actual check-in time</label>
+                      <input type="time" value={form.actual_checkin_time || ''} onChange={e => set('actual_checkin_time', e.target.value || null)}
+                        style={{ width: '140px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white' }} />
+                    </div>
+                    {form.early_checkin_fee != null && (
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#15803d', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '7px', padding: '5px 10px', whiteSpace: 'nowrap' }}>
+                        € {parseFloat(form.early_checkin_fee).toFixed(2)}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -1760,10 +1767,17 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
                   )}
                 </div>
                 {form.late_checkout && (
-                  <div style={{ marginTop: '8px' }}>
-                    <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '3px' }}>Actual check-out time</label>
-                    <input type="time" value={form.actual_checkout_time || ''} onChange={e => set('actual_checkout_time', e.target.value || null)}
-                      style={{ width: '140px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white' }} />
+                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '3px' }}>Actual check-out time</label>
+                      <input type="time" value={form.actual_checkout_time || ''} onChange={e => set('actual_checkout_time', e.target.value || null)}
+                        style={{ width: '140px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white' }} />
+                    </div>
+                    {form.late_checkout_fee != null && (
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '7px', padding: '5px 10px', whiteSpace: 'nowrap' }}>
+                        € {parseFloat(form.late_checkout_fee).toFixed(2)}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
