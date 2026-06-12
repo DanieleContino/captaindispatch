@@ -435,7 +435,9 @@ function stayComputedCosts(stay) {
   const rateV = rateNV > 0 && vatPct != null ? rateNV * (1 + vatPct / 100) : (rateNV > 0 ? rateNV * 1.10 : 0)
   const tv   = rateV > 0 && ngts > 0 ? rateV * ngts : (parseFloat(stay.total_cost_vat) || 0)
   const ct   = ctN != null && ngts > 0 ? ctN * ngts : (parseFloat(stay.city_tax_total) || 0)
-  return { nv, tv, ct }
+  const eciF = stay.early_checkin ? (parseFloat(stay.early_checkin_fee) || 0) : 0
+  const lcoF = stay.late_checkout  ? (parseFloat(stay.late_checkout_fee)  || 0) : 0
+  return { nv: nv + eciF + lcoF, tv: tv + eciF + lcoF, ct }
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
