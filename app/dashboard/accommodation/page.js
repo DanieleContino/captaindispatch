@@ -441,7 +441,7 @@ function stayComputedCosts(stay) {
 }
 
 // ─── CalendarView ──────────────────────────────────────────────
-function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {}, warningsMap = {}, setWarningModal }) {
+function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, subgroupsByHotel, hotels, showCosts, stickyTop, roommateMap = {}, warningsMap = {}, setWarningModal, onExtrasClick }) {
   const NAME_W        = 180
   const ROLE_W        = 100
   const DEPT_W        = 90
@@ -685,7 +685,16 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                         <td style={{ ...cellSt, color: '#7c3aed' }}>{fmtE(vata)}</td>
                         <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.po_number      || dash}</td>
                         <td style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>{stay.invoice_number || dash}</td>
-                        <td style={{ ...cellSt, color: '#15803d', fontWeight: '800' }}>{(() => {
+                        <td
+                          onClick={() => {
+                            const eciF = stay.early_checkin ? (parseFloat(stay.early_checkin_fee) || 0) : 0
+                            const lcoF = stay.late_checkout  ? (parseFloat(stay.late_checkout_fee)  || 0) : 0
+                            if (eciF + lcoF > 0) onExtrasClick(stay)
+                          }}
+                          style={{ ...cellSt, color: '#15803d', fontWeight: '800', cursor: 'pointer' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(21,128,61,0.08)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '' }}
+                        >{(() => {
                           const eciF = stay.early_checkin ? (parseFloat(stay.early_checkin_fee) || 0) : 0
                           const lcoF = stay.late_checkout  ? (parseFloat(stay.late_checkout_fee)  || 0) : 0
                           const tot = eciF + lcoF
