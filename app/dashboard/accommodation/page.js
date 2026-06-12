@@ -2525,7 +2525,6 @@ export default function AccommodationPage() {
             style={{ border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', fontSize: '13px', fontWeight: '700', color: '#0f172a', background: 'white', cursor: 'pointer', minWidth: 0 }} />
           <div style={{ width: '1px', height: '18px', background: '#e2e8f0', flexShrink: 0 }} />
           <button onClick={resetWindow} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #86efac', background: '#f0fdf4', color: '#15803d', fontSize: '11px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}>↺ Reset</button>
-          <button onClick={setFullPeriod} style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>Full period</button>
         </div>
 
         {/* View toggle + Columns + Cost Report */}
