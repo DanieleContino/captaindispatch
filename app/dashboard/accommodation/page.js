@@ -2946,7 +2946,12 @@ export default function AccommodationPage() {
       </div>
 
       <div className="no-print">
-        <AccommodationColumnsEditorSidebar open={columnsEditorOpen} onClose={() => setColumnsEditorOpen(false)} onChanged={loadColumnsConfig} />
+        <AccommodationColumnsEditorSidebar
+          open={columnsEditorOpen}
+          onClose={() => setColumnsEditorOpen(false)}
+          viewType={viewMode === 'calendar' && showCosts ? 'calendar_cost' : 'list'}
+          onChanged={() => { loadColumnsConfig(); loadCostColsConfig() }}
+        />
         <StaySidebar open={sidebarOpen} mode={sidebarMode} initial={sidebarTarget} onClose={() => setSidebarOpen(false)} onSaved={handleStaySaved} onDeleted={handleStayDeleted} hotels={hotels} currentUser={user ? { id: user.id, name: user.user_metadata?.full_name || user.email, role: userRole } : null} colorLegend={colorLegend} onRoommateChanged={() => loadData(windowStart, windowEnd)} />
         <SubgroupManagerSidebar
           open={subgroupSidebarOpen}
