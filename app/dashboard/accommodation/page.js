@@ -1675,6 +1675,54 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
               </div>
             )}
 
+            {/* Early check-in / Late check-out */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+              {/* Early check-in */}
+              <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151' }}>
+                    <input type="checkbox" checked={form.early_checkin} onChange={e => set('early_checkin', e.target.checked)}
+                      style={{ width: '14px', height: '14px', accentColor: '#15803d', cursor: 'pointer' }} />
+                    🕐 Early check-in
+                  </label>
+                  {hotelDefaultTimes.checkin && (
+                    <span style={{ fontSize: '10px', color: '#64748b', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '999px', padding: '1px 7px' }}>
+                      hotel default {hotelDefaultTimes.checkin.slice(0, 5)}
+                    </span>
+                  )}
+                </div>
+                {form.early_checkin && (
+                  <div style={{ marginTop: '8px' }}>
+                    <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '3px' }}>Actual check-in time</label>
+                    <input type="time" value={form.actual_checkin_time || ''} onChange={e => set('actual_checkin_time', e.target.value || null)}
+                      style={{ width: '140px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white' }} />
+                  </div>
+                )}
+              </div>
+              {/* Late check-out */}
+              <div style={{ padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: '#374151' }}>
+                    <input type="checkbox" checked={form.late_checkout} onChange={e => set('late_checkout', e.target.checked)}
+                      style={{ width: '14px', height: '14px', accentColor: '#15803d', cursor: 'pointer' }} />
+                    🕐 Late check-out
+                  </label>
+                  {hotelDefaultTimes.checkout && (
+                    <span style={{ fontSize: '10px', color: '#64748b', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '999px', padding: '1px 7px' }}>
+                      hotel default {hotelDefaultTimes.checkout.slice(0, 5)}
+                    </span>
+                  )}
+                </div>
+                {form.late_checkout && (
+                  <div style={{ marginTop: '8px' }}>
+                    <label style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '3px' }}>Actual check-out time</label>
+                    <input type="time" value={form.actual_checkout_time || ''} onChange={e => set('actual_checkout_time', e.target.value || null)}
+                      style={{ width: '140px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', color: '#0f172a', background: 'white' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Roommate + Family info box — only in new mode */}
             {mode === 'new' && (
               <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
