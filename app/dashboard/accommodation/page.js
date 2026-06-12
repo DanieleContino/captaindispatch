@@ -467,9 +467,9 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
     { key: 'tot_vat',       label: 'TOT W.VAT',       width: TOTVAT_W },
     { key: 'tot_vat_tax',   label: 'Tot. + City Tax', width: TOTVAT_TX_W },
     { key: 'vat_amt',       label: 'TOT VAT',         width: VAT_AMT_W },
+    { key: 'extras',        label: 'Extras',          width: 80 },
     { key: 'po',            label: 'P.O.',            width: PO_W },
     { key: 'inv',           label: 'N°Fatt.',         width: INV_W },
-    { key: 'extras',        label: 'Extras',          width: 80 },
   ] : []
   const totalWidth = NAME_W + ROLE_W + DEPT_W + days.length * DAY_W + NIGHT_W + ROOM_W + costCols.reduce((s, c) => s + c.width, 0)
 
