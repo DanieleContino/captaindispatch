@@ -17,6 +17,7 @@ import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
 import { AccommodationColumnsEditorSidebar } from '../../../lib/AccommodationColumnsEditorSidebar'
 import { ACCOMMODATION_DEFAULT_PRESET } from '../../../lib/accommodationColumnsCatalog'
+import ExtrasModal from './_components/ExtrasModal'
 import { computeCrewWarnings } from '../../../lib/tripWarnings'
 import SubgroupManagerSidebar from '../../../lib/SubgroupManagerSidebar'
 
@@ -2883,6 +2884,7 @@ export default function AccommodationPage() {
             onClose={() => setWarningModal(null)}
           />
         )}
+        <ExtrasModal stay={extrasModal} onClose={() => setExtrasModal(null)} />
       </div>
     </div>
   )
