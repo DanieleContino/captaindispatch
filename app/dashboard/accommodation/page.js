@@ -238,6 +238,7 @@ const SELECT_FIELDS = `
   room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
   total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
   room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status, row_color, room_assignment_id,
+  early_checkin, actual_checkin_time, late_checkout, actual_checkout_time,
   crew:crew_id(uuid, display_id, full_name, role, department, person_type),
   hotel:hotel_id(uuid, display_id, name),
   subgroup:subgroup_id(id, name),
@@ -355,6 +356,27 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
     }
     case 'notes':
       return <NotesCell key={field} notesEntry={stayNotesMap ? (stayNotesMap[stay.id] || null) : null} unreadCount={stayUnreadMap ? (stayUnreadMap[stay.id] || 0) : 0} onClick={() => onEditRow(stay, 'notes')} />
+    case 'extras': {
+      const hasEarlyCI = stay.early_checkin && stay.actual_checkin_time
+      const hasLateCO  = stay.late_checkout && stay.actual_checkout_time
+      if (!hasEarlyCI && !hasLateCO) return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
+      return (
+        <td key={field} style={{ padding: '7px 10px' }}>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {hasEarlyCI && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', whiteSpace: 'nowrap' }}>
+                🕐 early in {stay.actual_checkin_time.slice(0, 5)}
+              </span>
+            )}
+            {hasLateCO && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba74', whiteSpace: 'nowrap' }}>
+                🕐 late out {stay.actual_checkout_time.slice(0, 5)}
+              </span>
+            )}
+          </div>
+        </td>
+      )
+    }
     case 'cost_per_night':
       return <ClickableCell key={field} value={stay.cost_per_night != null ? `€${stay.cost_per_night}` : null} onClick={() => onEditRow(stay, 'cost_per_night')} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }} />
     case 'city_tax_total':
