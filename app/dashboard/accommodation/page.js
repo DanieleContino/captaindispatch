@@ -2722,6 +2722,7 @@ export default function AccommodationPage() {
               warningsMap={warningsMap}
               setWarningModal={setWarningModal}
               onExtrasClick={setExtrasModal}
+              costColsConfig={costColsConfig}
             />
           </div>
         ) : (
