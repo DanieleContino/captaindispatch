@@ -809,26 +809,12 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                   {showCosts && (() => {
                     const totals = hotelStays.reduce((acc, st) => {
                       const c = stayComputedCosts(st)
-                      return { nv: acc.nv + c.nv, tv: acc.tv + c.tv, ct: acc.ct + c.ct }
-                    }, { nv: 0, tv: 0, ct: 0 })
-                    const { nv, tv, ct } = totals
-                    const f  = (v) => v > 0 ? `€${v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''
+                      const eciF = st.early_checkin ? (parseFloat(st.early_checkin_fee) || 0) : 0
+                      const lcoF = st.late_checkout  ? (parseFloat(st.late_checkout_fee)  || 0) : 0
+                      return { nv: acc.nv + c.nv, tv: acc.tv + c.tv, ct: acc.ct + c.ct, extras: acc.extras + eciF + lcoF }
+                    }, { nv: 0, tv: 0, ct: 0, extras: 0 })
                     const cs = { padding: '5px 6px', fontSize: '10px', fontWeight: '900', textAlign: 'right', fontFamily: 'monospace', color: 'white', background: '#14532d', borderLeft: '1px solid #166534', whiteSpace: 'nowrap' }
-                    return (
-                      <>
-                        <td style={cs}>{f(ct)}</td>
-                        <td style={cs} />
-                        <td style={cs}>{f(nv)}</td>
-                        <td style={cs}>{f(nv + ct)}</td>
-                        <td style={cs} />
-                        <td style={cs}>{f(tv)}</td>
-                        <td style={cs}>{f(tv + ct)}</td>
-                    <td style={cs}>{f(tv - nv)}</td>
-                    <td style={cs}>{f(hotelStays.reduce((sum, st) => sum + (st.early_checkin ? (parseFloat(st.early_checkin_fee) || 0) : 0) + (st.late_checkout ? (parseFloat(st.late_checkout_fee) || 0) : 0), 0))}</td>
-                    <td style={cs} />
-                    <td style={cs} />
-                      </>
-                    )
+                    return costColsConfig.map(col => renderCostTotalCell(col.source_field, totals, cs))
                   })()}
                 </tr>
               </React.Fragment>
