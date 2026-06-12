@@ -2136,12 +2136,13 @@ export default function AccommodationPage() {
     finally { setApplyingPreset(false) }
   }
 
-  function setRange(start, end) {
+  function setRange(start, end, userId) {
     setWindowStart(start)
     setWindowEnd(end)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('accom_window_start', start)
-      localStorage.setItem('accom_window_end', end)
+    const uid = userId || user?.id
+    if (typeof window !== 'undefined' && uid) {
+      localStorage.setItem(`accom_range_${uid}_start`, start)
+      localStorage.setItem(`accom_range_${uid}_end`, end)
     }
   }
   async function resetWindow() {
