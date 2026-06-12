@@ -16,7 +16,7 @@ import { generateDisplayId } from '../../../lib/generateDisplayId'
 import { useIsMobile } from '../../../lib/useIsMobile'
 import NotesPanel from '../../../lib/NotesPanel'
 import { AccommodationColumnsEditorSidebar } from '../../../lib/AccommodationColumnsEditorSidebar'
-import { ACCOMMODATION_DEFAULT_PRESET } from '../../../lib/accommodationColumnsCatalog'
+import { ACCOMMODATION_DEFAULT_PRESET, CALENDAR_COST_DEFAULT_PRESET } from '../../../lib/accommodationColumnsCatalog'
 import ExtrasModal from './_components/ExtrasModal'
 import { computeCrewWarnings } from '../../../lib/tripWarnings'
 import SubgroupManagerSidebar from '../../../lib/SubgroupManagerSidebar'
@@ -2127,7 +2127,14 @@ export default function AccommodationPage() {
   const loadCostColsConfig = useCallback(async () => {
     if (!PRODUCTION_ID) return
     const { data } = await supabase.from('accommodation_columns').select('*').eq('production_id', PRODUCTION_ID).eq('view_type', 'calendar_cost').order('display_order', { ascending: true }).order('created_at', { ascending: true })
-    setCostColsConfig(data || [])
+    if (!data || data.length === 0) {
+      const rows = CALENDAR_COST_DEFAULT_PRESET.map(p => ({ ...p, production_id: PRODUCTION_ID }))
+      await supabase.from('accommodation_columns').insert(rows)
+      const { data: fresh } = await supabase.from('accommodation_columns').select('*').eq('production_id', PRODUCTION_ID).eq('view_type', 'calendar_cost').order('display_order', { ascending: true }).order('created_at', { ascending: true })
+      setCostColsConfig(fresh || [])
+    } else {
+      setCostColsConfig(data)
+    }
   }, [PRODUCTION_ID])
 
   async function applyDefaultPreset() {
