@@ -69,7 +69,7 @@ function GrandTotalRow({ label, row }) {
       <td style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '900', color: 'white' }}>{label}</td>
       {[row.tot_no_vat, row.tot_vat, row.city_tax, row.vat, row.tot_nights, row.extras].map((v, i) => (
         <td key={i} style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '900', fontFamily: 'monospace', color: 'white', textAlign: 'right' }}>
-          {i < 4 ? fmt(v) : fmtN(v)}
+          {i === 4 ? fmtN(v) : fmt(v)}
         </td>
       ))}
     </tr>
