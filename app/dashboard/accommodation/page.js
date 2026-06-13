@@ -274,7 +274,7 @@ function ClickableCell({ value, onClick, style, emptyLabel = '—' }) {
 }
 
 // ─── renderCell — data-driven ──────────────────────────────────
-function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal }) {
+function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal, onExtrasClick }) {
   const field = col.source_field
   switch (field) {
     case 'full_name':
