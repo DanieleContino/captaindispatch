@@ -237,7 +237,7 @@ function NotesCell({ notesEntry, unreadCount = 0, onClick }) {
 // ─── SELECT_FIELDS ─────────────────────────────────────────────
 const SELECT_FIELDS = `
   id, production_id, crew_id, hotel_id, arrival_date, departure_date,
-  room_type_notes, cost_per_night, city_tax_total, total_cost_no_vat,
+  cost_per_night, city_tax_total, total_cost_no_vat,
   total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
   room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status, row_color, room_assignment_id,
   early_checkin, actual_checkin_time, late_checkout, actual_checkout_time, early_checkin_fee, late_checkout_fee,
@@ -251,7 +251,7 @@ const SELECT_FIELDS = `
 const EMPTY_STAY = {
   id: null, crew_id: null, hotel_id: '', arrival_date: '', departure_date: '',
   subgroup_id: null, room_type_id: null, rate_override: false,
-  room_type_notes: '', cost_per_night: '', city_tax_total: '',
+  cost_per_night: '', city_tax_total: '',
   total_cost_no_vat: '', total_cost_vat: '', po_number: '', invoice_number: '',
   hotel_status: 'PENDING',
   row_color: null,
