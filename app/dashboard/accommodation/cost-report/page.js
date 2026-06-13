@@ -333,32 +333,72 @@ export default function CostReportPage() {
 
         ) : (
           <>
-            {/* ATL Section */}
-            <SectionTable
-              title="ATL — Above The Line (Cast & Producers)"
-              tableRows={atlRows}
-              total={atlTotal}
-              borderColor="#15803d"
-            />
-
-            {/* BTL Section */}
-            <SectionTable
-              title="BTL — Below The Line (Crew)"
-              tableRows={btlRows}
-              total={btlTotal}
-              borderColor="#1d4ed8"
-            />
-
-            {/* Grand Total */}
-            {stays.length > 0 && (
-              <div style={{ overflowX: 'auto', marginTop: '4px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px', border: '2px solid #0f2340', borderRadius: '10px', overflow: 'hidden' }}>
-                  <tbody>
-                    <GrandTotalRow label="GRAND TOTAL" row={grandTotal} />
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc' }}>
+                    {COL_HEADERS.map((h, i) => (
+                      <th key={h} style={{
+                        padding: '8px 14px', fontSize: '10px', fontWeight: '800',
+                        color: '#64748b', textAlign: i === 0 ? 'left' : 'right',
+                        letterSpacing: '0.06em', textTransform: 'uppercase',
+                        borderBottom: '2px solid #e2e8f0',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* ATL section header */}
+                  <tr style={{ background: '#f0fdf4', borderTop: '1px solid #86efac' }}>
+                    <td colSpan={7} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '900', color: '#14532d', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid #86efac' }}>
+                      ATL — Above The Line (Cast &amp; Producers)
+                    </td>
+                  </tr>
+                  {atlRows.map((r, i) => (
+                    <DataRow key={`atl-${i}`} label={r.label} row={r.row} indent={r.indent} isSubtotal={r.isSubtotal} isHotelTotal={r.isHotelTotal} />
+                  ))}
+                  {/* TOT. ATL */}
+                  <tr style={{ background: '#dcfce7', borderTop: '2px solid #15803d' }}>
+                    <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '900', color: '#0f172a' }}>TOT. ATL</td>
+                    {[atlTotal.tot_no_vat, atlTotal.tot_vat, atlTotal.city_tax, atlTotal.vat, atlTotal.tot_nights, atlTotal.extras].map((v, i) => (
+                      <td key={i} style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '900', fontFamily: 'monospace', color: i === 5 ? '#15803d' : '#0f172a', textAlign: 'right' }}>
+                        {i === 4 ? fmtN(v) : fmt(v)}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* BTL section header */}
+                  <tr style={{ background: '#eff6ff', borderTop: '2px solid #e2e8f0' }}>
+                    <td colSpan={7} style={{ padding: '7px 14px', fontSize: '12px', fontWeight: '900', color: '#1e3a8a', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid #bfdbfe' }}>
+                      BTL — Below The Line (Crew)
+                    </td>
+                  </tr>
+                  {btlRows.map((r, i) => (
+                    <DataRow key={`btl-${i}`} label={r.label} row={r.row} indent={r.indent} isSubtotal={r.isSubtotal} isHotelTotal={r.isHotelTotal} />
+                  ))}
+                  {/* TOT. BTL */}
+                  <tr style={{ background: '#dbeafe', borderTop: '2px solid #1d4ed8' }}>
+                    <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '900', color: '#0f172a' }}>TOT. BTL</td>
+                    {[btlTotal.tot_no_vat, btlTotal.tot_vat, btlTotal.city_tax, btlTotal.vat, btlTotal.tot_nights, btlTotal.extras].map((v, i) => (
+                      <td key={i} style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '900', fontFamily: 'monospace', color: i === 5 ? '#15803d' : '#0f172a', textAlign: 'right' }}>
+                        {i === 4 ? fmtN(v) : fmt(v)}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* GRAND TOTAL */}
+                  <tr style={{ background: '#0f2340' }}>
+                    <td style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '900', color: 'white' }}>GRAND TOTAL</td>
+                    {[grandTotal.tot_no_vat, grandTotal.tot_vat, grandTotal.city_tax, grandTotal.vat, grandTotal.tot_nights, grandTotal.extras].map((v, i) => (
+                      <td key={i} style={{ padding: '10px 14px', fontSize: '13px', fontWeight: '900', fontFamily: 'monospace', color: 'white', textAlign: 'right' }}>
+                        {i === 4 ? fmtN(v) : fmt(v)}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
 
             {/* Note */}
             <div style={{ marginTop: '20px', padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '11px', color: '#94a3b8' }}>
