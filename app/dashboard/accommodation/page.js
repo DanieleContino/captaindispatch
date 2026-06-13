@@ -400,7 +400,9 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       const roommates = (roommateMap[assignId] || []).filter(r => r.crew_id !== stay.crew_id)
       if (roommates.length === 0) return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
       return (
-        <td key={field} style={{ padding: '7px 10px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+        <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', overflow: 'hidden', whiteSpace: 'nowrap', cursor: 'cell' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             {roommates.map(r => r.is_family ? (
               <span key={r.crew_id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', color: '#92400e', whiteSpace: 'nowrap' }}>
@@ -2833,7 +2835,7 @@ export default function AccommodationPage() {
                                       borderBottom: isShared ? 'none' : '1px solid #e2e8f0',
                                     }}
                                     onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
-                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal }))}</tr>
+                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal, onExtrasClick: setExtrasModal }))}</tr>
                                 )
                               })
                               return rows
