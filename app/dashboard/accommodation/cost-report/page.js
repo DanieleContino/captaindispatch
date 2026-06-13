@@ -270,6 +270,7 @@ export default function CostReportPage() {
   }, [user, loadData])
 
   // ── Aggregation ────────────────────────────────────────────────────────────
+  const ATL_DEPTS = new Set(atlDepts)
   const atlStays = stays.filter(s => ATL_DEPTS.has((s.crew?.department || '').toUpperCase()))
   const btlStays = stays.filter(s => !ATL_DEPTS.has((s.crew?.department || '').toUpperCase()))
 
