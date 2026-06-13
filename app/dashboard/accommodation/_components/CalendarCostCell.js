@@ -30,20 +30,26 @@ function fmtE(v) {
  * Renders a <td> for a data row in renderStayRow.
  * computed = { rateNV, rateV, nv, tv, ct, nv_t, tv_t, vata, eciF, lcoF }
  */
-export function renderCostCell(key, stay, computed, onExtrasClick) {
+export function renderCostCell(key, stay, computed, onExtrasClick, onEditRow) {
   const { rateNV, rateV, nv, tv, ct, nv_t, tv_t, vata, eciF, lcoF } = computed
   const extrasTotal = eciF + lcoF
 
   switch (key) {
     case 'cal_po':
       return (
-        <td key={key} style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>
+        <td key={key} onClick={() => onEditRow && onEditRow(stay, 'po_number')}
+          style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit', cursor: 'pointer' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
           {stay.po_number || dash}
         </td>
       )
     case 'cal_inv':
       return (
-        <td key={key} style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit' }}>
+        <td key={key} onClick={() => onEditRow && onEditRow(stay, 'invoice_number')}
+          style={{ ...cellSt, color: '#0f2340', fontFamily: 'inherit', cursor: 'pointer' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
           {stay.invoice_number || dash}
         </td>
       )
