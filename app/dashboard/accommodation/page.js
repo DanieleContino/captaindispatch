@@ -396,9 +396,9 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       return <ClickableCell key={field} value={stay.invoice_number} onClick={() => onEditRow(stay, 'invoice_number')} style={{ fontSize: '11px', color: '#374151' }} />
     case 'sharing_with': {
       const assignId = stay.room_assignment_id
-      if (!assignId) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'cell' }}>—</td>
+      if (!assignId) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'cell' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }} onMouseLeave={e => { e.currentTarget.style.background = '' }}>—</td>
       const roommates = (roommateMap[assignId] || []).filter(r => r.crew_id !== stay.crew_id)
-      if (roommates.length === 0) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'cell' }}>—</td>
+      if (roommates.length === 0) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'cell' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }} onMouseLeave={e => { e.currentTarget.style.background = '' }}>—</td>
       return (
         <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', overflow: 'hidden', whiteSpace: 'nowrap', cursor: 'cell' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }}
