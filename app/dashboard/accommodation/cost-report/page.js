@@ -269,6 +269,12 @@ export default function CostReportPage() {
     if (user) loadData()
   }, [user, loadData])
 
+  useEffect(() => {
+    if (!PRODUCTION_ID) return
+    supabase.from('productions').select('atl_departments').eq('id', PRODUCTION_ID).single()
+      .then(({ data }) => { if (data?.atl_departments?.length) setAtlDepts(data.atl_departments) })
+  }, [PRODUCTION_ID])
+
   // ── Aggregation ────────────────────────────────────────────────────────────
   const ATL_DEPTS = new Set(atlDepts)
   const atlStays = stays.filter(s => ATL_DEPTS.has((s.crew?.department || '').toUpperCase()))
