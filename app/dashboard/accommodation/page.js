@@ -350,9 +350,10 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       const isCI = stay.arrival_date === today
       return (
         <td key={field} onClick={() => onEditRow(stay, 'arrival_date')}
-          style={{ padding: '7px 10px', fontSize: '11px', cursor: 'pointer', fontWeight: isCI ? '800' : '500', color: isCI ? '#15803d' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          onContextMenu={e => handleCellContextMenu(e, field)}
+          style={{ padding: '7px 10px', fontSize: '11px', cursor: 'pointer', fontWeight: isCI ? '800' : '500', color: isCI ? '#15803d' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: cellBg || undefined }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+          onMouseLeave={e => { e.currentTarget.style.background = cellBg || '' }}>
           {fmtDate(stay.arrival_date)}
         </td>
       )
@@ -361,9 +362,10 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       const isCO = stay.departure_date === today
       return (
         <td key={field} onClick={() => onEditRow(stay, 'departure_date')}
-          style={{ padding: '7px 10px', fontSize: '11px', cursor: 'pointer', fontWeight: isCO ? '800' : '500', color: isCO ? '#dc2626' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          onContextMenu={e => handleCellContextMenu(e, field)}
+          style={{ padding: '7px 10px', fontSize: '11px', cursor: 'pointer', fontWeight: isCO ? '800' : '500', color: isCO ? '#dc2626' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: cellBg || undefined }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+          onMouseLeave={e => { e.currentTarget.style.background = cellBg || '' }}>
           {fmtDate(stay.departure_date)}
         </td>
       )
