@@ -701,7 +701,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     const eciF   = stay.early_checkin ? (parseFloat(stay.early_checkin_fee) || 0) : 0
                     const lcoF   = stay.late_checkout  ? (parseFloat(stay.late_checkout_fee)  || 0) : 0
                     const computed = { rateNV, rateV, nv, tv, ct, nv_t: nv + ct, tv_t: tv + ct, vata: tv - nv, eciF, lcoF }
-                    return costColsConfig.map(col => renderCostCell(col.source_field, stay, computed, onExtrasClick))
+                    return costColsConfig.map(col => renderCostCell(col.source_field, stay, computed, onExtrasClick, onEditRow))
                   })()}
                 </tr>
               )
