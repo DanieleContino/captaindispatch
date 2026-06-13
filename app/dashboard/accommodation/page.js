@@ -262,9 +262,10 @@ const EMPTY_STAY = {
 }
 
 // ─── ClickableCell ─────────────────────────────────────────────
-function ClickableCell({ value, onClick, style, emptyLabel = '—' }) {
+function ClickableCell({ value, onClick, onContextMenu, style, emptyLabel = '—' }) {
   return (
     <td onClick={onClick}
+      onContextMenu={onContextMenu}
       style={{ padding: '7px 10px', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...style }}
       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
       onMouseLeave={e => { e.currentTarget.style.background = style?.background || '' }}>
@@ -343,7 +344,7 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       )
     case 'room_type_notes': {
       const roomLabel = stay.room_type?.name || null
-      return <ClickableCell key={field} value={roomLabel} onClick={() => onEditRow(stay, 'room_type_notes')} style={{ fontSize: '11px', color: '#374151' }} />
+      return <ClickableCell key={field} value={roomLabel} onClick={() => onEditRow(stay, 'room_type_notes')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ fontSize: '11px', color: '#374151', background: cellBg || undefined }} />
     }
     case 'arrival_date': {
       const isCI = stay.arrival_date === today
