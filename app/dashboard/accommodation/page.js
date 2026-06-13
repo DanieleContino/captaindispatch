@@ -1119,6 +1119,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
         actual_checkout_time: initial.actual_checkout_time || '',
         early_checkin_fee:    initial.early_checkin_fee    ?? null,
         late_checkout_fee:    initial.late_checkout_fee    ?? null,
+        cell_colors:          initial.cell_colors          || {},
       })
       setCrewSearch(initial.crew?.full_name || '')
       setCrewResults([])
@@ -1441,6 +1442,7 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
       actual_checkout_time: form.actual_checkout_time || null,
       early_checkin_fee:    form.early_checkin ? (form.early_checkin_fee ?? null) : null,
       late_checkout_fee:    form.late_checkout  ? (form.late_checkout_fee  ?? null) : null,
+      cell_colors:          form.cell_colors || {},
     }
   }
 
