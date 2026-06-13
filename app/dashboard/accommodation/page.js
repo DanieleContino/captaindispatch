@@ -240,7 +240,7 @@ const SELECT_FIELDS = `
   cost_per_night, city_tax_total, total_cost_no_vat,
   total_cost_vat, po_number, invoice_number, created_at, subgroup_id,
   room_type_id, rate_override, cost_per_night_vat, vat_pct, hotel_status, row_color, room_assignment_id,
-  early_checkin, actual_checkin_time, late_checkout, actual_checkout_time, early_checkin_fee, late_checkout_fee,
+  early_checkin, actual_checkin_time, late_checkout, actual_checkout_time, early_checkin_fee, late_checkout_fee, cell_colors,
   crew:crew_id(uuid, display_id, full_name, role, department, person_type),
   hotel:hotel_id(uuid, display_id, name),
   subgroup:subgroup_id(id, name),
@@ -258,7 +258,7 @@ const EMPTY_STAY = {
   room_assignment_id: null,
   early_checkin: false, actual_checkin_time: '',
   late_checkout: false, actual_checkout_time: '',
-  early_checkin_fee: null, late_checkout_fee: null,
+  early_checkin_fee: null, late_checkout_fee: null, cell_colors: {},
 }
 
 // ─── ClickableCell ─────────────────────────────────────────────
