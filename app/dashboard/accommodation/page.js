@@ -2041,6 +2041,15 @@ export default function AccommodationPage() {
     setStays(prev => prev.map(s => s.id === stayId ? { ...s, row_color: color } : s))
   }
 
+  async function handleCellColorChange(stayId, field, color) {
+    const stay = stays.find(s => s.id === stayId)
+    if (!stay) return
+    const newCellColors = { ...(stay.cell_colors || {}), [field]: color || undefined }
+    if (!color) delete newCellColors[field]
+    await supabase.from('crew_stays').update({ cell_colors: newCellColors }).eq('id', stayId)
+    setStays(prev => prev.map(s => s.id === stayId ? { ...s, cell_colors: newCellColors } : s))
+  }
+
   function showToast(message, type = 'success') {
     setToast({ message, type })
     setTimeout(() => setToast(null), 2500)
@@ -2869,7 +2878,7 @@ export default function AccommodationPage() {
                                       borderBottom: isShared ? 'none' : '1px solid #e2e8f0',
                                     }}
                                     onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
-                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal, onExtrasClick: setExtrasModal }))}</tr>
+                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal, onExtrasClick: setExtrasModal, onCellColorChange: handleCellColorChange }))}</tr>
                                 )
                               })
                               return rows
