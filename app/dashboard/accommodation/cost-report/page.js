@@ -124,9 +124,9 @@ function SectionTable({ title, tableRows, total, borderColor }) {
               <td style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '900', color: '#0f172a' }}>
                 TOT. {title.split('—')[0].trim()}
               </td>
-              {[total.tot_no_vat, total.tot_vat, total.city_tax, total.vat, total.tot_nights].map((v, i) => (
-                <td key={i} style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '900', fontFamily: 'monospace', color: '#0f172a', textAlign: 'right' }}>
-                  {i < 4 ? fmt(v) : fmtN(v)}
+              {[total.tot_no_vat, total.tot_vat, total.city_tax, total.vat, total.tot_nights, total.extras].map((v, i) => (
+                <td key={i} style={{ padding: '8px 14px', fontSize: '12px', fontWeight: '900', fontFamily: 'monospace', color: i === 5 ? '#15803d' : '#0f172a', textAlign: 'right' }}>
+                  {i === 4 ? fmtN(v) : fmt(v)}
                 </td>
               ))}
             </tr>
