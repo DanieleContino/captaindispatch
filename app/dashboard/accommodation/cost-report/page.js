@@ -15,9 +15,7 @@ import { supabase } from '../../../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getProductionId } from '../../../../lib/production'
 import { useIsMobile } from '../../../../lib/useIsMobile'
-
-// ATL departments — Above The Line
-const ATL_DEPTS = new Set(['CAST', 'PRODUCERS'])
+import AtlBtlSidebar from './_components/AtlBtlSidebar'
 
 function fmt(n) {
   if (n == null || n === 0) return '—'
@@ -237,6 +235,8 @@ export default function CostReportPage() {
   const [user,    setUser]    = useState(null)
   const [stays,   setStays]   = useState([])
   const [loading, setLoading] = useState(true)
+  const [atlDepts, setAtlDepts] = useState(['CAST', 'PRODUCERS'])
+  const [atlSidebarOpen, setAtlSidebarOpen] = useState(false)
 
   // Auth
   useEffect(() => {
