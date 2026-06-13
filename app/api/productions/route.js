@@ -1,4 +1,4 @@
-/**
+﻿/**
  * /api/productions
  * GET  → list productions the user has access to (via user_roles)
  * POST → create new production + assign CAPTAIN role to current user
@@ -17,7 +17,7 @@ const PROD_FIELDS = `
   transportation_captain, transportation_captain_phone,
   production_office_phone,
   set_location, set_address, basecamp,
-  general_call_time, shoot_day, revision,
+  general_call_time, shoot_day, revision, atl_departments,
   created_at
 `.trim()
 
@@ -177,6 +177,7 @@ export async function PATCH(req) {
     textFields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]?.trim() || null })
     if (body.shoot_day !== undefined) updates.shoot_day = body.shoot_day || null
     if (body.revision  !== undefined) updates.revision  = body.revision  || 1
+    if (body.atl_departments !== undefined) updates.atl_departments = body.atl_departments
 
     const { data, error } = await supabase
       .from('productions')
