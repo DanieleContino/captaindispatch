@@ -364,7 +364,7 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       const hasLateCO  = stay.late_checkout && stay.actual_checkout_time
       if (!hasEarlyCI && !hasLateCO) return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
       return (
-        <td key={field} onClick={() => onExtrasClick && onExtrasClick(stay)} style={{ padding: '7px 10px', cursor: 'cell' }}
+        <td key={field} onClick={() => onExtrasClick && onExtrasClick(stay)} style={{ padding: '7px 10px', cursor: 'pointer' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }}
           onMouseLeave={e => { e.currentTarget.style.background = '' }}>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -396,11 +396,11 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       return <ClickableCell key={field} value={stay.invoice_number} onClick={() => onEditRow(stay, 'invoice_number')} style={{ fontSize: '11px', color: '#374151' }} />
     case 'sharing_with': {
       const assignId = stay.room_assignment_id
-      if (!assignId) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'cell' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }} onMouseLeave={e => { e.currentTarget.style.background = '' }}>—</td>
+      if (!assignId) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }} onMouseLeave={e => { e.currentTarget.style.background = '' }}>—</td>
       const roommates = (roommateMap[assignId] || []).filter(r => r.crew_id !== stay.crew_id)
-      if (roommates.length === 0) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'cell' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }} onMouseLeave={e => { e.currentTarget.style.background = '' }}>—</td>
+      if (roommates.length === 0) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }} onMouseLeave={e => { e.currentTarget.style.background = '' }}>—</td>
       return (
-        <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', overflow: 'hidden', whiteSpace: 'nowrap', cursor: 'cell' }}
+        <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', overflow: 'hidden', whiteSpace: 'nowrap', cursor: 'pointer' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }}
           onMouseLeave={e => { e.currentTarget.style.background = '' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
