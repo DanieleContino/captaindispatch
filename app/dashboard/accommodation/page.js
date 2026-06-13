@@ -1814,11 +1814,6 @@ function StaySidebar({ open, mode, initial, onClose, onSaved, onDeleted, current
               </div>
             </div>
 
-            {/* Room / Notes */}
-            <div style={rowSt}>
-              <label style={lbl}>Room / Notes</label>
-              <input value={form.room_type_notes} onChange={e => set('room_type_notes', e.target.value)} style={inp} placeholder="Room type, number, preferences..." />
-            </div>
 
             {/* Room Type + Cost */}
             <div style={{ marginBottom: '12px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
