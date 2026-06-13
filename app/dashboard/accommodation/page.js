@@ -302,7 +302,7 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
         </td>
       )
     case 'room_type_notes': {
-      const roomLabel = stay.room_type?.name || stay.room_type_notes || null
+      const roomLabel = stay.room_type?.name || null
       return <ClickableCell key={field} value={roomLabel} onClick={() => onEditRow(stay, 'room_type_notes')} style={{ fontSize: '11px', color: '#374151' }} />
     }
     case 'arrival_date': {
@@ -638,7 +638,7 @@ function CalendarView({ groupedByHotel, sortedHotels, days, today, onEditRow, su
                     style={{ padding: '5px 8px', fontSize: '10px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderLeft: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = '' }}>
-                    {stay.room_type_notes || <span style={{ color: '#cbd5e1' }}>—</span>}
+                    {stay.room_type?.name || <span style={{ color: '#cbd5e1' }}>—</span>}
                   </td>
                   {showCosts && (() => {
                     const rt     = stay.room_type || null
