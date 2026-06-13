@@ -274,15 +274,47 @@ function ClickableCell({ value, onClick, style, emptyLabel = '—' }) {
 }
 
 // ─── renderCell — data-driven ──────────────────────────────────
-function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal, onExtrasClick }) {
+function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal, onExtrasClick, onCellColorChange }) {
   const field = col.source_field
+  const cellBg = stay.cell_colors?.[field] || ''
+  function handleCellContextMenu(e, field) {
+    e.preventDefault()
+    e.stopPropagation()
+    const existing = stay.cell_colors?.[field] || null
+    // Crea popover inline
+    const old = document.getElementById('cell-color-picker')
+    if (old) old.remove()
+    const palette = [null, '#bbf7d0', '#fde68a', '#fca5a5', '#93c5fd', '#f9a8d4', '#d8b4fe', '#fdba74', '#e2e8f0']
+    const picker = document.createElement('div')
+    picker.id = 'cell-color-picker'
+    picker.style.cssText = 'position:fixed;z-index:999;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);display:flex;flex-direction:column;gap:6px;'
+    picker.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px'
+    picker.style.top = Math.min(e.clientY, window.innerHeight - 120) + 'px'
+    const row = document.createElement('div')
+    row.style.cssText = 'display:flex;gap:6px;align-items:center;'
+    palette.forEach(color => {
+      const btn = document.createElement('button')
+      btn.style.cssText = `width:22px;height:22px;border-radius:5px;border:${color === existing ? '2px solid #0f2340' : '1px solid rgba(0,0,0,0.15)'};background:${color || 'white'};cursor:pointer;padding:0;flex-shrink:0;`
+      btn.title = color || 'Remove color'
+      btn.innerHTML = color === null ? '✕' : ''
+      btn.style.fontSize = '10px'
+      btn.style.color = '#94a3b8'
+      btn.onclick = () => { picker.remove(); onCellColorChange && onCellColorChange(stay.id, field, color) }
+      row.appendChild(btn)
+    })
+    picker.appendChild(row)
+    document.body.appendChild(picker)
+    const close = (ev) => { if (!picker.contains(ev.target)) { picker.remove(); document.removeEventListener('mousedown', close) } }
+    setTimeout(() => document.addEventListener('mousedown', close), 0)
+  }
   switch (field) {
     case 'full_name':
       return (
         <td key={field} onClick={() => onEditRow(stay, 'full_name')}
-          style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          onContextMenu={e => handleCellContextMenu(e, field)}
+          style={{ padding: '7px 10px', fontSize: '12px', fontWeight: '700', color: '#0f172a', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: cellBg || undefined }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+          onMouseLeave={e => { e.currentTarget.style.background = cellBg || '' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
             {stay.crew?.full_name || '—'}
             {warningsMap && stay.crew_id && (warningsMap[stay.crew_id] || []).length > 0 && (
