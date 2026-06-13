@@ -2885,7 +2885,7 @@ export default function AccommodationPage() {
                                       borderTop: 'none',
                                       borderBottom: isShared ? 'none' : '1px solid #e2e8f0',
                                     }}
-                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal, onExtrasClick: setExtrasModal, onCellColorChange: handleCellColorChange }))}</tr>
+                                   >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal, onExtrasClick: setExtrasModal, onCellColorChange: handleCellColorChange, colorLegend }))}</tr>
                                 )
                               })
                               return rows
