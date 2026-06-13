@@ -364,7 +364,9 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       const hasLateCO  = stay.late_checkout && stay.actual_checkout_time
       if (!hasEarlyCI && !hasLateCO) return <td key={field} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1' }}>—</td>
       return (
-        <td key={field} style={{ padding: '7px 10px' }}>
+        <td key={field} onClick={() => onExtrasClick && onExtrasClick(stay)} style={{ padding: '7px 10px', cursor: 'cell' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {hasEarlyCI && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', whiteSpace: 'nowrap' }}>
