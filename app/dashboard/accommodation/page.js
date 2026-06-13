@@ -2877,7 +2877,6 @@ export default function AccommodationPage() {
                                       borderTop: 'none',
                                       borderBottom: isShared ? 'none' : '1px solid #e2e8f0',
                                     }}
-                                    onContextMenu={e => { e.preventDefault(); const color = prompt('Scegli colore (hex) o lascia vuoto per rimuovere:\n' + ACCOMMODATION_PALETTE.filter(Boolean).map(c => `${c} = ${colorLegend[c] || c}`).join('\n')); if (color !== null) handleRowColorChange(stay.id, color || null) }}
                                    >{columnsConfig.map(col => renderCell(col, stay, { onEditRow: openEdit, stayNotesMap, stayUnreadMap, today, roommateMap, warningsMap, setWarningModal, onExtrasClick: setExtrasModal, onCellColorChange: handleCellColorChange }))}</tr>
                                 )
                               })
