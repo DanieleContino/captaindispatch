@@ -307,11 +307,21 @@ export default function CostReportPage() {
           Cost Report
         </span>
         <div style={{ flex: 1 }} />
+        <button onClick={() => setAtlSidebarOpen(true)}
+          style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
+          ⚙ ATL/BTL
+        </button>
         <button onClick={loadData}
           style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '5px 10px', cursor: 'pointer', fontSize: '13px', color: '#374151' }}>
           ↺
         </button>
       </div>
+      <AtlBtlSidebar
+        open={atlSidebarOpen}
+        atlDepts={atlDepts}
+        onClose={() => setAtlSidebarOpen(false)}
+        onSaved={(newDepts) => { setAtlDepts(newDepts); setAtlSidebarOpen(false) }}
+      />
 
       {/* Content */}
       <div style={{ padding: isMobile ? '12px' : '16px 24px' }}>
