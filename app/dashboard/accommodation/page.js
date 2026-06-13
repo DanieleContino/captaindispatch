@@ -427,26 +427,26 @@ function renderCell(col, stay, { onEditRow, stayNotesMap, stayUnreadMap, today, 
       )
     }
     case 'cost_per_night':
-      return <ClickableCell key={field} value={stay.cost_per_night != null ? `€${stay.cost_per_night}` : null} onClick={() => onEditRow(stay, 'cost_per_night')} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }} />
+      return <ClickableCell key={field} value={stay.cost_per_night != null ? `€${stay.cost_per_night}` : null} onClick={() => onEditRow(stay, 'cost_per_night')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace', background: cellBg || undefined }} />
     case 'city_tax_total':
-      return <ClickableCell key={field} value={stay.city_tax_total != null ? `€${stay.city_tax_total}` : null} onClick={() => onEditRow(stay, 'city_tax_total')} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }} />
+      return <ClickableCell key={field} value={stay.city_tax_total != null ? `€${stay.city_tax_total}` : null} onClick={() => onEditRow(stay, 'city_tax_total')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace', background: cellBg || undefined }} />
     case 'total_cost_no_vat':
-      return <ClickableCell key={field} value={stay.total_cost_no_vat != null ? `€${stay.total_cost_no_vat}` : null} onClick={() => onEditRow(stay, 'total_cost_no_vat')} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }} />
+      return <ClickableCell key={field} value={stay.total_cost_no_vat != null ? `€${stay.total_cost_no_vat}` : null} onClick={() => onEditRow(stay, 'total_cost_no_vat')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace', background: cellBg || undefined }} />
     case 'total_cost_vat':
-      return <ClickableCell key={field} value={stay.total_cost_vat != null ? `€${stay.total_cost_vat}` : null} onClick={() => onEditRow(stay, 'total_cost_vat')} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace' }} />
+      return <ClickableCell key={field} value={stay.total_cost_vat != null ? `€${stay.total_cost_vat}` : null} onClick={() => onEditRow(stay, 'total_cost_vat')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ fontSize: '11px', color: '#374151', fontFamily: 'monospace', background: cellBg || undefined }} />
     case 'po_number':
-      return <ClickableCell key={field} value={stay.po_number} onClick={() => onEditRow(stay, 'po_number')} style={{ fontSize: '11px', color: '#374151' }} />
+      return <ClickableCell key={field} value={stay.po_number} onClick={() => onEditRow(stay, 'po_number')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ fontSize: '11px', color: '#374151', background: cellBg || undefined }} />
     case 'invoice_number':
-      return <ClickableCell key={field} value={stay.invoice_number} onClick={() => onEditRow(stay, 'invoice_number')} style={{ fontSize: '11px', color: '#374151' }} />
+      return <ClickableCell key={field} value={stay.invoice_number} onClick={() => onEditRow(stay, 'invoice_number')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ fontSize: '11px', color: '#374151', background: cellBg || undefined }} />
     case 'sharing_with': {
       const assignId = stay.room_assignment_id
-      if (!assignId) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }} onMouseLeave={e => { e.currentTarget.style.background = '' }}>—</td>
+      if (!assignId) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'pointer', background: cellBg || undefined }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }} onMouseLeave={e => { e.currentTarget.style.background = cellBg || '' }}>—</td>
       const roommates = (roommateMap[assignId] || []).filter(r => r.crew_id !== stay.crew_id)
-      if (roommates.length === 0) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'pointer' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }} onMouseLeave={e => { e.currentTarget.style.background = '' }}>—</td>
+      if (roommates.length === 0) return <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ padding: '7px 10px', fontSize: '11px', color: '#cbd5e1', cursor: 'pointer', background: cellBg || undefined }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }} onMouseLeave={e => { e.currentTarget.style.background = cellBg || '' }}>—</td>
       return (
-        <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} style={{ padding: '7px 10px', overflow: 'hidden', whiteSpace: 'nowrap', cursor: 'pointer' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.12)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = '' }}>
+        <td key={field} onClick={() => onEditRow(stay, 'sharing_with')} onContextMenu={e => handleCellContextMenu(e, field)} style={{ padding: '7px 10px', overflow: 'hidden', whiteSpace: 'nowrap', cursor: 'pointer', background: cellBg || undefined }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(37,99,235,0.06)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = cellBg || '' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             {roommates.map(r => r.is_family ? (
               <span key={r.crew_id} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', color: '#92400e', whiteSpace: 'nowrap' }}>
